@@ -1,18 +1,8 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { CartesianGrid, Tooltip, ResponsiveContainer, Legend, AreaChart, Area, XAxis, YAxis } from "recharts";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
+import { cn } from "@/lib/utils";
 
 interface EvolucaoData {
   mes: string;
@@ -36,7 +26,7 @@ const lineOptions = [
 ];
 
 export function EvolucaoPatrimonialChart({ data }: EvolucaoPatrimonialChartProps) {
-  const [periodo, setPeriodo] = useState("6m");
+  const [periodo, setPeriodo] = useState("12m");
   const [activeLines, setActiveLines] = useState<Set<string>>(
     new Set(["patrimonioTotal", "receitas", "despesas"])
   );
@@ -75,43 +65,28 @@ export function EvolucaoPatrimonialChart({ data }: EvolucaoPatrimonialChartProps
               <SelectItem value="3m">3 meses</SelectItem>
               <SelectItem value="6m">6 meses</SelectItem>
               <SelectItem value="12m">12 meses</SelectItem>
-              <SelectItem value="custom">Personalizado</SelectItem>
             </SelectContent>
           </Select>
           
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button variant="outline" size="icon" className="h-8 w-8">
-                <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none">
-                  <path d="M12 8v4l3 3" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                  <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="2"/>
-                </svg>
+          <div className="flex gap-1">
+            {lineOptions.map(line => (
+              <Button
+                key={line.id}
+                variant="outline"
+                size="icon"
+                onClick={() => toggleLine(line.id)}
+                className={cn(
+                  "h-8 w-8 text-xs",
+                  activeLines.has(line.id) ? "bg-primary/10 text-primary border-primary/30" : "bg-muted/50 text-muted-foreground border-border"
+                )}
+              >
+                <div
+                  className="w-3 h-3 rounded-full"
+                  style={{ backgroundColor: line.color }}
+                />
               </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-56" align="end">
-              <div className="space-y-3">
-                <h4 className="font-medium text-sm">Linhas visíveis</h4>
-                {lineOptions.map(line => (
-                  <div key={line.id} className="flex items-center gap-2">
-                    <input
-                      id={line.id}
-                      type="checkbox"
-                      checked={activeLines.has(line.id)}
-                      onChange={() => toggleLine(line.id)}
-                      className="h-4 w-4 rounded border-border bg-muted text-primary focus:ring-primary"
-                    />
-                    <div
-                      className="w-3 h-3 rounded-full"
-                      style={{ backgroundColor: line.color }}
-                    />
-                    <label htmlFor={line.id} className="text-sm cursor-pointer">
-                      {line.label}
-                    </label>
-                  </div>
-                ))}
-              </div>
-            </PopoverContent>
-          </Popover>
+            ))}
+          </div>
         </div>
       </div>
 
@@ -137,7 +112,7 @@ export function EvolucaoPatrimonialChart({ data }: EvolucaoPatrimonialChartProps
               axisLine={false}
               tickLine={false}
               tick={{ fill: "hsl(215, 20%, 55%)", fontSize: 12 }}
-              tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`}
+              tickFormatter={(v) => `${(v/1000).toFixed(0)}k`}
             />
             <Tooltip
               contentStyle={{
