@@ -72,27 +72,16 @@ export function AlertasFinanceiros({ alertas: initialAlertas, onVerDetalhes, onI
       });
     }
 
-    const proximosVencimentos = Array.isArray(emprestimos)
-      ? emprestimos
-          .map(e => {
-            if (!e || !e.vencimento) return null;
-            const d = new Date(e.vencimento);
-            return isNaN(d.getTime()) ? null : { emprestimo: e, data: d };
-          })
-          .filter(Boolean)
-          .sort((a, b) => a.data.getTime() - b.data.getTime())
-          .slice(0, 1)
+    const alertasEmprestimos = Array.isArray(emprestimos) && emprestimos.length > 0
+      ? [{
+          id: "emprestimo-vencimento",
+          tipo: "info" as const,
+          mensagem: "Empréstimos cadastrados",
+          detalhe: `${emprestimos.length} empréstimo(s) ativo(s)`,
+        }]
       : [];
 
-    if (proximosVencimentos.length > 0) {
-      const { data, emprestimo } = proximosVencimentos[0];
-      alertasDinamicos.push({
-        id: `emprestimo-vencimento:${emprestimo.id}`,
-        tipo: "info",
-        mensagem: "Próximo vencimento de empréstimo",
-        detalhe: `Em ${data.toLocaleDateString("pt-BR")}`,
-      });
-    }
+    alertasDinamicos.push(...alertasEmprestimos);
 
     const merged = new Map<string, Alerta>();
     initialAlertas.forEach(a => merged.set(a.id, a));
