@@ -1,7 +1,10 @@
+"use client";
+
 import { useState } from "react";
-import { AlertTriangle, Info, CheckCircle, X, ChevronRight, Bell } from "lucide-react";
+import { AlertTriangle, Info, CheckCircle, X, ChevronRight, Bell, TrendingUp, TrendingDown, DollarSign, CreditCard, Calendar } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { useFinance } from "@/contexts/FinanceContext";
 
 interface Alerta {
   id: string;
@@ -18,8 +21,61 @@ interface AlertasFinanceirosProps {
 }
 
 export function AlertasFinanceiros({ alertas: initialAlertas, onVerDetalhes, onIgnorar }: AlertasFinanceirosProps) {
-  const [alertas, setAlertas] = useState(initialAlertas);
+  const { transacoes, emprestimos, getTotalReceitas, getTotalDespesas } = useFinance();
   const [dismissed, setDismissed] = useState<Set<string>>(new Set());
+
+  const alertas = useState(() => {
+    const hoje = new Date();
+    const currentMonth = hoje.getMonth();
+    const currentYear = hoje.getFullYear();
+    
+    const transacoesMes = transacoes.filter(t => {
+      const date = new Date(t.data);
+      return date.getMonth() === currentMonth && date.getFullYear() === currentYear;
+    });
+    
+    const receitasMes = transacoesMes.filter(t => t.tipo === "receita").reduce((acc, t) => acc + t.valor, 0);
+    const despesasMes = transacoesMes.filter(t => t.tipo === "despesa").reduce((acc, t) => acc + t.valor, 0);
+    const saldoMes = receitasMes - despesasMes;
+    
+    const alertasDinamicos: Alerta[] = [];
+    
+    if (despesasMes > receitasMes) {
+      alertasDinamicos.push({
+        id: "saldo-negativo",
+        tipo: "danger",
+        mensagem: "Saldo negativo no mês",
+        detalhe: `Despesas R$ ${despesasMes.toLocaleString("pt-BR")} > Receitas R$ ${receitasMes.toLocaleString("pt-BR")}`,
+      });
+    }
+    
+    const despesasFixas = transacoesMes
+      .filter(t => ["Moradia", "Saúde", "Transporte", "Salário"].includes(t.categoria) && t.tipo === "despesa")
+      .reduce((acc, t) => acc + t.valor, 0);
+    
+    const indiceEndividamento = receitasMes > 0 ? (despesasFixas / receitasMes) * 100 : 0;
+    if (indiceEndividamento > 50) {
+      alertasDinamicos.push({
+        id: "endividamento-alto",
+        tipo: "warning",
+        mensagem: "Endividamento acima de 50%",
+        detalhe: `Despesas fixas representam ${indiceEndividamento.toFixed(1)}% da renda`,
+      });
+    }
+    
+    const proximoVencimento = emprestimos.length > 0 ? new Date() : null;
+    if (proximoVencimento) {
+      proximoVencimento.setDate(proximoVencimento.getDate() + 10);
+      alertasDinamicos.push({
+        id: "emprestimo-vencimento",
+        tipo: "info",
+        mensagem: "Próximo vencimento de empréstimo",
+        detalhe: `Em ${proximoVencimento.toLocaleDateString("pt-BR")}`,
+      });
+    }
+    
+    return [...alertasDinamicos, ...initialAlertas];
+  })[0];
 
   const visibleAlertas = alertas.filter(a => !dismissed.has(a.id));
 
@@ -55,7 +111,7 @@ export function AlertasFinanceiros({ alertas: initialAlertas, onVerDetalhes, onI
         </div>
         <div className="flex items-center justify-center py-8 text-muted-foreground">
           <CheckCircle className="h-5 w-5 mr-2 text-success" />
-          Nenhum alerta no momento. Suas finanças estão em ordem!
+          Nenhum alerta no momento
         </div>
       </div>
     );
