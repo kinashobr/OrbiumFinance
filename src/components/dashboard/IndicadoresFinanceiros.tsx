@@ -1,6 +1,5 @@
 import { useMemo } from "react";
-import { Info } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Info, TrendingUp, TrendingDown, Gauge, Target, DollarSign } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { useFinance } from "@/contexts/FinanceContext";
