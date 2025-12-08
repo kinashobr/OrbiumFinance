@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import { 
   TrendingUp, TrendingDown, Calendar, AlertTriangle, 
   Award, Zap, ArrowUpRight, ArrowDownRight, Sparkles, 
