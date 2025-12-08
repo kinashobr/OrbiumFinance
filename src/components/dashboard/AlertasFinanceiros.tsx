@@ -84,7 +84,7 @@ interface Alerta {
   };
   data: Date;
   lido: boolean;
-  ignorado: bool;
+  ignorado: boolean;
   metricas?: {
     valorAtual: number;
     valorMeta: number;
