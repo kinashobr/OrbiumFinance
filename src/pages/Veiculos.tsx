@@ -32,6 +32,7 @@ import { useFinance, Veiculo, SeguroVeiculo } from "@/contexts/FinanceContext";
 import { EditableCell } from "@/components/EditableCell";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { FipeConsultaDialog } from "@/components/vehicles/FipeConsultaDialog";
 
 const Veiculos = () => {
   const { 
@@ -52,6 +53,18 @@ const Veiculos = () => {
   const [showAddVeiculo, setShowAddVeiculo] = useState(false);
   const [showAddSeguro, setShowAddSeguro] = useState(false);
   const [pendingVehicleId, setPendingVehicleId] = useState<number | null>(null);
+  const [showFipeDialog, setShowFipeDialog] = useState(false);
+  const [selectedVeiculoFipe, setSelectedVeiculoFipe] = useState<Veiculo | undefined>(undefined);
+  
+  const handleOpenFipeConsulta = (veiculo?: Veiculo) => {
+    setSelectedVeiculoFipe(veiculo);
+    setShowFipeDialog(true);
+  };
+  
+  const handleUpdateFipe = (veiculoId: number, valorFipe: number) => {
+    updateVeiculo(veiculoId, { valorFipe });
+    toast.success("Valor FIPE atualizado!");
+  };
   
   const [formData, setFormData] = useState({
     modelo: "",
@@ -689,6 +702,17 @@ const Veiculos = () => {
                                   Configurar
                                 </Button>
                               )}
+                              {item.status === 'ativo' && item.marca && item.modelo && (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => handleOpenFipeConsulta(item)}
+                                  className="h-8 px-2 hover:bg-primary/10 hover:text-primary"
+                                >
+                                  <Search className="w-4 h-4 mr-1" />
+                                  FIPE
+                                </Button>
+                              )}
                               <Button
                                 variant="ghost"
                                 size="icon"
@@ -858,6 +882,14 @@ const Veiculos = () => {
             </Card>
           </TabsContent>
         </Tabs>
+        
+        {/* FIPE Consulta Dialog */}
+        <FipeConsultaDialog 
+          open={showFipeDialog} 
+          onOpenChange={setShowFipeDialog}
+          veiculo={selectedVeiculoFipe}
+          onUpdateFipe={handleUpdateFipe}
+        />
       </div>
     </MainLayout>
   );
