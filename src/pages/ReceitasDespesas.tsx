@@ -163,7 +163,7 @@ const ReceitasDespesas = () => {
         });
       }
 
-      if (transaction.operationType === 'veiculo' && transaction.meta?.tipoVeiculo === 'compra') {
+      if (transaction.operationType === 'veiculo' && transaction.meta?.vehicleOperation === 'compra') {
         // Create pending vehicle
         addVeiculo({
           modelo: '',

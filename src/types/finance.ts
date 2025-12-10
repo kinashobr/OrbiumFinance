@@ -87,6 +87,7 @@ export interface TransactionMeta {
   updatedAt?: string;
   notes?: string;
   vehicleOperation?: 'compra' | 'venda';
+  tipoVeiculo?: 'carro' | 'moto' | 'caminhao';
   numeroContrato?: string;
   pendingLoanConfig?: boolean;
 }
