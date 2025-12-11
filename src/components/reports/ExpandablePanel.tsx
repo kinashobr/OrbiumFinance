@@ -36,7 +36,7 @@ export function ExpandablePanel({
   };
 
   return (
-    <Collapsible open={isOpen} onOpenChange={setIsOpen} className={cn("glass-card overflow-hidden", className)}>
+    <Collapsible open={isOpen} onOpenChange={setIsOpen} className={cn("glass-card", className)}>
       <CollapsibleTrigger asChild>
         <div
           className={cn(
