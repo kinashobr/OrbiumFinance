@@ -62,6 +62,7 @@ const Investimentos = () => {
     getTotalReceitas,
     getTotalDespesas,
     contasMovimento,
+    transacoesV2,
   } = useFinance();
   
   const [activeTab, setActiveTab] = useState("carteira");
@@ -88,7 +89,20 @@ const Investimentos = () => {
 
   const dateRange = useMemo(() => periodToDateRange(periodRange), [periodRange]);
 
-  // Get investment accounts from ReceitasDespesas
+  // Calcular total de investimentos das contas movimento tipo investimento
+  const totalInvestimentosContas = useMemo(() => {
+    const investmentAccountTypes = ['aplicacao_renda_fixa', 'poupanca', 'criptoativos', 'reserva_emergencia', 'objetivos_financeiros'];
+    return contasMovimento
+      .filter(c => investmentAccountTypes.includes(c.accountType))
+      .reduce((acc, conta) => {
+        const contaTx = transacoesV2.filter(t => t.accountId === conta.id);
+        const totalIn = contaTx.filter(t => t.flow === 'in' || t.flow === 'transfer_in').reduce((s, t) => s + t.amount, 0);
+        const totalOut = contaTx.filter(t => t.flow === 'out' || t.flow === 'transfer_out').reduce((s, t) => s + t.amount, 0);
+        return acc + conta.initialBalance + totalIn - totalOut;
+      }, 0);
+  }, [contasMovimento, transacoesV2]);
+
+  // Separate accounts by type for tab filtering
   const investmentAccounts = useMemo(() => {
     return contasMovimento.filter(c => 
       c.accountType === 'aplicacao_renda_fixa' || 
@@ -99,49 +113,83 @@ const Investimentos = () => {
     );
   }, [contasMovimento]);
 
-  // Separate crypto accounts into regular crypto and stablecoins
-  const cryptoAccounts = useMemo(() => {
-    return contasMovimento.filter(c => 
-      c.accountType === 'criptoativos' && !isStablecoin(c.name)
-    );
-  }, [contasMovimento]);
-
-  const stablecoinAccounts = useMemo(() => {
-    return contasMovimento.filter(c => 
-      c.accountType === 'criptoativos' && isStablecoin(c.name)
-    );
-  }, [contasMovimento]);
-
-  // RF accounts (aplicacao_renda_fixa + poupanca)
   const rfAccounts = useMemo(() => {
-    return contasMovimento.filter(c => 
+    return investmentAccounts.filter(c => 
       c.accountType === 'aplicacao_renda_fixa' || c.accountType === 'poupanca'
     );
-  }, [contasMovimento]);
+  }, [investmentAccounts]);
 
-  // Objetivos accounts (objetivos_financeiros + reserva_emergencia)
+  const cryptoAccounts = useMemo(() => {
+    return investmentAccounts.filter(c => 
+      c.accountType === 'criptoativos' && !isStablecoin(c.name)
+    );
+  }, [investmentAccounts]);
+
+  const stablecoinAccounts = useMemo(() => {
+    return investmentAccounts.filter(c => 
+      c.accountType === 'criptoativos' && isStablecoin(c.name)
+    );
+  }, [investmentAccounts]);
+
   const objetivosAccounts = useMemo(() => {
-    return contasMovimento.filter(c => 
+    return investmentAccounts.filter(c => 
       c.accountType === 'objetivos_financeiros' || c.accountType === 'reserva_emergencia'
     );
-  }, [contasMovimento]);
+  }, [investmentAccounts]);
 
   // Cálculos padronizados
   const calculosPatrimonio = useMemo(() => {
-    const totalRF = investimentosRF.reduce((acc, i) => acc + i.valor, 0);
-    const totalCripto = criptomoedas.reduce((acc, c) => acc + c.valorBRL, 0);
-    const totalStables = stablecoins.reduce((acc, s) => acc + s.valorBRL, 0);
-    const totalObjetivos = objetivos.reduce((acc, o) => acc + o.atual, 0);
+    // Totais legados
+    const totalRF_legado = investimentosRF.reduce((acc, i) => acc + i.valor, 0);
+    const totalCripto_legado = criptomoedas.reduce((acc, c) => acc + c.valorBRL, 0);
+    const totalStables_legado = stablecoins.reduce((acc, s) => acc + s.valorBRL, 0);
+    const totalObjetivos_legado = objetivos.reduce((acc, o) => acc + o.atual, 0);
+    
+    // Totais das Contas Movimento
+    const totalRF_contas = rfAccounts.reduce((acc, c) => {
+      const tx = transacoesV2.filter(t => t.accountId === c.id);
+      const inTx = tx.filter(t => t.flow === 'in').reduce((s, t) => s + t.amount, 0);
+      const outTx = tx.filter(t => t.flow === 'out').reduce((s, t) => s + t.amount, 0);
+      return acc + c.initialBalance + inTx - outTx;
+    }, 0);
+
+    const totalCripto_contas = cryptoAccounts.reduce((acc, c) => {
+      const tx = transacoesV2.filter(t => t.accountId === c.id);
+      const inTx = tx.filter(t => t.flow === 'in').reduce((s, t) => s + t.amount, 0);
+      const outTx = tx.filter(t => t.flow === 'out').reduce((s, t) => s + t.amount, 0);
+      return acc + c.initialBalance + inTx - outTx;
+    }, 0);
+
+    const totalStables_contas = stablecoinAccounts.reduce((acc, c) => {
+      const tx = transacoesV2.filter(t => t.accountId === c.id);
+      const inTx = tx.filter(t => t.flow === 'in').reduce((s, t) => s + t.amount, 0);
+      const outTx = tx.filter(t => t.flow === 'out').reduce((s, t) => s + t.amount, 0);
+      return acc + c.initialBalance + inTx - outTx;
+    }, 0);
+
+    const totalObjetivos_contas = objetivosAccounts.reduce((acc, c) => {
+      const tx = transacoesV2.filter(t => t.accountId === c.id);
+      const inTx = tx.filter(t => t.flow === 'in').reduce((s, t) => s + t.amount, 0);
+      const outTx = tx.filter(t => t.flow === 'out').reduce((s, t) => s + t.amount, 0);
+      return acc + c.initialBalance + inTx - outTx;
+    }, 0);
+
+    // Totais Consolidados
+    const totalRF = totalRF_legado + totalRF_contas;
+    const totalCripto = totalCripto_legado + totalCripto_contas;
+    const totalStables = totalStables_legado + totalStables_contas;
+    const totalObjetivos = totalObjetivos_legado + totalObjetivos_contas;
+
     const valorVeiculos = getValorFipeTotal();
     
-    const patrimonioTotal = totalRF + totalCripto + totalStables + totalObjetivos + valorVeiculos;
+    const patrimonioInvestimentos = totalRF + totalCripto + totalStables + totalObjetivos;
+    const patrimonioTotal = patrimonioInvestimentos + valorVeiculos;
     
     const reservaEmergencia = objetivos.find(o => 
       o.nome.toLowerCase().includes("reserva") || 
       o.nome.toLowerCase().includes("emergência")
     );
     
-    const patrimonioInvestimentos = totalRF + totalCripto + totalStables + totalObjetivos;
     const exposicaoCripto = patrimonioInvestimentos > 0 ? (totalCripto / patrimonioInvestimentos) * 100 : 0;
     
     const rentabilidadeRF = investimentosRF.length > 0 && totalRF > 0
@@ -167,9 +215,18 @@ const Investimentos = () => {
       exposicaoCripto,
       rentabilidadeMedia,
       variacaoMensal,
-      patrimonioInvestimentos
+      patrimonioInvestimentos,
+      // Totais por fonte (para uso nas tabelas)
+      totalRF_legado,
+      totalRF_contas,
+      totalCripto_legado,
+      totalCripto_contas,
+      totalStables_legado,
+      totalStables_contas,
+      totalObjetivos_legado,
+      totalObjetivos_contas,
     };
-  }, [investimentosRF, criptomoedas, stablecoins, objetivos, getValorFipeTotal, getTotalReceitas, getTotalDespesas]);
+  }, [investimentosRF, criptomoedas, stablecoins, objetivos, getValorFipeTotal, getTotalReceitas, getTotalDespesas, contasMovimento, transacoesV2]);
 
   const distribuicaoCarteira = useMemo(() => [
     { name: "Renda Fixa", value: calculosPatrimonio.totalRF },
@@ -425,7 +482,7 @@ const Investimentos = () => {
             <Card className="glass-card">
               <CardHeader className="flex flex-row items-center justify-between">
                 <CardTitle className="text-lg">Aplicações em Renda Fixa</CardTitle>
-                <Badge variant="outline">{investimentosRF.length} aplicações</Badge>
+                <Badge variant="outline">{investimentosRF.length + rfAccounts.length} aplicações</Badge>
               </CardHeader>
               <CardContent>
                 <Table>
@@ -441,6 +498,40 @@ const Investimentos = () => {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
+                    {/* Contas Movimento RF */}
+                    {rfAccounts.map((acc) => {
+                      const tx = transacoesV2.filter(t => t.accountId === acc.id);
+                      const inTx = tx.filter(t => t.flow === 'in').reduce((s, t) => s + t.amount, 0);
+                      const outTx = tx.filter(t => t.flow === 'out').reduce((s, t) => s + t.amount, 0);
+                      const valorAtual = acc.initialBalance + inTx - outTx;
+                      
+                      return (
+                        <TableRow key={acc.id} className="bg-primary/5">
+                          <TableCell>
+                            <div className="flex items-center gap-2">
+                              <Coins className="w-4 h-4 text-primary" />
+                              <span className="font-medium">{acc.name}</span>
+                            </div>
+                          </TableCell>
+                          <TableCell>{acc.institution || 'Conta Movimento'}</TableCell>
+                          <TableCell>
+                            <Badge variant="outline">{acc.accountType === 'poupanca' ? 'Poupança' : 'Renda Fixa'}</Badge>
+                          </TableCell>
+                          <TableCell className="text-right font-bold">
+                            {formatCurrency(valorAtual)}
+                          </TableCell>
+                          <TableCell className="text-right text-success">
+                            {acc.accountType === 'poupanca' ? '0.5%' : '—'}
+                          </TableCell>
+                          <TableCell className="text-right">—</TableCell>
+                          <TableCell>
+                            <Badge variant="secondary">Conta</Badge>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+
+                    {/* Investimentos RF Legados */}
                     {investimentosRF.map((inv) => (
                       <TableRow key={inv.id}>
                         <TableCell>
@@ -487,7 +578,7 @@ const Investimentos = () => {
                         </TableCell>
                       </TableRow>
                     ))}
-                    {investimentosRF.length === 0 && (
+                    {investimentosRF.length === 0 && rfAccounts.length === 0 && (
                       <TableRow>
                         <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
                           Nenhuma aplicação em renda fixa. Adicione via "Movimentar Conta" em Receitas & Despesas.
@@ -505,7 +596,7 @@ const Investimentos = () => {
             <Card className="glass-card">
               <CardHeader className="flex flex-row items-center justify-between">
                 <CardTitle className="text-lg">Carteira de Criptomoedas</CardTitle>
-                <Badge variant="outline">{criptomoedas.length} ativos</Badge>
+                <Badge variant="outline">{criptomoedas.length + cryptoAccounts.length} ativos</Badge>
               </CardHeader>
               <CardContent>
                 <Table>
@@ -520,6 +611,41 @@ const Investimentos = () => {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
+                    {/* Contas Movimento Cripto */}
+                    {cryptoAccounts.map((acc) => {
+                      const tx = transacoesV2.filter(t => t.accountId === acc.id);
+                      const inTx = tx.filter(t => t.flow === 'in').reduce((s, t) => s + t.amount, 0);
+                      const outTx = tx.filter(t => t.flow === 'out').reduce((s, t) => s + t.amount, 0);
+                      const valorAtual = acc.initialBalance + inTx - outTx;
+                      
+                      return (
+                        <TableRow key={acc.id} className="bg-primary/5">
+                          <TableCell>
+                            <div className="flex items-center gap-2">
+                              <Bitcoin className="w-4 h-4 text-warning" />
+                              <span className="font-medium">{acc.name}</span>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant="outline">BTC/ETH/Outro</Badge>
+                          </TableCell>
+                          <TableCell className="text-right font-bold">
+                            —
+                          </TableCell>
+                          <TableCell className="text-right font-bold">
+                            {formatCurrency(valorAtual)}
+                          </TableCell>
+                          <TableCell className="text-right text-warning">
+                            —
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant="secondary">Conta</Badge>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+
+                    {/* Criptomoedas Legadas */}
                     {criptomoedas.map((cripto) => (
                       <TableRow key={cripto.id}>
                         <TableCell className="flex items-center gap-2">
@@ -566,7 +692,7 @@ const Investimentos = () => {
                         </TableCell>
                       </TableRow>
                     ))}
-                    {criptomoedas.length === 0 && (
+                    {criptomoedas.length === 0 && cryptoAccounts.length === 0 && (
                       <TableRow>
                         <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
                           Nenhuma criptomoeda. Adicione via "Movimentar Conta" em Receitas & Despesas.
@@ -584,7 +710,7 @@ const Investimentos = () => {
             <Card className="glass-card">
               <CardHeader className="flex flex-row items-center justify-between">
                 <CardTitle className="text-lg">Carteira de Stablecoins</CardTitle>
-                <Badge variant="outline">{stablecoins.length} ativos</Badge>
+                <Badge variant="outline">{stablecoins.length + stablecoinAccounts.length} ativos</Badge>
               </CardHeader>
               <CardContent>
                 <Table>
@@ -598,6 +724,38 @@ const Investimentos = () => {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
+                    {/* Contas Movimento Stablecoins */}
+                    {stablecoinAccounts.map((acc) => {
+                      const tx = transacoesV2.filter(t => t.accountId === acc.id);
+                      const inTx = tx.filter(t => t.flow === 'in').reduce((s, t) => s + t.amount, 0);
+                      const outTx = tx.filter(t => t.flow === 'out').reduce((s, t) => s + t.amount, 0);
+                      const valorAtual = acc.initialBalance + inTx - outTx;
+                      
+                      return (
+                        <TableRow key={acc.id} className="bg-primary/5">
+                          <TableCell>
+                            <div className="flex items-center gap-2">
+                              <DollarSign className="w-4 h-4 text-info" />
+                              <span className="font-medium">{acc.name}</span>
+                            </div>
+                          </TableCell>
+                          <TableCell className="text-right font-bold">
+                            —
+                          </TableCell>
+                          <TableCell className="text-right font-bold">
+                            {formatCurrency(valorAtual)}
+                          </TableCell>
+                          <TableCell className="text-right">
+                            R$ 1.00
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant="secondary">Conta</Badge>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+
+                    {/* Stablecoins Legadas */}
                     {stablecoins.map((stable) => (
                       <TableRow key={stable.id}>
                         <TableCell className="flex items-center gap-2">
@@ -636,7 +794,7 @@ const Investimentos = () => {
                         </TableCell>
                       </TableRow>
                     ))}
-                    {stablecoins.length === 0 && (
+                    {stablecoins.length === 0 && stablecoinAccounts.length === 0 && (
                       <TableRow>
                         <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
                           Nenhuma stablecoin. Adicione via "Movimentar Conta" em Receitas & Despesas.
@@ -652,6 +810,52 @@ const Investimentos = () => {
           {/* Objetivos */}
           <TabsContent value="objetivos" className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {/* Contas Movimento Objetivos */}
+              {objetivosAccounts.map((acc) => {
+                const tx = transacoesV2.filter(t => t.accountId === acc.id);
+                const inTx = tx.filter(t => t.flow === 'in').reduce((s, t) => s + t.amount, 0);
+                const outTx = tx.filter(t => t.flow === 'out').reduce((s, t) => s + t.amount, 0);
+                const valorAtual = acc.initialBalance + inTx - outTx;
+                
+                return (
+                  <Card key={acc.id} className="glass-card bg-primary/5">
+                    <CardContent className="p-4">
+                      <div className="flex items-center justify-between mb-3">
+                        <div className="flex items-center gap-2">
+                          <Target className="w-4 h-4 text-primary" />
+                          <span className="font-medium">{acc.name}</span>
+                        </div>
+                        <Badge variant="secondary">Conta</Badge>
+                      </div>
+                      <div className="space-y-2">
+                        <div className="flex justify-between text-sm">
+                          <span className="text-muted-foreground">Atual</span>
+                          <span className="font-bold">{formatCurrency(valorAtual)}</span>
+                        </div>
+                        <div className="flex justify-between text-sm">
+                          <span className="text-muted-foreground">Meta</span>
+                          <span className="text-muted-foreground">—</span>
+                        </div>
+                        <div className="h-2 bg-muted rounded-full overflow-hidden">
+                          <div 
+                            className="h-full transition-all"
+                            style={{ 
+                              width: `100%`,
+                              backgroundColor: 'hsl(var(--primary))'
+                            }}
+                          />
+                        </div>
+                        <div className="flex justify-between text-xs">
+                          <span className="text-muted-foreground">Progresso: {formatCurrency(valorAtual)}</span>
+                          <span className="text-success">—</span>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                );
+              })}
+
+              {/* Objetivos Legados */}
               {objetivos.map((obj) => {
                 const progresso = obj.meta > 0 ? (obj.atual / obj.meta) * 100 : 0;
                 return (
@@ -714,7 +918,7 @@ const Investimentos = () => {
                   </Card>
                 );
               })}
-              {objetivos.length === 0 && (
+              {objetivos.length === 0 && objetivosAccounts.length === 0 && (
                 <Card className="glass-card col-span-full">
                   <CardContent className="p-8 text-center text-muted-foreground">
                     Nenhum objetivo financeiro. Adicione via "Movimentar Conta" em Receitas & Despesas.
