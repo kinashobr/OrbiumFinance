@@ -81,7 +81,6 @@ const OPERATION_CONFIG: Record<OperationType, { label: string; icon: typeof Tren
   liberacao_emprestimo: { label: 'Liberação Empréstimo', icon: Banknote, color: 'text-emerald-500' },
   veiculo: { label: 'Veículos', icon: Car, color: 'text-blue-500' },
   rendimento: { label: 'Rendimento', icon: DollarSign, color: 'text-teal-500' },
-  initial_balance: { label: 'Saldo Inicial', icon: Info, color: 'text-muted-foreground' },
 };
 
 export function MovimentarContaModal({
