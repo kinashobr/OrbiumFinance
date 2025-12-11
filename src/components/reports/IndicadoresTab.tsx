@@ -92,11 +92,14 @@ interface CustomIndicator {
   invertido: boolean; // Se true, menor é melhor
 }
 
+// Define o tipo de status esperado pelo IndicatorBadge
+type IndicatorStatus = "success" | "warning" | "danger" | "neutral";
+
 // Componente de badge com tooltip detalhado
 interface DetailedIndicatorBadgeProps {
   title: string;
   value: string;
-  status: "success" | "warning" | "danger" | "neutral";
+  status: IndicatorStatus;
   trend?: "up" | "down" | "stable";
   descricao: string;
   formula: string;
@@ -384,38 +387,38 @@ export function IndicadoresTab() {
 
     return {
       liquidez: {
-        corrente: { valor: liquidezCorrente, status: liquidezCorrente >= 1.5 ? "success" : liquidezCorrente >= 1 ? "warning" : "danger" as const },
-        seca: { valor: liquidezSeca, status: liquidezSeca >= 1 ? "success" : liquidezSeca >= 0.7 ? "warning" : "danger" as const },
-        imediata: { valor: liquidezImediata, status: liquidezImediata >= 0.5 ? "success" : liquidezImediata >= 0.3 ? "warning" : "danger" as const },
-        geral: { valor: liquidezGeral, status: liquidezGeral >= 2 ? "success" : liquidezGeral >= 1 ? "warning" : "danger" as const },
+        corrente: { valor: liquidezCorrente, status: (liquidezCorrente >= 1.5 ? "success" : liquidezCorrente >= 1 ? "warning" : "danger") as IndicatorStatus },
+        seca: { valor: liquidezSeca, status: (liquidezSeca >= 1 ? "success" : liquidezSeca >= 0.7 ? "warning" : "danger") as IndicatorStatus },
+        imediata: { valor: liquidezImediata, status: (liquidezImediata >= 0.5 ? "success" : liquidezImediata >= 0.3 ? "warning" : "danger") as IndicatorStatus },
+        geral: { valor: liquidezGeral, status: (liquidezGeral >= 2 ? "success" : liquidezGeral >= 1 ? "warning" : "danger") as IndicatorStatus },
       },
       endividamento: {
-        total: { valor: endividamentoTotal, status: endividamentoTotal < 30 ? "success" : endividamentoTotal < 50 ? "warning" : "danger" as const },
-        dividaPL: { valor: dividaPL, status: dividaPL < 50 ? "success" : dividaPL < 100 ? "warning" : "danger" as const },
-        composicao: { valor: composicaoEndividamento, status: composicaoEndividamento < 50 ? "success" : composicaoEndividamento < 70 ? "warning" : "danger" as const },
-        imobilizacao: { valor: imobilizacaoPL, status: imobilizacaoPL < 30 ? "success" : imobilizacaoPL < 50 ? "warning" : "danger" as const },
+        total: { valor: endividamentoTotal, status: (endividamentoTotal < 30 ? "success" : endividamentoTotal < 50 ? "warning" : "danger") as IndicatorStatus },
+        dividaPL: { valor: dividaPL, status: (dividaPL < 50 ? "success" : dividaPL < 100 ? "warning" : "danger") as IndicatorStatus },
+        composicao: { valor: composicaoEndividamento, status: (composicaoEndividamento < 50 ? "success" : composicaoEndividamento < 70 ? "warning" : "danger") as IndicatorStatus },
+        imobilizacao: { valor: imobilizacaoPL, status: (imobilizacaoPL < 30 ? "success" : imobilizacaoPL < 50 ? "warning" : "danger") as IndicatorStatus },
       },
       rentabilidade: {
-        margemLiquida: { valor: margemLiquida, status: margemLiquida >= 20 ? "success" : margemLiquida >= 10 ? "warning" : "danger" as const },
-        retornoAtivos: { valor: retornoAtivos, status: retornoAtivos >= 10 ? "success" : retornoAtivos >= 5 ? "warning" : "danger" as const },
-        retornoPL: { valor: retornoPL, status: retornoPL >= 15 ? "success" : retornoPL >= 8 ? "warning" : "danger" as const },
+        margemLiquida: { valor: margemLiquida, status: (margemLiquida >= 20 ? "success" : margemLiquida >= 10 ? "warning" : "danger") as IndicatorStatus },
+        retornoAtivos: { valor: retornoAtivos, status: (retornoAtivos >= 10 ? "success" : retornoAtivos >= 5 ? "warning" : "danger") as IndicatorStatus },
+        retornoPL: { valor: retornoPL, status: (retornoPL >= 15 ? "success" : retornoPL >= 8 ? "warning" : "danger") as IndicatorStatus },
       },
       eficiencia: {
-        despesasFixas: { valor: indiceDespesasFixas, status: indiceDespesasFixas < 50 ? "success" : indiceDespesasFixas < 70 ? "warning" : "danger" as const },
-        crescimentoReceitas: { valor: crescimentoReceitas, status: crescimentoReceitas > 5 ? "success" : crescimentoReceitas >= 0 ? "warning" : "danger" as const },
-        crescimentoDespesas: { valor: crescimentoDespesas, status: crescimentoDespesas < 0 ? "success" : crescimentoDespesas < 10 ? "warning" : "danger" as const },
-        operacional: { valor: eficienciaOperacional, status: eficienciaOperacional < 70 ? "success" : eficienciaOperacional < 85 ? "warning" : "danger" as const },
+        despesasFixas: { valor: indiceDespesasFixas, status: (indiceDespesasFixas < 50 ? "success" : indiceDespesasFixas < 70 ? "warning" : "danger") as IndicatorStatus },
+        crescimentoReceitas: { valor: crescimentoReceitas, status: (crescimentoReceitas > 5 ? "success" : crescimentoReceitas >= 0 ? "warning" : "danger") as IndicatorStatus },
+        crescimentoDespesas: { valor: crescimentoDespesas, status: (crescimentoDespesas < 0 ? "success" : crescimentoDespesas < 10 ? "warning" : "danger") as IndicatorStatus },
+        operacional: { valor: eficienciaOperacional, status: (eficienciaOperacional < 70 ? "success" : eficienciaOperacional < 85 ? "warning" : "danger") as IndicatorStatus },
       },
       pessoais: {
-        custoVida: { valor: custoVidaMensal, status: "neutral" as const },
-        mesesSobrevivencia: { valor: mesesSobrevivencia, status: mesesSobrevivencia >= 6 ? "success" : mesesSobrevivencia >= 3 ? "warning" : "danger" as const },
-        taxaPoupanca: { valor: taxaPoupanca, status: taxaPoupanca >= 20 ? "success" : taxaPoupanca >= 10 ? "warning" : "danger" as const },
-        comprometimento: { valor: comprometimentoRenda, status: comprometimentoRenda < 70 ? "success" : comprometimentoRenda < 90 ? "warning" : "danger" as const },
+        custoVida: { valor: custoVidaMensal, status: "neutral" as IndicatorStatus },
+        mesesSobrevivencia: { valor: mesesSobrevivencia, status: (mesesSobrevivencia >= 6 ? "success" : mesesSobrevivencia >= 3 ? "warning" : "danger") as IndicatorStatus },
+        taxaPoupanca: { valor: taxaPoupanca, status: (taxaPoupanca >= 20 ? "success" : taxaPoupanca >= 10 ? "warning" : "danger") as IndicatorStatus },
+        comprometimento: { valor: comprometimentoRenda, status: (comprometimentoRenda < 70 ? "success" : comprometimentoRenda < 90 ? "warning" : "danger") as IndicatorStatus },
       },
       outros: {
-        solvencia: { valor: solvencia, status: solvencia >= 2 ? "success" : solvencia >= 1 ? "warning" : "danger" as const },
-        coberturaJuros: { valor: coberturaJuros, status: coberturaJuros >= 3 ? "success" : coberturaJuros >= 1.5 ? "warning" : "danger" as const },
-        diversificacao: { valor: diversificacao, status: diversificacao >= 40 ? "success" : diversificacao >= 20 ? "warning" : "danger" as const },
+        solvencia: { valor: solvencia, status: (solvencia >= 2 ? "success" : solvencia >= 1 ? "warning" : "danger") as IndicatorStatus },
+        coberturaJuros: { valor: coberturaJuros, status: (coberturaJuros >= 3 ? "success" : coberturaJuros >= 1.5 ? "warning" : "danger") as IndicatorStatus },
+        diversificacao: { valor: diversificacao, status: (diversificacao >= 40 ? "success" : diversificacao >= 20 ? "warning" : "danger") as IndicatorStatus },
       },
       // Dados brutos para indicadores customizados
       raw: {
@@ -752,7 +755,6 @@ export function IndicadoresTab() {
           status={indicadores.eficiencia.crescimentoDespesas.status}
           trend={indicadores.eficiencia.crescimentoDespesas.valor < 0 ? "up" : "down"}
           descricao="Variação das despesas em relação ao mês anterior. Ideal: negativo ou controlado"
-          formula="((Despesas Mês Atual - Despesas Mês Anterior) / Despesas Mês Anterior) × 100"
           sparklineData={generateSparkline(Math.abs(indicadores.eficiencia.crescimentoDespesas.valor) + 10, indicadores.eficiencia.crescimentoDespesas.valor < 0 ? "down" : "up")}
           icon={<TrendingDown className="w-4 h-4" />}
         />
