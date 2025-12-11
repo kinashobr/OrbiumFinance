@@ -5,16 +5,18 @@ import { BalancoTab } from "@/components/reports/BalancoTab";
 import { DRETab } from "@/components/reports/DRETab";
 import { IndicadoresTab } from "@/components/reports/IndicadoresTab";
 import { Scale, Receipt, Activity } from "lucide-react";
-import { DateRangePicker, DateRange } from "@/components/dashboard/DateRangePicker";
+import { PeriodSelector, PeriodRange } from "@/components/dashboard/PeriodSelector";
 
 const Relatorios = () => {
-  const [dateRange, setDateRange] = useState<DateRange>({
-    from: undefined,
-    to: undefined,
+  const [periodRange, setPeriodRange] = useState<PeriodRange>({
+    startMonth: null,
+    startYear: null,
+    endMonth: null,
+    endYear: null,
   });
 
-  const handleDateRangeChange = useCallback((range: DateRange) => {
-    setDateRange(range);
+  const handlePeriodChange = useCallback((period: PeriodRange) => {
+    setPeriodRange(period);
   }, []);
 
   return (
@@ -30,8 +32,8 @@ const Relatorios = () => {
               Análise contábil profissional • Balanço, DRE e Indicadores
             </p>
           </div>
-          <DateRangePicker 
-            onDateRangeChange={handleDateRangeChange} 
+          <PeriodSelector 
+            onPeriodChange={handlePeriodChange} 
             tabId="relatorios" 
           />
         </div>
@@ -65,13 +67,13 @@ const Relatorios = () => {
             </TabsTrigger>
           </TabsList>
           <TabsContent value="balanco" className="mt-6">
-            <BalancoTab dateRange={dateRange} />
+            <BalancoTab />
           </TabsContent>
           <TabsContent value="dre" className="mt-6">
-            <DRETab dateRange={dateRange} />
+            <DRETab />
           </TabsContent>
           <TabsContent value="indicadores" className="mt-6">
-            <IndicadoresTab dateRange={dateRange} />
+            <IndicadoresTab />
           </TabsContent>
         </Tabs>
       </div>

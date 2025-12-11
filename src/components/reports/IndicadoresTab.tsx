@@ -56,7 +56,6 @@ import {
 import { cn } from "@/lib/utils";
 import { format, subMonths, startOfMonth, endOfMonth, parseISO, isWithinInterval } from "date-fns";
 import { toast } from "sonner";
-import { DateRange } from "../dashboard/DateRangePicker";
 
 interface IndicatorGroupProps {
   title: string;
@@ -100,11 +99,7 @@ type IndicatorStatus = "success" | "warning" | "danger" | "neutral";
 // Storage key for custom indicators
 const CUSTOM_INDICATORS_KEY = "fin_custom_indicators_v1";
 
-interface IndicadoresTabProps {
-  dateRange: DateRange;
-}
-
-export function IndicadoresTab({ dateRange }: IndicadoresTabProps) {
+export function IndicadoresTab() {
   const {
     transacoesV2,
     contasMovimento,
@@ -182,23 +177,6 @@ export function IndicadoresTab({ dateRange }: IndicadoresTabProps) {
     toast.success("Indicador removido");
   };
 
-  // 1. Filtrar transações pelo período selecionado
-  const filteredTransacoesV2 = useMemo(() => {
-    if (!dateRange.from || !dateRange.to) return transacoesV2;
-    
-    const endOfDay = new Date(dateRange.to);
-    endOfDay.setHours(23, 59, 59, 999);
-
-    return transacoesV2.filter(t => {
-      try {
-        const dataT = parseISO(t.date);
-        return isWithinInterval(dataT, { start: dateRange.from!, end: endOfDay });
-      } catch {
-        return false;
-      }
-    });
-  }, [transacoesV2, dateRange]);
-
   // Cálculos principais
   const indicadores = useMemo(() => {
     const now = new Date();
@@ -210,7 +188,7 @@ export function IndicadoresTab({ dateRange }: IndicadoresTabProps) {
     contasMovimento.forEach(conta => {
       saldosPorConta[conta.id] = conta.initialBalance;
     });
-    transacoesV2.forEach(t => { // Usamos todas as transações para o saldo atual
+    transacoesV2.forEach(t => {
       if (!saldosPorConta[t.accountId]) saldosPorConta[t.accountId] = 0;
       if (t.flow === 'in' || t.flow === 'transfer_in') {
         saldosPorConta[t.accountId] += t.amount;
@@ -246,9 +224,8 @@ export function IndicadoresTab({ dateRange }: IndicadoresTabProps) {
     // Passivos
     const emprestimosAtivos = emprestimos.filter(e => e.status !== 'quitado');
     const saldoDevedor = emprestimosAtivos.reduce((acc, e) => {
-      const parcelasPagas = e.parcelasPagas || 0;
-      const saldoDevedor = Math.max(0, e.valorTotal - (parcelasPagas * e.parcela));
-      return acc + saldoDevedor;
+      const parcelasRestantes = e.meses - (e.parcelasPagas || 0);
+      return acc + (e.parcela * parcelasRestantes);
     }, 0);
     const passivoCurtoPrazo = emprestimosAtivos.reduce((acc, e) => {
       const parcelasRestantes = Math.min(12, e.meses - (e.parcelasPagas || 0));
@@ -259,9 +236,9 @@ export function IndicadoresTab({ dateRange }: IndicadoresTabProps) {
     // Patrimônio Líquido
     const patrimonioLiquido = totalAtivos - totalPassivos;
 
-    // Receitas e Despesas do período FILTRADO
-    const transacoesMesAtual = filteredTransacoesV2;
-    const transacoesMesAnterior = transacoesV2.filter(t => t.date.startsWith(mesAnterior)); // Usa transacoesV2 total para comparação histórica
+    // Receitas e Despesas do período
+    const transacoesMesAtual = transacoesV2.filter(t => t.date.startsWith(mesAtual));
+    const transacoesMesAnterior = transacoesV2.filter(t => t.date.startsWith(mesAnterior));
 
     const calcReceitas = (trans: typeof transacoesV2) => trans
       .filter(t => t.flow === 'in' && t.operationType !== 'transferencia' && t.operationType !== 'liberacao_emprestimo')
@@ -389,7 +366,7 @@ export function IndicadoresTab({ dateRange }: IndicadoresTabProps) {
         passivoCurtoPrazo,
       },
     };
-  }, [filteredTransacoesV2, transacoesV2, contasMovimento, emprestimos, veiculos, investimentosRF, criptomoedas, stablecoins, objetivos, categoriasV2]);
+  }, [transacoesV2, contasMovimento, emprestimos, veiculos, investimentosRF, criptomoedas, stablecoins, objetivos, categoriasV2]);
 
   const formatPercent = (value: number) => `${value.toFixed(1)}%`;
   const formatRatio = (value: number) => value >= 999 ? "∞" : `${value.toFixed(2)}x`;

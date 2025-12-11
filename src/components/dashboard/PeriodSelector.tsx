@@ -1,12 +1,15 @@
-import { useState, useEffect, useCallback, useMemo } from "react";
-import { ChevronDown, Calendar, X } from "lucide-react";
+import { useState, useEffect, useCallback } from "react";
+import { ChevronDown, Calendar } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Separator } from "@/components/ui/separator";
-import { format, subMonths, startOfMonth, endOfMonth, startOfYear, endOfYear, startOfToday, subDays } from "date-fns";
-import { ptBR } from "date-fns/locale";
+
+// Interface padronizada para range de período
+export interface PeriodRange {
+  startMonth: number | null;
+  startYear: number | null;
+  endMonth: number | null;
+  endYear: number | null;
+}
 
 // Interface para Date range (usado em componentes que esperam Date)
 export interface DateRange {
@@ -14,16 +17,9 @@ export interface DateRange {
   to: Date | undefined;
 }
 
-// Interface para o estado do seletor (Mês/Ano)
-export interface PeriodRange {
-  startMonth: string | null;
-  startYear: string | null;
-  endMonth: string | null;
-  endYear: string | null;
-}
-
 interface PeriodSelectorProps {
   onPeriodChange: (period: PeriodRange) => void;
+  initialPeriod?: PeriodRange;
   tabId: string;
   className?: string;
 }
@@ -43,16 +39,7 @@ const months = [
   { value: 11, label: "Dezembro" },
 ];
 
-const getAvailableYears = () => {
-  const currentYear = new Date().getFullYear();
-  const years = [];
-  for (let year = 2020; year <= currentYear + 1; year++) {
-    years.push(year);
-  }
-  return years;
-};
-
-const yearsOptions = getAvailableYears();
+const years = Array.from({ length: 10 }, (_, i) => 2020 + i);
 
 const presets = [
   { id: "today", label: "Hoje" },
@@ -65,285 +52,291 @@ const presets = [
   { id: "all", label: "Todo o período" },
 ];
 
-// Função para converter PeriodRange (string/null) para DateRange (Date/undefined)
-export const periodToDateRange = (period: PeriodRange): DateRange => {
-  const { startMonth, startYear, endMonth, endYear } = period;
-  
-  let from: Date | undefined;
-  let to: Date | undefined;
+// Função utilitária para converter PeriodRange para DateRange
+export function periodToDateRange(period: PeriodRange): DateRange {
+  if (
+    period.startMonth === null ||
+    period.startYear === null ||
+    period.endMonth === null ||
+    period.endYear === null
+  ) {
+    return { from: undefined, to: undefined };
+  }
 
-  if (startMonth !== null && startYear !== null) {
-    from = startOfMonth(new Date(parseInt(startYear), parseInt(startMonth)));
-  }
-  
-  if (endMonth !== null && endYear !== null) {
-    to = endOfMonth(new Date(parseInt(endYear), parseInt(endMonth)));
-  }
-  
-  // Se apenas um lado for definido, ajusta para o mês inteiro
-  if (from && !to) {
-    to = endOfMonth(from);
-  } else if (to && !from) {
-    from = startOfMonth(to);
-  }
+  const from = new Date(period.startYear, period.startMonth, 1);
+  const to = new Date(period.endYear, period.endMonth + 1, 0); // Last day of month
 
   return { from, to };
-};
+}
 
-// Função para aplicar o preset e retornar o PeriodRange
-const getPeriodRangeFromPreset = (presetId: string): PeriodRange => {
-  const range = getRangeFromPreset(presetId);
-  
-  if (!range.from || !range.to) {
-    return { startMonth: null, startYear: null, endMonth: null, endYear: null };
+// Função utilitária para converter DateRange para PeriodRange
+export function dateRangeToPeriod(dateRange: DateRange): PeriodRange {
+  if (!dateRange.from || !dateRange.to) {
+    return {
+      startMonth: null,
+      startYear: null,
+      endMonth: null,
+      endYear: null,
+    };
   }
-  
+
   return {
-    startMonth: range.from.getMonth().toString(),
-    startYear: range.from.getFullYear().toString(),
-    endMonth: range.to.getMonth().toString(),
-    endYear: range.to.getFullYear().toString(),
+    startMonth: dateRange.from.getMonth(),
+    startYear: dateRange.from.getFullYear(),
+    endMonth: dateRange.to.getMonth(),
+    endYear: dateRange.to.getFullYear(),
   };
-};
-
-// Função para aplicar o preset e retornar o DateRange
-const getRangeFromPreset = (presetId: string): DateRange => {
-  const today = startOfToday();
-  let from: Date | undefined;
-  let to: Date | undefined;
-
-  switch (presetId) {
-    case "today":
-      from = today;
-      to = today;
-      break;
-    case "last7":
-      from = subDays(today, 6);
-      to = today;
-      break;
-    case "last30":
-      from = subDays(today, 29);
-      to = today;
-      break;
-    case "thisMonth":
-      from = startOfMonth(today);
-      to = endOfMonth(today);
-      break;
-    case "lastMonth":
-      from = startOfMonth(subMonths(today, 1));
-      to = endOfMonth(subMonths(today, 1));
-      break;
-    case "last3Months":
-      from = startOfMonth(subMonths(today, 2));
-      to = endOfMonth(today);
-      break;
-    case "thisYear":
-      from = startOfYear(today);
-      to = endOfYear(today);
-      break;
-    case "all":
-      from = undefined;
-      to = undefined;
-      break;
-    default:
-      return { from: undefined, to: undefined };
-  }
-  return { from, to };
-};
-
-// Função para formatar o display do botão
-const formatDateRange = (range: DateRange) => {
-  if (!range.from && !range.to) return "Todo o período";
-  if (!range.from || !range.to) return "Selecione um período";
-
-  const start = range.from;
-  const end = range.to;
-
-  // Se for o mesmo dia, exibe a data
-  if (format(start, 'yyyy-MM-dd') === format(end, 'yyyy-MM-dd')) {
-    return format(start, "dd 'de' MMM yyyy", { locale: ptBR });
-  }
-
-  // Se for o mesmo mês/ano, exibe apenas o mês/ano
-  if (start.getMonth() === end.getMonth() && start.getFullYear() === end.getFullYear()) {
-    return format(start, "MMM yyyy", { locale: ptBR });
-  }
-  
-  // Se for o mesmo ano, exibe Mês - Mês Ano
-  if (start.getFullYear() === end.getFullYear()) {
-    return `${format(start, "MMM", { locale: ptBR })} - ${format(end, "MMM yyyy", { locale: ptBR })}`;
-  }
-
-  // Caso contrário, exibe data completa
-  return `${format(start, "dd/MM/yyyy")} - ${format(end, "dd/MM/yyyy")}`;
-};
+}
 
 export function PeriodSelector({
   onPeriodChange,
+  initialPeriod,
   tabId,
   className,
 }: PeriodSelectorProps) {
+  const [period, setPeriod] = useState<PeriodRange>(
+    initialPeriod || {
+      startMonth: null,
+      startYear: null,
+      endMonth: null,
+      endYear: null,
+    }
+  );
   const [isOpen, setIsOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [selectedPreset, setSelectedPreset] = useState<string>('thisMonth');
-  
-  // Estado interno para Mês/Ano
-  const [startMonth, setStartMonth] = useState<string | null>(null);
-  const [startYear, setStartYear] = useState<string | null>(null);
-  const [endMonth, setEndMonth] = useState<string | null>(null);
-  const [endYear, setEndYear] = useState<string | null>(null);
-  
-  // Estado para o range de datas atual (o que está aplicado)
-  const [currentRange, setCurrentRange] = useState<DateRange>(getRangeFromPreset('thisMonth'));
 
-  // 1. Inicialização e Persistência
+  // Persistência de estado
   useEffect(() => {
-    const savedPeriod = localStorage.getItem(`periodRange-${tabId}`);
+    const savedPeriod = localStorage.getItem(`periodState-${tabId}`);
     if (savedPeriod) {
       try {
-        const parsed = JSON.parse(savedPeriod) as PeriodRange;
-        
-        setStartMonth(parsed.startMonth);
-        setStartYear(parsed.startYear);
-        setEndMonth(parsed.endMonth);
-        setEndYear(parsed.endYear);
-        
-        const range = periodToDateRange(parsed);
-        setCurrentRange(range);
+        const parsed = JSON.parse(savedPeriod);
+        setPeriod(parsed);
         onPeriodChange(parsed);
-        
       } catch (e) {
         console.error("Erro ao carregar período salvo:", e);
-        // Se falhar, aplica o preset 'Este mês'
-        const defaultPeriod = getPeriodRangeFromPreset('thisMonth');
-        const defaultRange = periodToDateRange(defaultPeriod);
-        
-        setStartMonth(defaultPeriod.startMonth);
-        setStartYear(defaultPeriod.startYear);
-        setEndMonth(defaultPeriod.endMonth);
-        setEndYear(defaultPeriod.endYear);
-        
-        setCurrentRange(defaultRange);
-        onPeriodChange(defaultPeriod);
       }
-    } else {
-      // Aplica o preset 'Este mês' se não houver nada salvo
-      const defaultPeriod = getPeriodRangeFromPreset('thisMonth');
-      const defaultRange = periodToDateRange(defaultPeriod);
-      
-      setStartMonth(defaultPeriod.startMonth);
-      setStartYear(defaultPeriod.startYear);
-      setEndMonth(defaultPeriod.endMonth);
-      setEndYear(defaultPeriod.endYear);
-      
-      setCurrentRange(defaultRange);
-      onPeriodChange(defaultPeriod);
     }
-  }, [tabId, onPeriodChange]);
+  }, [tabId]);
 
-  // 2. Função para salvar e aplicar o range
-  const applyPeriod = useCallback((period: PeriodRange) => {
-    const range = periodToDateRange(period);
-    
-    if (range.from && range.to && range.from > range.to) {
-      setError("Período inicial não pode ser posterior ao período final.");
-      return;
-    }
-    
-    setError(null);
-    setCurrentRange(range);
-    onPeriodChange(period);
-    localStorage.setItem(`periodRange-${tabId}`, JSON.stringify(period));
-    setIsOpen(false);
-  }, [onPeriodChange, tabId]);
+  const savePeriod = useCallback(
+    (newPeriod: PeriodRange) => {
+      setPeriod(newPeriod);
+      localStorage.setItem(`periodState-${tabId}`, JSON.stringify(newPeriod));
 
-  // 3. Lógica de aplicação de presets
-  const handleApplyPreset = (presetId: string) => {
-    setSelectedPreset(presetId);
-    const period = getPeriodRangeFromPreset(presetId);
-    
-    setStartMonth(period.startMonth);
-    setStartYear(period.startYear);
-    setEndMonth(period.endMonth);
-    setEndYear(period.endYear);
-    
-    applyPeriod(period);
-  };
-  
-  // 4. Lógica de aplicação de Mês/Ano customizado
-  const handleApplyCustom = () => {
-    const period: PeriodRange = {
-      startMonth,
-      startYear,
-      endMonth,
-      endYear,
+      // Validar período
+      if (
+        newPeriod.startMonth !== null &&
+        newPeriod.startYear !== null &&
+        newPeriod.endMonth !== null &&
+        newPeriod.endYear !== null
+      ) {
+        const startDate = new Date(newPeriod.startYear, newPeriod.startMonth);
+        const endDate = new Date(newPeriod.endYear, newPeriod.endMonth);
+
+        if (startDate > endDate) {
+          setError("Período inicial não pode ser posterior ao período final");
+          return;
+        }
+
+        setError(null);
+        onPeriodChange(newPeriod);
+      } else {
+        // Se qualquer campo estiver vazio, notifica com valores nulos
+        onPeriodChange(newPeriod);
+      }
+    },
+    [onPeriodChange, tabId]
+  );
+
+  const handleMonthChange = (type: "start" | "end", value: string) => {
+    const newPeriod = {
+      ...period,
+      [`${type}Month`]: value ? parseInt(value) : null,
     };
-    
-    applyPeriod(period);
+    savePeriod(newPeriod);
   };
-  
-  // 5. Limpar filtros
-  const handleClear = () => {
-    const period: PeriodRange = { startMonth: null, startYear: null, endMonth: null, endYear: null };
-    setStartMonth(null);
-    setStartYear(null);
-    setEndMonth(null);
-    setEndYear(null);
-    setSelectedPreset('all');
-    applyPeriod(period);
+
+  const handleYearChange = (type: "start" | "end", value: string) => {
+    const newPeriod = {
+      ...period,
+      [`${type}Year`]: value ? parseInt(value) : null,
+    };
+    savePeriod(newPeriod);
+  };
+
+  const applyPreset = (presetId: string) => {
+    const today = new Date();
+    let newPeriod: PeriodRange;
+
+    switch (presetId) {
+      case "today":
+        newPeriod = {
+          startMonth: today.getMonth(),
+          startYear: today.getFullYear(),
+          endMonth: today.getMonth(),
+          endYear: today.getFullYear(),
+        };
+        break;
+      case "last7":
+        const last7 = new Date(today);
+        last7.setDate(last7.getDate() - 7);
+        newPeriod = {
+          startMonth: last7.getMonth(),
+          startYear: last7.getFullYear(),
+          endMonth: today.getMonth(),
+          endYear: today.getFullYear(),
+        };
+        break;
+      case "last30":
+        const last30 = new Date(today);
+        last30.setDate(last30.getDate() - 30);
+        newPeriod = {
+          startMonth: last30.getMonth(),
+          startYear: last30.getFullYear(),
+          endMonth: today.getMonth(),
+          endYear: today.getFullYear(),
+        };
+        break;
+      case "thisMonth":
+        newPeriod = {
+          startMonth: today.getMonth(),
+          startYear: today.getFullYear(),
+          endMonth: today.getMonth(),
+          endYear: today.getFullYear(),
+        };
+        break;
+      case "lastMonth":
+        const lastMonth = new Date(today);
+        lastMonth.setMonth(lastMonth.getMonth() - 1);
+        newPeriod = {
+          startMonth: lastMonth.getMonth(),
+          startYear: lastMonth.getFullYear(),
+          endMonth: lastMonth.getMonth(),
+          endYear: lastMonth.getFullYear(),
+        };
+        break;
+      case "last3Months":
+        const last3Months = new Date(today);
+        last3Months.setMonth(last3Months.getMonth() - 3);
+        newPeriod = {
+          startMonth: last3Months.getMonth(),
+          startYear: last3Months.getFullYear(),
+          endMonth: today.getMonth(),
+          endYear: today.getFullYear(),
+        };
+        break;
+      case "thisYear":
+        newPeriod = {
+          startMonth: 0,
+          startYear: today.getFullYear(),
+          endMonth: 11,
+          endYear: today.getFullYear(),
+        };
+        break;
+      case "all":
+        newPeriod = {
+          startMonth: 0,
+          startYear: 2020,
+          endMonth: 11,
+          endYear: 2030,
+        };
+        break;
+      default:
+        return;
+    }
+
+    savePeriod(newPeriod);
+    setIsOpen(false);
+  };
+
+  const formatPeriod = () => {
+    if (
+      period.startMonth === null ||
+      period.startYear === null ||
+      period.endMonth === null ||
+      period.endYear === null
+    ) {
+      return "Selecione um período";
+    }
+
+    const startMonth =
+      months.find((m) => m.value === period.startMonth)?.label || "";
+    const endMonth =
+      months.find((m) => m.value === period.endMonth)?.label || "";
+
+    if (
+      period.startMonth === period.endMonth &&
+      period.startYear === period.endYear
+    ) {
+      return `${startMonth} ${period.startYear}`;
+    }
+
+    return `${startMonth} ${period.startYear} - ${endMonth} ${period.endYear}`;
+  };
+
+  const clearPeriod = () => {
+    const emptyPeriod: PeriodRange = {
+      startMonth: null,
+      startYear: null,
+      endMonth: null,
+      endYear: null,
+    };
+    savePeriod(emptyPeriod);
+    setIsOpen(false);
   };
 
   return (
-    <Popover open={isOpen} onOpenChange={setIsOpen}>
-      <PopoverTrigger asChild>
+    <div className={cn("relative", className)}>
+      <div className="flex items-center gap-2">
         <Button
           variant="outline"
           className={cn(
-            "flex items-center gap-2 bg-muted border-border h-9 px-3 py-2 text-sm w-[280px] justify-start",
-            className,
+            "flex items-center gap-2 bg-muted border-border h-9 px-3 py-2 text-sm",
             error && "border-destructive"
           )}
+          onClick={() => setIsOpen(!isOpen)}
         >
           <Calendar className="w-4 h-4" />
-          <span className="truncate">{formatDateRange(currentRange)}</span>
+          <span>{formatPeriod()}</span>
           <ChevronDown
-            className={cn("w-4 h-4 ml-auto transition-transform", isOpen && "rotate-180")}
+            className={cn("w-4 h-4 transition-transform", isOpen && "rotate-180")}
           />
         </Button>
-      </PopoverTrigger>
-      <PopoverContent className="w-[500px] p-4 bg-card border-border" align="end">
-        <div className="space-y-4">
-          {/* Seleção Mês/Ano */}
-          <div className="grid grid-cols-2 gap-4">
+      </div>
+
+      {isOpen && (
+        <div className="absolute right-0 top-full mt-2 w-[500px] z-50 bg-card border border-border rounded-lg shadow-lg p-4">
+          <div className="grid grid-cols-2 gap-4 mb-4">
             <div>
               <label className="block text-xs font-medium text-muted-foreground mb-2">
                 Período Inicial
               </label>
               <div className="flex gap-2">
-                <Select value={startMonth || ''} onValueChange={setStartMonth}>
-                  <SelectTrigger className="flex-1 bg-muted border-border h-9">
-                    <SelectValue placeholder="Mês" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {months.map((month) => (
-                      <SelectItem key={month.value} value={month.value.toString()}>
-                        {month.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <Select value={startYear || ''} onValueChange={setStartYear}>
-                  <SelectTrigger className="flex-1 bg-muted border-border h-9">
-                    <SelectValue placeholder="Ano" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {yearsOptions.map((year) => (
-                      <SelectItem key={year} value={year.toString()}>
-                        {year}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <select
+                  value={period.startMonth ?? ""}
+                  onChange={(e) => handleMonthChange("start", e.target.value)}
+                  className="flex-1 bg-muted border border-border rounded-md px-3 py-2 text-sm"
+                >
+                  <option value="">Mês</option>
+                  {months.map((month) => (
+                    <option key={month.value} value={month.value}>
+                      {month.label}
+                    </option>
+                  ))}
+                </select>
+                <select
+                  value={period.startYear ?? ""}
+                  onChange={(e) => handleYearChange("start", e.target.value)}
+                  className="flex-1 bg-muted border border-border rounded-md px-3 py-2 text-sm"
+                >
+                  <option value="">Ano</option>
+                  {years.map((year) => (
+                    <option key={year} value={year}>
+                      {year}
+                    </option>
+                  ))}
+                </select>
               </div>
             </div>
 
@@ -352,85 +345,66 @@ export function PeriodSelector({
                 Período Final
               </label>
               <div className="flex gap-2">
-                <Select value={endMonth || ''} onValueChange={setEndMonth}>
-                  <SelectTrigger className="flex-1 bg-muted border-border h-9">
-                    <SelectValue placeholder="Mês" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {months.map((month) => (
-                      <SelectItem key={month.value} value={month.value.toString()}>
-                        {month.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <Select value={endYear || ''} onValueChange={setEndYear}>
-                  <SelectTrigger className="flex-1 bg-muted border-border h-9">
-                    <SelectValue placeholder="Ano" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {yearsOptions.map((year) => (
-                      <SelectItem key={year} value={year.toString()}>
-                        {year}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <select
+                  value={period.endMonth ?? ""}
+                  onChange={(e) => handleMonthChange("end", e.target.value)}
+                  className="flex-1 bg-muted border border-border rounded-md px-3 py-2 text-sm"
+                >
+                  <option value="">Mês</option>
+                  {months.map((month) => (
+                    <option key={month.value} value={month.value}>
+                      {month.label}
+                    </option>
+                  ))}
+                </select>
+                <select
+                  value={period.endYear ?? ""}
+                  onChange={(e) => handleYearChange("end", e.target.value)}
+                  className="flex-1 bg-muted border border-border rounded-md px-3 py-2 text-sm"
+                >
+                  <option value="">Ano</option>
+                  {years.map((year) => (
+                    <option key={year} value={year}>
+                      {year}
+                    </option>
+                  ))}
+                </select>
               </div>
             </div>
           </div>
-          
-          <Button 
-            onClick={handleApplyCustom} 
-            className="w-full h-9"
-            disabled={!startMonth || !startYear || !endMonth || !endYear}
-          >
-            Aplicar Período Customizado
-          </Button>
 
           {error && (
-            <div className="p-2 bg-destructive/10 text-destructive text-xs rounded">
+            <div className="mb-4 p-2 bg-destructive/10 text-destructive text-xs rounded">
               {error}
             </div>
           )}
 
-          <Separator />
-
-          {/* Presets */}
-          <div>
+          <div className="mb-4">
             <label className="block text-xs font-medium text-muted-foreground mb-2">
               Períodos Pré-definidos
             </label>
             <div className="grid grid-cols-4 gap-2">
-              {presets.map((preset) => {
-                const range = getRangeFromPreset(preset.id);
-                const isSelected = currentRange.from && currentRange.to && 
-                                   range.from && range.to &&
-                                   formatDateRange(currentRange) === formatDateRange(range);
-                                   
-                return (
-                  <Button
-                    key={preset.id}
-                    variant={isSelected ? "default" : "outline"}
-                    size="sm"
-                    className="text-xs h-8"
-                    onClick={() => handleApplyPreset(preset.id)}
-                  >
-                    {preset.label}
-                  </Button>
-                );
-              })}
+              {presets.map((preset) => (
+                <Button
+                  key={preset.id}
+                  variant="outline"
+                  size="sm"
+                  className="text-xs h-8"
+                  onClick={() => applyPreset(preset.id)}
+                >
+                  {preset.label}
+                </Button>
+              ))}
             </div>
           </div>
 
-          <div className="flex justify-end gap-2 pt-2">
+          <div className="flex justify-end gap-2">
             <Button
               variant="ghost"
               size="sm"
-              onClick={handleClear}
-              className="text-xs gap-1"
+              onClick={clearPeriod}
+              className="text-xs"
             >
-              <X className="w-3 h-3" />
               Limpar
             </Button>
             <Button
@@ -443,7 +417,7 @@ export function PeriodSelector({
             </Button>
           </div>
         </div>
-      </PopoverContent>
-    </Popover>
+      )}
+    </div>
   );
 }

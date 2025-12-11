@@ -43,8 +43,7 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
 import { format, subMonths, startOfMonth, endOfMonth, parseISO, isWithinInterval } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { CATEGORY_NATURE_LABELS, TransacaoCompleta } from "@/types/finance";
-import { DateRange } from "../dashboard/PeriodSelector";
+import { CATEGORY_NATURE_LABELS } from "@/types/finance";
 
 const COLORS = {
   success: "hsl(142, 76%, 36%)",
@@ -137,22 +136,7 @@ function DREItem({ label, value, type, level = 0, icon, subItems }: DREItemProps
 // Define o tipo de status esperado pelos componentes ReportCard e IndicatorBadge
 type KPIStatus = "success" | "warning" | "danger" | "neutral";
 
-interface DRETabProps {
-  dateRange: DateRange;
-}
-
-// Função auxiliar para calcular o resultado (Receitas - Despesas)
-const calcularResultado = (transacoes: TransacaoCompleta[]) => {
-  const entradas = transacoes
-    .filter(t => t.flow === 'in' && t.operationType !== 'transferencia' && t.operationType !== 'liberacao_emprestimo')
-    .reduce((acc, t) => acc + t.amount, 0);
-  const saidas = transacoes
-    .filter(t => t.flow === 'out' && t.operationType !== 'transferencia' && t.operationType !== 'aplicacao')
-    .reduce((acc, t) => acc + t.amount, 0);
-  return entradas - saidas;
-};
-
-export function DRETab({ dateRange }: DRETabProps) {
+export function DRETab() {
   const {
     transacoesV2,
     categoriasV2,
@@ -160,23 +144,36 @@ export function DRETab({ dateRange }: DRETabProps) {
     emprestimos,
   } = useFinance();
 
+  const [periodo, setPeriodo] = useState<"mensal" | "trimestral" | "anual">("anual");
+
   // Cálculos da DRE
   const dre = useMemo(() => {
     const now = new Date();
-    const mesAnterior = format(subMonths(now, 1), 'yyyy-MM');
+    const mesAtual = format(now, 'yyyy-MM');
 
     // Definir período de análise
-    const dataInicio = dateRange.from || subMonths(startOfMonth(now), 11);
-    const dataFim = dateRange.to || endOfMonth(now);
+    let dataInicio: Date;
+    let dataFim: Date = now;
     
-    const endOfDay = new Date(dataFim);
-    endOfDay.setHours(23, 59, 59, 999);
+    switch (periodo) {
+      case "mensal":
+        dataInicio = startOfMonth(now);
+        dataFim = endOfMonth(now);
+        break;
+      case "trimestral":
+        dataInicio = subMonths(startOfMonth(now), 2);
+        break;
+      case "anual":
+      default:
+        dataInicio = subMonths(startOfMonth(now), 11);
+        break;
+    }
 
     // Filtrar transações do período
     const transacoesPeriodo = transacoesV2.filter(t => {
       try {
         const dataT = parseISO(t.date);
-        return isWithinInterval(dataT, { start: dataInicio, end: endOfDay });
+        return isWithinInterval(dataT, { start: dataInicio, end: dataFim });
       } catch {
         return false;
       }
@@ -296,13 +293,6 @@ export function DRETab({ dateRange }: DRETabProps) {
     const indiceEficiencia = totalReceitas > 0 ? (totalDespesas / totalReceitas) * 100 : 0;
     const comprometimentoFixo = totalReceitas > 0 ? (totalDespesasFixas / totalReceitas) * 100 : 0;
 
-    // Comparação com o mês anterior (para variação)
-    const transacoesMesAnterior = transacoesV2.filter(t => t.date.startsWith(mesAnterior));
-    const resultadoMesAnterior = calcularResultado(transacoesMesAnterior);
-    const variacaoResultado = resultadoMesAnterior !== 0
-      ? ((resultadoLiquido - resultadoMesAnterior) / Math.abs(resultadoMesAnterior)) * 100
-      : resultadoLiquido > 0 ? 100 : 0;
-
     return {
       receitas: {
         total: totalReceitas,
@@ -350,9 +340,8 @@ export function DRETab({ dateRange }: DRETabProps) {
         inicio: format(dataInicio, 'dd/MM/yyyy'),
         fim: format(dataFim, 'dd/MM/yyyy'),
       },
-      variacaoResultado,
     };
-  }, [transacoesV2, categoriasV2, emprestimos, dateRange]);
+  }, [transacoesV2, categoriasV2, emprestimos, periodo]);
 
   const formatCurrency = (value: number) => `R$ ${value.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`;
   const formatPercent = (value: number) => `${value.toFixed(1)}%`;
@@ -360,10 +349,10 @@ export function DRETab({ dateRange }: DRETabProps) {
   // Dados para gráficos
   const dadosComparativo = dre.evolucaoMensal.filter(m => m.receitas > 0 || m.despesas > 0);
   
-  const despesasPorTipo: { name: string; value: number; tipo: 'fixa' | 'variavel'; color: string }[] = ([
-    { name: "Despesas Fixas", value: dre.despesas.fixas.total, tipo: 'fixa', color: COLORS.warning },
-    { name: "Despesas Variáveis", value: dre.despesas.variaveis.total, tipo: 'variavel', color: COLORS.danger },
-  ] as { name: string; value: number; tipo: 'fixa' | 'variavel'; color: string }[]).filter(d => d.value > 0);
+  const despesasPorTipo = [
+    { name: "Despesas Fixas", value: dre.despesas.fixas.total, color: COLORS.warning },
+    { name: "Despesas Variáveis", value: dre.despesas.variaveis.total, color: COLORS.danger },
+  ].filter(d => d.value > 0);
 
   const todasDespesas = [
     ...dre.despesas.fixas.porCategoria.map(d => ({ ...d, tipo: 'fixa' })),
@@ -427,30 +416,33 @@ export function DRETab({ dateRange }: DRETabProps) {
           delay={200}
         />
         <ReportCard
-          title="Variação Resultado"
-          value={formatPercent(dre.variacaoResultado)}
-          trend={dre.variacaoResultado}
-          trendLabel="mês anterior"
-          status={dre.variacaoResultado >= 0 ? "success" : "danger"}
+          title="Margem Líquida"
+          value={formatPercent(dre.kpis.margemLiquida.valor)}
+          status={dre.kpis.margemLiquida.status}
           icon={<Percent className="w-5 h-5" />}
-          tooltip="Variação do resultado líquido comparado ao mês anterior"
+          tooltip="Percentual do lucro em relação à receita total"
           delay={250}
         />
       </div>
 
-      {/* Filtro de Período (Removido, agora usa DateRangePicker) */}
+      {/* Filtro de Período */}
       <div className="flex items-center justify-between flex-wrap gap-4">
         <div className="text-sm text-muted-foreground">
           Período: <span className="font-medium text-foreground">{dre.periodo.inicio}</span> a <span className="font-medium text-foreground">{dre.periodo.fim}</span>
         </div>
-        {/* Placeholder para manter o layout, mas o filtro é externo */}
-        <div className="flex items-center gap-2">
+        <Tabs value={periodo} onValueChange={(v) => setPeriodo(v as any)}>
           <TabsList className="bg-muted/50">
-            <TabsTrigger value="mensal" disabled className="text-xs">Mensal</TabsTrigger>
-            <TabsTrigger value="trimestral" disabled className="text-xs">Trimestral</TabsTrigger>
-            <TabsTrigger value="anual" disabled className="text-xs">Anual</TabsTrigger>
+            <TabsTrigger value="mensal" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+              Mensal
+            </TabsTrigger>
+            <TabsTrigger value="trimestral" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+              Trimestral
+            </TabsTrigger>
+            <TabsTrigger value="anual" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+              Anual
+            </TabsTrigger>
           </TabsList>
-        </div>
+        </Tabs>
       </div>
 
       {/* DRE Estruturada */}
@@ -651,7 +643,7 @@ export function DRETab({ dateRange }: DRETabProps) {
                     label={({ name, percent }) => `${(percent * 100).toFixed(0)}%`}
                   >
                     {despesasPorTipo.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.tipo === 'fixa' ? COLORS.warning : COLORS.danger} />
+                      <Cell key={`cell-${index}`} fill={entry.color} />
                     ))}
                   </Pie>
                   <Tooltip

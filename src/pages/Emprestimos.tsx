@@ -12,7 +12,7 @@ import { LoanForm } from "@/components/loans/LoanForm";
 import { LoanAlerts } from "@/components/loans/LoanAlerts";
 import { LoanCharts } from "@/components/loans/LoanCharts";
 import { LoanDetailDialog } from "@/components/loans/LoanDetailDialog";
-import { DateRangePicker, DateRange } from "@/components/dashboard/DateRangePicker";
+import { PeriodSelector, PeriodRange, periodToDateRange } from "@/components/dashboard/PeriodSelector";
 import { cn } from "@/lib/utils";
 
 const Emprestimos = () => {
@@ -29,33 +29,27 @@ const Emprestimos = () => {
   
   const [selectedLoan, setSelectedLoan] = useState<Emprestimo | null>(null);
   const [detailDialogOpen, setDetailDialogOpen] = useState(false);
-  const [dateRange, setDateRange] = useState<DateRange>({ from: undefined, to: undefined });
+  const [periodRange, setPeriodRange] = useState<PeriodRange>({
+    startMonth: null,
+    startYear: null,
+    endMonth: null,
+    endYear: null,
+  });
 
-  const handleDateRangeChange = useCallback((range: DateRange) => {
-    setDateRange(range);
+  const handlePeriodChange = useCallback((period: PeriodRange) => {
+    setPeriodRange(period);
   }, []);
+
+  const dateRange = useMemo(() => periodToDateRange(periodRange), [periodRange]);
 
   // Get pending loans from liberações
   const pendingLoans = getPendingLoans();
   const contasCorrentes = getContasCorrentesTipo();
 
-  // Filter emprestimos by date range (filter only active loans that started within the range)
+  // Filter emprestimos by date range
   const filteredEmprestimos = useMemo(() => {
-    if (!dateRange.from || !dateRange.to) {
-      return emprestimos.filter(e => e.status !== 'pendente_config');
-    }
-    
-    const endOfDay = new Date(dateRange.to);
-    endOfDay.setHours(23, 59, 59, 999);
-
-    return emprestimos.filter(e => {
-      if (e.status === 'pendente_config') return false;
-      if (!e.dataInicio) return true; // Inclui se não tiver data de início (assumindo antigo)
-      
-      const startDate = new Date(e.dataInicio);
-      return startDate >= dateRange.from! && startDate <= endOfDay;
-    });
-  }, [emprestimos, dateRange]);
+    return emprestimos.filter(e => e.status !== 'pendente_config');
+  }, [emprestimos]);
 
   // Get payment transactions for each loan
   const loanPayments = useMemo(() => {
@@ -63,7 +57,7 @@ const Emprestimos = () => {
     
     transacoesV2.forEach(t => {
       if (t.operationType === 'pagamento_emprestimo' && t.links?.loanId) {
-        const loanId = parseInt(t.links.loanId.replace('loan_', ''));
+        const loanId = parseInt(t.links.loanId);
         if (!payments[loanId]) {
           payments[loanId] = { count: 0, total: 0 };
         }
@@ -188,11 +182,10 @@ const Emprestimos = () => {
             </p>
           </div>
           <div className="flex items-center gap-3">
-            <DateRangePicker 
+            <PeriodSelector 
               tabId="emprestimos" 
-              onDateRangeChange={handleDateRangeChange} 
+              onPeriodChange={handlePeriodChange} 
             />
-            <LoanForm onSubmit={handleAddLoan} contasCorrentes={contasCorrentes} />
           </div>
         </div>
 
@@ -314,7 +307,7 @@ const Emprestimos = () => {
 
         {/* Layout Principal */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Coluna esquerda - Alertas */}
+          {/* Coluna Esquerda - Alertas */}
           <div className="space-y-6">
             <LoanAlerts emprestimos={filteredEmprestimos} className="animate-fade-in-up" />
             

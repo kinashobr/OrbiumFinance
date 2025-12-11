@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { CartesianGrid, Tooltip, ResponsiveContainer, Legend, AreaChart, Area, XAxis, YAxis } from "recharts";
 import { cn } from "@/lib/utils";
-// Removed unused import: useFinance
+import { useFinance } from "@/contexts/FinanceContext";
 
 interface EvolucaoData {
   mes: string;
@@ -27,7 +27,7 @@ const lineOptions = [
 ];
 
 export function EvolucaoPatrimonialChart({ data }: EvolucaoPatrimonialChartProps) {
-  // Removed unused context imports
+  const { transacoes, emprestimos, veiculos, investimentosRF, criptomoedas, stablecoins, objetivos } = useFinance();
   const [periodo, setPeriodo] = useState("12m");
   const [activeLines, setActiveLines] = useState<Set<string>>(
     new Set(["patrimonioTotal", "receitas", "despesas"])
@@ -42,17 +42,38 @@ export function EvolucaoPatrimonialChart({ data }: EvolucaoPatrimonialChartProps
     });
   };
 
-  // Use the data prop directly, which is already filtered by the parent component (Index.tsx)
+  const filteredData = useMemo(() => {
+    const meses = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
+    const now = new Date();
+    const currentYear = now.getFullYear();
+    
+    return meses.slice(0, 12).map((mes, i) => {
+      const mesNum = String(i + 1).padStart(2, "0");
+      const transacoesMes = transacoes.filter(t => t.data.includes(`-${mesNum}-`));
+      
+      const receitas = transacoesMes.filter(t => t.tipo === "receita").reduce((acc, t) => acc + t.valor, 0);
+      const despesas = transacoesMes.filter(t => t.tipo === "despesa").reduce((acc, t) => acc + t.valor, 0);
+      
+      const totalInvestimentos = investimentosRF.reduce((acc, inv) => acc + inv.valor, 0) +
+        criptomoedas.reduce((acc, c) => acc + c.valorBRL, 0) +
+        stablecoins.reduce((acc, s) => acc + s.valorBRL, 0) +
+        objetivos.reduce((acc, o) => acc + o.atual, 0);
+      
+      const totalDividas = emprestimos.reduce((acc, e) => acc + e.valorTotal * 0.7, 0);
+      const patrimonioTotal = totalInvestimentos + veiculos.reduce((acc, v) => acc + v.valorFipe, 0);
+      
+      return { mes, patrimonioTotal, receitas, despesas, investimentos: totalInvestimentos, dividas: Math.max(totalDividas, 0) };
+    });
+  }, [transacoes, emprestimos, veiculos, investimentosRF, criptomoedas, stablecoins, objetivos]);
+
   const dataToShow = useMemo(() => {
-    // The data array is expected to contain 12 months of data (or less if filtered by the parent).
-    // We slice based on the end of the array to show the most recent months available in the data prop.
     switch (periodo) {
-      case "3m": return data.slice(-3);
-      case "6m": return data.slice(-6);
-      case "12m": return data;
-      default: return data;
+      case "3m": return filteredData.slice(-3);
+      case "6m": return filteredData.slice(-6);
+      case "12m": return filteredData;
+      default: return filteredData;
     }
-  }, [data, periodo]);
+  }, [filteredData, periodo]);
 
   return (
     <div className="glass-card p-5 animate-fade-in-up">
@@ -97,7 +118,7 @@ export function EvolucaoPatrimonialChart({ data }: EvolucaoPatrimonialChartProps
                 <linearGradient key={line.id} id={`gradient-${line.id}`} x1="0" y1="0" x2="0" y2="1">
                   <stop offset="5%" stopColor={line.color} stopOpacity={0.3} />
                   <stop offset="95%" stopColor={line.color} stopOpacity={0} />
-                  </linearGradient>
+                </linearGradient>
               ))}
             </defs>
             <CartesianGrid strokeDasharray="3 3" stroke="hsl(220, 20%, 18%)" vertical={false} />

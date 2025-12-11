@@ -86,14 +86,14 @@ const ReceitasDespesas = () => {
   const dateRange = useMemo(() => periodToDateRange(periodRange), [periodRange]);
 
   // Helper function to calculate balance up to a specific date (exclusive)
-  const calculateBalanceUpToDate = useCallback((accountId: string, date: Date, allTransactions: TransacaoCompleta[], accounts: ContaCorrente[]): number => {
+  const calculateBalanceUpToDate = useCallback((accountId: string, date: Date | undefined, allTransactions: TransacaoCompleta[], accounts: ContaCorrente[]): number => {
     const account = accounts.find(a => a.id === accountId);
     if (!account) return 0;
 
     let balance = account.initialBalance;
     
-    // The target date is the start of the period (exclusive)
-    const targetDate = date; 
+    // If no date is provided, calculate global balance (end of all history)
+    const targetDate = date || new Date(9999, 11, 31);
 
     const transactionsBeforeDate = allTransactions
         .filter(t => t.accountId === accountId && new Date(t.date) < targetDate)
@@ -146,27 +146,18 @@ const ReceitasDespesas = () => {
     const periodStart = dateRange.from;
     const periodEnd = dateRange.to;
     
-    const isAllPeriod = !periodStart && !periodEnd; // Check if "Todo o período" is selected
-
     return accounts.map(account => {
-      // 1. Calculate Period Initial Balance
-      const periodInitialBalance = isAllPeriod
-        ? account.initialBalance // If all period, start from the account's initial balance
-        : calculateBalanceUpToDate(account.id, periodStart!, transactions, accounts); // Otherwise, calculate balance up to period start
+      // 1. Calculate Period Initial Balance (balance right before periodStart)
+      const periodInitialBalance = periodStart 
+        ? calculateBalanceUpToDate(account.id, periodStart, transactions, accounts)
+        : calculateBalanceUpToDate(account.id, undefined, transactions, accounts); // If no period selected, show global current balance as initial balance (end of all history)
 
-      // 2. Calculate Period Transactions
+      // 2. Calculate Period Transactions (transactions within the selected period)
       const accountTxInPeriod = transactions.filter(t => {
         if (t.accountId !== account.id) return false;
         const transactionDate = new Date(t.date);
-        
-        // If all period, include all transactions
-        if (isAllPeriod) return true;
-        
-        // Otherwise, filter by date range
-        const endOfDay = new Date(periodEnd!);
-        endOfDay.setHours(23, 59, 59, 999);
-        
-        return transactionDate >= periodStart! && transactionDate <= endOfDay;
+        return (!periodStart || transactionDate >= periodStart) && 
+               (!periodEnd || transactionDate <= periodEnd);
       });
 
       // 3. Calculate Period Totals
@@ -177,12 +168,14 @@ const ReceitasDespesas = () => {
         const isCreditCard = account.accountType === 'cartao_credito';
         
         if (isCreditCard) {
+          // Cartão de Crédito: Despesa (out) é uma saída, Transferência (in) é uma entrada
           if (t.operationType === 'despesa') {
             totalOut += t.amount;
           } else if (t.operationType === 'transferencia') {
             totalIn += t.amount;
           }
         } else {
+          // Contas normais
           if (t.flow === 'in' || t.flow === 'transfer_in') {
             totalIn += t.amount;
           } else {
@@ -353,13 +346,15 @@ const ReceitasDespesas = () => {
         
         // 2. Transação de ENTRADA (Conta de Investimento)
         const incomingTx: TransacaoCompleta = {
-          ...transaction,
           id: generateTransactionId(),
+          date: transaction.date,
           accountId: transaction.links.investmentId, // Conta de investimento
           flow: 'in',
           operationType: 'aplicacao',
           domain: 'investment',
+          amount: transaction.amount,
           categoryId: null,
+          description: transaction.description || `Aplicação recebida de conta corrente`,
           links: {
             investmentId: transaction.accountId, // Referência à conta origem
             loanId: null,
@@ -367,7 +362,6 @@ const ReceitasDespesas = () => {
             parcelaId: null,
             vehicleTransactionId: null,
           },
-          description: transaction.description || `Aplicação recebida de conta corrente`,
           conciliated: false,
           attachments: [],
           meta: {
@@ -389,13 +383,15 @@ const ReceitasDespesas = () => {
         
         // 2. Transação de SAÍDA (Conta de Investimento)
         const outgoingTx: TransacaoCompleta = {
-          ...transaction,
           id: generateTransactionId(),
+          date: transaction.date,
           accountId: transaction.links.investmentId, // Conta de investimento
           flow: 'out',
           operationType: 'resgate',
           domain: 'investment',
+          amount: transaction.amount,
           categoryId: null,
+          description: transaction.description || `Resgate enviado para conta corrente`,
           links: {
             investmentId: transaction.accountId, // Referência à conta destino
             loanId: null,
@@ -403,7 +399,6 @@ const ReceitasDespesas = () => {
             parcelaId: null,
             vehicleTransactionId: null,
           },
-          description: transaction.description || `Resgate enviado para conta corrente`,
           conciliated: false,
           attachments: [],
             meta: {
