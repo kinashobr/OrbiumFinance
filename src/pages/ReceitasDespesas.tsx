@@ -37,6 +37,7 @@ const ReceitasDespesas = () => {
     emprestimos,
     addEmprestimo,
     markLoanParcelPaid,
+    unmarkLoanParcelPaid, // Importado
     veiculos,
     addVeiculo,
     investimentosRF,
@@ -370,12 +371,22 @@ const ReceitasDespesas = () => {
     const handleDeleteTransaction = (id: string) => {
       if (!confirm("Excluir esta transação?")) return;
       
-      // Find if this transaction is part of a linked group (transfer, aplicacao, resgate)
+      // 1. Encontrar a transação a ser excluída
       const transactionToDelete = transacoesV2.find(t => t.id === id);
+      
+      // 2. Reverter status de pagamento de empréstimo, se aplicável
+      if (transactionToDelete?.operationType === 'pagamento_emprestimo' && transactionToDelete.links?.loanId) {
+        const loanIdNum = parseInt(transactionToDelete.links.loanId.replace('loan_', ''));
+        if (!isNaN(loanIdNum)) {
+          unmarkLoanParcelPaid(loanIdNum);
+        }
+      }
+      
+      // 3. Excluir a transação e seus vínculos (partida dobrada)
       const linkedGroupId = transactionToDelete?.links?.transferGroupId;
       
       if (linkedGroupId) {
-        // Delete both sides of the linked transaction (partida dobrada)
+        // Delete both sides of the linked transaction (transfer, aplicacao, resgate)
         setTransacoesV2(transacoesV2.filter(t => t.links?.transferGroupId !== linkedGroupId));
         toast.success("Transações vinculadas excluídas");
       } else {

@@ -170,6 +170,7 @@ interface FinanceContextType {
   deleteEmprestimo: (id: number) => void;
   getPendingLoans: () => Emprestimo[];
   markLoanParcelPaid: (loanId: number, valorPago: number, dataPagamento: string, parcelaNumero?: number) => void;
+  unmarkLoanParcelPaid: (loanId: number) => void; // Nova função
   
   // Veículos
   veiculos: Veiculo[];
@@ -445,6 +446,21 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
         ...e,
         parcelasPagas,
         status: parcelasPagas >= e.meses ? 'quitado' : e.status,
+      };
+    }));
+  }, []);
+  
+  // Unmark a loan parcel as paid (revert payment)
+  const unmarkLoanParcelPaid = useCallback((loanId: number) => {
+    setEmprestimos(prev => prev.map(e => {
+      if (e.id !== loanId) return e;
+      
+      const parcelasPagas = Math.max(0, (e.parcelasPagas || 0) - 1);
+      
+      return {
+        ...e,
+        parcelasPagas,
+        status: 'ativo', // Reverte para ativo se estava quitado
       };
     }));
   }, []);
@@ -762,6 +778,7 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     deleteEmprestimo,
     getPendingLoans,
     markLoanParcelPaid,
+    unmarkLoanParcelPaid, // Adicionado
     veiculos,
     addVeiculo,
     updateVeiculo,
