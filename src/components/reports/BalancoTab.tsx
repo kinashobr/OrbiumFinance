@@ -17,6 +17,7 @@ import {
   ShieldCheck,
   AlertTriangle,
   ChevronRight,
+  Droplets,
 } from "lucide-react";
 import {
   AreaChart,
@@ -39,6 +40,7 @@ import { useFinance } from "@/contexts/FinanceContext";
 import { ReportCard } from "./ReportCard";
 import { ExpandablePanel } from "./ExpandablePanel";
 import { IndicatorBadge } from "./IndicatorBadge";
+import { DetailedIndicatorBadge } from "./DetailedIndicatorBadge";
 import {
   Table,
   TableBody,
@@ -340,6 +342,18 @@ export function BalancoTab() {
   const formatPercent = (value: number) => `${value.toFixed(1)}%`;
   const formatRatio = (value: number) => value >= 999 ? "∞" : `${value.toFixed(2)}x`;
 
+  // Sparkline generator (copiado de IndicadoresTab para consistência)
+  const generateSparkline = (current: number, trend: "up" | "down" | "stable" = "stable") => {
+    const base = Math.abs(current) * 0.7;
+    const range = Math.abs(current) * 0.3 || 10;
+    return Array.from({ length: 6 }, (_, i) => {
+      const progress = i / 5;
+      if (trend === "up") return base + range * progress + Math.random() * range * 0.2;
+      if (trend === "down") return base + range * (1 - progress) + Math.random() * range * 0.2;
+      return base + range * 0.5 + (Math.random() - 0.5) * range * 0.4;
+    }).concat([Math.abs(current)]);
+  };
+
   return (
     <div className="space-y-6">
       {/* Cards Superiores */}
@@ -638,10 +652,10 @@ export function BalancoTab() {
                   <TableCell className={cn("text-right font-medium", balanco.patrimonioLiquido >= 0 ? "text-success" : "text-destructive")}>
                     {formatCurrency(balanco.patrimonioLiquido)}
                   </TableCell>
-                  <TableCell className="text-right text-muted-foreground">
-                    {balanco.ativos.total > 0 ? formatPercent((balanco.patrimonioLiquido / balanco.ativos.total) * 100) : "0%"}
-                  </TableCell>
-                </TableRow>
+                    <TableCell className="text-right text-muted-foreground">
+                      {balanco.ativos.total > 0 ? formatPercent((balanco.patrimonioLiquido / balanco.ativos.total) * 100) : "0%"}
+                    </TableCell>
+                  </TableRow>
 
                 {/* TOTAL PASSIVO + PL */}
                 <TableRow className="border-border bg-primary/10">
@@ -744,58 +758,64 @@ export function BalancoTab() {
         icon={<Landmark className="w-4 h-4" />}
       >
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          <IndicatorBadge
+          <DetailedIndicatorBadge
             title="PL / Total de Ativos"
             value={formatPercent(metricas.plAtivos.valor)}
             status={metricas.plAtivos.status}
             trend={metricas.plAtivos.valor >= 50 ? "up" : "down"}
-            tooltip="Indica quanto do patrimônio é efetivamente seu. Ideal: acima de 50%"
-            sparklineData={[40, 45, 42, 48, 52, 50, metricas.plAtivos.valor]}
+            descricao="Indica quanto do patrimônio é efetivamente seu. Ideal: acima de 50%"
+            formula="(Patrimônio Líquido / Ativo Total) × 100"
+            sparklineData={generateSparkline(metricas.plAtivos.valor, metricas.plAtivos.valor >= 50 ? "up" : "down")}
             icon={<Scale className="w-4 h-4" />}
           />
-          <IndicatorBadge
+          <DetailedIndicatorBadge
             title="Liquidez Geral"
             value={formatRatio(metricas.liquidezGeral.valor)}
             status={metricas.liquidezGeral.status}
             trend={metricas.liquidezGeral.valor >= 2 ? "up" : "down"}
-            tooltip="Capacidade de pagar todas as dívidas. Ideal: acima de 2x"
-            sparklineData={[1.5, 1.7, 1.8, 1.6, 2.0, 2.2, metricas.liquidezGeral.valor]}
+            descricao="Capacidade de pagar todas as dívidas. Ideal: acima de 2x"
+            formula="Ativo Total / Passivo Total"
+            sparklineData={generateSparkline(metricas.liquidezGeral.valor, metricas.liquidezGeral.valor >= 2 ? "up" : "down")}
             icon={<Droplets className="w-4 h-4" />}
           />
-          <IndicatorBadge
+          <DetailedIndicatorBadge
             title="Liquidez Corrente"
             value={formatRatio(metricas.liquidezCorrente.valor)}
             status={metricas.liquidezCorrente.status}
             trend={metricas.liquidezCorrente.valor >= 1.5 ? "up" : "down"}
-            tooltip="Capacidade de pagar dívidas de curto prazo. Ideal: acima de 1.5x"
-            sparklineData={[1.0, 1.2, 1.3, 1.4, 1.5, 1.6, metricas.liquidezCorrente.valor]}
+            descricao="Capacidade de pagar dívidas de curto prazo. Ideal: acima de 1.5x"
+            formula="Ativo Circulante / Passivo Circulante"
+            sparklineData={generateSparkline(metricas.liquidezCorrente.valor, metricas.liquidezCorrente.valor >= 1.5 ? "up" : "down")}
             icon={<Banknote className="w-4 h-4" />}
           />
-          <IndicatorBadge
+          <DetailedIndicatorBadge
             title="Endividamento"
             value={formatPercent(metricas.endividamento.valor)}
             status={metricas.endividamento.status}
             trend={metricas.endividamento.valor < 30 ? "up" : "down"}
-            tooltip="Percentual dos ativos comprometidos com dívidas. Ideal: abaixo de 30%"
-            sparklineData={[35, 32, 30, 28, 25, 22, metricas.endividamento.valor]}
+            descricao="Percentual dos ativos comprometidos com dívidas. Ideal: abaixo de 30%"
+            formula="(Passivo Total / Ativo Total) × 100"
+            sparklineData={generateSparkline(metricas.endividamento.valor, metricas.endividamento.valor < 30 ? "down" : "up")}
             icon={<CreditCard className="w-4 h-4" />}
           />
-          <IndicatorBadge
+          <DetailedIndicatorBadge
             title="Cobertura de Ativos"
             value={formatRatio(metricas.coberturaAtivos.valor)}
             status={metricas.coberturaAtivos.status}
             trend={metricas.coberturaAtivos.valor >= 2 ? "up" : "down"}
             tooltip="Quantas vezes os ativos cobrem os passivos. Ideal: acima de 2x"
-            sparklineData={[1.5, 1.8, 2.0, 2.2, 2.5, 2.8, metricas.coberturaAtivos.valor]}
+            formula="Ativo Total / Passivo Total"
+            sparklineData={generateSparkline(metricas.coberturaAtivos.valor, metricas.coberturaAtivos.valor >= 2 ? "up" : "down")}
             icon={<ShieldCheck className="w-4 h-4" />}
           />
-          <IndicatorBadge
+          <DetailedIndicatorBadge
             title="Imobilização do PL"
             value={formatPercent(metricas.imobilizacao.valor)}
             status={metricas.imobilizacao.status}
             trend={metricas.imobilizacao.valor < 30 ? "up" : "down"}
-            tooltip="Quanto do PL está em bens imobilizados (veículos). Ideal: abaixo de 30%"
-            sparklineData={[40, 35, 32, 30, 28, 25, metricas.imobilizacao.valor]}
+            descricao="Quanto do PL está em bens imobilizados (veículos). Ideal: abaixo de 30%"
+            formula="(Ativo Imobilizado / Patrimônio Líquido) × 100"
+            sparklineData={generateSparkline(metricas.imobilizacao.valor, metricas.imobilizacao.valor < 30 ? "down" : "up")}
             icon={<Car className="w-4 h-4" />}
           />
         </div>
@@ -803,6 +823,3 @@ export function BalancoTab() {
     </div>
   );
 }
-
-// Import Droplets icon
-import { Droplets } from "lucide-react";

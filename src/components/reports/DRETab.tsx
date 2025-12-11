@@ -38,6 +38,7 @@ import { useFinance } from "@/contexts/FinanceContext";
 import { ReportCard } from "./ReportCard";
 import { ExpandablePanel } from "./ExpandablePanel";
 import { IndicatorBadge } from "./IndicatorBadge";
+import { DetailedIndicatorBadge } from "./DetailedIndicatorBadge";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
 import { format, subMonths, startOfMonth, endOfMonth, parseISO, isWithinInterval } from "date-fns";
@@ -357,6 +358,18 @@ export function DRETab() {
     ...dre.despesas.fixas.porCategoria.map(d => ({ ...d, tipo: 'fixa' })),
     ...dre.despesas.variaveis.porCategoria.map(d => ({ ...d, tipo: 'variavel' })),
   ].sort((a, b) => b.valor - a.valor).slice(0, 8);
+
+  // Sparkline generator (copiado de IndicadoresTab para consistência)
+  const generateSparkline = (current: number, trend: "up" | "down" | "stable" = "stable") => {
+    const base = Math.abs(current) * 0.7;
+    const range = Math.abs(current) * 0.3 || 10;
+    return Array.from({ length: 6 }, (_, i) => {
+      const progress = i / 5;
+      if (trend === "up") return base + range * progress + Math.random() * range * 0.2;
+      if (trend === "down") return base + range * (1 - progress) + Math.random() * range * 0.2;
+      return base + range * 0.5 + (Math.random() - 0.5) * range * 0.4;
+    }).concat([Math.abs(current)]);
+  };
 
   return (
     <div className="space-y-6">
@@ -718,49 +731,54 @@ export function DRETab() {
         icon={<BarChart3 className="w-4 h-4" />}
       >
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-          <IndicatorBadge
+          <DetailedIndicatorBadge
             title="Margem Bruta"
             value={formatPercent(dre.kpis.margemBruta.valor)}
             status={dre.kpis.margemBruta.status}
             trend={dre.kpis.margemBruta.valor >= 40 ? "up" : "down"}
-            tooltip="(Receitas - Despesas Fixas) / Receitas × 100. Ideal: acima de 40%"
-            sparklineData={[30, 35, 38, 40, 42, 45, dre.kpis.margemBruta.valor]}
+            descricao="(Receitas - Despesas Fixas) / Receitas × 100. Ideal: acima de 40%"
+            formula="(Receitas - Despesas Fixas) / Receitas × 100"
+            sparklineData={generateSparkline(dre.kpis.margemBruta.valor, dre.kpis.margemBruta.valor >= 40 ? "up" : "down")}
             icon={<TrendingUp className="w-4 h-4" />}
           />
-          <IndicatorBadge
+          <DetailedIndicatorBadge
             title="Margem Operacional"
             value={formatPercent(dre.kpis.margemOperacional.valor)}
             status={dre.kpis.margemOperacional.status}
             trend={dre.kpis.margemOperacional.valor >= 20 ? "up" : "down"}
-            tooltip="Resultado Operacional / Receitas × 100. Ideal: acima de 20%"
-            sparklineData={[15, 18, 20, 22, 25, 23, dre.kpis.margemOperacional.valor]}
+            descricao="Resultado Operacional / Receitas × 100. Ideal: acima de 20%"
+            formula="Resultado Operacional / Receitas × 100"
+            sparklineData={generateSparkline(dre.kpis.margemOperacional.valor, dre.kpis.margemOperacional.valor >= 20 ? "up" : "down")}
             icon={<Calculator className="w-4 h-4" />}
           />
-          <IndicatorBadge
+          <DetailedIndicatorBadge
             title="Margem Líquida"
             value={formatPercent(dre.kpis.margemLiquida.valor)}
             status={dre.kpis.margemLiquida.status}
             trend={dre.kpis.margemLiquida.valor >= 15 ? "up" : "down"}
-            tooltip="Resultado Líquido / Receitas × 100. Ideal: acima de 15%"
-            sparklineData={[10, 12, 14, 15, 18, 16, dre.kpis.margemLiquida.valor]}
+            descricao="Resultado Líquido / Receitas × 100. Ideal: acima de 15%"
+            formula="Resultado Líquido / Receitas × 100"
+            sparklineData={generateSparkline(dre.kpis.margemLiquida.valor, dre.kpis.margemLiquida.valor >= 15 ? "up" : "down")}
             icon={<DollarSign className="w-4 h-4" />}
           />
-          <IndicatorBadge
+          <DetailedIndicatorBadge
             title="Índice de Eficiência"
             value={formatPercent(dre.kpis.indiceEficiencia.valor)}
             status={dre.kpis.indiceEficiencia.status}
             trend={dre.kpis.indiceEficiencia.valor <= 70 ? "up" : "down"}
-            tooltip="Total Despesas / Receitas × 100. Ideal: abaixo de 70%"
-            sparklineData={[80, 75, 72, 70, 68, 65, dre.kpis.indiceEficiencia.valor]}
+            descricao="Total Despesas / Receitas × 100. Ideal: abaixo de 70%"
+            formula="Total Despesas / Receitas × 100"
+            sparklineData={generateSparkline(dre.kpis.indiceEficiencia.valor, dre.kpis.indiceEficiencia.valor <= 70 ? "down" : "up")}
             icon={<Target className="w-4 h-4" />}
           />
-          <IndicatorBadge
+          <DetailedIndicatorBadge
             title="Comprometimento Fixo"
             value={formatPercent(dre.kpis.comprometimentoFixo.valor)}
             status={dre.kpis.comprometimentoFixo.status}
             trend={dre.kpis.comprometimentoFixo.valor <= 40 ? "up" : "down"}
-            tooltip="Despesas Fixas / Receitas × 100. Ideal: abaixo de 40%"
-            sparklineData={[50, 48, 45, 42, 40, 38, dre.kpis.comprometimentoFixo.valor]}
+            descricao="Despesas Fixas / Receitas × 100. Ideal: abaixo de 40%"
+            formula="Despesas Fixas / Receitas × 100"
+            sparklineData={generateSparkline(dre.kpis.comprometimentoFixo.valor, dre.kpis.comprometimentoFixo.valor <= 40 ? "down" : "up")}
             icon={<Wallet className="w-4 h-4" />}
           />
         </div>

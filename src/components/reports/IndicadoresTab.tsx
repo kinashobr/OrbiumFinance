@@ -26,6 +26,7 @@ import {
 import { useFinance } from "@/contexts/FinanceContext";
 import { IndicatorBadge } from "./IndicatorBadge";
 import { ExpandablePanel } from "./ExpandablePanel";
+import { DetailedIndicatorBadge } from "./DetailedIndicatorBadge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -94,76 +95,6 @@ interface CustomIndicator {
 
 // Define o tipo de status esperado pelo IndicatorBadge
 type IndicatorStatus = "success" | "warning" | "danger" | "neutral";
-
-// Componente de badge com tooltip detalhado
-interface DetailedIndicatorBadgeProps {
-  title: string;
-  value: string;
-  status: IndicatorStatus;
-  trend?: "up" | "down" | "stable";
-  descricao: string;
-  formula: string;
-  sparklineData?: number[];
-  icon?: React.ReactNode;
-}
-
-function DetailedIndicatorBadge({
-  title,
-  value,
-  status,
-  trend,
-  descricao,
-  formula,
-  sparklineData,
-  icon,
-}: DetailedIndicatorBadgeProps) {
-  return (
-    <TooltipProvider>
-      <Tooltip delayDuration={300}>
-        <TooltipTrigger asChild>
-          <div>
-            <IndicatorBadge
-              title={title}
-              value={value}
-              status={status}
-              trend={trend}
-              tooltip={descricao}
-              sparklineData={sparklineData}
-              icon={icon}
-            />
-          </div>
-        </TooltipTrigger>
-        <TooltipContent side="bottom" className="max-w-md p-4 space-y-3">
-          <div>
-            <div className="font-semibold text-foreground flex items-center gap-2">
-              {icon}
-              {title}
-            </div>
-            <p className="text-sm text-muted-foreground mt-1">{descricao}</p>
-          </div>
-          <div className="pt-2 border-t border-border">
-            <div className="text-xs font-medium text-muted-foreground mb-1">Fórmula:</div>
-            <code className="text-xs bg-muted px-2 py-1 rounded block whitespace-normal">{formula}</code>
-          </div>
-          <div className="flex items-center gap-2 text-xs pt-2">
-            <div className="flex items-center gap-1">
-              <div className="w-2 h-2 rounded-full bg-success" />
-              <span>Saudável</span>
-            </div>
-            <div className="flex items-center gap-1">
-              <div className="w-2 h-2 rounded-full bg-warning" />
-              <span>Atenção</span>
-            </div>
-            <div className="flex items-center gap-1">
-              <div className="w-2 h-2 rounded-full bg-destructive" />
-              <span>Crítico</span>
-            </div>
-          </div>
-        </TooltipContent>
-      </Tooltip>
-    </TooltipProvider>
-  );
-}
 
 // Storage key for custom indicators
 const CUSTOM_INDICATORS_KEY = "fin_custom_indicators_v1";
@@ -752,7 +683,7 @@ export function IndicadoresTab() {
         <DetailedIndicatorBadge
           title="Crescimento Despesas"
           value={formatPercent(indicadores.eficiencia.crescimentoDespesas.valor)}
-          status={indicadores.eficiencia.crescimentoDespesas.status}
+          status={indicadores.eficiencia.despesasFixas.status}
           trend={indicadores.eficiencia.crescimentoDespesas.valor < 0 ? "up" : "down"}
           descricao="Variação das despesas em relação ao mês anterior. Ideal: negativo ou controlado"
           formula="((Despesas Mês Atual - Despesas Mês Anterior) / Despesas Mês Anterior) × 100"
