@@ -1,8 +1,8 @@
 import { createContext, useContext, useState, useEffect, ReactNode, useCallback } from "react";
 import {
-  ContaCorrente, Categoria, TransacaoCompleta, TransferGroup,
+  Categoria, TransacaoCompleta, TransferGroup,
   AccountType, CategoryNature, DEFAULT_ACCOUNTS, DEFAULT_CATEGORIES,
-  generateTransactionId
+  generateTransactionId, ContaCorrente // Moved ContaCorrente here to resolve conflict
 } from "@/types/finance";
 
 // ============================================
@@ -133,19 +133,8 @@ export interface MovimentacaoInvestimento {
 // ============================================
 
 // Conta Movimento (antes ContaCorrente) - ATUALIZADO
-export interface ContaCorrente {
-  id: string;
-  name: string;
-  accountType: AccountType;
-  institution?: string;
-  currency: string;
-  initialBalance: number;
-  startDate?: string; // ADICIONADO
-  color?: string;
-  icon?: string;
-  createdAt: string;
-  meta: Record<string, unknown>;
-}
+// NOTE: The definition of ContaCorrente is now imported from types/finance.ts
+// The local definition was removed to resolve TS2440.
 
 export interface FinanceDataExport {
   version: string;
@@ -386,7 +375,7 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
   useEffect(() => { saveToStorage(STORAGE_KEYS.EMPRESTIMOS, emprestimos); }, [emprestimos]);
   useEffect(() => { saveToStorage(STORAGE_KEYS.VEICULOS, veiculos); }, [veiculos]);
   useEffect(() => { saveToStorage(STORAGE_KEYS.SEGUROS_VEICULO, segurosVeiculo); }, [segurosVeiculo]);
-  useEffect(() => { saveToStorage(STORAGE_KEYS.INVESTIMENTOS_RF, investimentosRF); }, [investimentosRF]);
+  useEffect(() => { saveToStorage(STORAGE_KEYS.INVESTIMENTos_RF, investimentosRF); }, [investimentosRF]);
   useEffect(() => { saveToStorage(STORAGE_KEYS.CRIPTOMOEDAS, criptomoedas); }, [criptomoedas]);
   useEffect(() => { saveToStorage(STORAGE_KEYS.STABLECOINS, stablecoins); }, [stablecoins]);
   useEffect(() => { saveToStorage(STORAGE_KEYS.OBJETIVOS, objetivos); }, [objetivos]);
@@ -638,16 +627,16 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
   // CÁLCULOS - Baseados em TransacoesV2
   // ============================================
 
-  const getTotalReceitas = (mes?: string) => {
+  const getTotalReceitas = (mes?: string): number => {
     const receitas = transacoesV2.filter(t => {
       const isReceita = t.operationType === 'receita' || t.operationType === 'rendimento';
       if (!mes) return isReceita;
       return isReceita && t.date.startsWith(mes);
     });
-    return receitas.reduce((acc, t => acc + t.amount, 0);
+    return receitas.reduce((acc, t) => acc + t.amount, 0);
   };
 
-  const getTotalDespesas = (mes?: string) => {
+  const getTotalDespesas = (mes?: string): number => {
     const despesas = transacoesV2.filter(t => {
       const isDespesa = t.operationType === 'despesa' || t.operationType === 'pagamento_emprestimo';
       if (!mes) return isDespesa;
@@ -661,7 +650,7 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
   };
 
   const getCustoVeiculos = () => {
-    return veiculos.reduce((acc, v) => acc + v.valorSeguro, 0);
+    return veiculos.filter(v => v.status !== 'vendido').reduce((acc, v) => acc + v.valorSeguro, 0);
   };
 
   const getSaldoAtual = () => {
@@ -687,7 +676,7 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
           }
         } else {
           // Contas normais: in soma, out subtrai
-          if (t.flow === 'in' || t.flow === 'transfer_in') {
+          if (t.flow === 'in' || t.flow === 'transfer_in' || t.operationType === 'initial_balance') {
             balance += t.amount;
           } else {
             balance -= t.amount;
@@ -764,7 +753,7 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
         let balance = c.startDate ? 0 : c.initialBalance; // Ajuste para saldo inicial
         const accountTransactions = transacoesV2.filter(t => t.accountId === c.id);
         accountTransactions.forEach(t => {
-          if (t.flow === 'in' || t.flow === 'transfer_in') {
+          if (t.flow === 'in' || t.flow === 'transfer_in' || t.operationType === 'initial_balance') {
             balance += t.amount;
           } else {
             balance -= t.amount;
