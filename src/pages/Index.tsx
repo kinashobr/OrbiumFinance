@@ -58,12 +58,11 @@ const Index = () => {
   const filteredTransacoesV2 = useMemo(() => {
     if (!dateRange.from || !dateRange.to) return transacoesV2;
     
+    const endOfDay = new Date(dateRange.to);
+    endOfDay.setHours(23, 59, 59, 999);
+    
     return transacoesV2.filter(t => {
       const transactionDate = new Date(t.date);
-      // Ajuste para incluir o dia final
-      const endOfDay = new Date(dateRange.to!);
-      endOfDay.setHours(23, 59, 59, 999);
-      
       return transactionDate >= dateRange.from! && transactionDate <= endOfDay;
     });
   }, [transacoesV2, dateRange]);
@@ -119,15 +118,38 @@ const Index = () => {
   const evolucaoData = useMemo(() => {
     const meses = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
     
-    return meses.slice(0, 12).map((mes, i) => {
-      const mesNum = String(i + 1).padStart(2, "0");
-      const receitas = filteredTransacoesV2
-        .filter(t => t.flow === "in" && t.operationType !== 'transferencia' && t.date.includes(`-${mesNum}-`))
+    // Use the current date to determine the 12 months window
+    const now = new Date();
+    const currentMonthIndex = now.getMonth();
+    const currentYear = now.getFullYear();
+    
+    const dataSeries = Array.from({ length: 12 }, (_, i) => {
+      const monthIndex = (currentMonthIndex - (11 - i) + 12) % 12;
+      const year = currentYear - (11 - i > currentMonthIndex ? 1 : 0);
+      const mes = meses[monthIndex];
+      const mesNum = String(monthIndex + 1).padStart(2, "0");
+      
+      // Filter transactions for this specific month/year
+      const transacoesMes = transacoesV2.filter(t => {
+        const d = new Date(t.date);
+        return d.getMonth() === monthIndex && d.getFullYear() === year;
+      });
+      
+      // Apply global date range filter if set
+      const transactionsToUse = (dateRange.from || dateRange.to)
+        ? transacoesMes.filter(t => filteredTransacoesV2.some(ft => ft.id === t.id))
+        : transacoesMes;
+
+      const receitas = transactionsToUse
+        .filter(t => t.flow === "in" && t.operationType !== 'transferencia')
         .reduce((acc, t) => acc + t.amount, 0);
-      const despesas = filteredTransacoesV2
-        .filter(t => t.flow === "out" && t.operationType !== 'transferencia' && t.date.includes(`-${mesNum}-`))
+      const despesas = transactionsToUse
+        .filter(t => t.flow === "out" && t.operationType !== 'transferencia')
         .reduce((acc, t) => acc + t.amount, 0);
       
+      // Note: Patrimonio/Investimentos/Dividas are calculated globally based on current state, 
+      // not historically accurate for each month in this simplified model. 
+      // We use the current totals for consistency across the chart data points.
       const patrimonioTotal = totalInvestimentos + veiculos.reduce((acc, v) => acc + v.valorFipe, 0);
       
       return {
@@ -139,7 +161,9 @@ const Index = () => {
         dividas: Math.max(totalDividas, 0),
       };
     });
-  }, [filteredTransacoesV2, totalInvestimentos, veiculos, totalDividas]);
+    
+    return dataSeries;
+  }, [transacoesV2, dateRange, filteredTransacoesV2, totalInvestimentos, veiculos, totalDividas]);
 
   const heatmapData = useMemo(() => {
     const now = new Date();
@@ -393,8 +417,6 @@ const Index = () => {
       case "distribuicao-charts":
         return <DistribuicaoCharts porClasse={distribuicaoPorClasse} porRisco={distribuicaoPorRisco} />;
       case "transacoes-recentes":
-        // Note: TransacoesRecentes uses the legacy Transacao type, but we pass V2 data for now
-        // This component should ideally be updated to use TransacaoCompleta
         return <MovimentacoesRelevantes transacoes={filteredTransacoesV2} limit={8} />;
       default:
         return null;
