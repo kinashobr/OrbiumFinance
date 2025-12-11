@@ -200,7 +200,18 @@ export interface AccountSummary {
 // Dados iniciais padrão - Sistema limpo, sem dados pré-preenchidos
 export const DEFAULT_ACCOUNTS: ContaCorrente[] = [];
 
-export const DEFAULT_CATEGORIES: Categoria[] = [];
+export const DEFAULT_CATEGORIES: Categoria[] = [
+  { id: 'cat_salario', label: 'Salário', icon: '💰', nature: 'receita', type: 'income' },
+  { id: 'cat_freelance', label: 'Freelance', icon: '💻', nature: 'receita', type: 'income' },
+  { id: 'cat_rendimentos', label: 'Rendimentos sobre Investimentos', icon: '📈', nature: 'receita', type: 'income' },
+  { id: 'cat_aluguel', label: 'Aluguel', icon: '🏠', nature: 'despesa_fixa', type: 'expense' },
+  { id: 'cat_assinaturas', label: 'Assinaturas', icon: '🔁', nature: 'despesa_fixa', type: 'expense' },
+  { id: 'cat_saude', label: 'Saúde', icon: '💊', nature: 'despesa_fixa', type: 'expense' },
+  { id: 'cat_alimentacao', label: 'Alimentação', icon: '🍽️', nature: 'despesa_variavel', type: 'expense' },
+  { id: 'cat_transporte', label: 'Transporte', icon: '🚗', nature: 'despesa_variavel', type: 'expense' },
+  { id: 'cat_lazer', label: 'Lazer', icon: '🎮', nature: 'despesa_variavel', type: 'expense' },
+  { id: 'cat_seguro', label: 'Seguro', icon: '🛡️', nature: 'despesa_fixa', type: 'expense' },
+];
 
 // Helpers
 export function generateTransactionId(): string {
@@ -231,7 +242,7 @@ export function getFlowTypeFromOperation(op: OperationType, vehicleOp?: 'compra'
     case 'receita':
     case 'resgate':
     case 'liberacao_emprestimo':
-    case 'rendimento':
+    case 'rendimento': // Rendimento é uma entrada (in)
       return 'in';
     case 'despesa':
     case 'aplicacao':
@@ -253,6 +264,7 @@ export function getDomainFromOperation(op: OperationType): TransactionDomain {
       return 'operational';
     case 'aplicacao':
     case 'resgate':
+    case 'rendimento': // Rendimento é do domínio de investimento
       return 'investment';
     case 'pagamento_emprestimo':
       return 'financing';

@@ -65,7 +65,7 @@ const getOperationsForAccountType = (accountType: AccountType): OperationType[] 
     case 'objetivos_financeiros':
       return ['rendimento'];
     case 'criptoativos':
-      return [];
+      return ['rendimento'];
     default:
       return ['receita', 'despesa'];
   }
@@ -121,6 +121,11 @@ export function MovimentarContaModal({
     accounts.find(a => a.id === accountId),
     [accounts, accountId]
   );
+  
+  const rendimentoCategoryId = useMemo(() => 
+    categories.find(c => c.label === 'Rendimentos sobre Investimentos')?.id,
+    [categories]
+  );
 
   // Operações disponíveis baseadas no tipo da conta selecionada
   const availableOperations = useMemo(() => {
@@ -132,17 +137,17 @@ export function MovimentarContaModal({
     const defaultAccount = accounts.find(a => a.id === selectedAccountId) || accounts[0];
     setAccountId(defaultAccount?.id || '');
     
+    let defaultOperation: OperationType = 'receita';
     if (defaultAccount) {
       const ops = getOperationsForAccountType(defaultAccount.accountType);
-      setOperationType(ops[0] || 'receita');
-    } else {
-      setOperationType('receita');
+      defaultOperation = ops[0] || 'receita';
     }
     
+    setOperationType(defaultOperation);
     setDate(new Date().toISOString().split('T')[0]);
     setAmount('');
     setDescription('');
-    setCategoryId('');
+    setCategoryId(defaultOperation === 'rendimento' ? rendimentoCategoryId || '' : '');
     setAccountDestinoId('');
     setInvestmentId('');
     setLoanId('');
@@ -156,7 +161,7 @@ export function MovimentarContaModal({
     if (!keepOpen) {
       onOpenChange(false);
     }
-  }, [accounts, selectedAccountId, onOpenChange]);
+  }, [accounts, selectedAccountId, onOpenChange, rendimentoCategoryId]);
 
   // Reset ou preencher quando modal abre
   useEffect(() => {
@@ -190,15 +195,25 @@ export function MovimentarContaModal({
     }
   }, [open, selectedAccountId, accounts, editingTransaction, resetForm]);
 
-  // Update operation when account changes
+  // Update operation and category when account changes
   useEffect(() => {
     if (selectedAccount && !isEditing) {
       const ops = getOperationsForAccountType(selectedAccount.accountType);
       if (!ops.includes(operationType)) {
-        setOperationType(ops[0] || 'receita');
+        const newOp = ops[0] || 'receita';
+        setOperationType(newOp);
+        if (newOp === 'rendimento') {
+          setCategoryId(rendimentoCategoryId || '');
+        } else {
+          setCategoryId('');
+        }
+      } else if (operationType === 'rendimento') {
+        setCategoryId(rendimentoCategoryId || '');
+      } else if (operationType !== 'rendimento' && operationType !== 'transferencia') {
+        setCategoryId('');
       }
     }
-  }, [selectedAccount, isEditing, operationType]);
+  }, [selectedAccount, isEditing, operationType, rendimentoCategoryId]);
 
   // Lógica de preenchimento automático para Seguro
   useEffect(() => {
@@ -262,7 +277,7 @@ export function MovimentarContaModal({
 
   const filteredCategories = useMemo(() => {
     let filtered = categories;
-    if (operationType === 'receita') {
+    if (operationType === 'receita' || operationType === 'rendimento') {
       filtered = categories.filter(c => c.nature === 'receita' || c.type === 'income' || c.type === 'both');
     } else if (operationType === 'despesa') {
       filtered = categories.filter(c => c.nature === 'despesa_fixa' || c.nature === 'despesa_variavel' || c.type === 'expense' || c.type === 'both');
@@ -293,7 +308,10 @@ export function MovimentarContaModal({
     
     if (operationType === 'transferencia' && !accountDestinoId) return false;
     if (operationType === 'transferencia' && accountId === accountDestinoId) return false;
-    if ((operationType === 'receita' || operationType === 'despesa') && !categoryId) return false;
+    
+    // Categoria é obrigatória para Receita, Despesa e Rendimento
+    if ((operationType === 'receita' || operationType === 'despesa' || operationType === 'rendimento') && !categoryId) return false;
+    
     if ((operationType === 'aplicacao' || operationType === 'resgate') && !investmentId) return false;
     if (operationType === 'pagamento_emprestimo' && (!loanId || !parcelaId)) return false;
     if (operationType === 'liberacao_emprestimo' && !numeroContrato.trim()) return false;
@@ -323,8 +341,8 @@ export function MovimentarContaModal({
     const isCreditCard = selectedAccount?.accountType === 'cartao_credito';
     
     // Fluxo para Cartão de Crédito:
-    // - Despesa (compra) é 'in' (aumenta o passivo, ou seja, aumenta o saldo negativo)
-    // - Transferência (pagamento de fatura) é 'out' (diminui o passivo, ou seja, diminui o saldo negativo)
+    // - Despesa (compra) é 'out' (aumenta o passivo, ou seja, aumenta o saldo negativo)
+    // - Transferência (pagamento de fatura) é 'in' (diminui o passivo, ou seja, diminui o saldo negativo)
     const isIncoming = operationType === 'receita' || operationType === 'resgate' || 
                        operationType === 'liberacao_emprestimo' || operationType === 'rendimento' ||
                        (operationType === 'veiculo' && vehicleOperation === 'venda');
@@ -347,7 +365,7 @@ export function MovimentarContaModal({
       operationType,
       domain: getDomainFromOperation(operationType),
       amount: parsedAmount,
-      categoryId: (operationType === 'receita' || operationType === 'despesa') ? categoryId : null,
+      categoryId: (operationType === 'receita' || operationType === 'despesa' || operationType === 'rendimento') ? categoryId : null,
       description: description || `${OPERATION_CONFIG[operationType]?.label || operationType} - ${formatCurrency(parsedAmount)}`,
       links: {
         investmentId: (operationType === 'aplicacao' || operationType === 'resgate') ? investmentId : null,
@@ -488,6 +506,7 @@ export function MovimentarContaModal({
 
   const selectedCategory = categories.find(c => c.id === categoryId);
   const isCreditCard = selectedAccount?.accountType === 'cartao_credito';
+  const isRendimento = operationType === 'rendimento';
 
   return (
     <>
@@ -653,8 +672,8 @@ export function MovimentarContaModal({
               />
             </div>
 
-            {/* Categoria (para receita/despesa) */}
-            {(operationType === 'receita' || operationType === 'despesa') && (
+            {/* Categoria (para receita/despesa/rendimento) */}
+            {(operationType === 'receita' || operationType === 'despesa' || isRendimento) && (
               <div className="space-y-2">
                 <Label htmlFor="categoryId">Categoria *</Label>
                 <Popover open={isCategoryPopoverOpen} onOpenChange={setIsCategoryPopoverOpen}>
@@ -666,6 +685,7 @@ export function MovimentarContaModal({
                         "w-full justify-between",
                         !categoryId && "text-muted-foreground"
                       )}
+                      disabled={isRendimento}
                     >
                       {selectedCategory ? (
                         <span className="flex items-center gap-2">
@@ -729,6 +749,13 @@ export function MovimentarContaModal({
                     </Button>
                   </div>
                 )}
+                
+                {isRendimento && (
+                  <p className="text-xs text-muted-foreground">
+                    <Info className="w-3 h-3 inline mr-1" />
+                    A categoria de rendimento é preenchida automaticamente para esta operação.
+                  </p>
+                )}
               </div>
             )}
 
@@ -741,12 +768,12 @@ export function MovimentarContaModal({
                     <SelectValue placeholder="Selecione a conta destino..." />
                   </SelectTrigger>
                   <SelectContent>
-                    {accounts.map(acc => (
+                    {investmentAccounts.map(acc => (
                       <SelectItem key={acc.id} value={acc.id}>
                         {acc.name}
                       </SelectItem>
                     ))}
-                    {accounts.length === 0 && (
+                    {investmentAccounts.length === 0 && (
                       <SelectItem value="new" disabled>
                         Nenhuma conta de investimento cadastrada
                       </SelectItem>
