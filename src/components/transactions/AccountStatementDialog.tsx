@@ -45,11 +45,13 @@ export function AccountStatementDialog({
   onReconcileAll
 }: AccountStatementDialogProps) {
   const [dateFrom, setDateFrom] = useState("");
-  // CORREÇÃO: Definindo o setter para dateTo
   const [dateTo, setDateTo] = useState(""); 
 
   // Filtrar transações por período
   const filteredTransactions = useMemo(() => {
+    // Log de depuração para ver as transações recebidas
+    console.log(`[Statement] Transações recebidas para ${account.name}:`, transactions.length);
+    
     return transactions
       .filter(t => {
         const matchFrom = !dateFrom || t.date >= dateFrom;
@@ -57,7 +59,7 @@ export function AccountStatementDialog({
         return matchFrom && matchTo;
       })
       .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-  }, [transactions, dateFrom, dateTo]);
+  }, [transactions, dateFrom, dateTo, account.name]);
 
   // Calcular saldos do período
   const periodSummary = useMemo(() => {
@@ -103,7 +105,7 @@ export function AccountStatementDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-5xl max-h-[90vh] p-0 overflow-hidden flex flex-col">
+      <DialogContent className="max-w-5xl h-[90vh] p-0 overflow-hidden flex flex-col">
         <DialogHeader className="px-6 pt-6 pb-4 border-b shrink-0">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
