@@ -320,7 +320,7 @@ export function DRETab({ dateRange }: DRETabProps) {
           porCategoria: despesasVariaveis,
         },
       },
-      jurosFinanceiros: jurosEmprestimos,
+      jurosFinanceiros,
       resultadoBruto,
       resultadoOperacional,
       resultadoLiquido,
