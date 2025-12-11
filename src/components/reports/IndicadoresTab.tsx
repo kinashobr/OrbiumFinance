@@ -755,6 +755,7 @@ export function IndicadoresTab() {
           status={indicadores.eficiencia.crescimentoDespesas.status}
           trend={indicadores.eficiencia.crescimentoDespesas.valor < 0 ? "up" : "down"}
           descricao="Variação das despesas em relação ao mês anterior. Ideal: negativo ou controlado"
+          formula="((Despesas Mês Atual - Despesas Mês Anterior) / Despesas Mês Anterior) × 100"
           sparklineData={generateSparkline(Math.abs(indicadores.eficiencia.crescimentoDespesas.valor) + 10, indicadores.eficiencia.crescimentoDespesas.valor < 0 ? "down" : "up")}
           icon={<TrendingDown className="w-4 h-4" />}
         />
@@ -877,7 +878,7 @@ export function IndicadoresTab() {
                 className="absolute top-1 right-1 w-6 h-6 opacity-0 group-hover:opacity-100 transition-opacity"
                 onClick={() => handleRemoveIndicator(ind.id)}
               >
-                <Trash2 className="w-3 h-3 text-destructive" />
+                <Trash2 className="w-3 h-3" />
               </Button>
             </div>
           ))}
