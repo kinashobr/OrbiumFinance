@@ -106,7 +106,7 @@ export function MovimentarContaModal({
   const [parcelaId, setParcelaId] = useState('');
   const [vehicleOperation, setVehicleOperation] = useState<'compra' | 'venda'>('compra');
   const [numeroContrato, setNumeroContrato] = useState('');
-  
+
   // Estado para Seguro
   const [showSeguroSelector, setShowSeguroSelector] = useState(false);
   const [seguroLink, setSeguroLink] = useState<{ seguroId: number; parcelaNumero: number; valor: number; vencimento: string } | null>(null);
@@ -117,12 +117,12 @@ export function MovimentarContaModal({
 
   const isEditing = !!editingTransaction;
 
-  const selectedAccount = useMemo(() => 
+  const selectedAccount = useMemo(() =>
     accounts.find(a => a.id === accountId),
     [accounts, accountId]
   );
-  
-  const rendimentoCategoryId = useMemo(() => 
+
+  const rendimentoCategoryId = useMemo(() =>
     categories.find(c => c.label === 'Rendimentos sobre Investimentos')?.id,
     [categories]
   );
@@ -136,13 +136,13 @@ export function MovimentarContaModal({
   const resetForm = useCallback((keepOpen: boolean) => {
     const defaultAccount = accounts.find(a => a.id === selectedAccountId) || accounts[0];
     setAccountId(defaultAccount?.id || '');
-    
+
     let defaultOperation: OperationType = 'receita';
     if (defaultAccount) {
       const ops = getOperationsForAccountType(defaultAccount.accountType);
       defaultOperation = ops[0] || 'receita';
     }
-    
+
     setOperationType(defaultOperation);
     setDate(new Date().toISOString().split('T')[0]);
     setAmount('');
@@ -178,7 +178,7 @@ export function MovimentarContaModal({
         setParcelaId(editingTransaction.links.parcelaId || '');
         setVehicleOperation(editingTransaction.meta.vehicleOperation || 'compra');
         setNumeroContrato(editingTransaction.meta.numeroContrato || '');
-        
+
         if (editingTransaction.links.vehicleTransactionId) {
           const [seguroIdStr, parcelaNumeroStr] = editingTransaction.links.vehicleTransactionId.split('_');
           const seguroId = parseInt(seguroIdStr);
@@ -209,7 +209,7 @@ export function MovimentarContaModal({
         }
       } else if (operationType === 'rendimento') {
         setCategoryId(rendimentoCategoryId || '');
-      } else if (operationType !== 'rendimento' && operationType !== 'transferencia') {
+      } else if (operationType !== 'transferencia') {
         setCategoryId('');
       }
     }
@@ -218,11 +218,11 @@ export function MovimentarContaModal({
   // Lógica de preenchimento automático para Seguro
   useEffect(() => {
     const seguroCategory = categories.find(c => c.label.toLowerCase() === 'seguro');
-    
+
     if (operationType === 'despesa' && categoryId === seguroCategory?.id && !seguroLink) {
       setShowSeguroSelector(true);
     }
-    
+
     if (seguroLink) {
       setAmount(seguroLink.valor.toString());
       setDate(seguroLink.vencimento);
@@ -248,9 +248,9 @@ export function MovimentarContaModal({
 
   const projectedBalance = useMemo(() => {
     const op = operationType;
-    const isIncoming = op === 'receita' || op === 'resgate' || op === 'liberacao_emprestimo' || 
+    const isIncoming = op === 'receita' || op === 'resgate' || op === 'liberacao_emprestimo' ||
                        op === 'rendimento' || (op === 'veiculo' && vehicleOperation === 'venda');
-    
+
     // Cartão de Crédito inverte a lógica de saldo: despesa (out) aumenta o passivo (torna mais negativo)
     const isCreditCard = selectedAccount?.accountType === 'cartao_credito';
 
@@ -282,19 +282,19 @@ export function MovimentarContaModal({
     } else if (operationType === 'despesa') {
       filtered = categories.filter(c => c.nature === 'despesa_fixa' || c.nature === 'despesa_variavel' || c.type === 'expense' || c.type === 'both');
     }
-    
+
     if (categorySearchTerm) {
       filtered = filtered.filter(c => c.label.toLowerCase().includes(categorySearchTerm.toLowerCase()));
     }
-    
+
     return filtered;
   }, [categories, operationType, categorySearchTerm]);
 
   // Contas de investimento disponíveis para aplicação/resgate
-  const investmentAccounts = useMemo(() => 
-    accounts.filter(a => 
-      a.accountType === 'aplicacao_renda_fixa' || 
-      a.accountType === 'poupanca' || 
+  const investmentAccounts = useMemo(() =>
+    accounts.filter(a =>
+      a.accountType === 'aplicacao_renda_fixa' ||
+      a.accountType === 'poupanca' ||
       a.accountType === 'criptoativos' ||
       a.accountType === 'reserva_emergencia' ||
       a.accountType === 'objetivos_financeiros'
@@ -305,17 +305,17 @@ export function MovimentarContaModal({
   const canSubmit = useMemo(() => {
     if (!accountId || !date) return false;
     if (parsedAmount <= 0) return false;
-    
+
     if (operationType === 'transferencia' && !accountDestinoId) return false;
     if (operationType === 'transferencia' && accountId === accountDestinoId) return false;
-    
+
     // Categoria é obrigatória para Receita, Despesa e Rendimento
     if ((operationType === 'receita' || operationType === 'despesa' || operationType === 'rendimento') && !categoryId) return false;
-    
+
     if ((operationType === 'aplicacao' || operationType === 'resgate') && !investmentId) return false;
     if (operationType === 'pagamento_emprestimo' && (!loanId || !parcelaId)) return false;
     if (operationType === 'liberacao_emprestimo' && !numeroContrato.trim()) return false;
-    
+
     const seguroCategory = categories.find(c => c.label.toLowerCase() === 'seguro');
     if (operationType === 'despesa' && categoryId === seguroCategory?.id && !seguroLink && selectedAccount?.accountType !== 'cartao_credito') return false;
 
@@ -339,16 +339,16 @@ export function MovimentarContaModal({
     const now = new Date().toISOString();
 
     const isCreditCard = selectedAccount?.accountType === 'cartao_credito';
-    
+
     // Fluxo para Cartão de Crédito:
     // - Despesa (compra) é 'out' (aumenta o passivo, ou seja, aumenta o saldo negativo)
     // - Transferência (pagamento de fatura) é 'in' (diminui o passivo, ou seja, diminui o saldo negativo)
-    const isIncoming = operationType === 'receita' || operationType === 'resgate' || 
+    const isIncoming = operationType === 'receita' || operationType === 'resgate' ||
                        operationType === 'liberacao_emprestimo' || operationType === 'rendimento' ||
                        (operationType === 'veiculo' && vehicleOperation === 'venda');
 
     let flow: 'in' | 'out' = isIncoming ? 'in' : 'out';
-    
+
     if (isCreditCard) {
       if (operationType === 'despesa') {
         flow = 'out'; // Despesa no cartão é uma saída (aumenta o passivo)
@@ -391,11 +391,11 @@ export function MovimentarContaModal({
     if (operationType === 'transferencia') {
       const groupId = generateTransferGroupId();
       transaction.links.transferGroupId = groupId;
-      
+
       // Se for Cartão de Crédito, a transferência é o pagamento da fatura (entrada no CC, saída na CC)
       if (isCreditCard) {
         transaction.flow = 'in'; // Entrada no Cartão de Crédito (diminui o passivo)
-        
+
         transferGroup = {
           id: groupId,
           fromAccountId: accountDestinoId, // Conta Corrente
@@ -407,7 +407,7 @@ export function MovimentarContaModal({
       } else {
         // Transferência normal (saída da conta origem)
         transaction.flow = 'transfer_out';
-        
+
         transferGroup = {
           id: groupId,
           fromAccountId: accountId,
@@ -420,7 +420,7 @@ export function MovimentarContaModal({
     }
 
     onSubmit(transaction, transferGroup);
-    
+
     // Manter modal aberto e resetar formulário se não estiver editando
     if (!isEditing) {
       toast.success("Movimentação registrada! Pronto para o próximo lançamento.");
@@ -455,7 +455,7 @@ export function MovimentarContaModal({
         </div>
       );
     }
-    
+
     const isCreditCard = selectedAccount?.accountType === 'cartao_credito';
 
     return (
@@ -466,7 +466,7 @@ export function MovimentarContaModal({
             const config = OPERATION_CONFIG[opType];
             if (!config) return null;
             const Icon = config.icon;
-            
+
             // Ajustar labels para Cartão de Crédito
             let label = config.label;
             if (isCreditCard) {
@@ -518,7 +518,7 @@ export function MovimentarContaModal({
               {isEditing ? "Editar Transação" : "Movimentar Conta"}
             </DialogTitle>
             <DialogDescription>
-              {selectedAccount?.accountType === 'conta_corrente' 
+              {selectedAccount?.accountType === 'conta_corrente'
                 ? "Registre receitas, despesas, aplicações e operações de empréstimo."
                 : isCreditCard
                   ? "Registre compras (despesas) e pagamentos de fatura (transferências)."
@@ -604,15 +604,15 @@ export function MovimentarContaModal({
                 </p>
               </div>
             )}
-            
+
             {/* Transferência - conta destino */}
             {operationType === 'transferencia' && (
               <div className="space-y-2">
                 <Label htmlFor="accountDestinoId">
                   {isCreditCard ? "Conta de Pagamento (Origem)" : "Conta Destino"} *
                 </Label>
-                <Select 
-                  value={accountDestinoId} 
+                <Select
+                  value={accountDestinoId}
                   onValueChange={setAccountDestinoId}
                 >
                   <SelectTrigger>
@@ -738,7 +738,7 @@ export function MovimentarContaModal({
                     </ScrollArea>
                   </PopoverContent>
                 </Popover>
-                
+
                 {/* Indicador de Parcela de Seguro Selecionada */}
                 {seguroLink && (
                   <div className="flex items-center gap-2 p-2 rounded-md bg-primary/10 border border-primary/30 text-sm">
@@ -749,7 +749,7 @@ export function MovimentarContaModal({
                     </Button>
                   </div>
                 )}
-                
+
                 {isRendimento && (
                   <p className="text-xs text-muted-foreground">
                     <Info className="w-3 h-3 inline mr-1" />
@@ -782,8 +782,8 @@ export function MovimentarContaModal({
                 </Select>
                 <p className="text-xs text-muted-foreground">
                   <Info className="w-3 h-3 inline mr-1" />
-                  {operationType === 'aplicacao' 
-                    ? "Transfere dinheiro desta conta para o investimento." 
+                  {operationType === 'aplicacao'
+                    ? "Transfere dinheiro desta conta para o investimento."
                     : "Resgata dinheiro do investimento para esta conta."}
                 </p>
               </div>
@@ -872,8 +872,8 @@ export function MovimentarContaModal({
             )}
 
             {/* Botão de Submissão */}
-            <Button 
-              className="w-full" 
+            <Button
+              className="w-full"
               onClick={handleSubmit}
               disabled={!canSubmit}
             >
@@ -883,7 +883,7 @@ export function MovimentarContaModal({
           </div>
         </DialogContent>
       </Dialog>
-      
+
       {/* Modal de Seleção de Parcela de Seguro */}
       <SeguroParcelaSelector
         open={showSeguroSelector}
