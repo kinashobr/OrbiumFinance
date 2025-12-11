@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Building2, Wallet, PiggyBank, TrendingUp, Shield, Target, Bitcoin } from "lucide-react";
+import { Building2, Wallet, PiggyBank, TrendingUp, Shield, Target, Bitcoin, CreditCard } from "lucide-react";
 import { ContaCorrente, AccountType, ACCOUNT_TYPE_LABELS, generateAccountId } from "@/types/finance";
 import { toast } from "sonner";
 
@@ -24,6 +24,7 @@ const ACCOUNT_TYPE_ICONS: Record<AccountType, typeof Building2> = {
   criptoativos: Bitcoin,
   reserva_emergencia: Shield,
   objetivos_financeiros: Target,
+  cartao_credito: CreditCard, // NOVO ÍCONE
 };
 
 export function AccountFormModal({

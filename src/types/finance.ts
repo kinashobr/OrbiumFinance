@@ -9,7 +9,8 @@ export type AccountType =
   | 'poupanca' 
   | 'criptoativos' 
   | 'reserva_emergencia' 
-  | 'objetivos_financeiros';
+  | 'objetivos_financeiros'
+  | 'cartao_credito'; // NOVO TIPO
 
 export const ACCOUNT_TYPE_LABELS: Record<AccountType, string> = {
   conta_corrente: 'Conta Corrente',
@@ -18,6 +19,7 @@ export const ACCOUNT_TYPE_LABELS: Record<AccountType, string> = {
   criptoativos: 'Criptoativos',
   reserva_emergencia: 'Reserva de Emergência',
   objetivos_financeiros: 'Objetivos Financeiros',
+  cartao_credito: 'Cartão de Crédito', // NOVO LABEL
 };
 
 // Tipos de Categoria
@@ -92,7 +94,7 @@ export interface TransactionMeta {
   pendingLoanConfig?: boolean;
 }
 
-// Transação Completa (atualizado)
+// Transação Completa (atualizada)
 export interface TransacaoCompleta {
   id: string;
   date: string;

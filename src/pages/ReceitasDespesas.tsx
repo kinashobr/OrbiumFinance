@@ -8,7 +8,7 @@ import { toast } from "sonner";
 import { 
   ContaCorrente, Categoria, TransacaoCompleta, TransferGroup,
   AccountSummary, OperationType, DEFAULT_ACCOUNTS, DEFAULT_CATEGORIES, 
-  generateTransactionId, formatCurrency
+  generateTransactionId, formatCurrency, generateTransferGroupId
 } from "@/types/finance";
 
 // Components
@@ -100,10 +100,22 @@ const ReceitasDespesas = () => {
         .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
     transactionsBeforeDate.forEach(t => {
-        if (t.flow === 'in' || t.flow === 'transfer_in') {
-            balance += t.amount;
-        } else {
+        const isCreditCard = account.accountType === 'cartao_credito';
+        
+        if (isCreditCard) {
+          // Cartão de Crédito: Despesa (out) subtrai, Transferência (in) soma
+          if (t.operationType === 'despesa') {
             balance -= t.amount;
+          } else if (t.operationType === 'transferencia') {
+            balance += t.amount;
+          }
+        } else {
+          // Contas normais: in soma, out subtrai
+          if (t.flow === 'in' || t.flow === 'transfer_in') {
+            balance += t.amount;
+          } else {
+            balance -= t.amount;
+          }
         }
     });
 
@@ -149,8 +161,28 @@ const ReceitasDespesas = () => {
       });
 
       // 3. Calculate Period Totals
-      const totalIn = accountTxInPeriod.filter(t => t.flow === 'in' || t.flow === 'transfer_in').reduce((s, t) => s + t.amount, 0);
-      const totalOut = accountTxInPeriod.filter(t => t.flow === 'out' || t.flow === 'transfer_out').reduce((s, t) => s + t.amount, 0);
+      let totalIn = 0;
+      let totalOut = 0;
+      
+      accountTxInPeriod.forEach(t => {
+        const isCreditCard = account.accountType === 'cartao_credito';
+        
+        if (isCreditCard) {
+          // Cartão de Crédito: Despesa (out) é uma saída, Transferência (in) é uma entrada
+          if (t.operationType === 'despesa') {
+            totalOut += t.amount;
+          } else if (t.operationType === 'transferencia') {
+            totalIn += t.amount;
+          }
+        } else {
+          // Contas normais
+          if (t.flow === 'in' || t.flow === 'transfer_in') {
+            totalIn += t.amount;
+          } else {
+            totalOut += t.amount;
+          }
+        }
+      });
       
       // 4. Calculate Period Final Balance
       const periodFinalBalance = periodInitialBalance + totalIn - totalOut;
@@ -195,7 +227,28 @@ const ReceitasDespesas = () => {
         setTransacoesV2(transacoesV2.map(t => {
           if (t.id === transaction.id) return transaction;
           if (t.links?.transferGroupId === linkedGroupId && t.id !== transaction.id) {
-            return { ...t, amount: transaction.amount, date: transaction.date, description: transaction.description };
+            // Determine flow for the other side based on account type
+            const otherAccount = accounts.find(a => a.id === t.accountId);
+            const isCreditCard = otherAccount?.accountType === 'cartao_credito';
+            
+            let newFlow: 'in' | 'out' | 'transfer_in' | 'transfer_out';
+            
+            if (isCreditCard) {
+              // Se o outro lado é CC, a transação original era o pagamento (transferencia)
+              // O lado oposto é a Conta Corrente (transferencia)
+              newFlow = t.accountId === transferGroup?.fromAccountId ? 'transfer_out' : 'transfer_in';
+            } else {
+              // Lógica normal de transferência
+              newFlow = t.accountId === transferGroup?.fromAccountId ? 'transfer_out' : 'transfer_in';
+            }
+            
+            return { 
+              ...t, 
+              amount: transaction.amount, 
+              date: transaction.date, 
+              description: transaction.description,
+              flow: newFlow,
+            };
           }
           return t;
         }));
@@ -205,16 +258,81 @@ const ReceitasDespesas = () => {
     } else {
       const newTransactions = [transaction];
       
-      // PARTIDA DOBRADA: Transferência entre contas
+      // PARTIDA DOBRADA: Transferência (inclui pagamento de fatura CC)
       if (transferGroup) {
         setTransferGroups(prev => [...prev, transferGroup]);
-        const incomingTx: TransacaoCompleta = {
-          ...transaction,
-          id: generateTransactionId(),
-          accountId: transferGroup.toAccountId,
-          flow: 'transfer_in',
-          links: { ...transaction.links, transferGroupId: transferGroup.id }
-        };
+        
+        const fromAccount = accounts.find(a => a.id === transferGroup.fromAccountId);
+        const toAccount = accounts.find(a => a.id === transferGroup.toAccountId);
+        
+        const isFromCreditCard = fromAccount?.accountType === 'cartao_credito';
+        const isToCreditCard = toAccount?.accountType === 'cartao_credito';
+        
+        let incomingTx: TransacaoCompleta;
+        
+        if (isToCreditCard) {
+          // Pagamento de Fatura: CC (toAccount) recebe (flow: in), CC (fromAccount) sai (flow: out)
+          // A transação original (transaction) é a entrada no CC (flow: in)
+          
+          // Transação de SAÍDA da Conta Corrente (fromAccount)
+          incomingTx = {
+            ...transaction,
+            id: generateTransactionId(),
+            accountId: transferGroup.fromAccountId,
+            flow: 'transfer_out',
+            operationType: 'transferencia',
+            domain: 'operational',
+            categoryId: null,
+            links: { ...transaction.links, transferGroupId: transferGroup.id },
+            description: transferGroup.description || `Transferência enviada para ${toAccount?.name}`,
+          };
+          
+          // Atualiza a transação original (entrada no CC)
+          transaction.links.transferGroupId = transferGroup.id;
+          transaction.flow = 'in';
+          
+        } else if (isFromCreditCard) {
+          // Não deve acontecer, Cartão de Crédito não envia transferência (exceto resgate, que é outra operação)
+          // Se acontecer, tratamos como transferência normal (saída do CC, entrada na CC)
+          
+          // Transação de ENTRADA na Conta Destino (toAccount)
+          incomingTx = {
+            ...transaction,
+            id: generateTransactionId(),
+            accountId: transferGroup.toAccountId,
+            flow: 'transfer_in',
+            operationType: 'transferencia',
+            domain: 'operational',
+            categoryId: null,
+            links: { ...transaction.links, transferGroupId: transferGroup.id },
+            description: transferGroup.description || `Transferência recebida de ${fromAccount?.name}`,
+          };
+          
+          // Atualiza a transação original (saída do CC)
+          transaction.links.transferGroupId = transferGroup.id;
+          transaction.flow = 'transfer_out';
+          
+        } else {
+          // Transferência normal (CC para CC)
+          
+          // Transação de ENTRADA na Conta Destino (toAccount)
+          incomingTx = {
+            ...transaction,
+            id: generateTransactionId(),
+            accountId: transferGroup.toAccountId,
+            flow: 'transfer_in',
+            operationType: 'transferencia',
+            domain: 'operational',
+            categoryId: null,
+            links: { ...transaction.links, transferGroupId: transferGroup.id },
+            description: transferGroup.description || `Transferência recebida de ${fromAccount?.name}`,
+          };
+          
+          // Atualiza a transação original (saída da Conta Origem)
+          transaction.links.transferGroupId = transferGroup.id;
+          transaction.flow = 'transfer_out';
+        }
+        
         newTransactions.push(incomingTx);
       }
 

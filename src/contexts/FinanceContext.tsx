@@ -650,10 +650,43 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
   };
 
   const getSaldoAtual = () => {
-    const totalIn = transacoesV2.filter(t => t.flow === 'in' || t.flow === 'transfer_in').reduce((acc, t) => acc + t.amount, 0);
-    const totalOut = transacoesV2.filter(t => t.flow === 'out' || t.flow === 'transfer_out').reduce((acc, t) => acc + t.amount, 0);
-    const initialBalances = contasMovimento.reduce((acc, c) => acc + c.initialBalance, 0);
-    return initialBalances + totalIn - totalOut;
+    let totalBalance = 0;
+
+    contasMovimento.forEach(conta => {
+      let balance = conta.initialBalance;
+      
+      const accountTransactions = transacoesV2.filter(t => t.accountId === conta.id);
+
+      accountTransactions.forEach(t => {
+        const isCreditCard = conta.accountType === 'cartao_credito';
+        
+        if (isCreditCard) {
+          // Cartão de Crédito: Despesa (out) aumenta o passivo (subtrai do saldo)
+          // Transferência (in) diminui o passivo (soma ao saldo)
+          if (t.operationType === 'despesa') {
+            balance -= t.amount;
+          } else if (t.operationType === 'transferencia') {
+            balance += t.amount;
+          }
+        } else {
+          // Contas normais: in soma, out subtrai
+          if (t.flow === 'in' || t.flow === 'transfer_in') {
+            balance += t.amount;
+          } else {
+            balance -= t.amount;
+          }
+        }
+      });
+
+      // Se for Cartão de Crédito, o saldo é um passivo (dívida), então o valor é negativo
+      if (conta.accountType === 'cartao_credito') {
+        totalBalance += balance; // O saldo já é negativo se houver dívida
+      } else {
+        totalBalance += balance;
+      }
+    });
+
+    return totalBalance;
   };
 
   const getValorFipeTotal = () => {
@@ -662,11 +695,32 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
 
   // Cálculos avançados
   const getSaldoDevedor = () => {
-    return emprestimos.reduce((acc, e) => {
+    const saldoEmprestimos = emprestimos.reduce((acc, e) => {
       const parcelasPagas = e.parcelasPagas || 0;
       const saldoDevedor = Math.max(0, e.valorTotal - (parcelasPagas * e.parcela));
       return acc + saldoDevedor;
     }, 0);
+    
+    const saldoCartoes = contasMovimento
+      .filter(c => c.accountType === 'cartao_credito')
+      .reduce((acc, c) => {
+        // O saldo do cartão de crédito é o passivo (dívida)
+        let balance = c.initialBalance;
+        const accountTransactions = transacoesV2.filter(t => t.accountId === c.id);
+        
+        accountTransactions.forEach(t => {
+          if (t.operationType === 'despesa') {
+            balance -= t.amount;
+          } else if (t.operationType === 'transferencia') {
+            balance += t.amount;
+          }
+        });
+        
+        // Se o saldo for negativo, é uma dívida (passivo)
+        return acc + Math.abs(Math.min(0, balance));
+      }, 0);
+      
+    return saldoEmprestimos + saldoCartoes;
   };
 
   const getJurosTotais = () => {
@@ -686,13 +740,29 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
   };
 
   const getAtivosTotal = () => {
-    const saldoContas = getSaldoAtual();
+    // Ativos = Saldo de contas (exceto CC) + Investimentos + Veículos
+    const saldoContasAtivas = contasMovimento
+      .filter(c => c.accountType !== 'cartao_credito')
+      .reduce((acc, c) => {
+        let balance = c.initialBalance;
+        const accountTransactions = transacoesV2.filter(t => t.accountId === c.id);
+        accountTransactions.forEach(t => {
+          if (t.flow === 'in' || t.flow === 'transfer_in') {
+            balance += t.amount;
+          } else {
+            balance -= t.amount;
+          }
+        });
+        return acc + balance;
+      }, 0);
+      
     const valorVeiculos = getValorFipeTotal();
     const investimentos = investimentosRF.reduce((acc, i) => acc + i.valor, 0) +
                           criptomoedas.reduce((acc, c) => acc + c.valorBRL, 0) +
                           stablecoins.reduce((acc, s) => acc + s.valorBRL, 0) +
                           objetivos.reduce((acc, o) => acc + o.atual, 0);
-    return saldoContas + valorVeiculos + investimentos;
+                          
+    return saldoContasAtivas + valorVeiculos + investimentos;
   };
 
   const getPassivosTotal = () => {
