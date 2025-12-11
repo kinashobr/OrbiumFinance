@@ -43,7 +43,6 @@ export function DetailedIndicatorBadge({
               value={value}
               status={status}
               trend={trend}
-              tooltip={descricao}
               sparklineData={sparklineData}
               icon={icon}
             />
