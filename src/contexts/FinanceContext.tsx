@@ -132,6 +132,21 @@ export interface MovimentacaoInvestimento {
 // INTERFACE DO CONTEXTO
 // ============================================
 
+// Conta Movimento (antes ContaCorrente) - ATUALIZADO
+export interface ContaCorrente {
+  id: string;
+  name: string;
+  accountType: AccountType;
+  institution?: string;
+  currency: string;
+  initialBalance: number;
+  startDate?: string; // ADICIONADO
+  color?: string;
+  icon?: string;
+  createdAt: string;
+  meta: Record<string, unknown>;
+}
+
 export interface FinanceDataExport {
   version: string;
   exportDate: string;
@@ -629,7 +644,7 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
       if (!mes) return isReceita;
       return isReceita && t.date.startsWith(mes);
     });
-    return receitas.reduce((acc, t) => acc + t.amount, 0);
+    return receitas.reduce((acc, t => acc + t.amount, 0);
   };
 
   const getTotalDespesas = (mes?: string) => {
@@ -653,7 +668,9 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     let totalBalance = 0;
 
     contasMovimento.forEach(conta => {
-      let balance = conta.initialBalance;
+      // Se a conta tem startDate, o saldo inicial é 0 e dependemos da transação sintética.
+      // Caso contrário, usamos o initialBalance legado.
+      let balance = conta.startDate ? 0 : conta.initialBalance; 
       
       const accountTransactions = transacoesV2.filter(t => t.accountId === conta.id);
 
@@ -705,7 +722,7 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
       .filter(c => c.accountType === 'cartao_credito')
       .reduce((acc, c) => {
         // O saldo do cartão de crédito é o passivo (dívida)
-        let balance = c.initialBalance;
+        let balance = c.startDate ? 0 : c.initialBalance; // Ajuste para saldo inicial
         const accountTransactions = transacoesV2.filter(t => t.accountId === c.id);
         
         accountTransactions.forEach(t => {
@@ -744,7 +761,7 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     const saldoContasAtivas = contasMovimento
       .filter(c => c.accountType !== 'cartao_credito')
       .reduce((acc, c) => {
-        let balance = c.initialBalance;
+        let balance = c.startDate ? 0 : c.initialBalance; // Ajuste para saldo inicial
         const accountTransactions = transacoesV2.filter(t => t.accountId === c.id);
         accountTransactions.forEach(t => {
           if (t.flow === 'in' || t.flow === 'transfer_in') {

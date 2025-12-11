@@ -75,7 +75,7 @@ const ReceitasDespesas = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedAccountId, setSelectedAccountId] = useState("all");
   const [selectedCategoryId, setSelectedCategoryId] = useState("all");
-  const [selectedTypes, setSelectedTypes] = useState<OperationType[]>(['receita', 'despesa', 'transferencia', 'aplicacao', 'resgate', 'pagamento_emprestimo', 'liberacao_emprestimo', 'veiculo', 'rendimento']);
+  const [selectedTypes, setSelectedTypes] = useState<OperationType[]>(['receita', 'despesa', 'transferencia', 'aplicacao', 'resgate', 'pagamento_emprestimo', 'liberacao_emprestimo', 'veiculo', 'rendimento', 'initial_balance']);
   
   // Removendo dateFrom/dateTo do estado local, pois PeriodSelector controla isso
   const dateFrom = dateRange.from ? dateRange.from.toISOString().split('T')[0] : "";
@@ -95,7 +95,9 @@ const ReceitasDespesas = () => {
     const account = accounts.find(a => a.id === accountId);
     if (!account) return 0;
 
-    let balance = account.initialBalance;
+    // Se a conta tem startDate, o saldo inicial é 0 e dependemos da transação sintética.
+    // Caso contrário, usamos o initialBalance legado.
+    let balance = account.startDate ? 0 : account.initialBalance; 
     
     // If no date is provided, calculate global balance (end of all history)
     const targetDate = date || new Date(9999, 11, 31);
@@ -125,7 +127,7 @@ const ReceitasDespesas = () => {
     });
 
     return balance;
-  }, []);
+  }, [accounts]); // Dependency on accounts is crucial here
 
   // Filter transactions
   const filteredTransactions = useMemo(() => {
@@ -519,10 +521,49 @@ const ReceitasDespesas = () => {
 
     // Account CRUD
     const handleAccountSubmit = (account: ContaCorrente) => {
-      if (editingAccount) {
-        setContasMovimento(accounts.map(a => a.id === account.id ? account : a));
+      const isNewAccount = !editingAccount;
+      
+      // Se for uma nova conta, criamos a transação sintética de saldo inicial.
+      if (isNewAccount) {
+        const initialBalanceAmount = account.initialBalance;
+        // A conta é salva com initialBalance = 0, pois o valor inicial será representado pela transação.
+        const newAccount: ContaCorrente = { ...account, initialBalance: 0 }; 
+        
+        setContasMovimento([...accounts, newAccount]);
+        
+        // 2. Cria a transação sintética de saldo inicial se o valor for diferente de zero
+        if (initialBalanceAmount !== 0) {
+          const initialTx: TransacaoCompleta = {
+            id: generateTransactionId(),
+            date: account.startDate!, // Data de início é obrigatória no formulário
+            accountId: account.id,
+            flow: initialBalanceAmount >= 0 ? 'in' : 'out',
+            operationType: 'initial_balance',
+            domain: 'operational',
+            amount: Math.abs(initialBalanceAmount),
+            categoryId: null,
+            description: `Saldo Inicial de Implantação`,
+            links: {
+              investmentId: null,
+              loanId: null,
+              transferGroupId: null,
+              parcelaId: null,
+              vehicleTransactionId: null,
+            },
+            conciliated: true,
+            attachments: [],
+            meta: {
+              createdBy: 'system',
+              source: 'manual',
+              createdAt: new Date().toISOString(),
+              notes: `Saldo inicial de ${formatCurrency(initialBalanceAmount)} em ${account.startDate}`
+            }
+          };
+          addTransacaoV2(initialTx);
+        }
       } else {
-        setContasMovimento([...accounts, account]);
+        // Editando conta existente: apenas atualiza os detalhes
+        setContasMovimento(accounts.map(a => a.id === account.id ? account : a));
       }
       setEditingAccount(undefined);
     };

@@ -40,6 +40,7 @@ export function AccountFormModal({
   const [institution, setInstitution] = useState("");
   const [initialBalance, setInitialBalance] = useState("");
   const [currency, setCurrency] = useState("BRL");
+  const [startDate, setStartDate] = useState(new Date().toISOString().split('T')[0]); // ADICIONADO
 
   const isEditing = !!account;
 
@@ -50,18 +51,24 @@ export function AccountFormModal({
       setInstitution(account.institution || "");
       setInitialBalance(account.initialBalance.toString());
       setCurrency(account.currency);
+      setStartDate(account.startDate || new Date().toISOString().split('T')[0]); // USAR DATA EXISTENTE OU PADRÃO
     } else if (open) {
       setName("");
       setAccountType("conta_corrente");
       setInstitution("");
       setInitialBalance("");
       setCurrency("BRL");
+      setStartDate(new Date().toISOString().split('T')[0]); // RESET
     }
   }, [open, account]);
 
   const handleSubmit = () => {
     if (!name.trim()) {
       toast.error("Nome da conta é obrigatório");
+      return;
+    }
+    if (!startDate) {
+      toast.error("Data de início é obrigatória");
       return;
     }
 
@@ -74,6 +81,7 @@ export function AccountFormModal({
       institution: institution.trim() || undefined,
       currency,
       initialBalance: parsedBalance,
+      startDate, // ADICIONADO
       color: account?.color || 'hsl(var(--primary))',
       icon: account?.icon || 'building-2',
       createdAt: account?.createdAt || new Date().toISOString(),
@@ -183,6 +191,20 @@ export function AccountFormModal({
                 </SelectContent>
               </Select>
             </div>
+          </div>
+          
+          {/* NOVO CAMPO: Data de Início */}
+          <div className="space-y-2">
+            <Label htmlFor="startDate">Data de Início (Saldo Inicial) *</Label>
+            <Input
+              id="startDate"
+              type="date"
+              value={startDate}
+              onChange={(e) => setStartDate(e.target.value)}
+            />
+            <p className="text-xs text-muted-foreground">
+              Data em que o saldo inicial foi registrado.
+            </p>
           </div>
         </div>
 
