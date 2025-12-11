@@ -182,7 +182,7 @@ const ReceitasDespesas = () => {
           domain: 'investment',
           amount: transaction.amount,
           categoryId: null,
-          description: transaction.description || `Aplicação recebida de ${accounts.find(a => a.id === transaction.accountId)?.name}`,
+          description: transaction.description || `Aplicação recebida de conta corrente`,
           links: {
             investmentId: transaction.accountId, // Referência à conta origem
             loanId: null,
@@ -219,7 +219,7 @@ const ReceitasDespesas = () => {
           domain: 'investment',
           amount: transaction.amount,
           categoryId: null,
-          description: transaction.description || `Resgate enviado para ${accounts.find(a => a.id === transaction.accountId)?.name}`,
+          description: transaction.description || `Resgate enviado para conta corrente`,
           links: {
             investmentId: transaction.accountId, // Referência à conta destino
             loanId: null,
@@ -302,7 +302,8 @@ const ReceitasDespesas = () => {
             transactionId: transaction.id,
           });
         }
-
+        
+        console.log("New Transactions to add:", newTransactions); // Debug log
         newTransactions.forEach(t => addTransacaoV2(t));
       }
     };
