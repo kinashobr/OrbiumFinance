@@ -39,6 +39,7 @@ export interface ContaCorrente {
   institution?: string;
   currency: string;
   initialBalance: number;
+  startDate?: string; // ADICIONADO: Data de início para o saldo de implantação
   color?: string;
   icon?: string;
   createdAt: string;
@@ -76,7 +77,8 @@ export type OperationType =
   | 'pagamento_emprestimo'
   | 'liberacao_emprestimo'
   | 'veiculo'
-  | 'rendimento';
+  | 'rendimento'
+  | 'initial_balance'; // ADICIONADO
 
 // Domínio da Transação
 export type TransactionDomain = 'operational' | 'investment' | 'financing' | 'asset';
@@ -242,7 +244,8 @@ export function getFlowTypeFromOperation(op: OperationType, vehicleOp?: 'compra'
     case 'receita':
     case 'resgate':
     case 'liberacao_emprestimo':
-    case 'rendimento': // Rendimento é uma entrada (in)
+    case 'rendimento':
+    case 'initial_balance': // ADICIONADO
       return 'in';
     case 'despesa':
     case 'aplicacao':
@@ -261,6 +264,8 @@ export function getDomainFromOperation(op: OperationType): TransactionDomain {
   switch (op) {
     case 'receita':
     case 'despesa':
+    case 'transferencia':
+    case 'initial_balance': // ADICIONADO
       return 'operational';
     case 'aplicacao':
     case 'resgate':
@@ -270,8 +275,6 @@ export function getDomainFromOperation(op: OperationType): TransactionDomain {
       return 'financing';
     case 'veiculo':
       return 'asset';
-    case 'transferencia':
-      return 'operational';
     default:
       return 'operational';
   }
