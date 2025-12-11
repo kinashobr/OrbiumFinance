@@ -255,7 +255,7 @@ export function DRETab({ dateRange }: DRETabProps) {
     const totalDespesas = totalDespesasFixas + totalDespesasVariaveis;
 
     // Juros de empréstimos (passivo financeiro)
-    const jurosEmprestimos = emprestimos
+    const jurosFinanceiros = emprestimos
       .filter(e => e.status === 'ativo')
       .reduce((acc, e) => acc + (e.parcela * e.taxaMensal / 100), 0);
 
@@ -263,7 +263,7 @@ export function DRETab({ dateRange }: DRETabProps) {
     const resultadoBruto = totalReceitas - totalDespesasFixas;
     const resultadoOperacional = resultadoBruto - totalDespesasVariaveis;
     const resultadoAntesJuros = resultadoOperacional;
-    const resultadoLiquido = resultadoOperacional - jurosEmprestimos;
+    const resultadoLiquido = resultadoOperacional - jurosFinanceiros;
 
     // Evolução mensal (últimos 12 meses)
     const evolucaoMensal: { mes: string; receitas: number; despesas: number; resultado: number }[] = [];
