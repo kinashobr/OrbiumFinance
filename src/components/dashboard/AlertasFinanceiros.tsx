@@ -198,7 +198,7 @@ const ALERTA_CONFIGS: AlertaConfig[] = [
 
 export function AlertasFinanceiros() {
   const { 
-    transacoes, 
+    transacoesV2, 
     emprestimos, 
     veiculos, 
     investimentosRF, 
@@ -227,35 +227,35 @@ export function AlertasFinanceiros() {
     const anoAtual = hoje.getFullYear();
 
     // Métricas de fluxo de caixa
-    const transacoesMes = transacoes.filter(t => {
-      const d = new Date(t.data);
+    const transacoesMes = transacoesV2.filter(t => {
+      const d = new Date(t.date);
       return d.getMonth() === mesAtual && d.getFullYear() === anoAtual;
     });
 
     const receitasMes = transacoesMes
-      .filter(t => t.tipo === "receita")
-      .reduce((acc, t) => acc + (Number(t.valor) || 0), 0);
+      .filter(t => t.operationType === "receita" || t.operationType === "rendimento")
+      .reduce((acc, t) => acc + (Number(t.amount) || 0), 0);
 
     const despesasMes = transacoesMes
-      .filter(t => t.tipo === "despesa")
-      .reduce((acc, t) => acc + (Number(t.valor) || 0), 0);
+      .filter(t => t.operationType === "despesa" || t.operationType === "pagamento_emprestimo")
+      .reduce((acc, t) => acc + (Number(t.amount) || 0), 0);
 
     // Métricas históricas
     const mesesHistoricos = Array.from({ length: 12 }, (_, i) => {
       const mes = (mesAtual - i + 12) % 12;
       const ano = mes > mesAtual ? anoAtual - 1 : anoAtual;
-      const transacoesHistorico = transacoes.filter(t => {
-        const d = new Date(t.data);
+      const transacoesHistorico = transacoesV2.filter(t => {
+        const d = new Date(t.date);
         return d.getMonth() === mes && d.getFullYear() === ano;
       });
       
       const receitas = transacoesHistorico
-        .filter(t => t.tipo === "receita")
-        .reduce((acc, t) => acc + (Number(t.valor) || 0), 0);
+        .filter(t => t.operationType === "receita" || t.operationType === "rendimento")
+        .reduce((acc, t) => acc + (Number(t.amount) || 0), 0);
       
       const despesas = transacoesHistorico
-        .filter(t => t.tipo === "despesa")
-        .reduce((acc, t) => acc + (Number(t.valor) || 0), 0);
+        .filter(t => t.operationType === "despesa" || t.operationType === "pagamento_emprestimo")
+        .reduce((acc, t) => acc + (Number(t.amount) || 0), 0);
 
       return { mes, ano, receitas, despesas };
     });
@@ -302,7 +302,7 @@ export function AlertasFinanceiros() {
         endividamento: { valor: passivos > 0 ? (passivos / ativos) * 100 : 0, meta: 30, variacao: 0, unidade: "%", cor: "hsl(38, 92%, 50%)" }
       }
     };
-  }, [transacoes, emprestimos, veiculos, investimentosRF, criptomoedas, stablecoins, objetivos]);
+  }, [transacoesV2, emprestimos, veiculos, investimentosRF, criptomoedas, stablecoins, objetivos]);
 
   // Backend: Geração inteligente de alertas
   const gerarAlertas = useCallback(() => {

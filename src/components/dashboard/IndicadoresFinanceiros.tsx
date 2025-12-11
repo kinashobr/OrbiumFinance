@@ -19,11 +19,11 @@ interface IndicadoresFinanceirosProps {
 }
 
 export function IndicadoresFinanceiros({ indicadores }: IndicadoresFinanceirosProps) {
-  const { transacoes, emprestimos, veiculos, investimentosRF, criptomoedas, stablecoins, objetivos } = useFinance();
+  const { transacoesV2, emprestimos, veiculos, investimentosRF, criptomoedas, stablecoins, objetivos } = useFinance();
 
   const calculos = useMemo(() => {
-    const receitas = transacoes.filter(t => t.tipo === "receita").reduce((acc, t) => acc + t.valor, 0);
-    const despesas = transacoes.filter(t => t.tipo === "despesa").reduce((acc, t) => acc + t.valor, 0);
+    const receitas = transacoesV2.filter(t => t.operationType === "receita" || t.operationType === "rendimento").reduce((acc, t) => acc + t.amount, 0);
+    const despesas = transacoesV2.filter(t => t.operationType === "despesa" || t.operationType === "pagamento_emprestimo").reduce((acc, t) => acc + t.amount, 0);
     const totalInvestimentos = investimentosRF.reduce((acc, inv) => acc + inv.valor, 0) +
       criptomoedas.reduce((acc, c) => acc + c.valorBRL, 0) +
       stablecoins.reduce((acc, s) => acc + s.valorBRL, 0) +
@@ -34,10 +34,10 @@ export function IndicadoresFinanceiros({ indicadores }: IndicadoresFinanceirosPr
 
     const meses = ["01", "02", "03", "04", "05", "06", "07", "08", "09", "10", "11", "12"];
     const receitasPorMes = meses.map(mes => 
-      transacoes.filter(t => t.tipo === "receita" && t.data.includes(`-${mes}-`)).reduce((acc, t) => acc + t.valor, 0)
+      transacoesV2.filter(t => (t.operationType === "receita" || t.operationType === "rendimento") && t.date.includes(`-${mes}-`)).reduce((acc, t) => acc + t.amount, 0)
     );
     const despesasPorMes = meses.map(mes => 
-      transacoes.filter(t => t.tipo === "despesa" && t.data.includes(`-${mes}-`)).reduce((acc, t) => acc + t.valor, 0)
+      transacoesV2.filter(t => (t.operationType === "despesa" || t.operationType === "pagamento_emprestimo") && t.date.includes(`-${mes}-`)).reduce((acc, t) => acc + t.amount, 0)
     );
 
     const receitasValidas = receitasPorMes.filter(r => r > 0);
@@ -70,7 +70,7 @@ export function IndicadoresFinanceiros({ indicadores }: IndicadoresFinanceirosPr
       pesoRF: totalInvestimentos > 0 ? (investimentosRF.reduce((acc, inv) => acc + inv.valor, 0) / totalInvestimentos) * 100 : 0,
       pesoRV: totalInvestimentos > 0 ? ((criptomoedas.reduce((acc, c) => acc + c.valorBRL, 0) + objetivos.reduce((acc, o) => acc + o.atual, 0)) / totalInvestimentos) * 100 : 0,
     };
-  }, [transacoes, emprestimos, veiculos, investimentosRF, criptomoedas, stablecoins, objetivos]);
+  }, [transacoesV2, emprestimos, veiculos, investimentosRF, criptomoedas, stablecoins, objetivos]);
 
   const getStatus = (indicador: Indicador): "success" | "warning" | "danger" => {
     const { valor, limites, inverso } = indicador;

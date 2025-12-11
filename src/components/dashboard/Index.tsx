@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, useEffect } from "react";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { useFinance } from "@/contexts/FinanceContext";
 import { PatrimonioCards } from "@/components/dashboard/PatrimonioCards";
@@ -422,81 +422,50 @@ const Index = () => {
     ].filter(item => item.valor > 0);
   }, [investimentosRF, stablecoins, objetivos, criptomoedas]);
 
-  const handleResetCustomization = () => {
-    setSections(defaultSections);
-    setLayout("fluid");
-  };
-
-  const renderSection = (sectionId: string) => {
-    switch (sectionId) {
-      case "patrimonio-cards":
-        return <PatrimonioCards data={patrimonioData} />;
-      case "quick-actions":
-        return <QuickActions />;
-      case "evolucao-chart":
-        return <EvolucaoPatrimonialChart data={evolucaoData} />;
-      case "heatmap":
-        const month = dateRange.from ? format(dateRange.from, 'MM') : format(now, 'MM');
-        const year = dateRange.from ? dateRange.from.getFullYear() : now.getFullYear();
-        return <FluxoCaixaHeatmap month={month} year={year} transacoes={filteredTransacoesV2} />;
-      case "indicadores":
-        return <IndicadoresFinanceiros indicadores={indicadores} />;
-      case "tabela-consolidada":
-        return <TabelaConsolidada data={tabelaConsolidada} />;
-      case "objetivos":
-        return <ObjetivosCards objetivos={objetivos} />;
-      case "distribuicao-charts":
-        return <DistribuicaoCharts porClasse={distribuicaoPorClasse} porRisco={distribuicaoPorRisco} />;
-      case "transacoes-recentes":
-        return <TransacoesRecentes transacoes={filteredTransacoesV2} limit={8} />;
-      default:
-        return null;
-    }
-  };
-
-  const visibleSections = sections
-    .filter(s => s.visivel)
-    .sort((a, b) => a.ordem - b.ordem);
-
   return (
-    <MainLayout>
-      <div className="space-y-6">
-        <div className="flex items-center justify-between animate-fade-in">
-          <div>
-            <h1 className="text-3xl font-bold text-foreground">Dashboard Financeiro</h1>
-            <p className="text-muted-foreground mt-1">
-              Painel unificado das suas finanças pessoais
-            </p>
-          </div>
-          <div className="flex items-center gap-3">
-            <PeriodSelector 
-              initialRange={initialRange}
-              onDateRangeChange={handlePeriodChange} 
-            />
-            <DashboardCustomizer
-              sections={sections}
-              layout={layout}
-              onSectionsChange={setSections}
-              onLayoutChange={setLayout}
-              onReset={handleResetCustomization}
-            />
-          </div>
+    <TooltipProvider>
+      <div className="glass-card p-5 animate-fade-in-up">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg font-semibold text-foreground">Indicadores Financeiros</h3>
         </div>
 
-        <div className={cn(
-          "space-y-6",
-          layout === "2col" && "grid grid-cols-1 lg:grid-cols-2 gap-6",
-          layout === "3col" && "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
-        )}>
-          {visibleSections.map((section) => (
-            <div key={section.id} className="animate-fade-in-up">
-              {renderSection(section.id)}
-            </div>
-          ))}
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
+          {indicadoresData.map((indicador) => {
+            const status = getStatus(indicador);
+            return (
+              <Tooltip key={indicador.id}>
+                <TooltipTrigger asChild>
+                  <div
+                    className={cn(
+                      "glass-card p-3 border-l-4 transition-all hover:scale-[1.02] cursor-help",
+                      statusStyles[status]
+                    )}
+                  >
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs text-muted-foreground font-medium truncate">{indicador.nome}</p>
+                        <p className={cn("text-lg font-bold mt-1", statusTextStyles[status])}>
+                          {formatValue(indicador)}
+                        </p>
+                      </div>
+                      <div className={cn(
+                        "p-2 rounded-lg",
+                        status === "success" && "bg-success/10 text-success",
+                        status === "warning" && "bg-warning/10 text-warning",
+                        status === "danger" && "bg-destructive/10 text-destructive"
+                      )}>
+                        <Info className="w-4 h-4" />
+                      </div>
+                    </div>
+                  </TooltipTrigger>
+                  <TooltipContent className="max-w-xs">
+                    <p className="text-sm">{indicador.formula}</p>
+                  </TooltipContent>
+                </Tooltip>
+              );
+            })}
         </div>
       </div>
-    </MainLayout>
+    </TooltipProvider>
   );
-};
-
-export default Index;
+}
