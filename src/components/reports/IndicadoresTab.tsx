@@ -182,40 +182,6 @@ export function IndicadoresTab({ dateRange }: IndicadoresTabProps) {
     toast.success("Indicador removido");
   };
 
-  // Helper para calcular saldo até uma data (usado para saldo inicial do período)
-  function calculateBalanceUpToDate(accountId: string, date: Date, allTransactions: typeof transacoesV2, accounts: typeof contasMovimento): number {
-    const account = accounts.find(a => a.id === accountId);
-    if (!account) return 0;
-
-    // Se a conta tem startDate, o saldo inicial é 0 e dependemos da transação sintética.
-    // Caso contrário, usamos o initialBalance legado.
-    let balance = account.startDate ? 0 : account.initialBalance; // MODIFICADO
-    
-    const transactionsBeforeDate = allTransactions
-        .filter(t => t.accountId === accountId && parseISO(t.date) < date)
-        .sort((a, b) => parseISO(a.date).getTime() - parseISO(b.date).getTime());
-
-    transactionsBeforeDate.forEach(t => {
-        const isCreditCard = account.accountType === 'cartao_credito';
-        
-        if (isCreditCard) {
-          if (t.operationType === 'despesa') {
-            balance -= t.amount;
-          } else if (t.operationType === 'transferencia') {
-            balance += t.amount;
-          }
-        } else {
-          if (t.flow === 'in' || t.flow === 'transfer_in') {
-            balance += t.amount;
-          } else {
-            balance -= t.amount;
-          }
-        }
-    });
-
-    return balance;
-  };
-
   // Cálculos principais
   const indicadores = useMemo(() => {
     const now = new Date();
@@ -252,7 +218,7 @@ export function IndicadoresTab({ dateRange }: IndicadoresTabProps) {
       // Saldo inicial do período
       const saldoInicialPeriodo = dateRange.from 
         ? calculateBalanceUpToDate(conta.id, dateRange.from, transacoesV2, contasMovimento)
-        : calculateBalanceUpToDate(conta.id, new Date(9999, 11, 31), transacoesV2, contasMovimento); // Saldo final global se não houver filtro
+        : conta.initialBalance;
         
       saldosPorConta[conta.id] = saldoInicialPeriodo;
     });
@@ -266,6 +232,39 @@ export function IndicadoresTab({ dateRange }: IndicadoresTabProps) {
       }
     });
     
+    // Helper para calcular saldo até uma data (usado para saldo inicial do período)
+    function calculateBalanceUpToDate(accountId: string, date: Date, allTransactions: typeof transacoesV2, accounts: typeof contasMovimento): number {
+      const account = accounts.find(a => a.id === accountId);
+      if (!account) return 0;
+
+      let balance = account.initialBalance;
+      
+      const transactionsBeforeDate = allTransactions
+          .filter(t => t.accountId === accountId && parseISO(t.date) < date)
+          .sort((a, b) => parseISO(a.date).getTime() - parseISO(b.date).getTime());
+
+      transactionsBeforeDate.forEach(t => {
+          const isCreditCard = account.accountType === 'cartao_credito';
+          
+          if (isCreditCard) {
+            if (t.operationType === 'despesa') {
+              balance -= t.amount;
+            } else if (t.operationType === 'transferencia') {
+              balance += t.amount;
+            }
+          } else {
+            if (t.flow === 'in' || t.flow === 'transfer_in') {
+              balance += t.amount;
+            } else {
+              balance -= t.amount;
+            }
+          }
+      });
+
+      return balance;
+    };
+
+
     // Ativos
     const contasLiquidas = contasMovimento.filter(c => 
       ['conta_corrente', 'poupanca', 'reserva_emergencia'].includes(c.accountType)
@@ -513,7 +512,7 @@ export function IndicadoresTab({ dateRange }: IndicadoresTabProps) {
                   onChange={(e) => setNewIndicator({ ...newIndicator, formula: e.target.value })}
                 />
                 <p className="text-xs text-muted-foreground">
-                  Variáveis disponíveis: caixaTotal, investimentosTotal, valorVeiculos, totalAtivos, totalPassivos, patrimonioLiquido, receitasMesAtual, despesasMesAtual, resultadoMesAtual, saldoDevedor, passivoCurtoPrazo
+                  Variáveis disponíveis: caixaTotal, investimentosTotal, totalAtivos, totalPassivos, patrimonioLiquido, receitasMesAtual, despesasMesAtual, resultadoMesAtual
                 </p>
               </div>
               <div className="grid grid-cols-2 gap-4">

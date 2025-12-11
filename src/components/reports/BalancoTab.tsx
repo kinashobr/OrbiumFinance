@@ -96,14 +96,52 @@ export function BalancoTab({ dateRange }: BalancoTabProps) {
     categoriasV2,
   } = useFinance();
 
+  // 1. Filtrar transações para o período selecionado
+  const transacoesPeriodo = useMemo(() => {
+    if (!dateRange.from || !dateRange.to) return transacoesV2;
+    
+    return transacoesV2.filter(t => {
+      try {
+        const dataT = parseISO(t.date);
+        return isWithinInterval(dataT, { start: dateRange.from!, end: dateRange.to! });
+      } catch {
+        return false;
+      }
+    });
+  }, [transacoesV2, dateRange]);
+
+  // 2. Calcular saldo de cada conta baseado nas transações do período
+  const saldosPorConta = useMemo(() => {
+    const saldos: Record<string, number> = {};
+    
+    contasMovimento.forEach(conta => {
+      // O saldo inicial é o saldo acumulado ANTES do período
+      const saldoInicialPeriodo = dateRange.from 
+        ? calculateBalanceUpToDate(conta.id, dateRange.from, transacoesV2, contasMovimento)
+        : conta.initialBalance; // Se não há data de início, usa o saldo inicial global
+        
+      saldos[conta.id] = saldoInicialPeriodo;
+    });
+
+    transacoesPeriodo.forEach(t => {
+      if (!saldos[t.accountId]) saldos[t.accountId] = 0;
+      
+      if (t.flow === 'in' || t.flow === 'transfer_in') {
+        saldos[t.accountId] += t.amount;
+      } else {
+        saldos[t.accountId] -= t.amount;
+      }
+    });
+
+    return saldos;
+  }, [transacoesPeriodo, contasMovimento, transacoesV2, dateRange]);
+  
   // Helper para calcular saldo até uma data (usado para saldo inicial do período)
   const calculateBalanceUpToDate = (accountId: string, date: Date, allTransactions: typeof transacoesV2, accounts: typeof contasMovimento): number => {
     const account = accounts.find(a => a.id === accountId);
     if (!account) return 0;
 
-    // Se a conta tem startDate, o saldo inicial é 0 e dependemos da transação sintética.
-    // Caso contrário, usamos o initialBalance legado.
-    let balance = account.startDate ? 0 : account.initialBalance; // MODIFICADO
+    let balance = account.initialBalance;
     
     const transactionsBeforeDate = allTransactions
         .filter(t => t.accountId === accountId && parseISO(t.date) < date)
@@ -130,46 +168,6 @@ export function BalancoTab({ dateRange }: BalancoTabProps) {
     return balance;
   };
 
-  // 1. Filtrar transações para o período selecionado
-  const transacoesPeriodo = useMemo(() => {
-    if (!dateRange.from || !dateRange.to) return transacoesV2;
-    
-    return transacoesV2.filter(t => {
-      try {
-        const dataT = parseISO(t.date);
-        return isWithinInterval(dataT, { start: dateRange.from!, end: dateRange.to! });
-      } catch {
-        return false;
-      }
-    });
-  }, [transacoesV2, dateRange]);
-
-  // 2. Calcular saldo de cada conta baseado nas transações do período
-  const saldosPorConta = useMemo(() => {
-    const saldos: Record<string, number> = {};
-    
-    contasMovimento.forEach(conta => {
-      // O saldo inicial é o saldo acumulado ANTES do período
-      const saldoInicialPeriodo = dateRange.from 
-        ? calculateBalanceUpToDate(conta.id, dateRange.from, transacoesV2, contasMovimento)
-        : calculateBalanceUpToDate(conta.id, new Date(9999, 11, 31), transacoesV2, contasMovimento); // Se não há data de início, usa o saldo final global
-        
-      saldos[conta.id] = saldoInicialPeriodo;
-    });
-
-    transacoesPeriodo.forEach(t => {
-      if (!saldos[t.accountId]) saldos[t.accountId] = 0;
-      
-      if (t.flow === 'in' || t.flow === 'transfer_in') {
-        saldos[t.accountId] += t.amount;
-      } else {
-        saldos[t.accountId] -= t.amount;
-      }
-    });
-
-    return saldos;
-  }, [transacoesPeriodo, contasMovimento, transacoesV2, dateRange]);
-  
   // Cálculos do Balanço Patrimonial
   const balanco = useMemo(() => {
     const now = new Date();
@@ -314,39 +312,19 @@ export function BalancoTab({ dateRange }: BalancoTabProps) {
       const fim = endOfMonth(data);
 
       // Calcular saldo acumulado até o final do mês
-      let saldoAcumulado = 0; // Começa em 0 e usa transações sintéticas
+      let saldoAcumulado = contasMovimento.reduce((acc, c) => acc + c.initialBalance, 0);
       
-      contasMovimento.forEach(conta => {
-        // Se a conta tem startDate, o saldo inicial é 0 e dependemos da transação sintética.
-        // Caso contrário, usamos o initialBalance legado.
-        let balance = conta.startDate ? 0 : conta.initialBalance; 
-        
-        transacoesV2.forEach(t => {
-          try {
-            const dataT = parseISO(t.date);
-            if (t.accountId === conta.id && dataT <= fim) {
-              const isCreditCard = conta.accountType === 'cartao_credito';
-              
-              if (isCreditCard) {
-                if (t.operationType === 'despesa') {
-                  balance -= t.amount;
-                } else if (t.operationType === 'transferencia') {
-                  balance += t.amount;
-                }
-              } else {
-                if (t.flow === 'in' || t.flow === 'transfer_in') {
-                  balance += t.amount;
-                } else {
-                  balance -= t.amount;
-                }
-              }
+      transacoesV2.forEach(t => {
+        try {
+          const dataT = parseISO(t.date);
+          if (dataT <= fim) {
+            if (t.flow === 'in' || t.flow === 'transfer_in') {
+              saldoAcumulado += t.amount;
+            } else {
+              saldoAcumulado -= t.amount;
             }
-          } catch (e) {}
-        });
-        
-        if (conta.accountType !== 'cartao_credito') {
-          saldoAcumulado += balance;
-        }
+          }
+        } catch (e) {}
       });
 
       // Valor de investimentos (simplificado - usar valor atual)
