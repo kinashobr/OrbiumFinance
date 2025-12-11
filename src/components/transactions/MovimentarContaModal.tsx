@@ -10,7 +10,7 @@ import { Separator } from "@/components/ui/separator";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { 
   TrendingUp, TrendingDown, ArrowLeftRight, PiggyBank, Wallet, 
-  CreditCard, AlertTriangle, Check, Plus, Info, Car, Banknote, DollarSign, Shield
+  CreditCard, AlertTriangle, Check, Plus, Info, Car, Banknote, DollarSign, Shield, X
 } from "lucide-react";
 import { 
   OperationType, ContaCorrente, Categoria, AccountType,
