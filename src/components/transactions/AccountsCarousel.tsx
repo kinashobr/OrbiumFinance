@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { AccountCard } from "./AccountCard";
 import { AccountSummary, ContaCorrente } from "@/types/finance";
-import { DragDropContext, Droppable, Draggable, DropResult } from "react-beautiful-dnd";
+import { DragDropContext, Droppable, Draggable, DropResult, DraggableProvided, DraggableStateSnapshot } from "react-beautiful-dnd";
 import { useFinance } from "@/contexts/FinanceContext";
 
 interface AccountsCarouselProps {
@@ -16,7 +16,7 @@ interface AccountsCarouselProps {
 }
 
 // Função auxiliar para reordenar a lista
-const reorder = (list: ContaCorrente[], startIndex: number, endIndex: number): ContaCorrente[] => {
+const reorder = (list: ContaCorrente[], startIndex: number, endIndex): ContaCorrente[] => {
   const result = Array.from(list);
   const [removed] = result.splice(startIndex, 1);
   result.splice(endIndex, 0, removed);
@@ -24,29 +24,38 @@ const reorder = (list: ContaCorrente[], startIndex: number, endIndex: number): C
 };
 
 // Helper function to get the style for the draggable item
-const getItemStyle = (isDragging: boolean, draggableStyle: any) => {
+const getItemStyle = (isDragging: boolean, draggableStyle: any, snapshot: DraggableStateSnapshot) => {
   if (!draggableStyle) return {};
 
   const transform = draggableStyle.transform;
   let newTransform = transform;
 
-  if (isDragging) {
-    // Adiciona escala à transformação existente (se houver)
-    if (transform) {
-      // Remove qualquer escala existente e aplica a nova
-      newTransform = transform.replace(/scale\([0-9.]+\)/g, '').trim();
-      newTransform += ' scale(1.05)';
-    } else {
-      newTransform = 'scale(1.05)';
+  if (isDragging && transform) {
+    // Extrai o valor de translação X (o valor Y deve ser 0)
+    const match = transform.match(/translate\(([^,]+), ([^)]+)\)/);
+    if (match) {
+      const x = match[1];
+      // Força a translação Y para 0, mantendo a translação X
+      newTransform = `translate(${x}, 0px)`;
     }
+    
+    // Aplica a escala e z-index alto
+    newTransform += ' scale(1.05)';
   }
 
   return {
     ...draggableStyle,
-    boxShadow: isDragging ? "0 10px 20px rgba(0,0,0,0.3)" : "none",
-    transform: newTransform,
-    transition: isDragging ? "none" : "all 0.2s ease", 
+    // Garante que o elemento arrastado fique no topo
     zIndex: isDragging ? 9999 : 'auto',
+    // Aplica a transformação corrigida
+    transform: newTransform,
+    // Transição suave para quando o drag terminar
+    transition: isDragging ? "none" : "all 0.2s ease", 
+    // Estilo visual durante o drag
+    boxShadow: isDragging ? "0 10px 20px rgba(0,0,0,0.3)" : "none",
+    cursor: isDragging ? 'grabbing' : 'grab',
+    // Opacidade para indicar que está sendo arrastado
+    opacity: isDragging ? 0.9 : 1,
   };
 };
 
@@ -125,7 +134,10 @@ export function AccountsCarousel({
       </div>
 
       <DragDropContext onDragEnd={onDragEnd}>
-        <Droppable droppableId="accounts-carousel" direction="horizontal">
+        <Droppable 
+          droppableId="accounts-carousel" 
+          direction="horizontal"
+        >
           {(droppableProvided) => (
             <ScrollArea className="w-full" ref={scrollRef}>
               <div 
@@ -143,7 +155,8 @@ export function AccountsCarousel({
                         className="shrink-0"
                         style={getItemStyle(
                           snapshot.isDragging,
-                          draggableProvided.draggableProps.style
+                          draggableProvided.draggableProps.style,
+                          snapshot
                         )}
                       >
                         <AccountCard
