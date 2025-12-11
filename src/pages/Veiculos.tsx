@@ -33,7 +33,6 @@ import { EditableCell } from "@/components/EditableCell";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { FipeConsultaDialog } from "@/components/vehicles/FipeConsultaDialog";
-import { MovimentarContaModal } from "@/components/transactions/MovimentarContaModal";
 import { TransacaoCompleta, generateTransactionId, OperationType, getFlowTypeFromOperation, getDomainFromOperation } from "@/types/finance";
 import { useNavigate } from "react-router-dom";
 
@@ -73,7 +72,8 @@ const Veiculos = () => {
     veiculoNome: string;
     vencimento: string;
   } | null>(null);
-  const [showMovimentarModal, setShowMovimentarModal] = useState(false);
+  
+  // REMOVIDO: [showMovimentarModal, setShowMovimentarModal]
 
   const handleOpenFipeConsulta = (veiculo?: Veiculo) => {
     setSelectedVeiculoFipe(veiculo);
@@ -252,71 +252,11 @@ const Veiculos = () => {
     return pendentes.sort((a, b) => new Date(a.parcela.vencimento).getTime() - new Date(b.parcela.vencimento).getTime());
   }, [segurosVeiculo, veiculos]);
 
-  // REMOVENDO handlePayInstallment
-  const handlePayInstallmentClick = (item: typeof parcelasPendentes[0]) => {
-    setParcelaToPay({
-      seguroId: item.seguro.id,
-      parcelaNumero: item.parcela.numero,
-      valor: item.parcela.valor,
-      veiculoNome: item.veiculo?.modelo || item.seguro.seguradora,
-      vencimento: item.parcela.vencimento,
-    });
-    setShowMovimentarModal(true);
-  };
-
-  const handleTransactionSubmit = (transaction: TransacaoCompleta) => {
-    // Lógica de pagamento de seguro
-    if (transaction.operationType === 'despesa' && transaction.links?.vehicleTransactionId) {
-      const [seguroIdStr, parcelaNumeroStr] = transaction.links.vehicleTransactionId.split('_');
-      const seguroId = parseInt(seguroIdStr);
-      const parcelaNumero = parseInt(parcelaNumeroStr);
-      
-      if (!isNaN(seguroId) && !isNaN(parcelaNumero)) {
-        // Marcar parcela como paga no contexto
-        // NOTE: Esta função será implementada no passo 3
-        // markSeguroParcelPaid(seguroId, parcelaNumero, transaction.id);
-        toast.success(`Parcela ${parcelaNumero} do seguro marcada como paga e transação registrada!`);
-      }
-    }
-    
-    // Adicionar transação ao V2
-    addTransacaoV2(transaction);
-    setShowMovimentarModal(false);
-    setParcelaToPay(null);
-  };
-
-  // Dados para o modal de movimentação
-  const modalTransactionData = useMemo(() => {
-    if (!parcelaToPay) return undefined;
-    
-    const seguroCategory = categoriasV2.find(c => c.label.toLowerCase().includes('seguro'));
-    
-    return {
-      operationType: 'despesa' as OperationType,
-      amount: parcelaToPay.valor,
-      date: parcelaToPay.vencimento,
-      description: `Pagamento Parcela ${parcelaToPay.parcelaNumero} - Seguro ${parcelaToPay.veiculoNome}`,
-      categoryId: seguroCategory?.id || '',
-      links: {
-        vehicleTransactionId: `${parcelaToPay.seguroId}_${parcelaToPay.parcelaNumero}`,
-      }
-    };
-  }, [parcelaToPay, categoriasV2]);
-
-  // Get investments and loans from context for linking
-  const investments = useMemo(() => {
-    return investimentosRF.map(i => ({ id: `inv_${i.id}`, name: i.aplicacao }));
-  }, [investimentosRF]);
-
-  const loans = useMemo(() => {
-    return emprestimos
-      .filter(e => e.status !== 'pendente_config')
-      .map(e => ({
-        id: `loan_${e.id}`,
-        institution: e.contrato,
-        numeroContrato: e.contrato,
-      }));
-  }, [emprestimos]);
+  // REMOVIDO: handlePayInstallmentClick
+  // REMOVIDO: handleTransactionSubmit
+  // REMOVIDO: modalTransactionData
+  // REMOVIDO: investments
+  // REMOVIDO: loans
 
   return (
     <MainLayout>
@@ -434,102 +374,6 @@ const Veiculos = () => {
                   <Button type="submit" className="w-full">
                     <Plus className="w-4 h-4 mr-2" />
                     Cadastrar Seguro
-                  </Button>
-                </form>
-              </DialogContent>
-            </Dialog>
-            <Dialog open={showAddVeiculo} onOpenChange={(open) => { setShowAddVeiculo(open); if (!open) setPendingVehicleId(null); }}>
-              <DialogContent className="bg-card border-border">
-                <DialogHeader>
-                  <DialogTitle>
-                    {pendingVehicleId ? "Configurar Veículo Pendente" : "Cadastrar Novo Veículo"}
-                  </DialogTitle>
-                </DialogHeader>
-                <form onSubmit={handleSubmitVeiculo} className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <Label>Marca</Label>
-                      <Input
-                        value={formData.marca}
-                        onChange={(e) => setFormData(prev => ({ ...prev, marca: e.target.value }))}
-                        placeholder="Ex: Honda"
-                        className="mt-1 bg-muted border-border"
-                      />
-                    </div>
-                    <div>
-                      <Label>Modelo *</Label>
-                      <Input
-                        value={formData.modelo}
-                        onChange={(e) => setFormData(prev => ({ ...prev, modelo: e.target.value }))}
-                        placeholder="Ex: Civic EXL"
-                        className="mt-1 bg-muted border-border"
-                      />
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-3 gap-4">
-                    <div>
-                      <Label>Tipo *</Label>
-                      <Select 
-                        value={formData.tipo} 
-                        onValueChange={(v: 'carro' | 'moto' | 'caminhao') => setFormData(prev => ({ ...prev, tipo: v }))}
-                      >
-                        <SelectTrigger className="mt-1 bg-muted border-border">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="carro">Carro</SelectItem>
-                          <SelectItem value="moto">Moto</SelectItem>
-                          <SelectItem value="caminhao">Caminhão</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div>
-                      <Label>Ano *</Label>
-                      <Input
-                        type="number"
-                        value={formData.ano}
-                        onChange={(e) => setFormData(prev => ({ ...prev, ano: e.target.value }))}
-                        placeholder="2024"
-                        className="mt-1 bg-muted border-border"
-                      />
-                    </div>
-                    <div>
-                      <Label>Data Compra</Label>
-                      <Input
-                        type="date"
-                        value={formData.dataCompra}
-                        onChange={(e) => setFormData(prev => ({ ...prev, dataCompra: e.target.value }))}
-                        className="mt-1 bg-muted border-border"
-                        disabled={!!pendingVehicleId}
-                      />
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <Label>Valor Compra (R$)</Label>
-                      <Input
-                        type="number"
-                        step="0.01"
-                        value={formData.valorVeiculo}
-                        onChange={(e) => setFormData(prev => ({ ...prev, valorVeiculo: e.target.value }))}
-                        className="mt-1 bg-muted border-border"
-                        disabled={!!pendingVehicleId}
-                      />
-                    </div>
-                    <div>
-                      <Label>Valor FIPE (R$)</Label>
-                      <Input
-                        type="number"
-                        step="0.01"
-                        value={formData.valorFipe}
-                        onChange={(e) => setFormData(prev => ({ ...prev, valorFipe: e.target.value }))}
-                        className="mt-1 bg-muted border-border"
-                      />
-                    </div>
-                  </div>
-                  <Button type="submit" className="w-full">
-                    <Plus className="w-4 h-4 mr-2" />
-                    {pendingVehicleId ? "Salvar Configuração" : "Adicionar Veículo"}
                   </Button>
                 </form>
               </DialogContent>
@@ -928,11 +772,12 @@ const Veiculos = () => {
                             <Badge variant="outline" className="border-warning text-warning">Pendente</Badge>
                           </TableCell>
                           <TableCell>
+                            {/* Botão que navega para a tela de ReceitasDespesas */}
                             <Button
                               variant="outline"
                               size="sm"
-                              onClick={() => handlePayInstallmentClick(item)}
-                              className="h-8 px-2 hover:bg-success/10 hover:text-success gap-1"
+                              onClick={() => navigate('/receitas-despesas')}
+                              className="h-8 px-2 hover:bg-primary/10 hover:text-primary gap-1"
                             >
                               Pagar <ArrowRight className="w-3 h-3" />
                             </Button>
@@ -960,33 +805,6 @@ const Veiculos = () => {
           onOpenChange={setShowFipeDialog}
           veiculo={selectedVeiculoFipe}
           onUpdateFipe={handleUpdateFipe}
-        />
-
-        {/* Modal de Movimentação (para pagamento de seguro) */}
-        <MovimentarContaModal
-          open={showMovimentarModal}
-          onOpenChange={setShowMovimentarModal}
-          accounts={contasMovimento}
-          categories={categoriasV2}
-          investments={investimentosRF.map(i => ({ id: `inv_${i.id}`, name: i.aplicacao }))}
-          loans={emprestimos.map(e => ({ id: `loan_${e.id}`, institution: e.contrato }))}
-          selectedAccountId={contasMovimento.find(c => c.accountType === 'conta_corrente')?.id}
-          onSubmit={handleTransactionSubmit}
-          editingTransaction={modalTransactionData ? {
-            id: generateTransactionId(),
-            date: modalTransactionData.date,
-            accountId: contasMovimento.find(c => c.accountType === 'conta_corrente')?.id || '',
-            flow: getFlowTypeFromOperation(modalTransactionData.operationType),
-            operationType: modalTransactionData.operationType,
-            domain: getDomainFromOperation(modalTransactionData.operationType),
-            amount: modalTransactionData.amount,
-            categoryId: modalTransactionData.categoryId,
-            description: modalTransactionData.description,
-            links: modalTransactionData.links,
-            conciliated: false,
-            attachments: [],
-            meta: { createdBy: 'system', source: 'manual', createdAt: new Date().toISOString() }
-          } as TransacaoCompleta : undefined}
         />
       </div>
     </MainLayout>

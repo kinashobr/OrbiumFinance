@@ -10,7 +10,7 @@ import { Separator } from "@/components/ui/separator";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { 
   TrendingUp, TrendingDown, ArrowLeftRight, PiggyBank, Wallet, 
-  CreditCard, AlertTriangle, Check, Plus, Info, Car, Banknote, DollarSign
+  CreditCard, AlertTriangle, Check, Plus, Info, Car, Banknote, DollarSign, Shield
 } from "lucide-react";
 import { 
   OperationType, ContaCorrente, Categoria, AccountType,
@@ -20,6 +20,7 @@ import {
 } from "@/types/finance";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { SeguroParcelaSelector } from "./SeguroParcelaSelector"; // Importando o novo componente
 
 interface LoanParcela {
   numero: number;
@@ -55,7 +56,7 @@ const getOperationsForAccountType = (accountType: AccountType): OperationType[] 
   switch (accountType) {
     case 'conta_corrente':
       // Conta corrente: Receita, Despesa, Transferência, Aplicação, Resgate, Pagamento/Liberação Empréstimo, Veículos
-      return ['receita', 'despesa', 'transferencia', 'aplicacao', 'resgate', 'pagamento_emprestimo', 'liberacao_emprestimo', 'veiculo'];
+      return ['receita', 'despesa', 'transferencia', 'aplicacao', 'resgate', 'pagamento_emprestimo', 'liberacao_emprestimo', 'veiculo', 'rendimento'];
     case 'aplicacao_renda_fixa':
     case 'poupanca':
     case 'reserva_emergencia':
@@ -105,6 +106,10 @@ export function MovimentarContaModal({
   const [parcelaId, setParcelaId] = useState('');
   const [vehicleOperation, setVehicleOperation] = useState<'compra' | 'venda'>('compra');
   const [numeroContrato, setNumeroContrato] = useState('');
+  
+  // Estado para Seguro
+  const [showSeguroSelector, setShowSeguroSelector] = useState(false);
+  const [seguroLink, setSeguroLink] = useState<{ seguroId: number; parcelaNumero: number; valor: number; vencimento: string } | null>(null);
 
   const isEditing = !!editingTransaction;
 
@@ -134,11 +139,23 @@ export function MovimentarContaModal({
         setParcelaId(editingTransaction.links.parcelaId || '');
         setVehicleOperation(editingTransaction.meta.vehicleOperation || 'compra');
         setNumeroContrato(editingTransaction.meta.numeroContrato || '');
+        
+        // Load seguro link if present
+        if (editingTransaction.links.vehicleTransactionId) {
+          const [seguroIdStr, parcelaNumeroStr] = editingTransaction.links.vehicleTransactionId.split('_');
+          const seguroId = parseInt(seguroIdStr);
+          const parcelaNumero = parseInt(parcelaNumeroStr);
+          // NOTE: Não temos o valor e vencimento aqui, mas podemos ignorar para edição
+          if (!isNaN(seguroId) && !isNaN(parcelaNumero)) {
+            setSeguroLink({ seguroId, parcelaNumero, valor: editingTransaction.amount, vencimento: editingTransaction.date });
+          }
+        } else {
+          setSeguroLink(null);
+        }
       } else {
         const defaultAccount = accounts.find(a => a.id === selectedAccountId) || accounts[0];
         setAccountId(defaultAccount?.id || '');
         
-        // Set default operation based on account type
         if (defaultAccount) {
           const ops = getOperationsForAccountType(defaultAccount.accountType);
           setOperationType(ops[0] || 'receita');
@@ -156,6 +173,7 @@ export function MovimentarContaModal({
         setParcelaId('');
         setVehicleOperation('compra');
         setNumeroContrato('');
+        setSeguroLink(null);
       }
     }
   }, [open, selectedAccountId, accounts, editingTransaction]);
@@ -169,6 +187,23 @@ export function MovimentarContaModal({
       }
     }
   }, [selectedAccount, isEditing, operationType]);
+
+  // Lógica de preenchimento automático para Seguro
+  useEffect(() => {
+    const seguroCategory = categories.find(c => c.label.toLowerCase() === 'seguro');
+    
+    if (operationType === 'despesa' && categoryId === seguroCategory?.id && !seguroLink) {
+      // Se a categoria 'Seguro' foi selecionada, abre o seletor de parcelas
+      setShowSeguroSelector(true);
+    }
+    
+    // Se o link de seguro foi preenchido, atualiza valor e descrição
+    if (seguroLink) {
+      setAmount(seguroLink.valor.toString());
+      setDate(seguroLink.vencimento);
+      setDescription(prev => prev || `Pagamento Parcela ${seguroLink.parcelaNumero} - Seguro Veículo`);
+    }
+  }, [operationType, categoryId, categories, seguroLink]);
 
   const selectedLoan = useMemo(() =>
     loans.find(l => l.id === loanId),
@@ -233,9 +268,13 @@ export function MovimentarContaModal({
     if ((operationType === 'aplicacao' || operationType === 'resgate') && !investmentId) return false;
     if (operationType === 'pagamento_emprestimo' && (!loanId || !parcelaId)) return false;
     if (operationType === 'liberacao_emprestimo' && !numeroContrato.trim()) return false;
+    
+    // Validação específica para Seguro
+    const seguroCategory = categories.find(c => c.label.toLowerCase() === 'seguro');
+    if (operationType === 'despesa' && categoryId === seguroCategory?.id && !seguroLink) return false;
 
     return true;
-  }, [accountId, parsedAmount, date, operationType, accountDestinoId, categoryId, investmentId, loanId, parcelaId, numeroContrato]);
+  }, [accountId, parsedAmount, date, operationType, accountDestinoId, categoryId, investmentId, loanId, parcelaId, numeroContrato, categories, seguroLink]);
 
   const handleSubmit = () => {
     if (!canSubmit) {
@@ -273,7 +312,7 @@ export function MovimentarContaModal({
         loanId: (operationType === 'pagamento_emprestimo' || operationType === 'liberacao_emprestimo') ? loanId || `loan_pending_${transactionId}` : null,
         transferGroupId: null,
         parcelaId: operationType === 'pagamento_emprestimo' ? parcelaId || null : null,
-        vehicleTransactionId: operationType === 'veiculo' ? `veh_${transactionId}` : null
+        vehicleTransactionId: seguroLink ? `${seguroLink.seguroId}_${seguroLink.parcelaNumero}` : (operationType === 'veiculo' ? `veh_${transactionId}` : null)
       },
       conciliated: editingTransaction?.conciliated || false,
       attachments: editingTransaction?.attachments || [],
@@ -369,281 +408,318 @@ export function MovimentarContaModal({
     );
   };
 
+  const handleSelectSeguroParcela = (seguroId: number, parcelaNumero: number, valor: number, vencimento: string) => {
+    setSeguroLink({ seguroId, parcelaNumero, valor, vencimento });
+    // Garante que a categoria 'Seguro' esteja selecionada
+    const seguroCategory = categories.find(c => c.label.toLowerCase() === 'seguro');
+    if (seguroCategory) {
+      setCategoryId(seguroCategory.id);
+    }
+  };
+
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Wallet className="w-5 h-5 text-primary" />
-            {isEditing ? "Editar Transação" : "Movimentar Conta"}
-          </DialogTitle>
-          <DialogDescription>
-            {selectedAccount?.accountType === 'conta_corrente' 
-              ? "Registre receitas, despesas, aplicações e operações de empréstimo."
-              : "Registre movimentações nesta conta."}
-          </DialogDescription>
-        </DialogHeader>
+    <>
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Wallet className="w-5 h-5 text-primary" />
+              {isEditing ? "Editar Transação" : "Movimentar Conta"}
+            </DialogTitle>
+            <DialogDescription>
+              {selectedAccount?.accountType === 'conta_corrente' 
+                ? "Registre receitas, despesas, aplicações e operações de empréstimo."
+                : "Registre movimentações nesta conta."}
+            </DialogDescription>
+          </DialogHeader>
 
-        <div className="space-y-5">
-          {/* Conta */}
-          <div className="space-y-2">
-            <Label htmlFor="accountId">Conta *</Label>
-            <Select value={accountId} onValueChange={setAccountId}>
-              <SelectTrigger>
-                <SelectValue placeholder="Selecione a conta..." />
-              </SelectTrigger>
-              <SelectContent>
-                {accounts.map(account => (
-                  <SelectItem key={account.id} value={account.id}>
-                    {account.name} - {formatCurrency(account.initialBalance)}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <Separator />
-
-          {/* Tipo de Operação */}
-          {renderOperationOptions()}
-
-          {/* Operação de Veículo */}
-          {operationType === 'veiculo' && (
+          <div className="space-y-5">
+            {/* Conta */}
             <div className="space-y-2">
-              <Label>Tipo de Operação com Veículo</Label>
-              <div className="flex gap-2">
-                <Button
-                  type="button"
-                  variant={vehicleOperation === 'compra' ? "default" : "outline"}
-                  size="sm"
-                  className="flex-1"
-                  onClick={() => setVehicleOperation('compra')}
-                >
-                  <TrendingDown className="w-4 h-4 mr-2" />
-                  Compra de Veículo
-                </Button>
-                <Button
-                  type="button"
-                  variant={vehicleOperation === 'venda' ? "default" : "outline"}
-                  size="sm"
-                  className="flex-1"
-                  onClick={() => setVehicleOperation('venda')}
-                >
-                  <TrendingUp className="w-4 h-4 mr-2" />
-                  Venda de Veículo
-                </Button>
-              </div>
-              <p className="text-xs text-muted-foreground">
-                <Info className="w-3 h-3 inline mr-1" />
-                O vínculo com o veículo será feito na tela de Veículos.
-              </p>
+              <Label htmlFor="accountId">Conta *</Label>
+              <Select value={accountId} onValueChange={setAccountId} disabled={isEditing}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione a conta..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {accounts.map(account => (
+                    <SelectItem key={account.id} value={account.id}>
+                      {account.name} - {formatCurrency(account.initialBalance)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
-          )}
 
-          {/* Liberação de Empréstimo - campos específicos */}
-          {operationType === 'liberacao_emprestimo' && (
-            <div className="space-y-3 p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/20">
-              <div className="flex items-center gap-2 text-emerald-600 dark:text-emerald-400">
-                <Banknote className="w-4 h-4" />
-                <span className="text-sm font-medium">Pré-cadastro de Empréstimo</span>
-              </div>
+            <Separator />
+
+            {/* Tipo de Operação */}
+            {renderOperationOptions()}
+
+            {/* Operação de Veículo */}
+            {operationType === 'veiculo' && (
               <div className="space-y-2">
-                <Label htmlFor="numeroContrato">Número do Contrato *</Label>
+                <Label>Tipo de Operação com Veículo</Label>
+                <div className="flex gap-2">
+                  <Button
+                    type="button"
+                    variant={vehicleOperation === 'compra' ? "default" : "outline"}
+                    size="sm"
+                    className="flex-1"
+                    onClick={() => setVehicleOperation('compra')}
+                  >
+                    <TrendingDown className="w-4 h-4 mr-2" />
+                    Compra de Veículo
+                  </Button>
+                  <Button
+                    type="button"
+                    variant={vehicleOperation === 'venda' ? "default" : "outline"}
+                    size="sm"
+                    className="flex-1"
+                    onClick={() => setVehicleOperation('venda')}
+                  >
+                    <TrendingUp className="w-4 h-4 mr-2" />
+                    Venda de Veículo
+                  </Button>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  <Info className="w-3 h-3 inline mr-1" />
+                  O vínculo com o veículo será feito na tela de Veículos.
+                </p>
+              </div>
+            )}
+
+            {/* Liberação de Empréstimo - campos específicos */}
+            {operationType === 'liberacao_emprestimo' && (
+              <div className="space-y-3 p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/20">
+                <div className="flex items-center gap-2 text-emerald-600 dark:text-emerald-400">
+                  <Banknote className="w-4 h-4" />
+                  <span className="text-sm font-medium">Pré-cadastro de Empréstimo</span>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="numeroContrato">Número do Contrato *</Label>
+                  <Input
+                    id="numeroContrato"
+                    placeholder="Ex: 123456789"
+                    value={numeroContrato}
+                    onChange={e => setNumeroContrato(e.target.value)}
+                  />
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  <Info className="w-3 h-3 inline mr-1" />
+                  O empréstimo aparecerá como "Pendente de Configuração" na aba Empréstimos.
+                </p>
+              </div>
+            )}
+
+            {/* Data e Valor */}
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="date">Data *</Label>
                 <Input
-                  id="numeroContrato"
-                  placeholder="Ex: 123456789"
-                  value={numeroContrato}
-                  onChange={e => setNumeroContrato(e.target.value)}
+                  id="date"
+                  type="date"
+                  value={date}
+                  onChange={e => setDate(e.target.value)}
+                  disabled={!!seguroLink} // Desabilita se for pagamento de seguro
                 />
               </div>
-              <p className="text-xs text-muted-foreground">
-                <Info className="w-3 h-3 inline mr-1" />
-                O empréstimo aparecerá como "Pendente de Configuração" na aba Empréstimos.
-              </p>
-            </div>
-          )}
-
-          {/* Data e Valor */}
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="date">Data *</Label>
-              <Input
-                id="date"
-                type="date"
-                value={date}
-                onChange={e => setDate(e.target.value)}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="amount">Valor (R$) *</Label>
-              <Input
-                id="amount"
-                type="text"
-                inputMode="decimal"
-                placeholder="0,00"
-                value={amount}
-                onChange={e => setAmount(e.target.value)}
-              />
-            </div>
-          </div>
-
-          {/* Descrição */}
-          <div className="space-y-2">
-            <Label htmlFor="description">Descrição</Label>
-            <Textarea
-              id="description"
-              placeholder="Descreva a movimentação..."
-              value={description}
-              onChange={e => setDescription(e.target.value)}
-              rows={2}
-            />
-          </div>
-
-          {/* Categoria (para receita/despesa) */}
-          {(operationType === 'receita' || operationType === 'despesa') && (
-            <div className="space-y-2">
-              <Label htmlFor="categoryId">Categoria *</Label>
-              <Select value={categoryId} onValueChange={setCategoryId}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione a categoria..." />
-                </SelectTrigger>
-                <SelectContent>
-                  {filteredCategories.map(cat => (
-                    <SelectItem key={cat.id} value={cat.id}>
-                      <span className="flex items-center gap-2">
-                        <span>{cat.icon}</span>
-                        {cat.label}
-                      </span>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          )}
-
-          {/* Investimento (para aplicação/resgate) */}
-          {(operationType === 'aplicacao' || operationType === 'resgate') && (
-            <div className="space-y-2">
-              <Label htmlFor="investmentId">Conta de Investimento *</Label>
-              <Select value={investmentId} onValueChange={setInvestmentId}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione a conta destino..." />
-                </SelectTrigger>
-                <SelectContent>
-                  {investmentAccounts.map(acc => (
-                    <SelectItem key={acc.id} value={acc.id}>
-                      {acc.name}
-                    </SelectItem>
-                  ))}
-                  {investmentAccounts.length === 0 && (
-                    <SelectItem value="new" disabled>
-                      Nenhuma conta de investimento cadastrada
-                    </SelectItem>
-                  )}
-                </SelectContent>
-              </Select>
-              <p className="text-xs text-muted-foreground">
-                <Info className="w-3 h-3 inline mr-1" />
-                {operationType === 'aplicacao' 
-                  ? "Transfere dinheiro desta conta para o investimento." 
-                  : "Resgata dinheiro do investimento para esta conta."}
-              </p>
-            </div>
-          )}
-
-          {/* Empréstimo (para pagamento) */}
-          {operationType === 'pagamento_emprestimo' && (
-            <>
               <div className="space-y-2">
-                <Label htmlFor="loanId">Empréstimo *</Label>
-                <Select value={loanId} onValueChange={setLoanId}>
+                <Label htmlFor="amount">Valor (R$) *</Label>
+                <Input
+                  id="amount"
+                  type="text"
+                  inputMode="decimal"
+                  placeholder="0,00"
+                  value={amount}
+                  onChange={e => setAmount(e.target.value)}
+                  disabled={!!seguroLink} // Desabilita se for pagamento de seguro
+                />
+              </div>
+            </div>
+
+            {/* Descrição */}
+            <div className="space-y-2">
+              <Label htmlFor="description">Descrição</Label>
+              <Textarea
+                id="description"
+                placeholder="Descreva a movimentação..."
+                value={description}
+                onChange={e => setDescription(e.target.value)}
+                rows={2}
+              />
+            </div>
+
+            {/* Categoria (para receita/despesa) */}
+            {(operationType === 'receita' || operationType === 'despesa') && (
+              <div className="space-y-2">
+                <Label htmlFor="categoryId">Categoria *</Label>
+                <Select 
+                  value={categoryId} 
+                  onValueChange={(v) => {
+                    setCategoryId(v);
+                    setSeguroLink(null); // Limpa o link de seguro ao mudar a categoria
+                  }}
+                >
                   <SelectTrigger>
-                    <SelectValue placeholder="Selecione o empréstimo..." />
+                    <SelectValue placeholder="Selecione a categoria..." />
                   </SelectTrigger>
                   <SelectContent>
-                    {loans.map(loan => (
-                      <SelectItem key={loan.id} value={loan.id}>
-                        {loan.institution} {loan.numeroContrato ? `(${loan.numeroContrato})` : ''}
+                    {filteredCategories.map(cat => (
+                      <SelectItem key={cat.id} value={cat.id}>
+                        <span className="flex items-center gap-2">
+                          <span>{cat.icon}</span>
+                          {cat.label}
+                        </span>
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
+                
+                {/* Indicador de Parcela de Seguro Selecionada */}
+                {seguroLink && (
+                  <div className="flex items-center gap-2 p-2 rounded-md bg-primary/10 border border-primary/30 text-sm">
+                    <Shield className="w-4 h-4 text-primary" />
+                    <span>Parcela de Seguro Selecionada: {seguroLink.parcelaNumero} ({formatCurrency(seguroLink.valor)})</span>
+                    <Button variant="ghost" size="icon" className="h-6 w-6 ml-auto" onClick={() => setSeguroLink(null)}>
+                      <X className="w-3 h-3" />
+                    </Button>
+                  </div>
+                )}
               </div>
+            )}
 
-              {selectedLoan && (
+            {/* Investimento (para aplicação/resgate) */}
+            {(operationType === 'aplicacao' || operationType === 'resgate') && (
+              <div className="space-y-2">
+                <Label htmlFor="investmentId">Conta de Investimento *</Label>
+                <Select value={investmentId} onValueChange={setInvestmentId}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione a conta destino..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {investmentAccounts.map(acc => (
+                      <SelectItem key={acc.id} value={acc.id}>
+                        {acc.name}
+                      </SelectItem>
+                    ))}
+                    {investmentAccounts.length === 0 && (
+                      <SelectItem value="new" disabled>
+                        Nenhuma conta de investimento cadastrada
+                      </SelectItem>
+                    )}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">
+                  <Info className="w-3 h-3 inline mr-1" />
+                  {operationType === 'aplicacao' 
+                    ? "Transfere dinheiro desta conta para o investimento." 
+                    : "Resgata dinheiro do investimento para esta conta."}
+                </p>
+              </div>
+            )}
+
+            {/* Empréstimo (para pagamento) */}
+            {operationType === 'pagamento_emprestimo' && (
+              <>
                 <div className="space-y-2">
-                  <Label htmlFor="parcelaId">Número da Parcela *</Label>
-                  {selectedLoan.parcelas && selectedLoan.parcelas.length > 0 ? (
-                    <Select value={parcelaId} onValueChange={setParcelaId}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Selecione a parcela..." />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {selectedLoan.parcelas
-                          .filter(p => !p.pago)
-                          .map(parcela => (
-                            <SelectItem key={parcela.numero.toString()} value={parcela.numero.toString()}>
-                              Parcela {parcela.numero} - Venc: {new Date(parcela.vencimento).toLocaleDateString('pt-BR')} - {formatCurrency(parcela.valor)}
-                            </SelectItem>
-                          ))}
-                      </SelectContent>
-                    </Select>
-                  ) : (
-                    <Input
-                      id="parcelaId"
-                      type="number"
-                      min="1"
-                      placeholder="Ex: 1"
-                      value={parcelaId}
-                      onChange={e => setParcelaId(e.target.value)}
-                    />
-                  )}
-                  <p className="text-xs text-muted-foreground">
-                    <Info className="w-3 h-3 inline mr-1" />
-                    Informe o número da parcela para reconciliação automática.
-                  </p>
+                  <Label htmlFor="loanId">Empréstimo *</Label>
+                  <Select value={loanId} onValueChange={setLoanId}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione o empréstimo..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {loans.map(loan => (
+                        <SelectItem key={loan.id} value={loan.id}>
+                          {loan.institution} {loan.numeroContrato ? `(${loan.numeroContrato})` : ''}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
-              )}
-            </>
-          )}
 
-          <Separator />
-
-          {/* Preview de Impacto */}
-          {selectedAccount && parsedAmount > 0 && (
-            <Alert className={isNegativeBalance ? "border-warning" : "border-success/30"}>
-              {isNegativeBalance && <AlertTriangle className="h-4 w-4 text-warning" />}
-              <AlertDescription>
-                <div className="space-y-1">
-                  <div className="flex justify-between text-sm">
-                    <span>Saldo atual:</span>
-                    <span className="font-medium">{formatCurrency(currentBalance)}</span>
+                {selectedLoan && (
+                  <div className="space-y-2">
+                    <Label htmlFor="parcelaId">Número da Parcela *</Label>
+                    {selectedLoan.parcelas && selectedLoan.parcelas.length > 0 ? (
+                      <Select value={parcelaId} onValueChange={setParcelaId}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Selecione a parcela..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {selectedLoan.parcelas
+                            .filter(p => !p.pago)
+                            .map(parcela => (
+                              <SelectItem key={parcela.numero.toString()} value={parcela.numero.toString()}>
+                                Parcela {parcela.numero} - Venc: {new Date(parcela.vencimento).toLocaleDateString('pt-BR')} - {formatCurrency(parcela.valor)}
+                              </SelectItem>
+                            ))}
+                        </SelectContent>
+                      </Select>
+                    ) : (
+                      <Input
+                        id="parcelaId"
+                        type="number"
+                        min="1"
+                        placeholder="Ex: 1"
+                        value={parcelaId}
+                        onChange={e => setParcelaId(e.target.value)}
+                      />
+                    )}
+                    <p className="text-xs text-muted-foreground">
+                      <Info className="w-3 h-3 inline mr-1" />
+                      Informe o número da parcela para reconciliação automática.
+                    </p>
                   </div>
-                  <div className="flex justify-between text-sm">
-                    <span>Após operação:</span>
-                    <span className={cn(
-                      "font-bold",
-                      isNegativeBalance ? "text-destructive" : "text-success"
-                    )}>
-                      {formatCurrency(projectedBalance)}
-                    </span>
-                  </div>
-                </div>
-              </AlertDescription>
-            </Alert>
-          )}
+                )}
+              </>
+            )}
 
-          {/* Botão de Submissão */}
-          <Button 
-            className="w-full" 
-            onClick={handleSubmit}
-            disabled={!canSubmit}
-          >
-            <Check className="w-4 h-4 mr-2" />
-            {isEditing ? "Salvar Alterações" : "Registrar Movimentação"}
-          </Button>
-        </div>
-      </DialogContent>
-    </Dialog>
+            <Separator />
+
+            {/* Preview de Impacto */}
+            {selectedAccount && parsedAmount > 0 && (
+              <Alert className={isNegativeBalance ? "border-warning" : "border-success/30"}>
+                {isNegativeBalance && <AlertTriangle className="h-4 w-4 text-warning" />}
+                <AlertDescription>
+                  <div className="space-y-1">
+                    <div className="flex justify-between text-sm">
+                      <span>Saldo atual:</span>
+                      <span className="font-medium">{formatCurrency(currentBalance)}</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span>Após operação:</span>
+                      <span className={cn(
+                        "font-bold",
+                        isNegativeBalance ? "text-destructive" : "text-success"
+                      )}>
+                        {formatCurrency(projectedBalance)}
+                      </span>
+                    </div>
+                  </div>
+                </AlertDescription>
+              </Alert>
+            )}
+
+            {/* Botão de Submissão */}
+            <Button 
+              className="w-full" 
+              onClick={handleSubmit}
+              disabled={!canSubmit}
+            >
+              <Check className="w-4 h-4 mr-2" />
+              {isEditing ? "Salvar Alterações" : "Registrar Movimentação"}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+      
+      {/* Modal de Seleção de Parcela de Seguro */}
+      <SeguroParcelaSelector
+        open={showSeguroSelector}
+        onOpenChange={setShowSeguroSelector}
+        onSelectParcela={handleSelectSeguroParcela}
+      />
+    </>
   );
 }
