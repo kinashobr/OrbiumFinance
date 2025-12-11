@@ -73,6 +73,9 @@ const PIE_COLORS = [
   COLORS.danger,
 ];
 
+// Define o tipo de status esperado pelo IndicatorBadge
+type IndicatorStatus = "success" | "warning" | "danger" | "neutral";
+
 export function BalancoTab() {
   const {
     transacoesV2,
@@ -306,12 +309,30 @@ export function BalancoTab() {
       : 0;
 
     return {
-      plAtivos: { valor: plAtivos, status: plAtivos >= 50 ? "success" : plAtivos >= 30 ? "warning" : "danger" as const },
-      liquidezGeral: { valor: liquidezGeral, status: liquidezGeral >= 2 ? "success" : liquidezGeral >= 1 ? "warning" : "danger" as const },
-      liquidezCorrente: { valor: liquidezCorrente, status: liquidezCorrente >= 1.5 ? "success" : liquidezCorrente >= 1 ? "warning" : "danger" as const },
-      endividamento: { valor: endividamento, status: endividamento < 30 ? "success" : endividamento < 50 ? "warning" : "danger" as const },
-      coberturaAtivos: { valor: coberturaAtivos, status: coberturaAtivos >= 2 ? "success" : coberturaAtivos >= 1 ? "warning" : "danger" as const },
-      imobilizacao: { valor: imobilizacao, status: imobilizacao < 30 ? "success" : imobilizacao < 50 ? "warning" : "danger" as const },
+      plAtivos: { 
+        valor: plAtivos, 
+        status: (plAtivos >= 50 ? "success" : plAtivos >= 30 ? "warning" : "danger") as IndicatorStatus 
+      },
+      liquidezGeral: { 
+        valor: liquidezGeral, 
+        status: (liquidezGeral >= 2 ? "success" : liquidezGeral >= 1 ? "warning" : "danger") as IndicatorStatus 
+      },
+      liquidezCorrente: { 
+        valor: liquidezCorrente, 
+        status: (liquidezCorrente >= 1.5 ? "success" : liquidezCorrente >= 1 ? "warning" : "danger") as IndicatorStatus 
+      },
+      endividamento: { 
+        valor: endividamento, 
+        status: (endividamento < 30 ? "success" : endividamento < 50 ? "warning" : "danger") as IndicatorStatus 
+      },
+      coberturaAtivos: { 
+        valor: coberturaAtivos, 
+        status: (coberturaAtivos >= 2 ? "success" : coberturaAtivos >= 1 ? "warning" : "danger") as IndicatorStatus 
+      },
+      imobilizacao: { 
+        valor: imobilizacao, 
+        status: (imobilizacao < 30 ? "success" : imobilizacao < 50 ? "warning" : "danger") as IndicatorStatus 
+      },
     };
   }, [balanco]);
 

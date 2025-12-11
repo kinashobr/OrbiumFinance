@@ -8,7 +8,7 @@ interface ExpandablePanelProps {
   subtitle?: string;
   icon?: ReactNode;
   children: ReactNode;
-  defaultOpen?: boolean;
+  defaultExpanded?: boolean;
   className?: string;
   headerClassName?: string;
   badge?: string;
@@ -20,13 +20,13 @@ export function ExpandablePanel({
   subtitle,
   icon,
   children,
-  defaultOpen = true,
+  defaultExpanded = true,
   className,
   headerClassName,
   badge,
   badgeStatus = "neutral",
 }: ExpandablePanelProps) {
-  const [isOpen, setIsOpen] = useState(defaultOpen);
+  const [isOpen, setIsOpen] = useState(defaultExpanded);
 
   const badgeColors = {
     success: "bg-success/20 text-success",
