@@ -36,12 +36,12 @@ export function ReportCard({
   delay = 0,
   size = "md",
 }: ReportCardProps) {
-  const statusColors = {
-    success: "border-l-success bg-success/5",
-    warning: "border-l-warning bg-warning/5",
-    danger: "border-l-destructive bg-destructive/5",
-    neutral: "border-l-primary bg-primary/5",
-    info: "border-l-neon-cyan bg-neon-cyan/5",
+  const statusClasses = {
+    success: "stat-card-positive",
+    warning: "stat-card-warning",
+    danger: "stat-card-negative",
+    neutral: "stat-card-neutral",
+    info: "stat-card-info", // Assumindo que 'info' usa a mesma cor de 'neutral' ou uma cor específica
   };
 
   const statusTextColors = {
@@ -84,7 +84,7 @@ export function ReportCard({
     <Card 
       className={cn(
         "glass-card border-l-4 animate-fade-in-up transition-all hover:scale-[1.02]",
-        statusColors[status],
+        statusClasses[status as keyof typeof statusClasses], // Aplica a classe de borda
         className
       )}
       style={{ animationDelay: `${delay}ms` }}
@@ -117,12 +117,8 @@ export function ReportCard({
               "p-3 rounded-xl shrink-0 flex items-center justify-center",
               statusIconBg[status]
             )}>
-              {typeof icon === 'object' && icon !== null && 'type' in icon && (icon.type as any).displayName === 'LucideIcon' ? (
-                // @ts-ignore
-                <icon.type {...icon.props} className={iconSizes[size]} />
-              ) : (
-                icon
-              )}
+              {/* Renderiza o ícone, assumindo que é um componente Lucide React ou similar */}
+              {icon}
             </div>
           )}
         </div>
