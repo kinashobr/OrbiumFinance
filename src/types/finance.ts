@@ -10,8 +10,7 @@ export type AccountType =
   | 'criptoativos' 
   | 'reserva_emergencia' 
   | 'objetivos_financeiros'
-  | 'cartao_credito' // NOVO TIPO
-  | 'initial_balance_contra'; // NOVO TIPO: Conta de contrapartida para saldo inicial
+  | 'cartao_credito'; // NOVO TIPO
 
 export const ACCOUNT_TYPE_LABELS: Record<AccountType, string> = {
   conta_corrente: 'Conta Corrente',
@@ -21,7 +20,6 @@ export const ACCOUNT_TYPE_LABELS: Record<AccountType, string> = {
   reserva_emergencia: 'Reserva de Emergência',
   objetivos_financeiros: 'Objetivos Financeiros',
   cartao_credito: 'Cartão de Crédito', // NOVO LABEL
-  initial_balance_contra: 'Saldo de Implantação', // NOVO LABEL
 };
 
 // Tipos de Categoria

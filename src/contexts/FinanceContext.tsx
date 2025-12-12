@@ -89,7 +89,7 @@ interface FinanceContextType {
   updateSeguroVeiculo: (id: number, seguro: Partial<SeguroVeiculo>) => void;
   deleteSeguroVeiculo: (id: number) => void;
   markSeguroParcelPaid: (seguroId: number, parcelaNumero: number, transactionId: string) => void;
-  unmarkSeguroParcelPaid: (seguroId: number, parcelaNumero: number) => void; // <-- FIXED: Correct function name
+  unmarkSeguroParcelPaid: (seguroId: number, parcelaNumero: number) => void;
   
   // Objetivos Financeiros
   objetivos: ObjetivoFinanceiro[];
@@ -101,7 +101,6 @@ interface FinanceContextType {
   contasMovimento: ContaCorrente[];
   setContasMovimento: Dispatch<SetStateAction<ContaCorrente[]>>;
   getContasCorrentesTipo: () => ContaCorrente[];
-  getInitialBalanceContraAccount: () => ContaCorrente; // NOVO: Obter conta de contrapartida
   
   // Categorias V2 (with nature)
   categoriasV2: Categoria[];
@@ -185,20 +184,6 @@ const STORAGE_KEYS = {
 // DADOS INICIAIS
 // ============================================
 
-const INITIAL_BALANCE_CONTRA_ID = "acc_initial_balance_contra";
-
-const INITIAL_BALANCE_CONTRA_ACCOUNT: ContaCorrente = {
-    id: INITIAL_BALANCE_CONTRA_ID,
-    name: "Saldo de Implantação",
-    accountType: 'initial_balance_contra',
-    currency: 'BRL',
-    initialBalance: 0,
-    startDate: new Date().toISOString().split('T')[0],
-    createdAt: new Date().toISOString(),
-    meta: { system: true },
-    hidden: true, // Conta oculta
-};
-
 const initialEmprestimos: Emprestimo[] = [];
 const initialVeiculos: Veiculo[] = [];
 const initialSegurosVeiculo: SeguroVeiculo[] = [];
@@ -219,24 +204,11 @@ function loadFromStorage<T>(key: string, defaultValue: T): T {
           return parseDateRanges(parsed) as unknown as T;
       }
       
-      // Ensure the contra account is present if loading accounts
-      if (key === STORAGE_KEYS.CONTAS_MOVIMENTO) {
-          const accounts: ContaCorrente[] = parsed;
-          if (!accounts.some(a => a.id === INITIAL_BALANCE_CONTRA_ID)) {
-              accounts.push(INITIAL_BALANCE_CONTRA_ACCOUNT);
-          }
-          return accounts as unknown as T;
-      }
-      
+      // No special handling needed for accounts anymore
       return parsed;
     }
   } catch (error) {
     console.error(`Erro ao carregar ${key} do localStorage:`, error);
-  }
-  
-  // If loading accounts and no data found, return default + contra account
-  if (key === STORAGE_KEYS.CONTAS_MOVIMENTO) {
-      return [...DEFAULT_ACCOUNTS, INITIAL_BALANCE_CONTRA_ACCOUNT] as unknown as T;
   }
   
   return defaultValue;
@@ -498,9 +470,7 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     return contasMovimento.filter(c => c.accountType === 'conta_corrente');
   }, [contasMovimento]);
   
-  const getInitialBalanceContraAccount = useCallback(() => {
-      return contasMovimento.find(a => a.id === INITIAL_BALANCE_CONTRA_ID) || INITIAL_BALANCE_CONTRA_ACCOUNT;
-  }, [contasMovimento]);
+  // Removida getInitialBalanceContraAccount
 
   // ============================================
   // CÁLCULOS - Baseados em TransacoesV2
@@ -536,9 +506,6 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     let totalBalance = 0;
 
     contasMovimento.forEach(conta => {
-      // Exclui a conta de contrapartida do saldo total
-      if (conta.id === INITIAL_BALANCE_CONTRA_ID) return;
-      
       // Calcula o saldo final global (end of all history)
       const balance = calculateBalanceUpToDate(conta.id, undefined, transacoesV2, contasMovimento);
       
@@ -587,9 +554,9 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
   };
 
   const getAtivosTotal = useCallback(() => {
-    // Ativos = Saldo de contas (exceto CC e Contrapartida) + Investimentos (V2) + Veículos
+    // Ativos = Saldo de contas (exceto CC) + Investimentos (V2) + Veículos
     const saldoContasAtivas = contasMovimento
-      .filter(c => c.accountType !== 'cartao_credito' && c.id !== INITIAL_BALANCE_CONTRA_ID)
+      .filter(c => c.accountType !== 'cartao_credito')
       .reduce((acc, c) => {
         const balance = calculateBalanceUpToDate(c.id, undefined, transacoesV2, contasMovimento);
         return acc + Math.max(0, balance); // Apenas saldos positivos são ativos
@@ -617,8 +584,7 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
       schemaVersion: "2.0",
       exportedAt: new Date().toISOString(),
       data: {
-        // Filtra a conta de contrapartida para não poluir a exportação, mas mantém a funcionalidade
-        accounts: contasMovimento.filter(a => a.id !== INITIAL_BALANCE_CONTRA_ID),
+        accounts: contasMovimento,
         categories: categoriasV2,
         transactions: transacoesV2,
         transferGroups: [],
@@ -648,12 +614,7 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
       if (data.schemaVersion === '2.0' && data.data) {
         // Importa coleções V2
         if (data.data.accounts) {
-            // Garante que a conta de contrapartida exista após a importação
-            const importedAccounts: ContaCorrente[] = data.data.accounts;
-            if (!importedAccounts.some(a => a.id === INITIAL_BALANCE_CONTRA_ID)) {
-                importedAccounts.push(INITIAL_BALANCE_CONTRA_ACCOUNT);
-            }
-            setContasMovimento(importedAccounts);
+            setContasMovimento(data.data.accounts);
         }
         if (data.data.categories) setCategoriasV2(data.data.categories);
         if (data.data.transactions) setTransacoesV2(data.data.transactions);
@@ -695,7 +656,7 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     updateSeguroVeiculo,
     deleteSeguroVeiculo,
     markSeguroParcelPaid,
-    unmarkSeguroParcelPaid, // <-- FIXED
+    unmarkSeguroParcelPaid,
     objetivos,
     addObjetivo,
     updateObjetivo,
@@ -703,7 +664,6 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     contasMovimento,
     setContasMovimento,
     getContasCorrentesTipo,
-    getInitialBalanceContraAccount, // EXPORTANDO
     categoriasV2,
     setCategoriasV2,
     transacoesV2,

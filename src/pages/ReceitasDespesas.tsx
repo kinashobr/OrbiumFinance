@@ -47,7 +47,6 @@ const ReceitasDespesas = () => {
     setDateRanges, // <-- Use context setter
     markSeguroParcelPaid,
     unmarkSeguroParcelPaid, // <-- FIXED: Renamed from unmarkSeguroParcelaid
-    getInitialBalanceContraAccount, // NOVO: Obter conta de contrapartida
   } = useFinance();
 
   // Local state for transfer groups
@@ -83,7 +82,6 @@ const ReceitasDespesas = () => {
   // Alias for context data
   const accounts = contasMovimento;
   const transactions = transacoesV2;
-  const initialBalanceContraAccount = getInitialBalanceContraAccount();
 
   const handlePeriodChange = useCallback((ranges: ComparisonDateRanges) => {
     setDateRanges(ranges);
@@ -108,7 +106,7 @@ const ReceitasDespesas = () => {
     }).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
   }, [transactions, searchTerm, selectedAccountId, selectedCategoryId, selectedTypes, dateRanges]);
 
-  // Contas visíveis (exclui a conta de contrapartida)
+  // Contas visíveis (agora todas são visíveis, pois a contrapartida foi removida)
   const visibleAccounts = useMemo(() => {
     return accounts.filter(a => !a.hidden);
   }, [accounts]);
@@ -119,28 +117,23 @@ const ReceitasDespesas = () => {
     const periodEnd = dateRanges.range1.to;
     
     return visibleAccounts.map(account => {
-      // 1. Calculate Period Initial Balance (balance accumulated UP TO the day BEFORE periodStart)
       
       let periodInitialBalance = 0;
       
       if (periodStart) {
-          // Calculate balance up to the day before periodStart (exclusive of periodStart)
+          // 1. Calculate Period Initial Balance (balance accumulated UP TO the day BEFORE periodStart)
           const dayBeforeStart = subDays(periodStart, 1);
           periodInitialBalance = calculateBalanceUpToDate(account.id, dayBeforeStart, transactions, accounts);
       }
-      // If periodStart is undefined (Todo o período), periodInitialBalance remains 0.
+      // Se periodStart é undefined (Todo o período), periodInitialBalance é 0.
       
       // 2. Calculate Period Transactions (transactions strictly ON or AFTER periodStart, up to periodEnd)
       const accountTxInPeriod = transactions.filter(t => {
         if (t.accountId !== account.id) return false;
         
-        // Exclude synthetic initial balance transactions from period flow calculation
-        // These transactions are already accounted for in periodInitialBalance if they occurred before periodStart.
-        if (t.operationType === 'initial_balance' && periodStart) return false;
-        
         const transactionDate = parseISO(t.date);
         
-        if (!periodStart) return true; // Todo o período: includes all transactions (including initial_balance if it exists)
+        if (!periodStart) return true; // Todo o período: inclui todas as transações
         
         // Period defined: include transactions ON or AFTER periodStart, up to periodEnd
         return transactionDate >= periodStart && transactionDate <= (periodEnd || new Date());
@@ -526,15 +519,14 @@ const ReceitasDespesas = () => {
     
     // A conta em si é salva com initialBalance: 0
     const newAccount: ContaCorrente = { ...account, initialBalance: 0 };
-    const contraAccountId = initialBalanceContraAccount.id;
 
     if (isNewAccount) {
-      setContasMovimento(prev => [...prev.filter(a => a.id !== contraAccountId), newAccount, initialBalanceContraAccount]);
+      setContasMovimento(prev => [...prev, newAccount]);
 
       if (initialBalanceAmount !== 0) {
         const txId = generateTransactionId();
         
-        // Transação 1: Entrada/Saída na conta do usuário
+        // Transação única: Entrada/Saída na conta do usuário
         const userTx: TransacaoCompleta = {
           id: txId,
           date: account.startDate!,
@@ -548,98 +540,71 @@ const ReceitasDespesas = () => {
           links: {
             investmentId: null,
             loanId: null,
-            transferGroupId: txId, // Usa o ID da transação como grupo de transferência
+            transferGroupId: null,
             parcelaId: null,
             vehicleTransactionId: null,
           },
           conciliated: true,
           attachments: [],
           meta: {
-            createdBy: 'system',
-            source: 'manual', // FIXED: source must be 'manual'
+            createdBy: 'user',
+            source: 'manual',
             createdAt: new Date().toISOString(),
             notes: `Saldo inicial de ${formatCurrency(initialBalanceAmount)} em ${account.startDate}`
           }
         };
         
-        // Transação 2: Contrapartida na conta de Saldo de Implantação
-        const contraTx: TransacaoCompleta = {
-            ...userTx,
-            id: generateTransactionId(),
-            accountId: contraAccountId,
-            flow: initialBalanceAmount >= 0 ? 'out' : 'in', // Fluxo oposto
-            description: `Contrapartida Saldo Inicial ${account.name}`,
-            links: {
-                ...userTx.links,
-                transferGroupId: txId,
-            },
-            meta: {
-                ...userTx.meta,
-                createdBy: 'system',
-                source: 'manual', // FIXED: source must be 'manual'
-            }
-        };
-        
         addTransacaoV2(userTx);
-        addTransacaoV2(contraTx);
       }
     } else {
       // Edição
       setContasMovimento(prev => prev.map(a => a.id === newAccount.id ? newAccount : a));
 
-      // Encontra as transações de saldo inicial (userTx e contraTx)
+      // Encontra a transação de saldo inicial existente
       const existingInitialTx = transactions.find(t => 
           t.accountId === newAccount.id && t.operationType === 'initial_balance'
       );
-      const linkedGroupId = existingInitialTx?.links?.transferGroupId;
-      const existingContraTx = linkedGroupId ? transactions.find(t => 
-          t.accountId === contraAccountId && t.links?.transferGroupId === linkedGroupId
-      ) : undefined;
 
       if (initialBalanceAmount !== 0) {
-        const txId = linkedGroupId || generateTransactionId();
-        
-        const baseTx = {
-            id: existingInitialTx?.id || generateTransactionId(),
-            accountId: newAccount.id,
-            operationType: 'initial_balance' as const,
-            domain: 'operational' as const,
-            categoryId: null,
-            description: `Saldo Inicial de Implantação`,
-            links: { investmentId: null, loanId: null, transferGroupId: txId, parcelaId: null, vehicleTransactionId: null },
-            conciliated: true,
-            attachments: [],
-            meta: { createdBy: 'system', source: 'manual' as const, createdAt: new Date().toISOString() } // FIXED: source must be 'manual'
-        };
+        const txId = existingInitialTx?.id || generateTransactionId();
         
         // Transação 1: Atualiza/Cria userTx
         const userTx: TransacaoCompleta = {
-          ...baseTx,
+          id: txId,
           date: newAccount.startDate!,
-          amount: Math.abs(initialBalanceAmount),
+          accountId: newAccount.id,
           flow: initialBalanceAmount >= 0 ? 'in' : 'out',
-        };
-        
-        // Transação 2: Atualiza/Cria contraTx
-        const contraTx: TransacaoCompleta = {
-            ...userTx,
-            id: existingContraTx?.id || generateTransactionId(),
-            accountId: contraAccountId,
-            flow: initialBalanceAmount >= 0 ? 'out' : 'in', // Fluxo oposto
-            description: `Contrapartida Saldo Inicial ${account.name}`,
-            links: { ...userTx.links },
-            meta: { ...userTx.meta, createdBy: 'system', source: 'manual' as const } // FIXED: source must be 'manual'
+          operationType: 'initial_balance',
+          domain: 'operational',
+          amount: Math.abs(initialBalanceAmount),
+          categoryId: null,
+          description: `Saldo Inicial de Implantação`,
+          links: {
+            investmentId: null,
+            loanId: null,
+            transferGroupId: null,
+            parcelaId: null,
+            vehicleTransactionId: null,
+          },
+          conciliated: true,
+          attachments: [],
+          meta: {
+            createdBy: 'user',
+            source: 'manual',
+            createdAt: existingInitialTx?.meta.createdAt || new Date().toISOString(),
+            notes: `Saldo inicial de ${formatCurrency(initialBalanceAmount)} em ${account.startDate}`
+          }
         };
 
         setTransacoesV2(prev => {
-            let newTxs = prev.filter(t => t.id !== userTx.id && t.id !== contraTx.id);
-            newTxs.push(userTx, contraTx);
+            let newTxs = prev.filter(t => t.id !== txId);
+            newTxs.push(userTx);
             return newTxs;
         });
       } else {
-        // Se o saldo inicial for 0, remove as transações existentes
+        // Se o saldo inicial for 0, remove a transação existente
         if (existingInitialTx) {
-          setTransacoesV2(prev => prev.filter(t => t.id !== existingInitialTx.id && t.id !== existingContraTx?.id));
+          setTransacoesV2(prev => prev.filter(t => t.id !== existingInitialTx.id));
         }
       }
     }
