@@ -138,8 +138,12 @@ export function PeriodSelector({
 
   const formatDateRange = (r: DateRange) => {
     if (!r.from && !r.to) return "Todo o período";
+    
+    // Se uma das datas estiver faltando, mas a outra estiver presente,
+    // isso indica um estado incompleto (custom range não finalizado).
     if (!r.from || !r.to) return "Selecione um período";
     
+    // Se chegamos aqui, r.from e r.to são Date objects.
     const fromStr = format(r.from, "dd/MM/yyyy", { locale: ptBR });
     const toStr = format(r.to, "dd/MM/yyyy", { locale: ptBR });
 
@@ -209,7 +213,7 @@ export function PeriodSelector({
           </div>
 
           {/* Coluna Calendário Compacta */}
-          <div className="space-y-2 min-w-[540px] max-w-[560px]">
+          <div className="space-y-2 min-w-[540px] max-w-[540px]">
             <Calendar
               mode="range"
               selected={{ from: tempRange.from, to: tempRange.to }}
