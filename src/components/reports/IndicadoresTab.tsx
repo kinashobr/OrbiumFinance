@@ -209,7 +209,7 @@ export function IndicadoresTab({ dateRanges }: IndicadoresTabProps) {
   };
 
   // Helper para calcular saldo até uma data (usado para saldo inicial do período)
-  function calculateBalanceUpToDate(accountId: string, date: Date | undefined, allTransactions: typeof transacoesV2, accounts: typeof contasMovimento): number {
+  const calculateBalanceUpToDate = useCallback((accountId: string, date: Date | undefined, allTransactions: typeof transacoesV2, accounts: typeof contasMovimento): number => {
     const account = accounts.find(a => a.id === accountId);
     if (!account) return 0;
 
@@ -239,7 +239,33 @@ export function IndicadoresTab({ dateRanges }: IndicadoresTabProps) {
     });
 
     return balance;
-  };
+  }, [contasMovimento, transacoesV2]);
+
+  // 2. Calcular saldo de cada conta baseado nas transações do período (Saldo Final do Período)
+  const calculateFinalBalances = useCallback((transactions: typeof transacoesV2, periodStart: Date | undefined) => {
+    const saldos: Record<string, number> = {};
+    
+    contasMovimento.forEach(conta => {
+      // O saldo inicial é o saldo acumulado ANTES do período
+      const saldoInicialPeriodo = periodStart 
+        ? calculateBalanceUpToDate(conta.id, periodStart, transacoesV2, contasMovimento)
+        : calculateBalanceUpToDate(conta.id, undefined, transacoesV2, contasMovimento);
+        
+      saldos[conta.id] = saldoInicialPeriodo;
+    });
+
+    transactions.forEach(t => {
+      if (!saldos[t.accountId]) saldos[t.accountId] = 0;
+      
+      if (t.flow === 'in' || t.flow === 'transfer_in') {
+        saldos[t.accountId] += t.amount;
+      } else {
+        saldos[t.accountId] -= t.amount;
+      }
+    });
+
+    return saldos;
+  }, [contasMovimento, transacoesV2, calculateBalanceUpToDate]);
 
   // Função para calcular todos os dados brutos e indicadores para um período
   const calculateIndicatorsForRange = useCallback((range: DateRange) => {
@@ -256,25 +282,7 @@ export function IndicadoresTab({ dateRanges }: IndicadoresTabProps) {
     });
     
     // 2. Calcular saldos das contas (saldo final do período)
-    const saldosPorConta: Record<string, number> = {};
-    contasMovimento.forEach(conta => {
-      // O saldo inicial é o saldo acumulado ANTES do período
-      const saldoInicialPeriodo = range.from 
-        ? calculateBalanceUpToDate(conta.id, range.from, transacoesV2, contasMovimento)
-        : calculateBalanceUpToDate(conta.id, undefined, transacoesV2, contasMovimento);
-        
-      saldosPorConta[conta.id] = saldoInicialPeriodo;
-    });
-
-    transacoesPeriodo.forEach(t => {
-      if (!saldosPorConta[t.accountId]) saldosPorConta[t.accountId] = 0;
-      
-      if (t.flow === 'in' || t.flow === 'transfer_in') {
-        saldosPorConta[t.accountId] += t.amount;
-      } else {
-        saldosPorConta[t.accountId] -= t.amount;
-      }
-    });
+    const saldosPorConta = calculateFinalBalances(transacoesPeriodo, range.from);
     
     // Ativos
     const contasLiquidas = contasMovimento.filter(c => 
