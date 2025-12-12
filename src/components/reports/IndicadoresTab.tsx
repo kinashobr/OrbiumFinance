@@ -52,7 +52,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
-import { format, subMonths, startOfMonth, endOfMonth, parseISO, isWithinInterval, subDays } from "date-fns";
+import { format, subMonths, startOfMonth, endOfMonth, parseISO, isWithinInterval, subDays, startOfDay, endOfDay } from "date-fns";
 import { toast } from "sonner";
 import { ComparisonDateRanges, DateRange } from "@/types/finance";
 import { ContaCorrente, TransacaoCompleta } from "@/types/finance";
@@ -597,7 +597,7 @@ export function IndicadoresTab({ dateRanges }: IndicadoresTabProps) {
                     <SelectContent>
                       <SelectItem value="false">Maior é melhor</SelectItem>
                       <SelectItem value="true">Menor é melhor</SelectItem>
-                    </SelectItemContent>
+                    </SelectContent>
                   </Select>
                 </div>
               </div>
@@ -947,7 +947,7 @@ export function IndicadoresTab({ dateRanges }: IndicadoresTabProps) {
                 className="absolute top-1 right-1 w-6 h-6 opacity-0 group-hover:opacity-100 transition-opacity"
                 onClick={() => handleRemoveIndicator(ind.id)}
               >
-                <Trash2 className="w-3 h-3" />
+                <Trash2 className="w-4 h-4" />
               </Button>
             </div>
           ))}
