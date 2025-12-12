@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
-import { format, startOfMonth, endOfMonth, subMonths, startOfYear, endOfYear, subDays, isSameDay, isSameMonth, isSameYear, startOfDay, endOfDay } from "date-fns";
+import { format, startOfMonth, endOfMonth, subMonths, startOfYear, endOfYear, isSameDay, isSameMonth, isSameYear, startOfDay, endOfDay } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Label } from "@/components/ui/label";
 
@@ -41,16 +41,10 @@ export function PeriodSelector({
   className,
 }: PeriodSelectorProps) {
   const [isOpen, setIsOpen] = useState(false);
-  // Usamos ranges.range1 como o estado principal
   const [range, setRange] = useState<DateRange>(initialRanges.range1);
-  
-  // Estado temporário para o calendário
   const [tempRange, setTempRange] = useState<DateRange>(initialRanges.range1);
-  
-  // Estado de presets
   const [selectedPreset, setSelectedPreset] = useState<string>('custom');
 
-  // Função auxiliar para calcular ranges
   const calculateRangeFromPreset = useCallback((presetId: string): DateRange => {
     const today = new Date();
     
@@ -73,7 +67,6 @@ export function PeriodSelector({
     }
   }, []);
 
-  // Função auxiliar para determinar o preset ativo
   const getActivePresetId = useCallback((currentRange: DateRange): string => {
     if (!currentRange.from && !currentRange.to) return "all";
     if (!currentRange.from || !currentRange.to) return "custom";
@@ -90,43 +83,36 @@ export function PeriodSelector({
     return "custom";
   }, [calculateRangeFromPreset]);
 
-  // Sincroniza o estado interno com o prop initialRanges
   useEffect(() => {
     setRange(initialRanges.range1);
     setSelectedPreset(getActivePresetId(initialRanges.range1));
   }, [initialRanges, getActivePresetId]);
 
-  // Sincroniza o range temporário ao abrir
   useEffect(() => {
     if (isOpen) {
       setTempRange(range);
     }
   }, [isOpen, range]);
 
-  // Aplica as mudanças e emite o evento
   const handleApply = useCallback((newRange: DateRange) => {
     const finalRange: DateRange = newRange.from ? normalizeRange(newRange) : { from: undefined, to: undefined };
     
     setRange(finalRange);
-    // Emite o evento com range2 vazio
     onDateRangeChange({ range1: finalRange, range2: { from: undefined, to: undefined } });
   }, [onDateRangeChange]);
   
-  // Lógica de seleção de preset
   const handleSelectPreset = (presetId: string) => {
     setSelectedPreset(presetId);
     
     if (presetId === 'custom') {
-      // Se for personalizado, abre o calendário para seleção
       return;
     }
     
     const newRange = calculateRangeFromPreset(presetId);
     handleApply(newRange);
-    setIsOpen(false); // Fecha após seleção rápida
+    setIsOpen(false);
   };
 
-  // Aplica o intervalo temporário (do calendário)
   const handleCalendarApply = () => {
     if (!tempRange.from && !tempRange.to) return;
     
@@ -188,13 +174,13 @@ export function PeriodSelector({
         </Button>
       </PopoverTrigger>
       
-      {/* Popover Content - Layout de duas colunas compactas */}
-      <PopoverContent className="w-full p-3 bg-card border-border max-w-[600px]" align="end">
+      {/* Popover Content - Aumentado para 650px para conter o calendário de 2 meses */}
+      <PopoverContent className="w-full p-3 bg-card border-border max-w-[650px]" align="end">
         <div className="grid grid-cols-[150px_1fr] gap-3">
           
           {/* Coluna 1: Presets Rápidos (Botões Pequenos) */}
           <div className="space-y-1.5">
-            <Label className="text-xs font-medium text-muted-foreground px-1">Seleção Rápida</Label>
+            <Label className="text-xs font-medium text-muted-foreground px-1">Presets</Label>
             <div className="flex flex-col gap-1">
               {presets.map((preset) => (
                 <Button
@@ -226,7 +212,8 @@ export function PeriodSelector({
           
           {/* Coluna 2: Calendário e Ações */}
           <div className="space-y-3">
-            <div className="flex justify-center overflow-x-auto">
+            {/* O Calendário é contido pelo max-w do Popover e pelo grid 1fr */}
+            <div className="flex justify-center">
               <Calendar
                 mode="range"
                 selected={{ from: tempRange.from, to: tempRange.to }}
@@ -234,7 +221,7 @@ export function PeriodSelector({
                 numberOfMonths={2}
                 locale={ptBR}
                 initialFocus
-                className="max-w-full p-0" 
+                // Removendo classes de layout que podem causar conflito
               />
             </div>
             
