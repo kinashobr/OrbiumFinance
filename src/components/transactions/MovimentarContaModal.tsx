@@ -225,7 +225,8 @@ export function MovimentarContaModal({
   useEffect(() => {
     const seguroCategory = categories.find(c => c.label.toLowerCase() === 'seguro');
 
-    if (operationType === 'despesa' && categoryId === seguroCategory?.id && !seguroLink && selectedAccount?.accountType !== 'cartao_credito') {
+    // CORREÇÃO: Remover a exclusão de 'cartao_credito' para permitir o seletor de parcela
+    if (operationType === 'despesa' && categoryId === seguroCategory?.id && !seguroLink) {
       setShowSeguroSelector(true);
     }
 
@@ -234,7 +235,7 @@ export function MovimentarContaModal({
       setDate(seguroLink.vencimento);
       setDescription(prev => prev || `Pagamento Parcela ${seguroLink.parcelaNumero} - Seguro Veículo`);
     }
-  }, [operationType, categoryId, categories, seguroLink, selectedAccount]);
+  }, [operationType, categoryId, categories, seguroLink]);
 
   const selectedCategory = categories.find(c => c.id === categoryId);
 
@@ -321,10 +322,11 @@ export function MovimentarContaModal({
     if (operationType === 'liberacao_emprestimo' && !numeroContrato.trim()) return false;
 
     const seguroCategory = categories.find(c => c.label.toLowerCase() === 'seguro');
-    if (operationType === 'despesa' && categoryId === seguroCategory?.id && !seguroLink && selectedAccount?.accountType !== 'cartao_credito') return false;
+    // Se for despesa de seguro, o link é obrigatório
+    if (operationType === 'despesa' && categoryId === seguroCategory?.id && !seguroLink) return false;
 
     return true;
-  }, [accountId, parsedAmount, date, operationType, accountDestinoId, categoryId, investmentId, loanId, parcelaId, numeroContrato, categories, seguroLink, selectedAccount]);
+  }, [accountId, parsedAmount, date, operationType, accountDestinoId, categoryId, investmentId, loanId, parcelaId, numeroContrato, categories, seguroLink]);
 
   const handleSubmit = () => {
     if (!canSubmit) {
