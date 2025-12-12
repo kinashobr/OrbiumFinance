@@ -70,10 +70,17 @@ export function PeriodSelector({
     }
     
     const diffInDays = differenceInDays(range1.to, range1.from) + 1;
-    const prevTo = subDays(range1.from, 1);
-    const prevFrom = subDays(prevTo, diffInDays - 1);
     
-    // Normaliza o range de comparação também
+    // O dia anterior ao início do range 1 (startOfDay)
+    const prevToStartOfDay = subDays(range1.from, 1);
+    
+    // Garante que o limite superior do range 2 é o final do dia anterior ao range 1
+    const prevTo = endOfDay(prevToStartOfDay); 
+    
+    // O limite inferior do range 2
+    const prevFrom = subDays(prevToStartOfDay, diffInDays - 1);
+    
+    // Normaliza o range de comparação (garantindo que prevFrom é startOfDay)
     return normalizeRange({ from: prevFrom, to: prevTo });
   }, [normalizeRange]);
 
@@ -81,17 +88,20 @@ export function PeriodSelector({
     if (!currentRange.from && !currentRange.to) return "all";
     if (!currentRange.from || !currentRange.to) return "custom";
 
+    // Normaliza o range atual para comparação com presets
+    const normalizedCurrent = normalizeRange(currentRange);
+
     for (const preset of presets) {
       const calculatedRange = calculateRangeFromPreset(preset.id);
         
       if (calculatedRange.from && calculatedRange.to && 
-          isSameDay(currentRange.from, calculatedRange.from) && 
-          isSameDay(currentRange.to, calculatedRange.to)) {
+          isSameDay(normalizedCurrent.from, calculatedRange.from) && 
+          isSameDay(normalizedCurrent.to, calculatedRange.to)) {
         return preset.id;
       }
     }
     return "custom";
-  }, [calculateRangeFromPreset]);
+  }, [calculateRangeFromPreset, normalizeRange]);
 
   useEffect(() => {
     // Use initialRanges passed via props (from context)
@@ -106,7 +116,7 @@ export function PeriodSelector({
   }, [isOpen, range]);
 
   const handleApply = useCallback((newRange: DateRange) => {
-    // Garante que o range aplicado está normalizado
+    // Garante que o range aplicado está normalizado (from=startOfDay, to=endOfDay)
     const finalRange1: DateRange = newRange.from ? normalizeRange(newRange) : { from: undefined, to: undefined };
     const finalRange2 = calculateComparisonRange(finalRange1);
     
