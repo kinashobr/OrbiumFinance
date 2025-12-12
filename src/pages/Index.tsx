@@ -19,11 +19,6 @@ const Index = () => {
   const { 
     transacoesV2,
     contasMovimento,
-    emprestimos, 
-    investimentosRF, 
-    criptomoedas, 
-    stablecoins, 
-    objetivos,
     categoriasV2,
     getValorFipeTotal,
     getAtivosTotal,
@@ -84,7 +79,7 @@ const Index = () => {
   // Liquidez imediata (contas correntes e poupança)
   const liquidezImediata = useMemo(() => {
     return saldosPorConta
-      .filter(c => c.accountType === 'conta_corrente' || c.accountType === 'poupanca')
+      .filter(c => c.accountType === 'conta_corrente' || c.accountType === 'poupanca' || c.accountType === 'reserva_emergencia')
       .reduce((acc, c) => acc + c.saldo, 0);
   }, [saldosPorConta]);
 
@@ -166,11 +161,10 @@ const Index = () => {
 
   // Dados para acompanhamento de ativos
   const investimentosRFTotal = useMemo(() => {
-    const rfContas = saldosPorConta
+    return saldosPorConta
       .filter(c => c.accountType === 'aplicacao_renda_fixa' || c.accountType === 'poupanca')
       .reduce((acc, c) => acc + c.saldo, 0);
-    return investimentosRF.reduce((acc, inv) => acc + inv.valor, 0) + rfContas;
-  }, [investimentosRF, saldosPorConta]);
+  }, [saldosPorConta]);
 
   const poupancaTotal = useMemo(() => {
     return saldosPorConta
@@ -184,8 +178,17 @@ const Index = () => {
       .reduce((acc, c) => acc + c.saldo, 0);
   }, [saldosPorConta]);
 
-  const criptoTotal = criptomoedas.reduce((acc, c) => acc + c.valorBRL, 0) + saldosPorConta.filter(c => c.accountType === 'criptoativos').reduce((acc, c) => acc + c.saldo, 0);
-  const stablesTotal = stablecoins.reduce((acc, s) => acc + s.valorBRL, 0);
+  const criptoTotal = useMemo(() => {
+    return saldosPorConta
+      .filter(c => c.accountType === 'criptoativos' && !c.name.toLowerCase().includes('stable'))
+      .reduce((acc, c) => acc + c.saldo, 0);
+  }, [saldosPorConta]);
+  
+  const stablesTotal = useMemo(() => {
+    return saldosPorConta
+      .filter(c => c.accountType === 'criptoativos' && c.name.toLowerCase().includes('stable'))
+      .reduce((acc, c) => acc + c.saldo, 0);
+  }, [saldosPorConta]);
 
   // Dados para saúde financeira
   

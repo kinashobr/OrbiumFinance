@@ -23,19 +23,17 @@ import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { SeguroParcelaSelector } from "./SeguroParcelaSelector";
 
-interface LoanParcela {
-  numero: number;
-  vencimento: string;
-  valor: number;
-  pago: boolean;
-  dataPagamento?: string;
-}
-
+// Interface simplificada para Empréstimo (apenas o necessário para o modal)
 interface LoanInfo {
   id: string;
   institution: string;
   numeroContrato?: string;
-  parcelas?: LoanParcela[];
+  parcelas?: {
+    numero: number;
+    vencimento: string;
+    valor: number;
+    pago: boolean;
+  }[];
   valorParcela?: number;
   totalParcelas?: number;
 }
@@ -45,8 +43,8 @@ interface MovimentarContaModalProps {
   onOpenChange: (open: boolean) => void;
   accounts: ContaCorrente[];
   categories: Categoria[];
-  investments: Array<{ id: string; name: string }>;
-  loans: LoanInfo[];
+  // Removido: investments: Array<{ id: string; name: string }>;
+  // Removido: loans: LoanInfo[];
   selectedAccountId?: string;
   onSubmit: (transaction: TransacaoCompleta, transferGroup?: TransferGroup) => void;
   editingTransaction?: TransacaoCompleta;
@@ -63,7 +61,6 @@ const getOperationsForAccountType = (accountType: AccountType): OperationType[] 
     case 'poupanca':
     case 'reserva_emergencia':
     case 'objetivos_financeiros':
-      return ['rendimento'];
     case 'criptoativos':
       return ['rendimento'];
     default:
@@ -89,8 +86,6 @@ export function MovimentarContaModal({
   onOpenChange,
   accounts,
   categories,
-  investments,
-  loans,
   selectedAccountId,
   onSubmit,
   editingTransaction
@@ -231,14 +226,47 @@ export function MovimentarContaModal({
     }
   }, [operationType, categoryId, categories, seguroLink]);
 
+  const selectedCategory = categories.find(c => c.id === categoryId);
+
+  // Contas de investimento disponíveis para aplicação/resgate
+  const investmentAccounts = useMemo(() =>
+    accounts.filter(a =>
+      a.accountType === 'aplicacao_renda_fixa' ||
+      a.accountType === 'poupanca' ||
+      a.accountType === 'criptoativos' ||
+      a.accountType === 'reserva_emergencia' ||
+      a.accountType === 'objetivos_financeiros'
+    ),
+    [accounts]
+  );
+  
+  // Contas de empréstimo (Simulação: Apenas contas correntes para pagamento)
+  const loanAccounts = useMemo(() =>
+    accounts.filter(a => a.accountType === 'conta_corrente'),
+    [accounts]
+  );
+
+  // Simulação de Empréstimos Ativos (para seleção de pagamento)
+  const simulatedLoans: LoanInfo[] = useMemo(() => {
+    // Como as entidades V1 foram removidas, simulamos uma lista de empréstimos
+    // ativos para que o modal de pagamento funcione minimamente.
+    // Na Etapa 4, esta lógica será refeita usando as entidades V2 mantidas.
+    return [
+      { id: 'loan_1', institution: 'Banco X', numeroContrato: '1234', valorParcela: 500, totalParcelas: 12, parcelas: Array.from({ length: 12 }, (_, i) => ({ numero: i + 1, vencimento: '2025-01-01', valor: 500, pago: i < 3 })) },
+      { id: 'loan_2', institution: 'Financeira Y', numeroContrato: '5678', valorParcela: 1200, totalParcelas: 48, parcelas: Array.from({ length: 48 }, (_, i) => ({ numero: i + 1, vencimento: '2025-01-01', valor: 1200, pago: i < 10 })) },
+    ];
+  }, []);
+  
   const selectedLoan = useMemo(() =>
-    loans.find(l => l.id === loanId),
-    [loans, loanId]
+    simulatedLoans.find(l => l.id === loanId),
+    [simulatedLoans, loanId]
   );
 
   // Calculate current balance including all transactions
   const currentBalance = useMemo(() => {
     if (!selectedAccount) return 0;
+    // Simplificação: Apenas mostra o initialBalance da conta, pois o cálculo completo é complexo aqui.
+    // O cálculo real é feito no ReceitasDespesas.tsx
     return selectedAccount.initialBalance;
   }, [selectedAccount]);
 
@@ -291,18 +319,6 @@ export function MovimentarContaModal({
     return filtered;
   }, [categories, operationType, categorySearchTerm]);
 
-  // Contas de investimento disponíveis para aplicação/resgate
-  const investmentAccounts = useMemo(() =>
-    accounts.filter(a =>
-      a.accountType === 'aplicacao_renda_fixa' ||
-      a.accountType === 'poupanca' ||
-      a.accountType === 'criptoativos' ||
-      a.accountType === 'reserva_emergencia' ||
-      a.accountType === 'objetivos_financeiros'
-    ),
-    [accounts]
-  );
-
   const canSubmit = useMemo(() => {
     if (!accountId || !date) return false;
     if (parsedAmount <= 0) return false;
@@ -341,9 +357,6 @@ export function MovimentarContaModal({
 
     const isCreditCard = selectedAccount?.accountType === 'cartao_credito';
 
-    // Fluxo para Cartão de Crédito:
-    // - Despesa (compra) é 'out' (aumenta o passivo, ou seja, aumenta o saldo negativo)
-    // - Transferência (pagamento de fatura) é 'in' (diminui o passivo, ou seja, diminui o saldo negativo)
     const isIncoming = operationType === 'receita' || operationType === 'resgate' ||
                        operationType === 'liberacao_emprestimo' || operationType === 'rendimento' ||
                        (operationType === 'veiculo' && vehicleOperation === 'venda');
@@ -352,9 +365,9 @@ export function MovimentarContaModal({
 
     if (isCreditCard) {
       if (operationType === 'despesa') {
-        flow = 'out'; // Despesa no cartão é uma saída (aumenta o passivo)
+        flow = 'out'; 
       } else if (operationType === 'transferencia') {
-        flow = 'in'; // Pagamento de fatura é uma entrada (diminui o passivo)
+        flow = 'in'; 
       }
     }
 
@@ -369,6 +382,7 @@ export function MovimentarContaModal({
       categoryId: (operationType === 'receita' || operationType === 'despesa' || operationType === 'rendimento') ? categoryId : null,
       description: description || `${OPERATION_CONFIG[operationType]?.label || operationType} - ${formatCurrency(parsedAmount)}`,
       links: {
+        // investmentId e loanId agora usam IDs de contas V2 ou IDs simulados
         investmentId: (operationType === 'aplicacao' || operationType === 'resgate') ? investmentId : null,
         loanId: (operationType === 'pagamento_emprestimo' || operationType === 'liberacao_emprestimo') ? loanId || `loan_pending_${transactionId}` : null,
         transferGroupId: null,
@@ -393,20 +407,18 @@ export function MovimentarContaModal({
       const groupId = generateTransferGroupId();
       transaction.links.transferGroupId = groupId;
 
-      // Se for Cartão de Crédito, a transferência é o pagamento da fatura (entrada no CC, saída na CC)
       if (isCreditCard) {
-        transaction.flow = 'in'; // Entrada no Cartão de Crédito (diminui o passivo)
+        transaction.flow = 'in'; 
 
         transferGroup = {
           id: groupId,
-          fromAccountId: accountDestinoId, // Conta Corrente
-          toAccountId: accountId, // Cartão de Crédito
+          fromAccountId: accountDestinoId, 
+          toAccountId: accountId, 
           amount: parsedAmount,
           date,
           description: description || `Pagamento de fatura CC ${selectedAccount?.name}`
         };
       } else {
-        // Transferência normal (saída da conta origem)
         transaction.flow = 'transfer_out';
 
         transferGroup = {
@@ -422,7 +434,6 @@ export function MovimentarContaModal({
 
     onSubmit(transaction, transferGroup);
 
-    // Manter modal aberto e resetar formulário se não estiver editando
     if (!isEditing) {
       toast.success("Movimentação registrada! Pronto para o próximo lançamento.");
       resetForm(true);
@@ -505,7 +516,6 @@ export function MovimentarContaModal({
     }
   };
 
-  const selectedCategory = categories.find(c => c.id === categoryId);
   const isCreditCard = selectedAccount?.accountType === 'cartao_credito';
   const isRendimento = operationType === 'rendimento';
 
@@ -538,7 +548,7 @@ export function MovimentarContaModal({
                 <SelectContent>
                   {accounts.map(account => (
                     <SelectItem key={account.id} value={account.id}>
-                      {account.name} - {formatCurrency(account.initialBalance)}
+                      {account.name} - {formatCurrency(currentBalance)}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -701,7 +711,7 @@ export function MovimentarContaModal({
                   </PopoverTrigger>
                   <PopoverContent className="w-[300px] p-0">
                     <div className="relative p-2">
-                      <Search className="absolute left-4 top-4 h-4 w-4 text-muted-foreground" />
+                      <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                       <Input
                         placeholder="Buscar categoria..."
                         className="pl-10 h-9"
@@ -800,7 +810,7 @@ export function MovimentarContaModal({
                       <SelectValue placeholder="Selecione o empréstimo..." />
                     </SelectTrigger>
                     <SelectContent>
-                      {loans.map(loan => (
+                      {simulatedLoans.map(loan => (
                         <SelectItem key={loan.id} value={loan.id}>
                           {loan.institution} {loan.numeroContrato ? `(${loan.numeroContrato})` : ''}
                         </SelectItem>

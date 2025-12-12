@@ -108,11 +108,12 @@ export function IndicadoresTab({ dateRange }: IndicadoresTabProps) {
     contasMovimento,
     emprestimos,
     veiculos,
-    investimentosRF,
-    criptomoedas,
-    stablecoins,
-    objetivos,
     categoriasV2,
+    getAtivosTotal,
+    getPassivosTotal,
+    getPatrimonioLiquido,
+    getSaldoDevedor,
+    getJurosTotais,
   } = useFinance();
 
   // Estado para indicadores personalizados
@@ -203,7 +204,7 @@ export function IndicadoresTab({ dateRange }: IndicadoresTabProps) {
             balance += t.amount;
           }
         } else {
-          if (t.flow === 'in' || t.flow === 'transfer_in') {
+          if (t.flow === 'in' || t.flow === 'transfer_in' || t.operationType === 'initial_balance') {
             balance += t.amount;
           } else {
             balance -= t.amount;
@@ -273,35 +274,23 @@ export function IndicadoresTab({ dateRange }: IndicadoresTabProps) {
     const contasInvestimento = contasMovimento.filter(c => 
       ['aplicacao_renda_fixa', 'criptoativos', 'objetivos_financeiros'].includes(c.accountType)
     );
-    const investimentosContas = contasInvestimento.reduce((acc, c) => acc + Math.max(0, saldosPorConta[c.id] || 0), 0);
+    const investimentosTotal = contasInvestimento.reduce((acc, c) => acc + Math.max(0, saldosPorConta[c.id] || 0), 0);
     
-    const investimentosLegado = 
-      investimentosRF.reduce((acc, i) => acc + i.valor, 0) +
-      criptomoedas.reduce((acc, c) => acc + c.valorBRL, 0) +
-      stablecoins.reduce((acc, s) => acc + s.valorBRL, 0) +
-      objetivos.reduce((acc, o) => acc + o.atual, 0);
+    const valorVeiculos = veiculos.filter(v => v.status !== 'vendido').reduce((acc, v) => acc + (v.valorFipe || v.valorVeiculo || 0), 0);
 
-    const investimentosTotal = Math.max(investimentosContas, investimentosLegado);
-
-    const veiculosAtivos = veiculos.filter(v => v.status !== 'vendido');
-    const valorVeiculos = veiculosAtivos.reduce((acc, v) => acc + (v.valorFipe || v.valorVeiculo || 0), 0);
-
-    const totalAtivos = caixaTotal + investimentosTotal + valorVeiculos;
+    const totalAtivos = getAtivosTotal();
 
     // Passivos
     const emprestimosAtivos = emprestimos.filter(e => e.status !== 'quitado');
-    const saldoDevedor = emprestimosAtivos.reduce((acc, e) => {
-      const parcelasRestantes = e.meses - (e.parcelasPagas || 0);
-      return acc + (e.parcela * parcelasRestantes);
-    }, 0);
+    const saldoDevedor = getSaldoDevedor();
     const passivoCurtoPrazo = emprestimosAtivos.reduce((acc, e) => {
       const parcelasRestantes = Math.min(12, e.meses - (e.parcelasPagas || 0));
       return acc + (e.parcela * parcelasRestantes);
     }, 0);
-    const totalPassivos = saldoDevedor;
+    const totalPassivos = getPassivosTotal();
 
     // Patrimônio Líquido
-    const patrimonioLiquido = totalAtivos - totalPassivos;
+    const patrimonioLiquido = getPatrimonioLiquido();
 
     // Receitas e Despesas do período
     const calcReceitas = (trans: typeof transacoesV2) => trans
@@ -331,7 +320,7 @@ export function IndicadoresTab({ dateRange }: IndicadoresTabProps) {
     });
 
     // Juros
-    const jurosTotais = emprestimosAtivos.reduce((acc, e) => acc + (e.parcela * e.taxaMensal / 100), 0);
+    const jurosTotais = getJurosTotais();
 
     // Resultado
     const resultadoMesAtual = receitasMesAtual - despesasMesAtual;
@@ -430,7 +419,7 @@ export function IndicadoresTab({ dateRange }: IndicadoresTabProps) {
         passivoCurtoPrazo,
       },
     };
-  }, [transacoesV2, contasMovimento, emprestimos, veiculos, investimentosRF, criptomoedas, stablecoins, objetivos, categoriasV2, dateRange]);
+  }, [transacoesV2, contasMovimento, emprestimos, veiculos, categoriasV2, dateRange, getAtivosTotal, getPassivosTotal, getPatrimonioLiquido, getSaldoDevedor, getJurosTotais]);
 
   const formatPercent = (value: number) => `${value.toFixed(1)}%`;
   const formatRatio = (value: number) => value >= 999 ? "∞" : `${value.toFixed(2)}x`;

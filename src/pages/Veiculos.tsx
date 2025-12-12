@@ -50,11 +50,6 @@ const Veiculos = () => {
     updateSeguroVeiculo,
     deleteSeguroVeiculo,
     getValorFipeTotal,
-    contasMovimento,
-    categoriasV2,
-    investimentosRF,
-    emprestimos,
-    addTransacaoV2,
     transacoesV2,
   } = useFinance();
   
@@ -64,15 +59,6 @@ const Veiculos = () => {
   const [pendingVehicleId, setPendingVehicleId] = useState<number | null>(null);
   const [showFipeDialog, setShowFipeDialog] = useState(false);
   const [selectedVeiculoFipe, setSelectedVeiculoFipe] = useState<Veiculo | undefined>(undefined);
-  
-  // Estado para simular o pré-preenchimento do modal de movimentação
-  const [parcelaToPay, setParcelaToPay] = useState<{
-    seguroId: number;
-    parcelaNumero: number;
-    valor: number;
-    veiculoNome: string;
-    vencimento: string;
-  } | null>(null);
   
   // Forms
   const [formData, setFormData] = useState({

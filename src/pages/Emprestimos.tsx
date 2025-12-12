@@ -28,7 +28,7 @@ const Emprestimos = () => {
     transacoesV2
   } = useFinance();
   
-  const [selectedLoan, setSelectedLoan] = useState<Emprestimo | null>(null);
+  const [selectedLoan, setSelectedLoan] = useState<Emprestimo | null>(selectedLoan);
   const [detailDialogOpen, setDetailDialogOpen] = useState(false);
   
   // Inicializa o range para o mês atual

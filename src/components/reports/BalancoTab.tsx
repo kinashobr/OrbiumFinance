@@ -89,11 +89,10 @@ export function BalancoTab({ dateRange }: BalancoTabProps) {
     contasMovimento,
     emprestimos,
     veiculos,
-    investimentosRF,
-    criptomoedas,
-    stablecoins,
-    objetivos,
     categoriasV2,
+    getAtivosTotal,
+    getPassivosTotal,
+    getPatrimonioLiquido,
   } = useFinance();
 
   // Helper para calcular saldo até uma data (usado para saldo inicial do período)
@@ -119,7 +118,7 @@ export function BalancoTab({ dateRange }: BalancoTabProps) {
             balance += t.amount;
           }
         } else {
-          if (t.flow === 'in' || t.flow === 'transfer_in') {
+          if (t.flow === 'in' || t.flow === 'transfer_in' || t.operationType === 'initial_balance') {
             balance += t.amount;
           } else {
             balance -= t.amount;
@@ -173,69 +172,49 @@ export function BalancoTab({ dateRange }: BalancoTabProps) {
   // Cálculos do Balanço Patrimonial
   const balanco = useMemo(() => {
     const now = new Date();
-    const mesAtual = format(now, 'yyyy-MM');
-    const mesAnterior = format(subMonths(now, 1), 'yyyy-MM');
 
     // === ATIVOS CIRCULANTES ===
-    const contasCorrente = contasMovimento.filter(c => c.accountType === 'conta_corrente');
-    const contasPoupanca = contasMovimento.filter(c => c.accountType === 'poupanca');
-    const contasReserva = contasMovimento.filter(c => c.accountType === 'reserva_emergencia');
+    const contasCirculantes = contasMovimento.filter(c => 
+      ['conta_corrente', 'poupanca', 'reserva_emergencia'].includes(c.accountType)
+    );
     
     // Usamos o saldo calculado no período (que é o saldo final do período)
-    const saldoContasCorrente = contasCorrente.reduce((acc, c) => acc + (saldosPorConta[c.id] || 0), 0);
-    const saldoPoupanca = contasPoupanca.reduce((acc, c) => acc + (saldosPorConta[c.id] || 0), 0);
-    const saldoReserva = contasReserva.reduce((acc, c) => acc + (saldosPorConta[c.id] || 0), 0);
-    
-    // Caixa e equivalentes
-    const caixaEquivalentes = Math.max(0, saldoContasCorrente + saldoPoupanca + saldoReserva);
+    const caixaEquivalentes = contasCirculantes.reduce((acc, c) => acc + Math.max(0, saldosPorConta[c.id] || 0), 0);
 
     // === INVESTIMENTOS ===
-    const contasRendaFixa = contasMovimento.filter(c => c.accountType === 'aplicacao_renda_fixa');
-    const contasCripto = contasMovimento.filter(c => c.accountType === 'criptoativos');
-    const contasObjetivos = contasMovimento.filter(c => c.accountType === 'objetivos_financeiros');
-    
-    const saldoRendaFixa = contasRendaFixa.reduce((acc, c) => acc + (saldosPorConta[c.id] || 0), 0);
-    const saldoCripto = contasCripto.reduce((acc, c) => acc + (saldosPorConta[c.id] || 0), 0);
-    const saldoObjetivos = contasObjetivos.reduce((acc, c) => acc + (saldosPorConta[c.id] || 0), 0);
-    
-    // Investimentos também da base legada (assumindo que o saldo da conta já reflete o valor atual)
-    const totalInvRF = investimentosRF.reduce((acc, i) => acc + i.valor, 0);
-    const totalCripto = criptomoedas.reduce((acc, c) => acc + c.valorBRL, 0);
-    const totalStable = stablecoins.reduce((acc, s) => acc + s.valorBRL, 0);
-    const totalObjetivos = objetivos.reduce((acc, o) => acc + o.atual, 0);
-    
-    const investimentosTotal = Math.max(
-      saldoRendaFixa + saldoCripto + saldoObjetivos,
-      totalInvRF + totalCripto + totalStable + totalObjetivos
+    const contasInvestimento = contasMovimento.filter(c => 
+      ['aplicacao_renda_fixa', 'criptoativos', 'objetivos_financeiros'].includes(c.accountType)
     );
+    
+    const saldoRendaFixa = contasInvestimento.filter(c => c.accountType === 'aplicacao_renda_fixa' || c.accountType === 'poupanca').reduce((acc, c) => acc + Math.max(0, saldosPorConta[c.id] || 0), 0);
+    const saldoCripto = contasInvestimento.filter(c => c.accountType === 'criptoativos' && !c.name.toLowerCase().includes('stable')).reduce((acc, c) => acc + Math.max(0, saldosPorConta[c.id] || 0), 0);
+    const saldoStable = contasInvestimento.filter(c => c.accountType === 'criptoativos' && c.name.toLowerCase().includes('stable')).reduce((acc, c) => acc + Math.max(0, saldosPorConta[c.id] || 0), 0);
+    const saldoObjetivos = contasInvestimento.filter(c => c.accountType === 'objetivos_financeiros').reduce((acc, c) => acc + Math.max(0, saldosPorConta[c.id] || 0), 0);
+    
+    const investimentosTotal = saldoRendaFixa + saldoCripto + saldoStable + saldoObjetivos;
 
     // === IMOBILIZADO ===
     const veiculosAtivos = veiculos.filter(v => v.status !== 'vendido');
     const valorVeiculos = veiculosAtivos.reduce((acc, v) => acc + (v.valorFipe || v.valorVeiculo || 0), 0);
 
     // === TOTAL ATIVOS ===
-    const totalAtivos = caixaEquivalentes + investimentosTotal + valorVeiculos;
+    const totalAtivos = getAtivosTotal();
 
     // === PASSIVOS ===
     const emprestimosAtivos = emprestimos.filter(e => e.status !== 'quitado');
-    const saldoDevedorTotal = emprestimosAtivos.reduce((acc, e) => {
-      const parcelasRestantes = e.meses - (e.parcelasPagas || 0);
-      return acc + (e.parcela * parcelasRestantes);
-    }, 0);
+    const totalPassivos = getPassivosTotal();
 
     // Passivo curto prazo (próximos 12 meses)
     const passivoCurtoPrazo = emprestimosAtivos.reduce((acc, e) => {
       const parcelasRestantes = Math.min(12, e.meses - (e.parcelasPagas || 0));
       return acc + (e.parcela * parcelasRestantes);
     }, 0);
-
+    
     // Passivo longo prazo
-    const passivoLongoPrazo = saldoDevedorTotal - passivoCurtoPrazo;
-
-    const totalPassivos = saldoDevedorTotal;
+    const passivoLongoPrazo = totalPassivos - passivoCurtoPrazo;
 
     // === PATRIMÔNIO LÍQUIDO ===
-    const patrimonioLiquido = totalAtivos - totalPassivos;
+    const patrimonioLiquido = getPatrimonioLiquido();
 
     // === VARIAÇÃO MENSAL (usando transações do período) ===
     const calcularResultado = (transacoes: typeof transacoesV2) => {
@@ -275,16 +254,13 @@ export function BalancoTab({ dateRange }: BalancoTabProps) {
       ativos: {
         circulantes: {
           caixa: caixaEquivalentes,
-          contasCorrente: saldoContasCorrente,
-          poupanca: saldoPoupanca,
-          reservaEmergencia: saldoReserva,
         },
         naoCirculantes: {
           investimentos: investimentosTotal,
-          rendaFixa: Math.max(saldoRendaFixa, totalInvRF),
-          criptoativos: Math.max(saldoCripto, totalCripto),
-          stablecoins: totalStable,
-          objetivos: Math.max(saldoObjetivos, totalObjetivos),
+          rendaFixa: saldoRendaFixa,
+          criptoativos: saldoCripto,
+          stablecoins: saldoStable,
+          objetivos: saldoObjetivos,
           veiculos: valorVeiculos,
         },
         total: totalAtivos,
@@ -299,7 +275,7 @@ export function BalancoTab({ dateRange }: BalancoTabProps) {
       variacaoMensal,
       resultadoMesAtual: resultadoPeriodoAtual,
     };
-  }, [transacoesV2, contasMovimento, emprestimos, veiculos, investimentosRF, criptomoedas, stablecoins, objetivos, saldosPorConta, dateRange, transacoesPeriodo]);
+  }, [transacoesV2, contasMovimento, emprestimos, veiculos, saldosPorConta, dateRange, transacoesPeriodo, getAtivosTotal, getPassivosTotal, getPatrimonioLiquido]);
 
   // Evolução do PL nos últimos 12 meses (mantido com base em todas as transações para histórico)
   const evolucaoPL = useMemo(() => {
@@ -314,11 +290,9 @@ export function BalancoTab({ dateRange }: BalancoTabProps) {
       const fim = endOfMonth(data);
 
       // Calcular saldo acumulado até o final do mês
-      let saldoAcumulado = 0; // Começa em 0 e usa transações sintéticas
+      let saldoAcumulado = 0; 
       
       contasMovimento.forEach(conta => {
-        // Se a conta tem startDate, o saldo inicial é 0 e dependemos da transação sintética.
-        // Caso contrário, usamos o initialBalance legado.
         let balance = conta.startDate ? 0 : conta.initialBalance; 
         
         transacoesV2.forEach(t => {
@@ -334,7 +308,7 @@ export function BalancoTab({ dateRange }: BalancoTabProps) {
                   balance += t.amount;
                 }
               } else {
-                if (t.flow === 'in' || t.flow === 'transfer_in') {
+                if (t.flow === 'in' || t.flow === 'transfer_in' || t.operationType === 'initial_balance') {
                   balance += t.amount;
                 } else {
                   balance -= t.amount;
@@ -349,12 +323,9 @@ export function BalancoTab({ dateRange }: BalancoTabProps) {
         }
       });
 
-      // Valor de investimentos (simplificado - usar valor atual)
-      const invTotal = balanco.ativos.naoCirculantes.investimentos * (0.7 + i * 0.03);
-      const veicTotal = balanco.ativos.naoCirculantes.veiculos;
-      
-      const ativosTotal = Math.max(0, saldoAcumulado) + invTotal + veicTotal;
-      const passivosTotal = balanco.passivos.total * (1 + (11 - i) * 0.02);
+      // Simplificação: Usar o valor atual dos ativos/passivos e aplicar uma variação simulada
+      const ativosTotal = balanco.ativos.total * (1 + (i - 6) * 0.005);
+      const passivosTotal = balanco.passivos.total * (1 + (i - 6) * 0.008);
       
       resultado.push({
         mes: mesLabel.charAt(0).toUpperCase() + mesLabel.slice(1),
@@ -379,14 +350,6 @@ export function BalancoTab({ dateRange }: BalancoTabProps) {
     ].filter(item => item.value > 0);
 
     return items;
-  }, [balanco]);
-
-  // Composição dos passivos
-  const composicaoPassivos = useMemo(() => {
-    return [
-      { name: "Curto Prazo (12m)", value: balanco.passivos.curtoPrazo, color: COLORS.warning },
-      { name: "Longo Prazo", value: balanco.passivos.longoPrazo, color: COLORS.danger },
-    ].filter(item => item.value > 0);
   }, [balanco]);
 
   // Métricas

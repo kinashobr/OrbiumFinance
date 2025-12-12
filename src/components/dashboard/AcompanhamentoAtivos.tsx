@@ -21,6 +21,7 @@ interface AtivoGrupo {
 }
 
 interface AcompanhamentoAtivosProps {
+  // Usando apenas valores consolidados, pois a lógica de cálculo está no Index.tsx
   investimentosRF: number;
   criptomoedas: number;
   stablecoins: number;
