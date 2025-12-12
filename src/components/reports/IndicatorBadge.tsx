@@ -27,22 +27,22 @@ export function IndicatorBadge({
 }: IndicatorBadgeProps) {
   const statusStyles = {
     success: {
-      bg: "bg-success/10 border-success/30",
+      bg: "bg-success/5 border-l-success",
       text: "text-success",
       sparkline: "hsl(142, 76%, 36%)",
     },
     warning: {
-      bg: "bg-warning/10 border-warning/30",
+      bg: "bg-warning/5 border-l-warning",
       text: "text-warning",
       sparkline: "hsl(38, 92%, 50%)",
     },
     danger: {
-      bg: "bg-destructive/10 border-destructive/30",
+      bg: "bg-destructive/5 border-l-destructive",
       text: "text-destructive",
       sparkline: "hsl(0, 72%, 51%)",
     },
     neutral: {
-      bg: "bg-primary/10 border-primary/30",
+      bg: "bg-primary/5 border-l-primary",
       text: "text-primary",
       sparkline: "hsl(199, 89%, 48%)",
     },
@@ -53,7 +53,7 @@ export function IndicatorBadge({
   return (
     <div
       className={cn(
-        "glass-card p-4 border transition-all hover:scale-[1.02] cursor-help",
+        "glass-card p-4 border-l-4 border transition-all hover:scale-[1.02] cursor-help",
         statusStyles[status].bg,
         className
       )}
@@ -65,31 +65,32 @@ export function IndicatorBadge({
             {title}
           </span>
         </div>
-        <div className="flex items-center gap-1">
-          {trend && (
-            <div className={cn(
-              "flex items-center gap-1 text-xs font-medium",
-              trend === "up" ? "text-success" : trend === "down" ? "text-destructive" : "text-muted-foreground"
-            )}>
-              <TrendIcon className="w-3.5 h-3.5" />
-              {trendLabel && <span className="text-muted-foreground">{trendLabel}</span>}
-            </div>
-          )}
-          <Info className="w-3 h-3 text-muted-foreground/50" />
-        </div>
+        <Info className="w-3 h-3 text-muted-foreground/50 shrink-0" />
       </div>
+      
       <div className="flex items-end justify-between gap-2">
         <span className={cn("text-xl font-bold", statusStyles[status].text)}>
           {value}
         </span>
-        {sparklineData && sparklineData.length > 1 && (
-          <MiniSparkline
-            data={sparklineData}
-            color={statusStyles[status].sparkline}
-            width={50}
-            height={20}
-          />
-        )}
+        <div className="flex flex-col items-end">
+          {sparklineData && sparklineData.length > 1 && (
+            <MiniSparkline
+              data={sparklineData}
+              color={statusStyles[status].sparkline}
+              width={50}
+              height={20}
+            />
+          )}
+          {trend && (
+            <div className={cn(
+              "flex items-center gap-1 text-xs font-medium mt-1",
+              trend === "up" ? "text-success" : trend === "down" ? "text-destructive" : "text-muted-foreground"
+            )}>
+              <TrendIcon className="w-3 h-3" />
+              {trendLabel && <span className="text-muted-foreground">{trendLabel}</span>}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
