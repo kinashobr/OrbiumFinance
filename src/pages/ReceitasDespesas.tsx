@@ -542,14 +542,14 @@ const ReceitasDespesas = () => {
             
             if (existingInitialTx) {
                 // Update existing transaction
-                setTransacoesV2(prev => prev.map(t => t.id === existingInitialTx.id ? newInitialTx : t));
+                setTransacoesV2((prev: TransacaoCompleta[]) => prev.map(t => t.id === existingInitialTx.id ? newInitialTx : t));
             } else {
                 // Add new transaction
                 addTransacaoV2(newInitialTx);
             }
         } else if (existingInitialTx) {
             // Delete existing transaction if new balance is 0
-            setTransacoesV2(prev => prev.filter(t => t.id !== existingInitialTx.id));
+            setTransacoesV2((prev: TransacaoCompleta[]) => prev.filter(t => t.id !== existingInitialTx.id));
         }
       }
       setEditingAccount(undefined);
@@ -575,9 +575,6 @@ const ReceitasDespesas = () => {
         let initialBalanceValue = 0;
         if (initialTx) {
             initialBalanceValue = initialTx.flow === 'in' ? initialTx.amount : -initialTx.amount;
-        } else {
-            // Fallback for legacy accounts without synthetic transaction
-            initialBalanceValue = account.initialBalance;
         }
         
         // Create a temporary account object to pass the correct initial balance value to the form
