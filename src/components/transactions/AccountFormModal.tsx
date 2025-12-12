@@ -25,7 +25,6 @@ const ACCOUNT_TYPE_ICONS: Record<AccountType, typeof Building2> = {
   reserva_emergencia: Shield,
   objetivos_financeiros: Target,
   cartao_credito: CreditCard,
-  initial_balance_contra: Wallet, // Usando Wallet como fallback, mas esta conta é oculta
 };
 
 // Helper para formatar número para string BR
@@ -175,7 +174,6 @@ export function AccountFormModal({
               </SelectTrigger>
               <SelectContent>
                 {(Object.keys(ACCOUNT_TYPE_LABELS) as AccountType[])
-                  .filter(type => type !== 'initial_balance_contra') // Filtra a conta de contrapartida
                   .map((type) => {
                   const Icon = ACCOUNT_TYPE_ICONS[type];
                   return (
