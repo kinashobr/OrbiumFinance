@@ -114,7 +114,7 @@ const Index = () => {
   const transacoesPeriodoAnterior = useMemo(() => {
     if (!dateRange.from || !dateRange.to) return []; // Não calcula variação se for "Todo o período"
 
-    const diffIn Days = (dateRange.to.getTime() - dateRange.from.getTime()) / (1000 * 60 * 60 * 24);
+    const diffInDays = (dateRange.to.getTime() - dateRange.from.getTime()) / (1000 * 60 * 60 * 24);
     
     const prevFrom = subMonths(dateRange.from, 1);
     const prevTo = subMonths(dateRange.to, 1);
