@@ -58,9 +58,15 @@ export function ReportCard({
   };
 
   const valueSizes = {
-    sm: "text-lg",
-    md: "text-2xl",
-    lg: "text-3xl",
+    sm: "text-xl",
+    md: "text-3xl",
+    lg: "text-4xl",
+  };
+  
+  const iconSizes = {
+    sm: "w-5 h-5",
+    md: "w-6 h-6",
+    lg: "w-7 h-7",
   };
 
   const TrendIcon = trend && trend > 0 ? TrendingUp : trend && trend < 0 ? TrendingDown : Minus;
@@ -88,25 +94,32 @@ export function ReportCard({
           )}
           {trend !== undefined && (
             <div className={cn(
-              "flex items-center gap-1 mt-2 text-xs font-medium",
+              "flex items-center gap-1 mt-2 text-sm font-medium",
               trend > 0 ? "text-success" : trend < 0 ? "text-destructive" : "text-muted-foreground"
             )}>
-              <TrendIcon className="w-3 h-3" />
+              <TrendIcon className="w-4 h-4" />
               <span>{trend > 0 ? "+" : ""}{trend.toFixed(1)}%</span>
-              {trendLabel && <span className="text-muted-foreground">vs {trendLabel}</span>}
+              {trendLabel && <span className="text-muted-foreground text-xs">vs {trendLabel}</span>}
             </div>
           )}
         </div>
         {icon && (
           <div className={cn(
-            "p-2.5 rounded-xl shrink-0",
+            "p-3 rounded-xl shrink-0",
             status === "success" && "bg-success/10 text-success",
             status === "warning" && "bg-warning/10 text-warning",
             status === "danger" && "bg-destructive/10 text-destructive",
             status === "neutral" && "bg-primary/10 text-primary",
             status === "info" && "bg-neon-cyan/10 text-neon-cyan"
           )}>
-            {icon}
+            {/* Ajuste do tamanho do ícone */}
+            {/* Clonamos o ícone para aplicar o tamanho dinamicamente */}
+            {typeof icon === 'object' && icon !== null && 'type' in icon && (icon.type as any).displayName === 'LucideIcon' ? (
+              // @ts-ignore
+              <icon.type {...icon.props} className={iconSizes[size]} />
+            ) : (
+              icon
+            )}
           </div>
         )}
       </div>
