@@ -18,15 +18,7 @@ import { Emprestimo } from "@/types/finance";
 import { ExpandablePanel } from "@/components/reports/ExpandablePanel";
 import { TrendingDown, BarChart3, Calendar, Scale } from "lucide-react";
 import { cn } from "@/lib/utils";
-
-const COLORS = {
-  success: "hsl(142, 76%, 36%)",
-  warning: "hsl(38, 92%, 50%)",
-  danger: "hsl(0, 72%, 51%)",
-  primary: "hsl(199, 89%, 48%)",
-  accent: "hsl(270, 80%, 60%)",
-  muted: "hsl(215, 20%, 55%)",
-};
+import { useChartColors } from "@/hooks/useChartColors";
 
 interface LoanChartsProps {
   emprestimos: Emprestimo[];
@@ -34,6 +26,8 @@ interface LoanChartsProps {
 }
 
 export function LoanCharts({ emprestimos, className }: LoanChartsProps) {
+  const colors = useChartColors(); // Use o hook para cores dinâmicas
+  
   // Evolução do saldo devedor
   const evolucaoSaldo = useMemo(() => {
     const totalSaldo = emprestimos.reduce((acc, e) => {
@@ -127,22 +121,22 @@ export function LoanCharts({ emprestimos, className }: LoanChartsProps) {
             <AreaChart data={evolucaoSaldo}>
               <defs>
                 <linearGradient id="colorSaldo" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor={COLORS.accent} stopOpacity={0.4} />
-                  <stop offset="95%" stopColor={COLORS.accent} stopOpacity={0} />
+                  <stop offset="5%" stopColor={colors.accent} stopOpacity={0.4} />
+                  <stop offset="95%" stopColor={colors.accent} stopOpacity={0} />
                 </linearGradient>
               </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke="hsl(220, 20%, 18%)" vertical={false} />
-              <XAxis dataKey="mes" axisLine={false} tickLine={false} tick={{ fill: COLORS.muted, fontSize: 12 }} />
+              <CartesianGrid strokeDasharray="3 3" stroke={colors.border} vertical={false} />
+              <XAxis dataKey="mes" axisLine={false} tickLine={false} tick={{ fill: colors.mutedForeground, fontSize: 12 }} />
               <YAxis
                 axisLine={false}
                 tickLine={false}
-                tick={{ fill: COLORS.muted, fontSize: 12 }}
+                tick={{ fill: colors.mutedForeground, fontSize: 12 }}
                 tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`}
               />
               <Tooltip
                 contentStyle={{
-                  backgroundColor: "hsl(220, 20%, 8%)",
-                  border: "1px solid hsl(220, 20%, 18%)",
+                  backgroundColor: colors.card,
+                  border: `1px solid ${colors.border}`,
                   borderRadius: "12px",
                 }}
                 formatter={(value: number) => [formatCurrency(value), "Saldo"]}
@@ -150,7 +144,7 @@ export function LoanCharts({ emprestimos, className }: LoanChartsProps) {
               <Area
                 type="monotone"
                 dataKey="saldo"
-                stroke={COLORS.accent}
+                stroke={colors.accent}
                 strokeWidth={2}
                 fillOpacity={1}
                 fill="url(#colorSaldo)"
@@ -169,25 +163,25 @@ export function LoanCharts({ emprestimos, className }: LoanChartsProps) {
         <div className="h-[280px]">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={jurosAmortizacao}>
-              <CartesianGrid strokeDasharray="3 3" stroke="hsl(220, 20%, 18%)" vertical={false} />
-              <XAxis dataKey="parcela" axisLine={false} tickLine={false} tick={{ fill: COLORS.muted, fontSize: 12 }} />
+              <CartesianGrid strokeDasharray="3 3" stroke={colors.border} vertical={false} />
+              <XAxis dataKey="parcela" axisLine={false} tickLine={false} tick={{ fill: colors.mutedForeground, fontSize: 12 }} />
               <YAxis
                 axisLine={false}
                 tickLine={false}
-                tick={{ fill: COLORS.muted, fontSize: 12 }}
+                tick={{ fill: colors.mutedForeground, fontSize: 12 }}
                 tickFormatter={(v) => `${(v / 1000).toFixed(1)}k`}
               />
               <Tooltip
                 contentStyle={{
-                  backgroundColor: "hsl(220, 20%, 8%)",
-                  border: "1px solid hsl(220, 20%, 18%)",
+                  backgroundColor: colors.card,
+                  border: `1px solid ${colors.border}`,
                   borderRadius: "12px",
                 }}
                 formatter={(value: number) => [formatCurrency(value)]}
               />
               <Legend />
-              <Bar dataKey="juros" name="Juros" fill={COLORS.danger} radius={[4, 4, 0, 0]} stackId="stack" />
-              <Bar dataKey="amortizacao" name="Amortização" fill={COLORS.success} radius={[4, 4, 0, 0]} stackId="stack" />
+              <Bar dataKey="juros" name="Juros" fill={colors.destructive} radius={[4, 4, 0, 0]} stackId="stack" />
+              <Bar dataKey="amortizacao" name="Amortização" fill={colors.success} radius={[4, 4, 0, 0]} stackId="stack" />
             </BarChart>
           </ResponsiveContainer>
         </div>
@@ -202,12 +196,12 @@ export function LoanCharts({ emprestimos, className }: LoanChartsProps) {
         <div className="h-[280px]">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={comparativo} layout="vertical">
-              <CartesianGrid strokeDasharray="3 3" stroke="hsl(220, 20%, 18%)" horizontal={false} />
+              <CartesianGrid strokeDasharray="3 3" stroke={colors.border} horizontal={false} />
               <XAxis
                 type="number"
                 axisLine={false}
                 tickLine={false}
-                tick={{ fill: COLORS.muted, fontSize: 12 }}
+                tick={{ fill: colors.mutedForeground, fontSize: 12 }}
                 tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`}
               />
               <YAxis
@@ -215,21 +209,21 @@ export function LoanCharts({ emprestimos, className }: LoanChartsProps) {
                 dataKey="nome"
                 axisLine={false}
                 tickLine={false}
-                tick={{ fill: COLORS.muted, fontSize: 11 }}
+                tick={{ fill: colors.mutedForeground, fontSize: 11 }}
                 width={80}
               />
               <Tooltip
                 contentStyle={{
-                  backgroundColor: "hsl(220, 20%, 8%)",
-                  border: "1px solid hsl(220, 20%, 18%)",
+                  backgroundColor: colors.card,
+                  border: `1px solid ${colors.border}`,
                   borderRadius: "12px",
                 }}
                 formatter={(value: number, name: string) => [formatCurrency(value), name]}
               />
               <Legend />
-              <Bar dataKey="valorOriginal" name="Valor Original" fill={COLORS.muted} radius={[0, 4, 4, 0]} />
-              <Bar dataKey="saldoDevedor" name="Saldo Devedor" fill={COLORS.danger} radius={[0, 4, 4, 0]} />
-              <Bar dataKey="jurosTotal" name="Juros Total" fill={COLORS.warning} radius={[0, 4, 4, 0]} />
+              <Bar dataKey="valorOriginal" name="Valor Original" fill={colors.mutedForeground} radius={[0, 4, 4, 0]} />
+              <Bar dataKey="saldoDevedor" name="Saldo Devedor" fill={colors.destructive} radius={[0, 4, 4, 0]} />
+              <Bar dataKey="jurosTotal" name="Juros Total" fill={colors.warning} radius={[0, 4, 4, 0]} />
             </BarChart>
           </ResponsiveContainer>
         </div>

@@ -38,6 +38,7 @@ import {
   ResponsiveContainer,
 } from "recharts";
 import { cn } from "@/lib/utils";
+import { useChartColors } from "@/hooks/useChartColors";
 
 interface LoanDetailDialogProps {
   emprestimo: Emprestimo | null;
@@ -49,6 +50,7 @@ export function LoanDetailDialog({ emprestimo, open, onOpenChange }: LoanDetailD
   const { updateEmprestimo, getContasCorrentesTipo } = useFinance();
   const [isEditing, setIsEditing] = useState(false);
   const contasCorrentes = getContasCorrentesTipo();
+  const colors = useChartColors(); // Use o hook para cores dinâmicas
   
   // Hooks must be called unconditionally before any conditional return
   
@@ -330,18 +332,18 @@ export function LoanDetailDialog({ emprestimo, open, onOpenChange }: LoanDetailD
                       <AreaChart data={evolucaoData}>
                         <defs>
                           <linearGradient id="colorSaldoDetail" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.4} />
-                            <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0} />
+                            <stop offset="5%" stopColor={colors.primary} stopOpacity={0.4} />
+                            <stop offset="95%" stopColor={colors.primary} stopOpacity={0} />
                           </linearGradient>
                         </defs>
-                        <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
-                        <XAxis dataKey="parcela" axisLine={false} tickLine={false} tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 10 }} />
-                        <YAxis axisLine={false} tickLine={false} tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 10 }} tickFormatter={(v) => `${(v/1000).toFixed(0)}k`} />
+                        <CartesianGrid strokeDasharray="3 3" stroke={colors.border} vertical={false} />
+                        <XAxis dataKey="parcela" axisLine={false} tickLine={false} tick={{ fill: colors.mutedForeground, fontSize: 10 }} />
+                        <YAxis axisLine={false} tickLine={false} tick={{ fill: colors.mutedForeground, fontSize: 10 }} tickFormatter={(v) => `${(v/1000).toFixed(0)}k`} />
                         <Tooltip
-                          contentStyle={{ backgroundColor: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: "8px" }}
+                          contentStyle={{ backgroundColor: colors.card, border: `1px solid ${colors.border}`, borderRadius: "8px" }}
                           formatter={(value: number) => [formatCurrency(value)]}
                         />
-                        <Area type="monotone" dataKey="saldo" stroke="hsl(var(--primary))" strokeWidth={2} fillOpacity={1} fill="url(#colorSaldoDetail)" />
+                        <Area type="monotone" dataKey="saldo" stroke={colors.primary} strokeWidth={2} fillOpacity={1} fill="url(#colorSaldoDetail)" />
                       </AreaChart>
                     </ResponsiveContainer>
                   </div>
@@ -352,15 +354,15 @@ export function LoanDetailDialog({ emprestimo, open, onOpenChange }: LoanDetailD
                   <div className="h-[250px]">
                     <ResponsiveContainer width="100%" height="100%">
                       <BarChart data={evolucaoData.slice(0, 24)}>
-                        <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
-                        <XAxis dataKey="parcela" axisLine={false} tickLine={false} tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 10 }} />
-                        <YAxis axisLine={false} tickLine={false} tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 10 }} tickFormatter={(v) => `${(v/1000).toFixed(1)}k`} />
+                        <CartesianGrid strokeDasharray="3 3" stroke={colors.border} vertical={false} />
+                        <XAxis dataKey="parcela" axisLine={false} tickLine={false} tick={{ fill: colors.mutedForeground, fontSize: 10 }} />
+                        <YAxis axisLine={false} tickLine={false} tick={{ fill: colors.mutedForeground, fontSize: 10 }} tickFormatter={(v) => `${(v/1000).toFixed(1)}k`} />
                         <Tooltip
-                          contentStyle={{ backgroundColor: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: "8px" }}
+                          contentStyle={{ backgroundColor: colors.card, border: `1px solid ${colors.border}`, borderRadius: "8px" }}
                           formatter={(value: number) => [formatCurrency(value)]}
                         />
-                        <Bar dataKey="juros" name="Juros" fill="hsl(var(--destructive))" stackId="stack" radius={[0, 0, 0, 0]} />
-                        <Bar dataKey="amortizacao" name="Amortização" fill="hsl(var(--success))" stackId="stack" radius={[4, 4, 0, 0]} />
+                        <Bar dataKey="juros" name="Juros" fill={colors.destructive} stackId="stack" radius={[0, 0, 0, 0]} />
+                        <Bar dataKey="amortizacao" name="Amortização" fill={colors.success} stackId="stack" radius={[4, 4, 0, 0]} />
                       </BarChart>
                     </ResponsiveContainer>
                   </div>
