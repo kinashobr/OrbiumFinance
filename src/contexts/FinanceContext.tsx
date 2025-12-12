@@ -107,6 +107,7 @@ interface FinanceContextType {
   // Transações V2 (integrated)
   transacoesV2: TransacaoCompleta[];
   setTransacoesV2: Dispatch<SetStateAction<TransacaoCompleta[]>>;
+  addTransacaoV2: (transaction: TransacaoCompleta) => void;
   
   // Data Filtering (NEW)
   dateRanges: ComparisonDateRanges;
@@ -654,6 +655,7 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     setCategoriasV2,
     transacoesV2,
     setTransacoesV2,
+    addTransacaoV2,
     
     // Data Filtering (NEW)
     dateRanges,
