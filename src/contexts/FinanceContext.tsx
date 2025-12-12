@@ -293,15 +293,14 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     const account = accounts.find(a => a.id === accountId);
     if (!account) return 0;
 
-    // FIX 1: Always start balance at 0. We rely entirely on transactions, including the synthetic 'initial_balance'.
     let balance = 0; 
     
-    // If no date is provided, calculate global balance (end of all history)
+    // Se não houver data, calcula o saldo global (fim de todo o histórico)
     const targetDate = date || new Date(9999, 11, 31);
 
-    // Filter transactions up to the target date
+    // Filtra transações até a data limite (inclusive)
     const transactionsBeforeDate = allTransactions
-        .filter(t => t.accountId === accountId && parseISO(t.date) < targetDate)
+        .filter(t => t.accountId === accountId && parseISO(t.date) <= targetDate) // MUDANÇA AQUI: <= targetDate
         .sort((a, b) => parseISO(a.date).getTime() - parseISO(b.date).getTime());
 
     transactionsBeforeDate.forEach(t => {
