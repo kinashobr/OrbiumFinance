@@ -31,13 +31,11 @@ const Index = () => {
   const now = new Date();
   const initialRange1: DateRange = { from: startOfMonth(now), to: endOfMonth(now) };
   
-  // Calcula o período anterior como range inicial 2
-  const diffInDays = (initialRange1.to!.getTime() - initialRange1.from!.getTime()) / (1000 * 60 * 60 * 24);
-  const prevTo = subDays(initialRange1.from!, 1);
-  const prevFrom = subDays(prevTo, diffInDays);
-  const initialRange2: DateRange = { from: prevFrom, to: prevTo };
-
-  const initialRanges: ComparisonDateRanges = { range1: initialRange1, range2: initialRange2 };
+  // O range2 será calculado automaticamente pelo PeriodSelector
+  const initialRanges: ComparisonDateRanges = { 
+    range1: initialRange1, 
+    range2: { from: undefined, to: undefined } 
+  };
   
   const [dateRanges, setDateRanges] = useState<ComparisonDateRanges>(initialRanges);
 
@@ -107,6 +105,7 @@ const Index = () => {
       .reduce((acc, t) => acc + t.amount, 0);
   }, [transacoesPeriodo1]);
 
+  // Despesas e despesas do período ATUAL (P1)
   const despesasPeriodo1 = useMemo(() => {
     return transacoesPeriodo1
       .filter(t => t.operationType === 'despesa' || t.operationType === 'pagamento_emprestimo')
@@ -120,6 +119,7 @@ const Index = () => {
       .reduce((acc, t) => acc + t.amount, 0);
   }, [transacoesPeriodo2]);
 
+  // Despesas e despesas do período ANTERIOR (P2)
   const despesasPeriodo2 = useMemo(() => {
     return transacoesPeriodo2
       .filter(t => t.operationType === 'despesa' || t.operationType === 'pagamento_emprestimo')

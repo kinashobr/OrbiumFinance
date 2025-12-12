@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
-import { format, startOfMonth, endOfMonth, subMonths, startOfYear, endOfYear, isSameDay, isSameMonth, isSameYear, startOfDay, endOfDay } from "date-fns";
+import { format, startOfMonth, endOfMonth, subMonths, startOfYear, endOfYear, isSameDay, isSameMonth, isSameYear, startOfDay, endOfDay, differenceInDays, subDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Label } from "@/components/ui/label";
 
@@ -17,7 +17,7 @@ export interface DateRange {
 // Mantendo a interface de comparação para evitar quebras em outros arquivos, mas focando apenas no range1
 export interface ComparisonDateRanges {
   range1: DateRange;
-  range2: DateRange; // Será sempre undefined/null
+  range2: DateRange;
 }
 
 interface PeriodSelectorProps {
@@ -67,6 +67,18 @@ export function PeriodSelector({
     }
   }, []);
 
+  const calculateComparisonRange = useCallback((range1: DateRange): DateRange => {
+    if (!range1.from || !range1.to) {
+      return { from: undefined, to: undefined };
+    }
+    
+    const diffInDays = differenceInDays(range1.to, range1.from) + 1;
+    const prevTo = subDays(range1.from, 1);
+    const prevFrom = subDays(prevTo, diffInDays - 1);
+    
+    return { from: prevFrom, to: prevTo };
+  }, []);
+
   const getActivePresetId = useCallback((currentRange: DateRange): string => {
     if (!currentRange.from && !currentRange.to) return "all";
     if (!currentRange.from || !currentRange.to) return "custom";
@@ -95,11 +107,12 @@ export function PeriodSelector({
   }, [isOpen, range]);
 
   const handleApply = useCallback((newRange: DateRange) => {
-    const finalRange: DateRange = newRange.from ? normalizeRange(newRange) : { from: undefined, to: undefined };
+    const finalRange1: DateRange = newRange.from ? normalizeRange(newRange) : { from: undefined, to: undefined };
+    const finalRange2 = calculateComparisonRange(finalRange1);
     
-    setRange(finalRange);
-    onDateRangeChange({ range1: finalRange, range2: { from: undefined, to: undefined } });
-  }, [onDateRangeChange]);
+    setRange(finalRange1);
+    onDateRangeChange({ range1: finalRange1, range2: finalRange2 });
+  }, [onDateRangeChange, calculateComparisonRange]);
   
   const handleSelectPreset = (presetId: string) => {
     setSelectedPreset(presetId);
@@ -144,7 +157,6 @@ export function PeriodSelector({
     if (!r.from || !r.to) return "Selecione um período";
     
     // Se chegamos aqui, r.from e r.to são Date objects.
-    // Usamos uma verificação de tipo para garantir que o compilador saiba que são Date
     const fromDate = r.from as Date;
     const toDate = r.to as Date;
 
