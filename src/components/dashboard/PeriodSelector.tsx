@@ -203,7 +203,7 @@ export function PeriodSelector({
         <Button
           variant="outline"
           className={cn(
-            "w-[200px] justify-start text-left font-normal h-9 border-border shadow-sm hover:bg-muted/50 transition-colors",
+            "w-[240px] justify-start text-left font-normal h-9 border-border shadow-sm hover:bg-muted/50 transition-colors",
             (!range.from && !range.to) && "text-muted-foreground",
             className
           )}
