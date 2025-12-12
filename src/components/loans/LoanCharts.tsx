@@ -19,13 +19,16 @@ import { ExpandablePanel } from "@/components/reports/ExpandablePanel";
 import { TrendingDown, BarChart3, Calendar, Scale } from "lucide-react";
 import { cn } from "@/lib/utils";
 
+// Usando variáveis CSS para cores dinâmicas
 const COLORS = {
-  success: "hsl(142, 76%, 36%)",
-  warning: "hsl(38, 92%, 50%)",
-  danger: "hsl(0, 72%, 51%)",
-  primary: "hsl(199, 89%, 48%)",
-  accent: "hsl(270, 80%, 60%)",
-  muted: "hsl(215, 20%, 55%)",
+  success: "hsl(var(--success))",
+  warning: "hsl(var(--warning))",
+  danger: "hsl(var(--destructive))",
+  primary: "hsl(var(--primary))",
+  accent: "hsl(var(--accent))",
+  muted: "hsl(var(--muted-foreground))",
+  card: "hsl(var(--card))",
+  border: "hsl(var(--border))",
 };
 
 interface LoanChartsProps {
@@ -131,7 +134,7 @@ export function LoanCharts({ emprestimos, className }: LoanChartsProps) {
                   <stop offset="95%" stopColor={COLORS.accent} stopOpacity={0} />
                 </linearGradient>
               </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke="hsl(220, 20%, 18%)" vertical={false} />
+              <CartesianGrid strokeDasharray="3 3" stroke={COLORS.border} vertical={false} />
               <XAxis dataKey="mes" axisLine={false} tickLine={false} tick={{ fill: COLORS.muted, fontSize: 12 }} />
               <YAxis
                 axisLine={false}
@@ -141,8 +144,8 @@ export function LoanCharts({ emprestimos, className }: LoanChartsProps) {
               />
               <Tooltip
                 contentStyle={{
-                  backgroundColor: "hsl(220, 20%, 8%)",
-                  border: "1px solid hsl(220, 20%, 18%)",
+                  backgroundColor: COLORS.card,
+                  border: `1px solid ${COLORS.border}`,
                   borderRadius: "12px",
                 }}
                 formatter={(value: number) => [formatCurrency(value), "Saldo"]}
@@ -169,7 +172,7 @@ export function LoanCharts({ emprestimos, className }: LoanChartsProps) {
         <div className="h-[280px]">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={jurosAmortizacao}>
-              <CartesianGrid strokeDasharray="3 3" stroke="hsl(220, 20%, 18%)" vertical={false} />
+              <CartesianGrid strokeDasharray="3 3" stroke={COLORS.border} vertical={false} />
               <XAxis dataKey="parcela" axisLine={false} tickLine={false} tick={{ fill: COLORS.muted, fontSize: 12 }} />
               <YAxis
                 axisLine={false}
@@ -179,8 +182,8 @@ export function LoanCharts({ emprestimos, className }: LoanChartsProps) {
               />
               <Tooltip
                 contentStyle={{
-                  backgroundColor: "hsl(220, 20%, 8%)",
-                  border: "1px solid hsl(220, 20%, 18%)",
+                  backgroundColor: COLORS.card,
+                  border: `1px solid ${COLORS.border}`,
                   borderRadius: "12px",
                 }}
                 formatter={(value: number) => [formatCurrency(value)]}
@@ -202,7 +205,7 @@ export function LoanCharts({ emprestimos, className }: LoanChartsProps) {
         <div className="h-[280px]">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={comparativo} layout="vertical">
-              <CartesianGrid strokeDasharray="3 3" stroke="hsl(220, 20%, 18%)" horizontal={false} />
+              <CartesianGrid strokeDasharray="3 3" stroke={COLORS.border} horizontal={false} />
               <XAxis
                 type="number"
                 axisLine={false}
@@ -220,8 +223,8 @@ export function LoanCharts({ emprestimos, className }: LoanChartsProps) {
               />
               <Tooltip
                 contentStyle={{
-                  backgroundColor: "hsl(220, 20%, 8%)",
-                  border: "1px solid hsl(220, 20%, 18%)",
+                  backgroundColor: COLORS.card,
+                  border: `1px solid ${COLORS.border}`,
                   borderRadius: "12px",
                 }}
                 formatter={(value: number, name: string) => [formatCurrency(value), name]}

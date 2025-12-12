@@ -29,22 +29,22 @@ export function IndicatorBadge({
     success: {
       bg: "bg-success/10 border-success/30",
       text: "text-success",
-      sparkline: "hsl(142, 76%, 36%)",
+      sparkline: "hsl(var(--success))", // CORRIGIDO: Usando variável CSS
     },
     warning: {
       bg: "bg-warning/10 border-warning/30",
       text: "text-warning",
-      sparkline: "hsl(38, 92%, 50%)",
+      sparkline: "hsl(var(--warning))", // CORRIGIDO: Usando variável CSS
     },
     danger: {
       bg: "bg-destructive/10 border-destructive/30",
       text: "text-destructive",
-      sparkline: "hsl(0, 72%, 51%)",
+      sparkline: "hsl(var(--destructive))", // CORRIGIDO: Usando variável CSS
     },
     neutral: {
       bg: "bg-primary/10 border-primary/30",
       text: "text-primary",
-      sparkline: "hsl(199, 89%, 48%)",
+      sparkline: "hsl(var(--primary))", // CORRIGIDO: Usando variável CSS
     },
   };
 

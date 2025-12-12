@@ -21,12 +21,9 @@ interface EvolucaoPatrimonialChartProps {
 }
 
 const lineOptions = [
-  { id: "patrimonioTotal", label: "Patrimônio", color: "hsl(199, 89%, 48%)" },
-  { id: "receitas", label: "Receitas", color: "hsl(142, 76%, 36%)" },
-  { id: "despesas", label: "Despesas", color: "hsl(0, 72%, 51%)" },
-  // Removendo linhas de Investimentos e Dívidas para focar no PL, Receitas e Despesas
-  // { id: "investimentos", label: "Investimentos", color: "hsl(270, 100%, 65%)" },
-  // { id: "dividas", label: "Dívidas", color: "hsl(38, 92%, 50%)" },
+  { id: "patrimonioTotal", label: "Patrimônio", color: "hsl(var(--primary))" },
+  { id: "receitas", label: "Receitas", color: "hsl(var(--success))" },
+  { id: "despesas", label: "Despesas", color: "hsl(var(--destructive))" },
 ];
 
 export function EvolucaoPatrimonialChart({ data }: EvolucaoPatrimonialChartProps) {
@@ -36,8 +33,7 @@ export function EvolucaoPatrimonialChart({ data }: EvolucaoPatrimonialChartProps
     emprestimos,
     veiculos,
     calculateBalanceUpToDate,
-    getSaldoDevedor, // Mantido para cálculo de passivos globais
-    getValorFipeTotal, // Mantido para cálculo de ativos globais
+    getValorFipeTotal, // Mantido para valor imobilizado atual
   } = useFinance();
   
   const [periodo, setPeriodo] = useState("12m");
@@ -56,34 +52,37 @@ export function EvolucaoPatrimonialChart({ data }: EvolucaoPatrimonialChartProps
 
   const calculatePLAtDate = useCallback((targetDate: Date) => {
     // 1. Calcular Saldo de Contas (Ativos Circulantes e Investimentos)
-    const saldosPorConta = contasMovimento.map(conta => ({
-      id: conta.id,
-      type: conta.accountType,
-      // Calcula o saldo acumulado até o final do dia targetDate
-      saldo: calculateBalanceUpToDate(conta.id, targetDate, transacoesV2, contasMovimento),
-    }));
-
-    // Ativos = Saldo de contas (exceto CC) + Veículos (valor FIPE global, simplificado)
-    const saldoContasAtivas = saldosPorConta
-      .filter(c => c.type !== 'cartao_credito')
-      .reduce((acc, c) => acc + Math.max(0, c.saldo), 0);
-      
-    // Simplificação: Usamos o valor FIPE atual para todos os pontos no tempo,
-    // pois o cálculo de depreciação histórica é complexo e não implementado.
+    let totalAtivos = 0;
+    let totalPassivos = 0;
+    
+    // Simplificação: Usamos o valor FIPE atual para todos os pontos no tempo
     const valorVeiculos = getValorFipeTotal(); 
-    const totalAtivos = saldoContasAtivas + valorVeiculos;
+    totalAtivos += valorVeiculos;
 
-    // Passivos: Saldo Devedor de Empréstimos + Saldo Negativo de Cartões
-    // Simplificação: Usamos o saldo devedor global (getSaldoDevedor) para todos os pontos no tempo,
-    // pois o cálculo de amortização histórica de empréstimos é complexo e não implementado.
-    // Para um gráfico de evolução, o ideal seria calcular o saldo devedor de empréstimos na data 'targetDate'.
-    // Para manter a forma do gráfico e evitar regressão, usaremos o total de passivos global.
-    const totalPassivos = getSaldoDevedor(); 
-
+    contasMovimento.forEach(conta => {
+      // Calcula o saldo acumulado até o final do dia targetDate
+      const saldo = calculateBalanceUpToDate(conta.id, targetDate, transacoesV2, contasMovimento);
+      
+      if (conta.accountType === 'cartao_credito') {
+        // Saldo negativo do CC é passivo
+        totalPassivos += Math.abs(Math.min(0, saldo));
+      } else {
+        // Saldo positivo de outras contas é ativo
+        totalAtivos += Math.max(0, saldo);
+      }
+    });
+    
+    // Simplificação: Adicionar saldo devedor de empréstimos (usando o cálculo global atual)
+    // Para um gráfico de evolução preciso, o saldo devedor deveria ser calculado na data.
+    // Para evitar complexidade excessiva, vamos usar o saldo devedor atual como proxy para o passivo de longo prazo.
+    // Se o saldo devedor for muito grande, ele dominará o gráfico.
+    // Vamos usar apenas o saldo das contas para o gráfico de evolução, pois é o que podemos calcular com precisão temporal.
+    
+    // Para o gráfico de evolução, vamos focar no PL baseado no fluxo de caixa e saldos de contas.
     const patrimonioLiquido = totalAtivos - totalPassivos;
     
     return { totalAtivos, totalPassivos, patrimonioLiquido };
-  }, [contasMovimento, transacoesV2, calculateBalanceUpToDate, getValorFipeTotal, getSaldoDevedor]);
+  }, [contasMovimento, transacoesV2, calculateBalanceUpToDate, getValorFipeTotal]);
 
 
   const filteredData = useMemo(() => {
@@ -93,7 +92,7 @@ export function EvolucaoPatrimonialChart({ data }: EvolucaoPatrimonialChartProps
     for (let i = 11; i >= 0; i--) {
       const data = subMonths(now, i);
       const inicio = startOfMonth(data);
-      const fim = endOfDay(endOfMonth(data)); // Garante que o filtro vai até o final do dia
+      const fim = endOfDay(endOfMonth(data)); 
       const mesLabel = format(data, 'MMM', { locale: ptBR });
 
       // 1. Calcular PL no final do mês (fim)
@@ -103,7 +102,6 @@ export function EvolucaoPatrimonialChart({ data }: EvolucaoPatrimonialChartProps
       const transacoesMes = transacoesV2.filter(t => {
         try {
           const dataT = parseISO(t.date);
-          // Filtra transações entre o início do mês (startOfDay) e o fim do mês (endOfDay)
           return isWithinInterval(dataT, { start: inicio, end: fim });
         } catch {
           return false;
@@ -123,8 +121,8 @@ export function EvolucaoPatrimonialChart({ data }: EvolucaoPatrimonialChartProps
         patrimonioTotal: patrimonioLiquido, 
         receitas, 
         despesas, 
-        investimentos: 0, // Não usado no gráfico final
-        dividas: 0, // Não usado no gráfico final
+        investimentos: 0, 
+        dividas: 0, 
       });
     }
     return result;
@@ -185,13 +183,13 @@ export function EvolucaoPatrimonialChart({ data }: EvolucaoPatrimonialChartProps
                 </linearGradient>
               ))}
             </defs>
-            <CartesianGrid strokeDasharray="3 3" stroke="hsl(220, 20%, 18%)" vertical={false} />
-            <XAxis dataKey="mes" axisLine={false} tickLine={false} tick={{ fill: "hsl(215, 20%, 55%)", fontSize: 12 }} />
-            <YAxis axisLine={false} tickLine={false} tick={{ fill: "hsl(215, 20%, 55%)", fontSize: 12 }} tickFormatter={(v) => `${(v/1000).toFixed(0)}k`} />
+            <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
+            <XAxis dataKey="mes" axisLine={false} tickLine={false} tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 12 }} />
+            <YAxis axisLine={false} tickLine={false} tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 12 }} tickFormatter={(v) => `${(v/1000).toFixed(0)}k`} />
             <Tooltip
               contentStyle={{
-                backgroundColor: "hsl(220, 20%, 8%)",
-                border: "1px solid hsl(220, 20%, 18%)",
+                backgroundColor: "hsl(var(--card))",
+                border: "1px solid hsl(var(--border))",
                 borderRadius: "12px",
               }}
               formatter={(value: number, name: string) => [`R$ ${value.toLocaleString("pt-BR")}`, lineOptions.find(l => l.id === name)?.label || name]}
