@@ -29,22 +29,27 @@ export function IndicatorBadge({
     success: {
       bg: "bg-success/20 border-success/40",
       text: "text-success",
-      sparkline: "hsl(var(--success))", // CORRIGIDO: Usando variável CSS
+      // Usando HSL explícito para garantir que o SVG renderize corretamente
+      sparkline: "hsl(var(--success))", 
+      sparklineExplicit: "hsl(142, 76%, 36%)", // Valor padrão para sucesso
     },
     warning: {
       bg: "bg-warning/20 border-warning/40",
       text: "text-warning",
-      sparkline: "hsl(var(--warning))", // CORRIGIDO: Usando variável CSS
+      sparkline: "hsl(var(--warning))",
+      sparklineExplicit: "hsl(38, 92%, 50%)", // Valor padrão para warning
     },
     danger: {
       bg: "bg-destructive/20 border-destructive/40",
       text: "text-destructive",
-      sparkline: "hsl(var(--destructive))", // CORRIGIDO: Usando variável CSS
+      sparkline: "hsl(var(--destructive))",
+      sparklineExplicit: "hsl(0, 72%, 51%)", // Valor padrão para danger
     },
     neutral: {
       bg: "bg-primary/20 border-primary/40",
       text: "text-primary",
-      sparkline: "hsl(var(--primary))", // CORRIGIDO: Usando variável CSS
+      sparkline: "hsl(var(--primary))",
+      sparklineExplicit: "hsl(199, 89%, 48%)", // Valor padrão para primary (neutro)
     },
   };
 
@@ -85,7 +90,8 @@ export function IndicatorBadge({
         {sparklineData && sparklineData.length > 1 && (
           <MiniSparkline
             data={sparklineData}
-            color={statusStyles[status].sparkline}
+            // Passamos a cor explícita para o SVG
+            color={statusStyles[status].sparklineExplicit} 
             width={50}
             height={20}
           />

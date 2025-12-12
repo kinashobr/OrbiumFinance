@@ -28,6 +28,9 @@ export function MiniSparkline({
   }).join(" ");
 
   const trend = data[data.length - 1] > data[0];
+  
+  // Gerar um ID único para o gradiente
+  const gradientId = `sparkline-gradient-${Math.random().toString(36).substring(2, 9)}`;
 
   return (
     <svg
@@ -37,14 +40,15 @@ export function MiniSparkline({
       viewBox={`0 0 ${width} ${height}`}
     >
       <defs>
-        <linearGradient id={`sparkline-gradient-${color}`} x1="0%" y1="0%" x2="0%" y2="100%">
+        <linearGradient id={gradientId} x1="0%" y1="0%" x2="0%" y2="100%">
+          {/* Usar a cor passada diretamente no stopColor */}
           <stop offset="0%" stopColor={color} stopOpacity="0.3" />
           <stop offset="100%" stopColor={color} stopOpacity="0" />
         </linearGradient>
       </defs>
       <polygon
         points={`0,${height} ${points} ${width},${height}`}
-        fill={`url(#sparkline-gradient-${color})`}
+        fill={`url(#${gradientId})`}
       />
       <polyline
         points={points}
@@ -58,7 +62,8 @@ export function MiniSparkline({
         cx={(data.length - 1) / (data.length - 1) * width}
         cy={height - ((data[data.length - 1] - min) / range) * height}
         r="2"
-        fill={trend ? "hsl(var(--success))" : "hsl(var(--destructive))"}
+        // Usar cores explícitas para os pontos de tendência
+        fill={trend ? "hsl(142, 76%, 36%)" : "hsl(0, 72%, 51%)"}
       />
     </svg>
   );
