@@ -253,10 +253,16 @@ const ReceitasDespesas = () => {
       const isToCreditCard = toAccount?.accountType === 'cartao_credito';
 
       // Transação original (clone)
-      const originalTx = {
+      const originalTx: TransacaoCompleta = {
         ...baseTx,
         id: generateTransactionId(),
-        links: { ...(baseTx.links || {}), transferGroupId: tg.id },
+        links: {
+          investmentId: baseTx.links.investmentId || null,
+          loanId: baseTx.links.loanId || null,
+          transferGroupId: tg.id,
+          parcelaId: baseTx.links.parcelaId || null,
+          vehicleTransactionId: baseTx.links.vehicleTransactionId || null,
+        },
       };
 
       if (isToCreditCard) {
