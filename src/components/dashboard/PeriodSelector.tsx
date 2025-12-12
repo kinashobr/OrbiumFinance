@@ -209,7 +209,7 @@ export function PeriodSelector({
           </div>
 
           {/* Coluna Calendário Compacta */}
-          <div className="space-y-2 min-w-[560px] max-w-[560px]">
+          <div className="space-y-2 min-w-[540px] max-w-[560px]">
             <Calendar
               mode="range"
               selected={{ from: tempRange.from, to: tempRange.to }}
