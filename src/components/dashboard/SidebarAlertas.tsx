@@ -21,6 +21,7 @@ import {
 import { cn } from "@/lib/utils";
 import { useFinance } from "@/contexts/FinanceContext";
 import { AlertasConfigDialog } from "./AlertasConfigDialog";
+import { subMonths, startOfMonth, endOfMonth } from "date-fns";
 
 interface Alerta {
   id: string;
@@ -67,9 +68,28 @@ export function SidebarAlertas({ collapsed = false }: SidebarAlertasProps) {
     // Saldo total das contas
     const saldoContas = contasMovimento.reduce((acc, conta) => {
       const contaTx = transacoesV2.filter(t => t.accountId === conta.id);
-      const totalIn = contaTx.filter(t => t.flow === 'in' || t.flow === 'transfer_in').reduce((s, t) => s + t.amount, 0);
-      const totalOut = contaTx.filter(t => t.flow === 'out' || t.flow === 'transfer_out').reduce((s, t) => s + t.amount, 0);
-      return acc + conta.initialBalance + totalIn - totalOut;
+      
+      let balance = conta.startDate ? 0 : conta.initialBalance;
+      
+      contaTx.forEach(t => {
+        const isCreditCard = conta.accountType === 'cartao_credito';
+        
+        if (isCreditCard) {
+          if (t.operationType === 'despesa') {
+            balance -= t.amount;
+          } else if (t.operationType === 'transferencia') {
+            balance += t.amount;
+          }
+        } else {
+          if (t.flow === 'in' || t.flow === 'transfer_in' || t.operationType === 'initial_balance') {
+            balance += t.amount;
+          } else {
+            balance -= t.amount;
+          }
+        }
+      });
+      
+      return acc + balance;
     }, 0);
 
     // Receitas e despesas do mês
