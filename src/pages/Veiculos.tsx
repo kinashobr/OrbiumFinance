@@ -249,18 +249,19 @@ const Veiculos = () => {
             <h1 className="text-3xl font-bold text-foreground">Imobilizado - Veículos</h1>
             <p className="text-muted-foreground mt-1">Controle seus veículos, seguros e custos associados</p>
           </div>
+          {/* Botões removidos conforme solicitação */}
           <div className="flex items-center gap-2">
-            <Button variant="outline" onClick={() => handleOpenFipeConsulta()} className="gap-2">
+            {/* <Button variant="outline" onClick={() => handleOpenFipeConsulta()} className="gap-2">
               <Search className="w-4 h-4" />
               Consultar FIPE
-            </Button>
+            </Button> */}
             <Dialog open={showAddSeguro} onOpenChange={setShowAddSeguro}>
-              <DialogTrigger asChild>
+              {/* <DialogTrigger asChild>
                 <Button variant="outline" className="gap-2">
                   <Shield className="w-4 h-4" />
                   Novo Seguro
                 </Button>
-              </DialogTrigger>
+              </DialogTrigger> */}
               <DialogContent className="bg-card border-border max-w-lg">
                 <DialogHeader>
                   <DialogTitle>Cadastrar Seguro de Veículo</DialogTitle>
@@ -363,7 +364,7 @@ const Veiculos = () => {
             </Dialog>
             
             {/* Botão Novo Veículo */}
-            <Button 
+            {/* <Button 
               variant="default" 
               className="gap-2 bg-neon-gradient hover:opacity-90"
               onClick={() => {
@@ -374,7 +375,7 @@ const Veiculos = () => {
             >
               <Car className="w-4 h-4" />
               Novo Veículo
-            </Button>
+            </Button> */}
           </div>
         </div>
 

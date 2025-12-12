@@ -122,7 +122,7 @@ const Emprestimos = () => {
               initialRanges={dateRanges}
               onDateRangeChange={handlePeriodChange} 
             />
-            <LoanForm onSubmit={handleAddLoan} contasCorrentes={contasCorrentes} />
+            {/* <LoanForm onSubmit={handleAddLoan} contasCorrentes={contasCorrentes} /> */}
           </div>
         </div>
 
