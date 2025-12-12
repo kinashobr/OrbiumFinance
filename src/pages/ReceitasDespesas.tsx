@@ -10,7 +10,7 @@ import {
   ContaCorrente, Categoria, TransacaoCompleta, TransferGroup,
   AccountSummary, OperationType, DEFAULT_ACCOUNTS, DEFAULT_CATEGORIES, 
   generateTransactionId, formatCurrency, generateTransferGroupId,
-  DateRange, ComparisonDateRanges
+  DateRange, ComparisonDateRanges, TransactionLinks
 } from "@/types/finance";
 
 // Components
@@ -214,13 +214,23 @@ const ReceitasDespesas = () => {
               newFlow = t.accountId === transferGroup?.fromAccountId ? 'transfer_out' : 'transfer_in';
             }
 
+            // CRITICAL FIX 1 & 2: Ensure all links properties are explicitly set to string | null
+            const updatedLinks: TransactionLinks = {
+              investmentId: t.links.investmentId,
+              loanId: t.links.loanId,
+              transferGroupId: t.links.transferGroupId,
+              parcelaId: t.links.parcelaId,
+              vehicleTransactionId: t.links.vehicleTransactionId,
+            };
+
             return {
               ...t,
               amount: tx.amount,
               date: tx.date,
               description: tx.description,
               flow: newFlow,
-            } as TransacaoCompleta; // Explicit cast to TransacaoCompleta
+              links: updatedLinks, // Use the explicitly defined links
+            } as TransacaoCompleta;
           }
           return t;
         }));
@@ -257,6 +267,14 @@ const ReceitasDespesas = () => {
           flow: 'in' as const,
           operationType: 'transferencia' as const,
           description: tg.description || `Pagamento de fatura CC ${toAccount?.name}`,
+          // CRITICAL FIX 3: Explicitly define all links properties
+          links: {
+            investmentId: originalTx.links.investmentId || null,
+            loanId: originalTx.links.loanId || null,
+            transferGroupId: tg.id,
+            parcelaId: originalTx.links.parcelaId || null,
+            vehicleTransactionId: originalTx.links.vehicleTransactionId || null,
+          }
         };
 
         // Transação de saída da conta corrente
@@ -267,7 +285,14 @@ const ReceitasDespesas = () => {
           flow: 'transfer_out' as const,
           operationType: 'transferencia' as const,
           description: tg.description || `Pagamento fatura ${toAccount?.name}`,
-          links: { ...(originalTx.links || {}), transferGroupId: tg.id },
+          // CRITICAL FIX 4: Explicitly define all links properties
+          links: {
+            investmentId: originalTx.links.investmentId || null,
+            loanId: originalTx.links.loanId || null,
+            transferGroupId: tg.id,
+            parcelaId: originalTx.links.parcelaId || null,
+            vehicleTransactionId: originalTx.links.vehicleTransactionId || null,
+          }
         };
 
         newTransactions.push(fromTx, ccTx);
@@ -280,7 +305,14 @@ const ReceitasDespesas = () => {
           flow: 'transfer_out' as const,
           operationType: 'transferencia' as const,
           description: tg.description || `Transferência para ${toAccount?.name}`,
-          links: { ...(originalTx.links || {}), transferGroupId: tg.id },
+          // CRITICAL FIX 5: Explicitly define all links properties
+          links: {
+            investmentId: originalTx.links.investmentId || null,
+            loanId: originalTx.links.loanId || null,
+            transferGroupId: tg.id,
+            parcelaId: originalTx.links.parcelaId || null,
+            vehicleTransactionId: originalTx.links.vehicleTransactionId || null,
+          }
         };
 
         const inTx: TransacaoCompleta = {
@@ -290,14 +322,32 @@ const ReceitasDespesas = () => {
           flow: 'transfer_in' as const,
           operationType: 'transferencia' as const,
           description: tg.description || `Transferência recebida de ${fromAccount?.name}`,
-          links: { ...(originalTx.links || {}), transferGroupId: tg.id },
+          // CRITICAL FIX 6: Explicitly define all links properties
+          links: {
+            investmentId: originalTx.links.investmentId || null,
+            loanId: originalTx.links.loanId || null,
+            transferGroupId: tg.id,
+            parcelaId: originalTx.links.parcelaId || null,
+            vehicleTransactionId: originalTx.links.vehicleTransactionId || null,
+          }
         };
 
         newTransactions.push(outTx, inTx);
       }
     } else {
       // Sem transferGroup: adiciona apenas a transação original (garantindo id única)
-      const simpleTx = { ...baseTx, id: tx.id || generateTransactionId() } as TransacaoCompleta;
+      // CRITICAL FIX 7: Explicitly define all links properties for simpleTx
+      const simpleTx: TransacaoCompleta = { 
+        ...baseTx, 
+        id: tx.id || generateTransactionId(),
+        links: {
+          investmentId: baseTx.links.investmentId || null,
+          loanId: baseTx.links.loanId || null,
+          transferGroupId: baseTx.links.transferGroupId || null,
+          parcelaId: baseTx.links.parcelaId || null,
+          vehicleTransactionId: baseTx.links.vehicleTransactionId || null,
+        }
+      };
       newTransactions.push(simpleTx);
     }
 
@@ -327,9 +377,11 @@ const ReceitasDespesas = () => {
         domain: 'investment',
         description: isAplicacao ? (baseTx.description || `Aplicação recebida de conta corrente`) : (baseTx.description || `Resgate enviado para conta corrente`),
         links: {
-          ...primaryTx.links,
           investmentId: primaryTx.accountId, // Referência à conta oposta
+          loanId: primaryTx.links.loanId,
           transferGroupId: groupId,
+          parcelaId: primaryTx.links.parcelaId,
+          vehicleTransactionId: primaryTx.links.vehicleTransactionId,
         },
         meta: {
           ...primaryTx.meta,
