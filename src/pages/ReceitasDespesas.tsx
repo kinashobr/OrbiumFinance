@@ -144,11 +144,10 @@ const ReceitasDespesas = () => {
       let totalOut = 0;
       
       accountTxInPeriod.forEach(t => {
-        const isCreditCard = account.accountType === 'cartao_credito';
-        
-        // Excluir a transação sintética de saldo inicial do cálculo de IN/OUT do período,
-        // pois ela já foi contabilizada no periodInitialBalance.
+        // IGNORAR SALDO INICIAL NO CÁLCULO DE IN/OUT DO PERÍODO
         if (t.operationType === 'initial_balance') return;
+        
+        const isCreditCard = account.accountType === 'cartao_credito';
         
         if (isCreditCard) {
           // Cartão de Crédito: Despesa (out) é uma saída, Transferência (in) é uma entrada

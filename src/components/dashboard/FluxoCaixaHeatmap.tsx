@@ -43,6 +43,9 @@ export function FluxoCaixaHeatmap({ month, year, transacoes }: FluxoCaixaHeatmap
     for (let day = 1; day <= daysInMonth; day++) {
       const dayData = transacoes
         .filter(t => {
+          // Excluir transações de saldo inicial
+          if (t.operationType === 'initial_balance') return false;
+          
           const txDate = new Date(t.date);
           return txDate.getDate() === day && 
                  txDate.getMonth() === parseInt(month) - 1 && 

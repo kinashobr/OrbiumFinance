@@ -98,28 +98,28 @@ const Index = () => {
   // Receitas e despesas do período ATUAL (P1)
   const receitasPeriodo1 = useMemo(() => {
     return transacoesPeriodo1
-      .filter(t => t.operationType === 'receita' || t.operationType === 'rendimento')
+      .filter(t => (t.operationType === 'receita' || t.operationType === 'rendimento') && t.operationType !== 'initial_balance')
       .reduce((acc, t) => acc + t.amount, 0);
   }, [transacoesPeriodo1]);
 
   // Despesas e despesas do período ATUAL (P1)
   const despesasPeriodo1 = useMemo(() => {
     return transacoesPeriodo1
-      .filter(t => t.operationType === 'despesa' || t.operationType === 'pagamento_emprestimo')
+      .filter(t => (t.operationType === 'despesa' || t.operationType === 'pagamento_emprestimo') && t.operationType !== 'initial_balance')
       .reduce((acc, t) => acc + t.amount, 0);
   }, [transacoesPeriodo1]);
 
   // Receitas e despesas do período ANTERIOR (P2)
   const receitasPeriodo2 = useMemo(() => {
     return transacoesPeriodo2
-      .filter(t => t.operationType === 'receita' || t.operationType === 'rendimento')
+      .filter(t => (t.operationType === 'receita' || t.operationType === 'rendimento') && t.operationType !== 'initial_balance')
       .reduce((acc, t) => acc + t.amount, 0);
   }, [transacoesPeriodo2]);
 
   // Despesas e despesas do período ANTERIOR (P2)
   const despesasPeriodo2 = useMemo(() => {
     return transacoesPeriodo2
-      .filter(t => t.operationType === 'despesa' || t.operationType === 'pagamento_emprestimo')
+      .filter(t => (t.operationType === 'despesa' || t.operationType === 'pagamento_emprestimo') && t.operationType !== 'initial_balance')
       .reduce((acc, t) => acc + t.amount, 0);
   }, [transacoesPeriodo2]);
 
