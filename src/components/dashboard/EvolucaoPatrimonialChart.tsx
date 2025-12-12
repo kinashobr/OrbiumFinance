@@ -5,6 +5,7 @@ import { CartesianGrid, Tooltip, ResponsiveContainer, Legend, AreaChart, Area, X
 import { cn } from "@/lib/utils";
 import { useFinance } from "@/contexts/FinanceContext";
 import { subMonths, startOfMonth, endOfMonth, parseISO, isWithinInterval, format } from "date-fns";
+import { ptBR } from "date-fns/locale";
 
 interface EvolucaoData {
   mes: string;
@@ -23,20 +24,20 @@ const lineOptions = [
   { id: "patrimonioTotal", label: "Patrimônio", color: "hsl(199, 89%, 48%)" },
   { id: "receitas", label: "Receitas", color: "hsl(142, 76%, 36%)" },
   { id: "despesas", label: "Despesas", color: "hsl(0, 72%, 51%)" },
-  { id: "investimentos", label: "Investimentos", color: "hsl(270, 100%, 65%)" },
-  { id: "dividas", label: "Dívidas", color: "hsl(38, 92%, 50%)" },
+  // Removendo linhas de Investimentos e Dívidas para focar no PL, Receitas e Despesas
+  // { id: "investimentos", label: "Investimentos", color: "hsl(270, 100%, 65%)" },
+  // { id: "dividas", label: "Dívidas", color: "hsl(38, 92%, 50%)" },
 ];
 
 export function EvolucaoPatrimonialChart({ data }: EvolucaoPatrimonialChartProps) {
   const { 
     transacoesV2, 
-    investimentosRF, 
-    criptomoedas, 
-    stablecoins, 
-    objetivos,
     contasMovimento,
-    getSaldoDevedor,
-    getPatrimonioLiquido,
+    emprestimos,
+    veiculos,
+    calculateBalanceUpToDate,
+    getSaldoDevedor, // Mantido para cálculo de passivos globais
+    getValorFipeTotal, // Mantido para cálculo de ativos globais
   } = useFinance();
   
   const [periodo, setPeriodo] = useState("12m");
@@ -53,37 +54,36 @@ export function EvolucaoPatrimonialChart({ data }: EvolucaoPatrimonialChartProps
     });
   };
 
-  // Helper para calcular saldo até uma data (usado para saldo inicial do período)
-  const calculateBalanceUpToDate = useCallback((accountId: string, date: Date, allTransactions: typeof transacoesV2, accounts: typeof contasMovimento): number => {
-    const account = accounts.find(a => a.id === accountId);
-    if (!account) return 0;
+  const calculatePLAtDate = useCallback((targetDate: Date) => {
+    // 1. Calcular Saldo de Contas (Ativos Circulantes e Investimentos)
+    const saldosPorConta = contasMovimento.map(conta => ({
+      id: conta.id,
+      type: conta.accountType,
+      saldo: calculateBalanceUpToDate(conta.id, targetDate, transacoesV2, contasMovimento),
+    }));
 
-    let balance = account.startDate ? 0 : account.initialBalance; 
+    // Ativos = Saldo de contas (exceto CC) + Veículos (valor FIPE global, simplificado)
+    const saldoContasAtivas = saldosPorConta
+      .filter(c => c.type !== 'cartao_credito')
+      .reduce((acc, c) => acc + Math.max(0, c.saldo), 0);
+      
+    // Simplificação: Usamos o valor FIPE atual para todos os pontos no tempo,
+    // pois o cálculo de depreciação histórica é complexo e não implementado.
+    const valorVeiculos = getValorFipeTotal(); 
+    const totalAtivos = saldoContasAtivas + valorVeiculos;
+
+    // Passivos: Saldo Devedor de Empréstimos + Saldo Negativo de Cartões
+    // Simplificação: Usamos o saldo devedor global (getSaldoDevedor) para todos os pontos no tempo,
+    // pois o cálculo de amortização histórica de empréstimos é complexo e não implementado.
+    // Para um gráfico de evolução, o ideal seria calcular o saldo devedor de empréstimos na data 'targetDate'.
+    // Para manter a forma do gráfico e evitar regressão, usaremos o total de passivos global.
+    const totalPassivos = getSaldoDevedor(); 
+
+    const patrimonioLiquido = totalAtivos - totalPassivos;
     
-    const transactionsBeforeDate = allTransactions
-        .filter(t => t.accountId === accountId && parseISO(t.date) < date)
-        .sort((a, b) => parseISO(a.date).getTime() - parseISO(b.date).getTime());
+    return { totalAtivos, totalPassivos, patrimonioLiquido };
+  }, [contasMovimento, transacoesV2, calculateBalanceUpToDate, getValorFipeTotal, getSaldoDevedor]);
 
-    transactionsBeforeDate.forEach(t => {
-        const isCreditCard = account.accountType === 'cartao_credito';
-        
-        if (isCreditCard) {
-          if (t.operationType === 'despesa') {
-            balance -= t.amount;
-          } else if (t.operationType === 'transferencia') {
-            balance += t.amount;
-          }
-        } else {
-          if (t.flow === 'in' || t.flow === 'transfer_in' || t.operationType === 'initial_balance') {
-            balance += t.amount;
-          } else {
-            balance -= t.amount;
-          }
-        }
-    });
-
-    return balance;
-  }, [contasMovimento, transacoesV2]);
 
   const filteredData = useMemo(() => {
     const now = new Date();
@@ -93,8 +93,12 @@ export function EvolucaoPatrimonialChart({ data }: EvolucaoPatrimonialChartProps
       const data = subMonths(now, i);
       const inicio = startOfMonth(data);
       const fim = endOfMonth(data);
-      const mesLabel = format(data, 'MMM');
+      const mesLabel = format(data, 'MMM', { locale: ptBR });
 
+      // 1. Calcular PL no final do mês (fim)
+      const { patrimonioLiquido } = calculatePLAtDate(fim);
+
+      // 2. Calcular Receitas e Despesas DENTRO do mês
       const transacoesMes = transacoesV2.filter(t => {
         try {
           const dataT = parseISO(t.date);
@@ -112,30 +116,17 @@ export function EvolucaoPatrimonialChart({ data }: EvolucaoPatrimonialChartProps
         .filter(t => t.operationType === "despesa" || t.operationType === "pagamento_emprestimo")
         .reduce((acc, t) => acc + t.amount, 0);
       
-      // Calcular Patrimônio Total (simplificado para o mês atual, mas ajustado para refletir o PL)
-      // Para um gráfico de evolução preciso, precisaríamos calcular o PL em cada ponto no tempo.
-      // Usaremos uma simulação baseada no PL atual para manter a forma do gráfico.
-      const patrimonioLiquidoAtual = getPatrimonioLiquido();
-      const patrimonioTotal = patrimonioLiquidoAtual * (1 + (i - 6) * 0.01);
-      
-      const totalInvestimentos = investimentosRF.reduce((acc, inv) => acc + inv.valor, 0) +
-        criptomoedas.reduce((acc, c) => acc + c.valorBRL, 0) +
-        stablecoins.reduce((acc, s) => acc + s.valorBRL, 0) +
-        objetivos.reduce((acc, o) => acc + o.atual, 0);
-        
-      const totalDividas = getSaldoDevedor();
-      
       result.push({ 
         mes: mesLabel.charAt(0).toUpperCase() + mesLabel.slice(1), 
-        patrimonioTotal: Math.max(0, patrimonioTotal), 
+        patrimonioTotal: patrimonioLiquido, 
         receitas, 
         despesas, 
-        investimentos: totalInvestimentos, 
-        dividas: totalDividas 
+        investimentos: 0, // Não usado no gráfico final
+        dividas: 0, // Não usado no gráfico final
       });
     }
     return result;
-  }, [transacoesV2, investimentosRF, criptomoedas, stablecoins, objetivos, getPatrimonioLiquido, getSaldoDevedor]);
+  }, [transacoesV2, calculatePLAtDate]);
 
   const dataToShow = useMemo(() => {
     switch (periodo) {

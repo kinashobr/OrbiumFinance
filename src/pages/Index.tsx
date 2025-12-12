@@ -23,6 +23,7 @@ const Index = () => {
     getValorFipeTotal,
     getAtivosTotal,
     getPassivosTotal,
+    getSaldoDevedor,
     calculateBalanceUpToDate, // Importado do contexto
   } = useFinance();
 
@@ -65,6 +66,7 @@ const Index = () => {
     const targetDate = dateRanges.range1.to;
     
     return contasMovimento.map(conta => {
+      // Usamos calculateBalanceUpToDate para obter o saldo acumulado até o final do período
       const saldo = calculateBalanceUpToDate(conta.id, targetDate, transacoesV2, contasMovimento);
       
       return {
@@ -81,10 +83,7 @@ const Index = () => {
       .reduce((acc, c) => acc + c.saldo, 0);
   }, [saldosPorConta]);
 
-  // Total de todos os ativos (usando função do contexto)
-  // NOTA: getAtivosTotal e getPassivosTotal no contexto calculam o saldo GLOBAL (até hoje).
-  // Para o dashboard, usaremos o saldo calculado no período (saldosPorConta) para Ativos e Passivos.
-  
+  // Total de todos os ativos (usando saldos calculados na data final do período)
   const totalAtivosPeriodo = useMemo(() => {
     const saldoContasAtivas = saldosPorConta
       .filter(c => c.accountType !== 'cartao_credito')

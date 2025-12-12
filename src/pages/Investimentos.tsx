@@ -66,6 +66,7 @@ const Investimentos = () => {
     deleteObjetivo, 
     addMovimentacaoInvestimento,
     deleteMovimentacaoInvestimento,
+    calculateBalanceUpToDate, // Importado do contexto
   } = useFinance();
   
   const [activeTab, setActiveTab] = useState("carteira");
@@ -98,37 +99,10 @@ const Investimentos = () => {
     descricao: ""
   });
 
-  // Helper para calcular saldo atual de uma conta (sem filtro de data)
-  const calculateBalanceUpToDate = useCallback((accountId: string, allTransactions: typeof transacoesV2, accounts: typeof contasMovimento): number => {
-    const account = accounts.find(a => a.id === accountId);
-    if (!account) return 0;
-
-    let balance = account.startDate ? 0 : account.initialBalance; 
-    
-    const transactionsBeforeDate = allTransactions
-        .filter(t => t.accountId === accountId)
-        .sort((a, b) => parseISO(a.date).getTime() - parseISO(b.date).getTime());
-
-    transactionsBeforeDate.forEach(t => {
-        const isCreditCard = account.accountType === 'cartao_credito';
-        
-        if (isCreditCard) {
-          if (t.operationType === 'despesa') {
-            balance -= t.amount;
-          } else if (t.operationType === 'transferencia') {
-            balance += t.amount;
-          }
-        } else {
-          if (t.flow === 'in' || t.flow === 'transfer_in' || t.operationType === 'initial_balance') {
-            balance += t.amount;
-          } else {
-            balance -= t.amount;
-          }
-        }
-    });
-
-    return balance;
-  }, [contasMovimento, transacoesV2]);
+  // Helper para calcular saldo atual de uma conta (usando a data final do período P1)
+  const calculateAccountBalance = useCallback((accountId: string, targetDate: Date | undefined): number => {
+    return calculateBalanceUpToDate(accountId, targetDate, transacoesV2, contasMovimento);
+  }, [calculateBalanceUpToDate, transacoesV2, contasMovimento]);
 
   // Separate accounts by type for tab filtering
   const investmentAccounts = useMemo(() => {
@@ -167,11 +141,13 @@ const Investimentos = () => {
 
   // Cálculos padronizados
   const calculosPatrimonio = useMemo(() => {
+    const targetDate = dateRanges.range1.to;
+
     // Totais das Contas Movimento (V2)
-    const totalRF = rfAccounts.reduce((acc, c) => acc + calculateBalanceUpToDate(c.id, transacoesV2, contasMovimento), 0);
-    const totalCripto = cryptoAccounts.reduce((acc, c) => acc + calculateBalanceUpToDate(c.id, transacoesV2, contasMovimento), 0);
-    const totalStables = stablecoinAccounts.reduce((acc, c) => acc + calculateBalanceUpToDate(c.id, transacoesV2, contasMovimento), 0);
-    const totalObjetivos = objetivosAccounts.reduce((acc, c) => acc + calculateBalanceUpToDate(c.id, transacoesV2, contasMovimento), 0);
+    const totalRF = rfAccounts.reduce((acc, c) => acc + calculateAccountBalance(c.id, targetDate), 0);
+    const totalCripto = cryptoAccounts.reduce((acc, c) => acc + calculateAccountBalance(c.id, targetDate), 0);
+    const totalStables = stablecoinAccounts.reduce((acc, c) => acc + calculateAccountBalance(c.id, targetDate), 0);
+    const totalObjetivos = objetivosAccounts.reduce((acc, c) => acc + calculateAccountBalance(c.id, targetDate), 0);
 
     const valorVeiculos = getValorFipeTotal();
     
@@ -199,7 +175,7 @@ const Investimentos = () => {
       variacaoMensal,
       patrimonioInvestimentos,
     };
-  }, [contasMovimento, transacoesV2, rfAccounts, cryptoAccounts, stablecoinAccounts, objetivosAccounts, calculateBalanceUpToDate, getValorFipeTotal, getTotalReceitas, getTotalDespesas]);
+  }, [contasMovimento, transacoesV2, rfAccounts, cryptoAccounts, stablecoinAccounts, objetivosAccounts, calculateAccountBalance, getValorFipeTotal, getTotalReceitas, getTotalDespesas, dateRanges.range1.to]);
 
   const distribuicaoCarteira = useMemo(() => [
     { name: "Renda Fixa", value: calculosPatrimonio.totalRF },
@@ -418,7 +394,7 @@ const Investimentos = () => {
                   </TableHeader>
                   <TableBody>
                     {investmentAccounts.map((account) => {
-                      const saldo = calculateBalanceUpToDate(account.id, transacoesV2, contasMovimento);
+                      const saldo = calculateAccountBalance(account.id, dateRanges.range1.to);
                       const isPositive = saldo >= 0;
                       
                       return (
@@ -479,7 +455,7 @@ const Investimentos = () => {
                   </TableHeader>
                   <TableBody>
                     {rfAccounts.map((account) => {
-                      const saldo = calculateBalanceUpToDate(account.id, transacoesV2, contasMovimento);
+                      const saldo = calculateAccountBalance(account.id, dateRanges.range1.to);
                       return (
                         <TableRow key={account.id}>
                           <TableCell className="font-medium">{account.name}</TableCell>
@@ -533,7 +509,7 @@ const Investimentos = () => {
                   </TableHeader>
                   <TableBody>
                     {cryptoAccounts.map((account) => {
-                      const saldo = calculateBalanceUpToDate(account.id, transacoesV2, contasMovimento);
+                      const saldo = calculateAccountBalance(account.id, dateRanges.range1.to);
                       return (
                         <TableRow key={account.id}>
                           <TableCell className="font-medium">{account.name}</TableCell>
@@ -560,7 +536,7 @@ const Investimentos = () => {
                       );
                     })}
                     {stablecoinAccounts.map((account) => {
-                      const saldo = calculateBalanceUpToDate(account.id, transacoesV2, contasMovimento);
+                      const saldo = calculateAccountBalance(account.id, dateRanges.range1.to);
                       return (
                         <TableRow key={account.id}>
                           <TableCell className="font-medium">{account.name}</TableCell>
@@ -615,7 +591,7 @@ const Investimentos = () => {
                   </TableHeader>
                   <TableBody>
                     {objetivosAccounts.map((account) => {
-                      const saldo = calculateBalanceUpToDate(account.id, transacoesV2, contasMovimento);
+                      const saldo = calculateAccountBalance(account.id, dateRanges.range1.to);
                       const meta = 10000; // Placeholder
                       const progresso = (saldo / meta) * 100;
                       
