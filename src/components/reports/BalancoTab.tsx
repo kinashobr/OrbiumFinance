@@ -55,6 +55,7 @@ import { format, subMonths, startOfMonth, endOfMonth, parseISO, isWithinInterval
 import { ptBR } from "date-fns/locale";
 import { ComparisonDateRanges, DateRange } from "@/types/finance";
 import { ContaCorrente, TransacaoCompleta } from "@/types/finance";
+import { EvolucaoPatrimonialChart } from "@/components/dashboard/EvolucaoPatrimonialChart"; // ADDED IMPORT
 
 const COLORS = {
   success: "hsl(142, 76%, 36%)",
@@ -237,35 +238,6 @@ export function BalancoTab({ dateRanges }: BalancoTabProps) {
     return { diff, percent };
   }, [balanco1, balanco2, range2.from]);
 
-  // Evolução do PL nos últimos 12 meses (mantido com base em todas as transações para histórico)
-  const evolucaoPL = useMemo(() => {
-    const resultado: { mes: string; ativos: number; passivos: number; pl: number }[] = [];
-    const now = new Date();
-
-    for (let i = 11; i >= 0; i--) {
-      const data = subMonths(now, i);
-      const mesLabel = format(data, 'MMM', { locale: ptBR });
-      
-      const fim = endOfMonth(data);
-
-      // Calcular o balanço no final deste mês (fim)
-      const transacoesAteFimDoMes = transacoesV2.filter(t => parseISO(t.date) <= fim);
-      
-      // O saldo inicial para o cálculo do balanço do mês é o saldo acumulado ANTES do início do mês
-      const inicioDoMes = startOfMonth(data);
-      const balancoMes = calculateBalanco(transacoesAteFimDoMes, inicioDoMes); 
-
-      resultado.push({
-        mes: mesLabel.charAt(0).toUpperCase() + mesLabel.slice(1),
-        ativos: balancoMes.ativos.total,
-        passivos: balancoMes.passivos.total,
-        pl: balancoMes.patrimonioLiquido,
-      });
-    }
-
-    return resultado;
-  }, [transacoesV2, calculateBalanco]);
-
   // Composição dos ativos para gráfico pizza (usando P1)
   const composicaoAtivos = useMemo(() => {
     const items = [
@@ -325,11 +297,6 @@ export function BalancoTab({ dateRanges }: BalancoTabProps) {
   const formatCurrency = (value: number) => `R$ ${value.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`;
   const formatPercent = (value: number) => `${value.toFixed(1)}%`;
   const formatRatio = (value: number) => value >= 999 ? "∞" : `${value.toFixed(2)}x`;
-
-  // Evolução do PL nos últimos 12 meses (mantido com base em todas as transações para histórico)
-  const evolucaoPLSparkline = useMemo(() => {
-    return evolucaoPL.map(e => e.pl);
-  }, [evolucaoPL]);
 
   // Sparkline generator (copiado de IndicadoresTab para consistência)
   const generateSparkline = (current: number, trend: "up" | "down" | "stable" = "stable") => {
@@ -698,7 +665,7 @@ export function BalancoTab({ dateRanges }: BalancoTabProps) {
           </div>
         </ExpandablePanel>
 
-        {/* Evolução do PL */}
+        {/* Evolução do PL (REPLACED WITH DEDICATED COMPONENT) */}
         <ExpandablePanel
           title="Evolução Patrimonial"
           subtitle="Últimos 12 meses"
@@ -706,39 +673,7 @@ export function BalancoTab({ dateRanges }: BalancoTabProps) {
           badge={variacaoPL.percent >= 0 ? "Crescendo" : "Reduzindo"}
           badgeStatus={variacaoPL.percent >= 0 ? "success" : "danger"}
         >
-          <div className="h-[300px]">
-            <ResponsiveContainer width="100%" height="100%">
-              <ComposedChart data={evolucaoPL}>
-                <defs>
-                  <linearGradient id="colorPL" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor={COLORS.primary} stopOpacity={0.4} />
-                    <stop offset="95%" stopColor={COLORS.primary} stopOpacity={0} />
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
-                <XAxis dataKey="mes" axisLine={false} tickLine={false} tick={{ fill: COLORS.muted, fontSize: 11 }} />
-                <YAxis
-                  yAxisId="left"
-                  axisLine={false}
-                  tickLine={false}
-                  tick={{ fill: COLORS.muted, fontSize: 11 }}
-                  tickFormatter={(value) => `${(value / 1000).toFixed(0)}k`}
-                />
-                <Tooltip
-                  contentStyle={{
-                    backgroundColor: "hsl(var(--card))",
-                    border: "1px solid hsl(var(--border))",
-                    borderRadius: "12px",
-                  }}
-                  formatter={(value: number, name: string) => [formatCurrency(value), name === 'pl' ? 'Patrimônio Líquido' : name === 'ativos' ? 'Ativos' : 'Passivos']}
-                />
-                <Legend />
-                <Bar yAxisId="left" dataKey="ativos" name="Ativos" fill={COLORS.success} opacity={0.7} radius={[4, 4, 0, 0]} />
-                <Bar yAxisId="left" dataKey="passivos" name="Passivos" fill={COLORS.danger} opacity={0.7} radius={[4, 4, 0, 0]} />
-                <Line yAxisId="left" type="monotone" dataKey="pl" name="Patrimônio Líquido" stroke={COLORS.primary} strokeWidth={3} dot={false} />
-              </ComposedChart>
-            </ResponsiveContainer>
-          </div>
+          <EvolucaoPatrimonialChart data={[]} />
         </ExpandablePanel>
       </div>
 

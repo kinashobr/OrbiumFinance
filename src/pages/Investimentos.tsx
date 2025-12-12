@@ -21,6 +21,7 @@ import { PeriodSelector } from "@/components/dashboard/PeriodSelector";
 import { DateRange, ComparisonDateRanges } from "@/types/finance";
 import { startOfMonth, endOfMonth, parseISO, subDays } from "date-fns";
 import { ContaCorrente, TransacaoCompleta } from "@/types/finance";
+import { InvestmentEvolutionChart } from "@/components/investments/InvestmentEvolutionChart";
 
 const pieColors = [
   "hsl(142, 76%, 36%)",
@@ -346,17 +347,7 @@ const Investimentos = () => {
                   <CardTitle>Evolução Patrimonial (Últimos 12 meses)</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="h-[300px]">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <AreaChart data={[]}>
-                        <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
-                        <XAxis dataKey="mes" />
-                        <YAxis tickFormatter={(v) => `${(v/1000).toFixed(0)}k`} />
-                        <Tooltip formatter={(value: number) => [formatCurrency(value), "Valor"]} />
-                        <Area type="monotone" dataKey="patrimonio" stroke="hsl(var(--primary))" fill="hsl(var(--primary) / 0.2)" />
-                      </AreaChart>
-                    </ResponsiveContainer>
-                  </div>
+                  <InvestmentEvolutionChart />
                 </CardContent>
               </Card>
             </div>

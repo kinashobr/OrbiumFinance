@@ -133,6 +133,7 @@ interface FinanceContextType {
   
   // Nova função de cálculo de saldo por data
   calculateBalanceUpToDate: (accountId: string, date: Date | undefined, allTransactions: TransacaoCompleta[], accounts: ContaCorrente[]) => number;
+  calculateTotalInvestmentBalanceAtDate: (date: Date | undefined) => number;
 
   // Exportação e Importação
   exportData: () => void;
@@ -330,6 +331,25 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
 
     return balance;
   }, [contasMovimento, transacoesV2]); // Dependências para garantir que o useCallback seja refeito quando os dados mudam
+
+  const calculateTotalInvestmentBalanceAtDate = useCallback((date: Date | undefined): number => {
+    const targetDate = date || new Date(9999, 11, 31);
+    
+    const investmentAccountIds = contasMovimento
+      .filter(c => 
+        c.accountType === 'aplicacao_renda_fixa' || 
+        c.accountType === 'poupanca' ||
+        c.accountType === 'criptoativos' ||
+        c.accountType === 'reserva_emergencia' ||
+        c.accountType === 'objetivos_financeiros'
+      )
+      .map(c => c.id);
+
+    return investmentAccountIds.reduce((acc, accountId) => {
+        const balance = calculateBalanceUpToDate(accountId, targetDate, transacoesV2, contasMovimento);
+        return acc + Math.max(0, balance);
+    }, 0);
+  }, [contasMovimento, transacoesV2, calculateBalanceUpToDate]);
 
   // ============================================
   // OPERAÇÕES DE ENTIDADES V2 (Empréstimos, Veículos, etc.)
@@ -687,6 +707,7 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     getAtivosTotal,
     getPassivosTotal,
     calculateBalanceUpToDate, // Exportando a função central
+    calculateTotalInvestmentBalanceAtDate,
     exportData,
     importData,
     
