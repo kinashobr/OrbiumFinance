@@ -9,7 +9,7 @@ import {
   MoreVertical, Pencil, Trash2, CheckCircle2, XCircle, Paperclip, Eye, Info
 } from "lucide-react";
 import { TransacaoCompleta, OperationType, formatCurrency, ContaCorrente, Categoria } from "@/types/finance";
-import { cn } from "@/lib/utils";
+import { cn, parseDateLocal } from "@/lib/utils";
 
 interface TransactionTableProps {
   transactions: TransacaoCompleta[];
@@ -79,10 +79,13 @@ export function TransactionTable({
   };
 
   const formatDate = (dateStr: string) => {
-    // Assume dateStr is in YYYY-MM-DD format
+    // Usa parseDateLocal para garantir que a data seja interpretada localmente
     if (!dateStr || dateStr.length < 10) return dateStr;
-    const [year, month, day] = dateStr.split('-');
-    return `${day}/${month}/${year.substring(2)}`;
+    const date = parseDateLocal(dateStr);
+    const year = date.getFullYear().toString().substring(2);
+    const month = (date.getMonth() + 1).toString().padStart(2, '0');
+    const day = date.getDate().toString().padStart(2, '0');
+    return `${day}/${month}/${year}`;
   };
 
   const hasLinks = (t: TransacaoCompleta) => 

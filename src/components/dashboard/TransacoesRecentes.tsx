@@ -4,7 +4,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { cn } from "@/lib/utils";
+import { cn, parseDateLocal } from "@/lib/utils";
 import { TransacaoCompleta } from "@/types/finance";
 import { useNavigate } from "react-router-dom";
 import { useFinance } from "@/contexts/FinanceContext";
@@ -30,11 +30,11 @@ export function TransacoesRecentes({ transacoes, limit = 8 }: TransacoesRecentes
   const { categoriasV2 } = useFinance();
 
   const recentTransacoes = [...transacoes]
-    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+    .sort((a, b) => parseDateLocal(b.date).getTime() - parseDateLocal(a.date).getTime())
     .slice(0, limit);
 
   const formatDate = (dateStr: string) => {
-    const date = new Date(dateStr + "T00:00:00");
+    const date = parseDateLocal(dateStr);
     return date.toLocaleDateString("pt-BR", { day: "2-digit", month: "short" });
   };
 
@@ -101,7 +101,7 @@ export function TransacoesRecentes({ transacoes, limit = 8 }: TransacoesRecentes
                   <div className="text-xs">
                     <p className="font-medium">{transacao.description}</p>
                     <p>Categoria: {categoryLabel}</p>
-                    <p>Data: {new Date(transacao.date).toLocaleDateString("pt-BR")}</p>
+                    <p>Data: {parseDateLocal(transacao.date).toLocaleDateString("pt-BR")}</p>
                     <p>Valor: R$ {transacao.amount.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</p>
                   </div>
                 </TooltipContent>

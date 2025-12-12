@@ -13,13 +13,13 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PieChart, Pie, Cell, AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { Plus, Trash2, TrendingUp, Wallet, Target, Shield, Bitcoin, DollarSign, ArrowUpRight, ArrowDownRight, Coins, CircleDollarSign, Landmark, History, Calendar } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn, parseDateLocal } from "@/lib/utils";
 import { useFinance } from "@/contexts/FinanceContext";
 import { EditableCell } from "@/components/EditableCell";
 import { toast } from "sonner";
 import { PeriodSelector } from "@/components/dashboard/PeriodSelector";
 import { DateRange, ComparisonDateRanges } from "@/types/finance";
-import { startOfMonth, endOfMonth, parseISO, subDays } from "date-fns";
+import { startOfMonth, endOfMonth, subDays } from "date-fns";
 import { ContaCorrente, TransacaoCompleta } from "@/types/finance";
 import { InvestmentEvolutionChart } from "@/components/investments/InvestmentEvolutionChart";
 
@@ -425,7 +425,7 @@ const Investimentos = () => {
                       <TableHead>Conta</TableHead>
                       <TableHead>Tipo</TableHead>
                       <TableHead className="text-right">Saldo</TableHead>
-                      <TableHead className="text-right">Rentabilidade</TableHead>
+                      <TableHead className="text-right">Rentabilidade (Mês)</TableHead>
                       <TableHead className="w-20">Ações</TableHead>
                     </TableRow>
                   </TableHeader>

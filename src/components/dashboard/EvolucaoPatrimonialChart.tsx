@@ -4,8 +4,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { CartesianGrid, Tooltip, ResponsiveContainer, Legend, AreaChart, Area, XAxis, YAxis } from "recharts";
 import { cn } from "@/lib/utils";
 import { useFinance } from "@/contexts/FinanceContext";
-import { subMonths, startOfMonth, endOfMonth, parseISO, isWithinInterval, format } from "date-fns";
+import { subMonths, startOfMonth, endOfMonth, isWithinInterval, format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { parseDateLocal } from "@/lib/utils";
 
 interface EvolucaoData {
   mes: string;
@@ -94,7 +95,7 @@ export function EvolucaoPatrimonialChart({}: EvolucaoPatrimonialChartProps) {
       // 2. Calcular Receitas e Despesas DENTRO do mês
       const transacoesMes = transacoesV2.filter(t => {
         try {
-          const dataT = parseISO(t.date);
+          const dataT = parseDateLocal(t.date);
           return isWithinInterval(dataT, { start: inicio, end: fim });
         } catch {
           return false;

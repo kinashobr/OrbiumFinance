@@ -14,6 +14,7 @@ import {
   generateAccountId,
 } from "@/types/finance";
 import { parseISO, startOfMonth, endOfMonth, subDays, differenceInDays } from "date-fns"; // Import date-fns helpers
+import { parseDateLocal } from "@/lib/utils"; // Importando a nova função
 
 // ============================================
 // FUNÇÕES AUXILIARES PARA DATAS
@@ -43,7 +44,8 @@ function parseDateRanges(storedRanges: any): ComparisonDateRanges {
     const parseDate = (dateStr: string | undefined): Date | undefined => {
         if (!dateStr) return undefined;
         try {
-            const date = new Date(dateStr);
+            // Usamos parseDateLocal para garantir que as datas salvas sejam lidas corretamente
+            const date = parseDateLocal(dateStr.split('T')[0]); 
             return isNaN(date.getTime()) ? undefined : date;
         } catch {
             return undefined;
@@ -222,13 +224,14 @@ function saveToStorage<T>(key: string, data: T): void {
     if (key === STORAGE_KEYS.DATE_RANGES) {
         const ranges = data as unknown as ComparisonDateRanges;
         dataToStore = {
+            // Salvamos apenas a string YYYY-MM-DD para evitar problemas de fuso horário na leitura
             range1: {
-                from: ranges.range1.from?.toISOString(),
-                to: ranges.range1.to?.toISOString(),
+                from: ranges.range1.from?.toISOString().split('T')[0],
+                to: ranges.range1.to?.toISOString().split('T')[0],
             },
             range2: {
-                from: ranges.range2.from?.toISOString(),
-                to: ranges.range2.to?.toISOString(),
+                from: ranges.range2.from?.toISOString().split('T')[0],
+                to: ranges.range2.to?.toISOString().split('T')[0],
             },
         } as unknown as T;
     }
@@ -305,8 +308,8 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
 
     // Filtra transações até a data limite (inclusive)
     const transactionsBeforeDate = allTransactions
-        .filter(t => t.accountId === accountId && parseISO(t.date) <= targetDate)
-        .sort((a, b) => parseISO(a.date).getTime() - parseISO(b.date).getTime());
+        .filter(t => t.accountId === accountId && parseDateLocal(t.date) <= targetDate)
+        .sort((a, b) => parseDateLocal(a.date).getTime() - parseDateLocal(b.date).getTime());
 
     transactionsBeforeDate.forEach(t => {
         const isCreditCard = account.accountType === 'cartao_credito';

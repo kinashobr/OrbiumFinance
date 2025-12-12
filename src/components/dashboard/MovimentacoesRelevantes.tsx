@@ -1,16 +1,19 @@
 import { 
-  ArrowUpCircle, 
-  ArrowDownCircle, 
+  TrendingUp, 
+  TrendingDown, 
+  Wallet, 
+  CalendarClock,
+  ArrowUpRight,
+  ArrowDownRight,
+  Target,
   RefreshCw,
   Banknote,
   Shield,
   ChevronRight,
-  TrendingUp,
-  TrendingDown
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { cn } from "@/lib/utils";
+import { cn, parseDateLocal } from "@/lib/utils";
 import { useNavigate } from "react-router-dom";
 import { TransacaoCompleta } from "@/types/finance";
 
@@ -49,14 +52,14 @@ export function MovimentacoesRelevantes({ transacoes, limit = 6 }: Movimentacoes
     })
     .sort((a, b) => {
       // Ordenar por data mais recente, depois por valor
-      const dateCompare = new Date(b.date).getTime() - new Date(a.date).getTime();
+      const dateCompare = parseDateLocal(b.date).getTime() - parseDateLocal(a.date).getTime();
       if (dateCompare !== 0) return dateCompare;
       return b.amount - a.amount;
     })
     .slice(0, limit);
 
   const formatDate = (dateStr: string) => {
-    const date = new Date(dateStr);
+    const date = parseDateLocal(dateStr);
     const today = new Date();
     const yesterday = new Date(today);
     yesterday.setDate(yesterday.getDate() - 1);

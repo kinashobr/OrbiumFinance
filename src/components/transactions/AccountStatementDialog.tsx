@@ -15,8 +15,8 @@ import {
   formatCurrency, ACCOUNT_TYPE_LABELS 
 } from "@/types/finance";
 import { TransactionTable } from "./TransactionTable";
-import { cn } from "@/lib/utils";
-import { parseISO, isWithinInterval, subDays } from "date-fns";
+import { cn, parseDateLocal } from "@/lib/utils";
+import { isWithinInterval, startOfDay, endOfDay } from "date-fns";
 
 interface AccountStatementDialogProps {
   open: boolean;
@@ -48,36 +48,28 @@ export function AccountStatementDialog({
 
   // Filtrar transações por período
   const filteredTransactions = useMemo(() => {
-    const fromDate = dateFrom ? parseISO(dateFrom) : undefined;
-    const toDate = dateTo ? parseISO(dateTo) : undefined;
+    const fromDate = dateFrom ? startOfDay(parseDateLocal(dateFrom)) : undefined;
+    const toDate = dateTo ? endOfDay(parseDateLocal(dateTo)) : undefined;
 
     return transactions
       .filter(t => {
-        const transactionDate = parseISO(t.date);
+        const transactionDate = parseDateLocal(t.date);
         
         const matchFrom = !fromDate || transactionDate >= fromDate;
         const matchTo = !toDate || transactionDate <= toDate;
         
-        // Se o período não está definido (fromDate e toDate são undefined),
-        // incluímos todas as transações, inclusive initial_balance.
-        if (!fromDate && !toDate) return true;
-        
-        // Se o período está definido, incluímos todas as transações,
-        // mas se for initial_balance, ela só deve aparecer se a data
-        // estiver dentro do range (embora o saldo inicial do período
-        // já a tenha contabilizado se ela for anterior ao 'from').
-        // Para simplificar o extrato, mostramos todas as transações que caem no filtro de data.
         return matchFrom && matchTo;
       })
-      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+      .sort((a, b) => parseDateLocal(b.date).getTime() - parseDateLocal(a.date).getTime());
   }, [transactions, dateFrom, dateTo]);
 
   // O resumo do período é fornecido pelo accountSummary (calculado em ReceitasDespesas.tsx)
   const periodSummary = useMemo(() => {
     const { initialBalance, currentBalance, totalIn, totalOut } = accountSummary;
     
-    const conciliatedCount = transactions.filter(t => t.conciliated).length;
-    const pendingCount = transactions.length - conciliatedCount;
+    // Contagem de conciliação baseada nas transações filtradas (não no resumo do período)
+    const conciliatedCount = filteredTransactions.filter(t => t.conciliated).length;
+    const pendingCount = filteredTransactions.length - conciliatedCount;
 
     return {
       initialBalance,
@@ -88,7 +80,7 @@ export function AccountStatementDialog({
       conciliatedCount,
       pendingCount,
     };
-  }, [accountSummary, transactions]);
+  }, [accountSummary, filteredTransactions]);
 
   const statusColor = periodSummary.pendingCount === 0 ? 'text-success' : 'text-warning';
 

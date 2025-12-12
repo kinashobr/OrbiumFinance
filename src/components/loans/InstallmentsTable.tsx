@@ -12,7 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { Check, Clock, AlertTriangle, Upload, FileText, TrendingUp, TrendingDown } from "lucide-react";
 import { useFinance } from "@/contexts/FinanceContext";
 import { Emprestimo, TransacaoCompleta } from "@/types/finance";
-import { cn } from "@/lib/utils";
+import { cn, parseDateLocal } from "@/lib/utils";
 
 interface Parcela {
   numero: number;
@@ -35,7 +35,8 @@ interface InstallmentsTableProps {
 
 // Função auxiliar para calcular a data de vencimento
 const getDueDate = (startDateStr: string, installmentNumber: number): Date => {
-  const startDate = new Date(startDateStr + "T00:00:00");
+  // Usa parseDateLocal para garantir que a data de início seja interpretada localmente
+  const startDate = parseDateLocal(startDateStr);
   const dueDate = new Date(startDate);
   dueDate.setMonth(dueDate.getMonth() + installmentNumber);
   return dueDate;
@@ -100,7 +101,8 @@ export function InstallmentsTable({ emprestimo, className }: InstallmentsTablePr
           dataPagamento = payment.date;
           valorPago = payment.amount;
           
-          const paymentDate = new Date(dataPagamento + "T00:00:00");
+          // Usa parseDateLocal para garantir que a data de pagamento seja interpretada localmente
+          const paymentDate = parseDateLocal(dataPagamento);
           const diffTime = paymentDate.getTime() - dataVencimento.getTime();
           diasDiferenca = Math.round(diffTime / (1000 * 60 * 60 * 24));
           
@@ -256,7 +258,7 @@ export function InstallmentsTable({ emprestimo, className }: InstallmentsTablePr
                     <TableCell className="font-medium">{parcela.numero}</TableCell>
                     <TableCell>{parcela.dataVencimento.toLocaleDateString("pt-BR")}</TableCell>
                     <TableCell className={cn(isPaid ? "text-success" : "text-muted-foreground")}>
-                      {parcela.dataPagamento ? new Date(parcela.dataPagamento + "T00:00:00").toLocaleDateString("pt-BR") : '-'}
+                      {parcela.dataPagamento ? parseDateLocal(parcela.dataPagamento).toLocaleDateString("pt-BR") : '-'}
                     </TableCell>
                     <TableCell className="text-right font-medium">
                       {formatCurrency(emprestimo.parcela)}

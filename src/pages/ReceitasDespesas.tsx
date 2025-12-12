@@ -3,7 +3,7 @@ import { MainLayout } from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
 import { RefreshCw, Tags, Plus } from "lucide-react";
 import { toast } from "sonner";
-import { isWithinInterval, startOfMonth, endOfMonth, parseISO, subDays } from "date-fns";
+import { isWithinInterval, startOfMonth, endOfMonth, subDays, startOfDay, endOfDay } from "date-fns";
 
 // Types
 import { 
@@ -26,6 +26,7 @@ import { PeriodSelector } from "@/components/dashboard/PeriodSelector";
 
 // Context
 import { useFinance } from "@/contexts/FinanceContext";
+import { parseDateLocal } from "@/lib/utils";
 
 const ReceitasDespesas = () => {
   const { 
@@ -91,19 +92,24 @@ const ReceitasDespesas = () => {
   const filteredTransactions = useMemo(() => {
     const range = dateRanges.range1; // Use range1 for filtering transactions in this view
     
+    // Normaliza os limites do período para garantir que o dia inteiro seja incluído
+    const rangeFrom = range.from ? startOfDay(range.from) : undefined;
+    const rangeTo = range.to ? endOfDay(range.to) : undefined;
+    
     return transactions.filter(t => {
       const matchSearch = !searchTerm || t.description.toLowerCase().includes(searchTerm.toLowerCase());
       const matchAccount = selectedAccountId === 'all' || t.accountId === selectedAccountId;
       const matchCategory = selectedCategoryId === 'all' || t.categoryId === selectedCategoryId;
       const matchType = selectedTypes.includes(t.operationType);
       
-      const transactionDate = parseISO(t.date);
+      // Usa parseDateLocal para obter a data da transação no fuso horário local
+      const transactionDate = parseDateLocal(t.date);
       
       // Filtro de período usando dateRange.range1
-      const matchPeriod = (!range.from || isWithinInterval(transactionDate, { start: range.from, end: range.to || new Date() }));
+      const matchPeriod = (!rangeFrom || isWithinInterval(transactionDate, { start: rangeFrom, end: rangeTo || new Date() }));
       
       return matchSearch && matchAccount && matchCategory && matchType && matchPeriod;
-    }).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    }).sort((a, b) => parseDateLocal(b.date).getTime() - parseDateLocal(a.date).getTime());
   }, [transactions, searchTerm, selectedAccountId, selectedCategoryId, selectedTypes, dateRanges]);
 
   // Contas visíveis (agora todas são visíveis, pois a contrapartida foi removida)
@@ -131,16 +137,18 @@ const ReceitasDespesas = () => {
       const accountTxInPeriod = transactions.filter(t => {
         if (t.accountId !== account.id) return false;
         
-        const transactionDate = parseISO(t.date);
+        const transactionDate = parseDateLocal(t.date);
+        
+        // Normaliza os limites do período para garantir que o dia inteiro seja incluído
+        const rangeFrom = periodStart ? startOfDay(periodStart) : undefined;
+        const rangeTo = periodEnd ? endOfDay(periodEnd) : undefined;
         
         // Se o período NÃO está definido (Todo o período), incluímos todas as transações.
-        if (!periodStart) return true; 
+        if (!rangeFrom) return true; 
         
         // Se o período está definido:
         // Incluímos transações ON or AFTER periodStart, up to periodEnd.
-        // Não excluímos 'initial_balance' explicitamente, pois se ela cair dentro do período,
-        // ela deve ser contabilizada no fluxo do período (já que periodInitialBalance é calculado antes dela).
-        return transactionDate >= periodStart && transactionDate <= (periodEnd || new Date());
+        return transactionDate >= rangeFrom && transactionDate <= (rangeTo || new Date());
       });
 
       // 3. Calculate Period Totals
@@ -690,7 +698,8 @@ const ReceitasDespesas = () => {
       .map(e => {
         // Generate parcelas array if loan has meses configured
         const parcelas = e.meses > 0 ? Array.from({ length: e.meses }, (_, i) => {
-          const vencimento = new Date(e.dataInicio || new Date());
+          // Usa parseDateLocal para garantir que a data de início seja interpretada corretamente
+          const vencimento = parseDateLocal(e.dataInicio || new Date().toISOString().split('T')[0]);
           vencimento.setMonth(vencimento.getMonth() + i + 1);
           return {
             numero: i + 1,

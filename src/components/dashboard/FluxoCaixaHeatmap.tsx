@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { cn } from "@/lib/utils";
+import { cn, parseDateLocal } from "@/lib/utils";
 
 interface DayData {
   day: number;
@@ -43,7 +43,8 @@ export function FluxoCaixaHeatmap({ month, year, transacoes }: FluxoCaixaHeatmap
     for (let day = 1; day <= daysInMonth; day++) {
       const dayData = transacoes
         .filter(t => {
-          const txDate = new Date(t.date);
+          // Usa parseDateLocal para obter a data correta
+          const txDate = parseDateLocal(t.date);
           return txDate.getDate() === day && 
                  txDate.getMonth() === parseInt(month) - 1 && 
                  txDate.getFullYear() === year;

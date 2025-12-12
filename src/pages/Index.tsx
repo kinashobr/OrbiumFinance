@@ -14,7 +14,8 @@ import {
   Activity,
   LayoutDashboard
 } from "lucide-react";
-import { startOfMonth, endOfMonth, isWithinInterval, format, subMonths, parseISO, subDays } from "date-fns";
+import { startOfMonth, endOfMonth, isWithinInterval, format, subMonths, subDays, startOfDay, endOfDay } from "date-fns";
+import { parseDateLocal } from "@/lib/utils";
 
 const Index = () => {
   const { 
@@ -38,9 +39,13 @@ const Index = () => {
   const filterTransactionsByRange = useCallback((range: DateRange) => {
     if (!range.from || !range.to) return transacoesV2;
     
+    // Normaliza os limites do período para garantir que o dia inteiro seja incluído
+    const rangeFrom = startOfDay(range.from);
+    const rangeTo = endOfDay(range.to);
+    
     return transacoesV2.filter(t => {
-      const transactionDate = parseISO(t.date);
-      return isWithinInterval(transactionDate, { start: range.from!, end: range.to! });
+      const transactionDate = parseDateLocal(t.date);
+      return isWithinInterval(transactionDate, { start: rangeFrom, end: rangeTo });
     });
   }, [transacoesV2]);
 
@@ -205,7 +210,7 @@ const Index = () => {
       const y = data.getFullYear();
       
       const txMes = transacoesV2.filter(t => {
-        const d = parseISO(t.date);
+        const d = parseDateLocal(t.date);
         return d.getMonth() === m && d.getFullYear() === y;
       });
       

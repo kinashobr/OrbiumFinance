@@ -49,9 +49,9 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { cn } from "@/lib/utils";
+import { cn, parseDateLocal } from "@/lib/utils";
 import { ACCOUNT_TYPE_LABELS } from "@/types/finance";
-import { format, subMonths, startOfMonth, endOfMonth, parseISO, isWithinInterval, subDays } from "date-fns";
+import { format, subMonths, startOfMonth, endOfMonth, isWithinInterval, subDays, startOfDay, endOfDay } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { ComparisonDateRanges, DateRange } from "@/types/finance";
 import { ContaCorrente, TransacaoCompleta } from "@/types/finance";
@@ -104,10 +104,13 @@ export function BalancoTab({ dateRanges }: BalancoTabProps) {
   const filterTransactionsByRange = useCallback((range: DateRange) => {
     if (!range.from || !range.to) return transacoesV2;
     
+    const rangeFrom = startOfDay(range.from);
+    const rangeTo = endOfDay(range.to);
+    
     return transacoesV2.filter(t => {
       try {
-        const dataT = parseISO(t.date);
-        return isWithinInterval(dataT, { start: range.from!, end: range.to! });
+        const dataT = parseDateLocal(t.date);
+        return isWithinInterval(dataT, { start: rangeFrom, end: rangeTo });
       } catch {
         return false;
       }
@@ -124,7 +127,7 @@ export function BalancoTab({ dateRanges }: BalancoTabProps) {
     contasMovimento.forEach(conta => {
       // O saldo inicial é o saldo acumulado ANTES do período
       const saldoInicialPeriodo = periodStart 
-        ? calculateBalanceUpToDate(conta.id, periodStart, transacoesV2, contasMovimento)
+        ? calculateBalanceUpToDate(conta.id, subDays(periodStart, 1), transacoesV2, contasMovimento)
         : calculateBalanceUpToDate(conta.id, undefined, transacoesV2, contasMovimento);
         
       saldos[conta.id] = saldoInicialPeriodo;

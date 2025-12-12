@@ -39,8 +39,8 @@ import { ReportCard } from "./ReportCard";
 import { ExpandablePanel } from "./ExpandablePanel";
 import { IndicatorBadge } from "./IndicatorBadge";
 import { DetailedIndicatorBadge } from "./DetailedIndicatorBadge";
-import { cn } from "@/lib/utils";
-import { format, subMonths, startOfMonth, endOfMonth, parseISO, isWithinInterval } from "date-fns";
+import { cn, parseDateLocal } from "@/lib/utils";
+import { format, subMonths, startOfMonth, endOfMonth, isWithinInterval, startOfDay, endOfDay } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { ComparisonDateRanges, DateRange } from "@/types/finance";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -157,10 +157,13 @@ export function DRETab({ dateRanges }: DRETabProps) {
   const filterTransactionsByRange = useCallback((range: DateRange) => {
     if (!range.from || !range.to) return transacoesV2;
     
+    const rangeFrom = startOfDay(range.from);
+    const rangeTo = endOfDay(range.to);
+    
     return transacoesV2.filter(t => {
       try {
-        const dataT = parseISO(t.date);
-        return isWithinInterval(dataT, { start: range.from!, end: range.to! });
+        const dataT = parseDateLocal(t.date);
+        return isWithinInterval(dataT, { start: rangeFrom, end: rangeTo });
       } catch {
         return false;
       }
@@ -299,7 +302,7 @@ export function DRETab({ dateRanges }: DRETabProps) {
 
       const transacoesMes = transacoesV2.filter(t => {
         try {
-          const dataT = parseISO(t.date);
+          const dataT = parseDateLocal(t.date);
           return isWithinInterval(dataT, { start: inicio, end: fim });
         } catch {
           return false;
@@ -482,7 +485,7 @@ export function DRETab({ dateRanges }: DRETabProps) {
                     labelLine={{ stroke: COLORS.muted, strokeWidth: 1 }}
                   >
                     {dre1.composicaoDespesas.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.color} />
+                      <Cell key={`cell-${index}`} fill={PIE_COLORS[index % PIE_COLORS.length]} />
                     ))}
                   </Pie>
                   <Tooltip

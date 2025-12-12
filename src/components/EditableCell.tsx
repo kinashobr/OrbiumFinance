@@ -7,6 +7,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { parseDateLocal } from "@/lib/utils";
 
 interface EditableCellProps {
   value: string | number;
@@ -53,17 +54,18 @@ export function EditableCell({ value, onSave, type = "text", options = [], class
       return `R$ ${Number(value).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`;
     }
     if (type === "date" && value) {
-      // Correção: exibir a data exatamente como está armazenada, sem conversão de timezone
       const dateStr = String(value);
-      // Se for uma string no formato YYYY-MM-DD, exibir como está
+      // Se for uma string no formato YYYY-MM-DD, use parseDateLocal
       if (dateStr.match(/^\d{4}-\d{2}-\d{2}$/)) {
-        const [year, month, day] = dateStr.split('-').map(Number);
-        // Criar data no timezone local sem conversão
-        const date = new Date(year, month - 1, day);
+        const date = parseDateLocal(dateStr);
         return date.toLocaleDateString("pt-BR");
       }
-      // Caso contrário, tentar converter normalmente
-      return new Date(dateStr).toLocaleDateString("pt-BR");
+      // Caso contrário, tente converter normalmente (fallback)
+      try {
+        return new Date(dateStr).toLocaleDateString("pt-BR");
+      } catch {
+        return dateStr;
+      }
     }
     if (type === "number") {
       return Number(value).toLocaleString("pt-BR");
