@@ -20,11 +20,11 @@ interface IndicadorSaude {
 }
 
 interface SaudeFinanceiraProps {
-  liquidez: number; // ratio
-  endividamento: number; // percentual
+  liquidez: number; // Liquidez Geral (Ativo Total / Passivo Total)
+  endividamento: number; // percentual (Passivo Total / Ativo Total)
   diversificacao: number; // percentual (0-100, quanto mais diversificado melhor)
   estabilidadeFluxo: number; // percentual de meses positivos
-  dependenciaRenda: number; // percentual da renda principal vs total
+  dependenciaRenda: number; // Comprometimento Fixo (Despesas Fixas / Receitas Totais)
 }
 
 const statusConfig = {
@@ -43,13 +43,15 @@ export function SaudeFinanceira({
 }: SaudeFinanceiraProps) {
   
   const getStatusLiquidez = (valor: number): IndicadorSaude['status'] => {
-    if (valor >= 2) return 'otimo';
+    // Liquidez Geral (Ativo Total / Passivo Total)
+    if (valor >= 2.0) return 'otimo';
     if (valor >= 1.5) return 'bom';
-    if (valor >= 1) return 'atencao';
+    if (valor >= 1.0) return 'atencao';
     return 'critico';
   };
 
   const getStatusEndividamento = (valor: number): IndicadorSaude['status'] => {
+    // Endividamento (Passivo Total / Ativo Total * 100)
     if (valor <= 20) return 'otimo';
     if (valor <= 35) return 'bom';
     if (valor <= 50) return 'atencao';
@@ -71,19 +73,20 @@ export function SaudeFinanceira({
   };
 
   const getStatusDependencia = (valor: number): IndicadorSaude['status'] => {
-    if (valor <= 60) return 'otimo';
-    if (valor <= 75) return 'bom';
-    if (valor <= 90) return 'atencao';
+    // Comprometimento Fixo (Despesas Fixas / Receitas Totais * 100)
+    if (valor <= 40) return 'otimo';
+    if (valor <= 60) return 'bom';
+    if (valor <= 80) return 'atencao';
     return 'critico';
   };
 
   const indicadores: (IndicadorSaude & { icon: React.ElementType })[] = [
     {
       id: 'liquidez',
-      nome: 'Liquidez',
-      valor: Math.min(liquidez * 50, 100), // normalizar para 0-100
+      nome: 'Liquidez Geral',
+      valor: Math.min(liquidez * 50, 100), // normalizar para 0-100 (assumindo 2.0 = 100%)
       status: getStatusLiquidez(liquidez),
-      descricao: liquidez >= 1.5 ? 'Recursos disponíveis adequados' : 'Pode faltar liquidez',
+      descricao: liquidez >= 1.5 ? 'Ativos cobrem passivos adequadamente' : 'Atenção à cobertura de dívidas',
       icon: Wallet,
     },
     {
@@ -104,7 +107,7 @@ export function SaudeFinanceira({
     },
     {
       id: 'estabilidade',
-      nome: 'Estabilidade',
+      nome: 'Estabilidade Fluxo',
       valor: estabilidadeFluxo,
       status: getStatusEstabilidade(estabilidadeFluxo),
       descricao: estabilidadeFluxo >= 60 ? 'Fluxo mensal estável' : 'Fluxo instável',
@@ -112,10 +115,10 @@ export function SaudeFinanceira({
     },
     {
       id: 'dependencia',
-      nome: 'Renda',
-      valor: 100 - Math.min(dependenciaRenda, 100), // inverter
+      nome: 'Comprometimento Fixo',
+      valor: 100 - Math.min(dependenciaRenda, 100), // inverter (menos % fixo = melhor)
       status: getStatusDependencia(dependenciaRenda),
-      descricao: dependenciaRenda <= 75 ? 'Fontes diversificadas' : 'Alta dependência',
+      descricao: dependenciaRenda <= 60 ? 'Custos fixos sob controle' : 'Alta rigidez orçamentária',
       icon: Briefcase,
     },
   ];

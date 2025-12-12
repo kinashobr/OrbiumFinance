@@ -114,7 +114,7 @@ const Index = () => {
   const transacoesPeriodoAnterior = useMemo(() => {
     if (!dateRange.from || !dateRange.to) return []; // Não calcula variação se for "Todo o período"
 
-    const diffInDays = (dateRange.to.getTime() - dateRange.from.getTime()) / (1000 * 60 * 60 * 24);
+    const diffIn Days = (dateRange.to.getTime() - dateRange.from.getTime()) / (1000 * 60 * 60 * 24);
     
     const prevFrom = subMonths(dateRange.from, 1);
     const prevTo = subMonths(dateRange.to, 1);
@@ -188,10 +188,14 @@ const Index = () => {
   const stablesTotal = stablecoins.reduce((acc, s) => acc + s.valorBRL, 0);
 
   // Dados para saúde financeira
-  const liquidezRatio = totalDividas > 0 ? liquidezImediata / (totalDividas * 0.1 || 1) : 2;
+  
+  // 1. Liquidez Ratio (Liquidez Geral: Ativo Total / Passivo Total)
+  const liquidezRatio = totalDividas > 0 ? totalAtivos / totalDividas : 999;
+
+  // 2. Endividamento Percent (Passivo Total / Ativo Total * 100)
   const endividamentoPercent = totalAtivos > 0 ? (totalDividas / totalAtivos) * 100 : 0;
   
-  // Diversificação (quantos tipos de ativos diferentes > 0)
+  // 3. Diversificação (quantos tipos de ativos diferentes > 0)
   const tiposAtivos = [
     investimentosRFTotal > 0,
     criptoTotal > 0,
@@ -203,7 +207,7 @@ const Index = () => {
   ].filter(Boolean).length;
   const diversificacaoPercent = (tiposAtivos / 7) * 100;
 
-  // Estabilidade do fluxo (meses com saldo positivo)
+  // 4. Estabilidade do fluxo (meses com saldo positivo)
   const mesesPositivos = useMemo(() => {
     const ultimos6Meses = [];
     for (let i = 0; i < 6; i++) {
@@ -225,8 +229,18 @@ const Index = () => {
     return (ultimos6Meses.filter(Boolean).length / 6) * 100;
   }, [transacoesV2]);
 
-  // Dependência de renda (assumindo 80% se não há dados)
-  const dependenciaRenda = receitasPeriodo > 0 ? 80 : 100;
+  // 5. Dependência de renda (Comprometimento Fixo: Despesas Fixas / Receitas Totais * 100)
+  const despesasFixasPeriodo = useMemo(() => {
+    const categoriasMap = new Map(categoriasV2.map(c => [c.id, c]));
+    return transacoesPeriodo
+        .filter(t => {
+            const cat = categoriasMap.get(t.categoryId || '');
+            return cat?.nature === 'despesa_fixa';
+        })
+        .reduce((acc, t) => acc + t.amount, 0);
+  }, [transacoesPeriodo, categoriasV2]);
+  
+  const dependenciaRenda = receitasPeriodo > 0 ? (despesasFixasPeriodo / receitasPeriodo) * 100 : 0;
 
   return (
     <MainLayout>
