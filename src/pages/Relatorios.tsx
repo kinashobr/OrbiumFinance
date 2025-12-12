@@ -5,17 +5,26 @@ import { BalancoTab } from "@/components/reports/BalancoTab";
 import { DRETab } from "@/components/reports/DRETab";
 import { IndicadoresTab } from "@/components/reports/IndicadoresTab";
 import { Scale, Receipt, Activity } from "lucide-react";
-import { PeriodSelector, DateRange } from "@/components/dashboard/PeriodSelector";
-import { startOfMonth, endOfMonth } from "date-fns";
+import { PeriodSelector, DateRange, ComparisonDateRanges } from "@/components/dashboard/PeriodSelector";
+import { startOfMonth, endOfMonth, subDays } from "date-fns";
 
 const Relatorios = () => {
   // Inicializa o range para o mês atual
   const now = new Date();
-  const initialRange: DateRange = { from: startOfMonth(now), to: endOfMonth(now) };
-  const [dateRange, setDateRange] = useState<DateRange>(initialRange);
+  const initialRange1: DateRange = { from: startOfMonth(now), to: endOfMonth(now) };
+  
+  // Calcula o período anterior como range inicial 2
+  const diffInDays = (initialRange1.to!.getTime() - initialRange1.from!.getTime()) / (1000 * 60 * 60 * 24);
+  const prevTo = subDays(initialRange1.from!, 1);
+  const prevFrom = subDays(prevTo, diffInDays);
+  const initialRange2: DateRange = { from: prevFrom, to: prevTo };
 
-  const handlePeriodChange = useCallback((range: DateRange) => {
-    setDateRange(range);
+  const initialRanges: ComparisonDateRanges = { range1: initialRange1, range2: initialRange2 };
+  
+  const [dateRanges, setDateRanges] = useState<ComparisonDateRanges>(initialRanges);
+
+  const handlePeriodChange = useCallback((ranges: ComparisonDateRanges) => {
+    setDateRanges(ranges);
   }, []);
 
   return (
@@ -32,7 +41,7 @@ const Relatorios = () => {
             </p>
           </div>
           <PeriodSelector 
-            initialRange={initialRange}
+            initialRanges={initialRanges}
             onDateRangeChange={handlePeriodChange} 
           />
         </div>
@@ -66,13 +75,13 @@ const Relatorios = () => {
             </TabsTrigger>
           </TabsList>
           <TabsContent value="balanco" className="mt-6">
-            <BalancoTab dateRange={dateRange} />
+            <BalancoTab dateRanges={dateRanges} />
           </TabsContent>
           <TabsContent value="dre" className="mt-6">
-            <DRETab dateRange={dateRange} />
+            <DRETab dateRanges={dateRanges} />
           </TabsContent>
           <TabsContent value="indicadores" className="mt-6">
-            <IndicadoresTab dateRange={dateRange} />
+            <IndicadoresTab dateRanges={dateRanges} />
           </TabsContent>
         </Tabs>
       </div>

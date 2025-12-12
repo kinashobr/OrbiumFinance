@@ -8,12 +8,12 @@ import { MovimentacoesRelevantes } from "@/components/dashboard/MovimentacoesRel
 import { AcompanhamentoAtivos } from "@/components/dashboard/AcompanhamentoAtivos";
 import { SaudeFinanceira } from "@/components/dashboard/SaudeFinanceira";
 import { FluxoCaixaHeatmap } from "@/components/dashboard/FluxoCaixaHeatmap";
-import { PeriodSelector, DateRange } from "@/components/dashboard/PeriodSelector";
+import { PeriodSelector, DateRange, ComparisonDateRanges } from "@/components/dashboard/PeriodSelector";
 import { 
   Activity,
   LayoutDashboard
 } from "lucide-react";
-import { startOfMonth, endOfMonth, isWithinInterval, format, subMonths, parseISO } from "date-fns";
+import { startOfMonth, endOfMonth, isWithinInterval, format, subMonths, parseISO, subDays } from "date-fns";
 
 const Index = () => {
   const { 
@@ -27,22 +27,37 @@ const Index = () => {
 
   // Inicializa o range para o mês atual
   const now = new Date();
-  const initialRange: DateRange = { from: startOfMonth(now), to: endOfMonth(now) };
-  const [dateRange, setDateRange] = useState<DateRange>(initialRange);
+  const initialRange1: DateRange = { from: startOfMonth(now), to: endOfMonth(now) };
+  
+  // Calcula o período anterior como range inicial 2
+  const diffInDays = (initialRange1.to!.getTime() - initialRange1.from!.getTime()) / (1000 * 60 * 60 * 24);
+  const prevTo = subDays(initialRange1.from!, 1);
+  const prevFrom = subDays(prevTo, diffInDays);
+  const initialRange2: DateRange = { from: prevFrom, to: prevTo };
 
-  const handlePeriodChange = useCallback((range: DateRange) => {
-    setDateRange(range);
+  const initialRanges: ComparisonDateRanges = { range1: initialRange1, range2: initialRange2 };
+  
+  const [dateRanges, setDateRanges] = useState<ComparisonDateRanges>(initialRanges);
+
+  const handlePeriodChange = useCallback((ranges: ComparisonDateRanges) => {
+    setDateRanges(ranges);
   }, []);
 
-  // 1. Filtra transações V2 pelo período selecionado
-  const transacoesPeriodo = useMemo(() => {
-    if (!dateRange.from || !dateRange.to) return transacoesV2;
+  // Helper para filtrar transações por um range específico
+  const filterTransactionsByRange = useCallback((range: DateRange) => {
+    if (!range.from || !range.to) return transacoesV2;
     
     return transacoesV2.filter(t => {
       const transactionDate = parseISO(t.date);
-      return isWithinInterval(transactionDate, { start: dateRange.from!, end: dateRange.to! });
+      return isWithinInterval(transactionDate, { start: range.from!, end: range.to! });
     });
-  }, [transacoesV2, dateRange]);
+  }, [transacoesV2]);
+
+  // Transações do Período 1 (Principal)
+  const transacoesPeriodo1 = useMemo(() => filterTransactionsByRange(dateRanges.range1), [filterTransactionsByRange, dateRanges.range1]);
+
+  // Transações do Período 2 (Comparação)
+  const transacoesPeriodo2 = useMemo(() => filterTransactionsByRange(dateRanges.range2), [filterTransactionsByRange, dateRanges.range2]);
 
   // Saldo por conta (usando todas as transações para o saldo atual)
   const saldosPorConta = useMemo(() => {
@@ -92,62 +107,48 @@ const Index = () => {
   // Patrimônio total
   const patrimonioTotal = totalAtivos - totalDividas;
 
-  // Receitas e despesas do período ATUAL
-  const receitasPeriodo = useMemo(() => {
-    return transacoesPeriodo
+  // Receitas e despesas do período ATUAL (P1)
+  const receitasPeriodo1 = useMemo(() => {
+    return transacoesPeriodo1
       .filter(t => t.operationType === 'receita' || t.operationType === 'rendimento')
       .reduce((acc, t) => acc + t.amount, 0);
-  }, [transacoesPeriodo]);
+  }, [transacoesPeriodo1]);
 
-  const despesasPeriodo = useMemo(() => {
-    return transacoesPeriodo
+  const despesasPeriodo1 = useMemo(() => {
+    return transacoesPeriodo1
       .filter(t => t.operationType === 'despesa' || t.operationType === 'pagamento_emprestimo')
       .reduce((acc, t) => acc + t.amount, 0);
-  }, [transacoesPeriodo]);
+  }, [transacoesPeriodo1]);
 
-  // Transações do período anterior (para cálculo de variação)
-  const transacoesPeriodoAnterior = useMemo(() => {
-    if (!dateRange.from || !dateRange.to) return []; // Não calcula variação se for "Todo o período"
-
-    const diffInDays = (dateRange.to.getTime() - dateRange.from.getTime()) / (1000 * 60 * 60 * 24);
-    
-    const prevFrom = subMonths(dateRange.from, 1);
-    const prevTo = subMonths(dateRange.to, 1);
-
-    return transacoesV2.filter(t => {
-      const transactionDate = parseISO(t.date);
-      return isWithinInterval(transactionDate, { start: prevFrom, end: prevTo });
-    });
-  }, [transacoesV2, dateRange]);
-
-  // Receitas e despesas do período ANTERIOR
-  const receitasPeriodoAnterior = useMemo(() => {
-    return transacoesPeriodoAnterior
+  // Receitas e despesas do período ANTERIOR (P2)
+  const receitasPeriodo2 = useMemo(() => {
+    return transacoesPeriodo2
       .filter(t => t.operationType === 'receita' || t.operationType === 'rendimento')
       .reduce((acc, t) => acc + t.amount, 0);
-  }, [transacoesPeriodoAnterior]);
+  }, [transacoesPeriodo2]);
 
-  const despesasPeriodoAnterior = useMemo(() => {
-    return transacoesPeriodoAnterior
+  const despesasPeriodo2 = useMemo(() => {
+    return transacoesPeriodo2
       .filter(t => t.operationType === 'despesa' || t.operationType === 'pagamento_emprestimo')
       .reduce((acc, t) => acc + t.amount, 0);
-  }, [transacoesPeriodoAnterior]);
+  }, [transacoesPeriodo2]);
 
-  // Variação do patrimônio (simplificado para o fluxo de caixa do período)
-  const saldoPeriodoAtual = receitasPeriodo - despesasPeriodo;
-  const saldoPeriodoAnterior = receitasPeriodoAnterior - despesasPeriodoAnterior;
-  const variacaoPatrimonio = saldoPeriodoAtual - saldoPeriodoAnterior;
-  const variacaoPercentual = saldoPeriodoAnterior !== 0 
-    ? ((saldoPeriodoAtual - saldoPeriodoAnterior) / Math.abs(saldoPeriodoAnterior)) * 100 
+  // Variação do patrimônio (baseado no fluxo de caixa do período)
+  const saldoPeriodo1 = receitasPeriodo1 - despesasPeriodo1;
+  const saldoPeriodo2 = receitasPeriodo2 - despesasPeriodo2;
+  
+  const variacaoPatrimonio = saldoPeriodo1 - saldoPeriodo2;
+  const variacaoPercentual = saldoPeriodo2 !== 0 
+    ? ((saldoPeriodo1 - saldoPeriodo2) / Math.abs(saldoPeriodo2)) * 100 
     : 0;
 
   // Compromissos do período (despesas + parcelas empréstimo)
-  const compromissosPeriodo = despesasPeriodo;
+  const compromissosPeriodo = despesasPeriodo1;
 
   // Projeção 30 dias (baseado na média do período atual)
-  const diasNoPeriodo = dateRange.from && dateRange.to ? (dateRange.to.getTime() - dateRange.from.getTime()) / (1000 * 60 * 60 * 24) : 30;
-  const saldoMedioDiario = diasNoPeriodo > 0 ? saldoPeriodoAtual / diasNoPeriodo : 0;
-  const projecao30Dias = saldoPeriodoAtual + (saldoMedioDiario * 30);
+  const diasNoPeriodo = dateRanges.range1.from && dateRanges.range1.to ? (dateRanges.range1.to.getTime() - dateRanges.range1.from.getTime()) / (1000 * 60 * 60 * 24) : 30;
+  const saldoMedioDiario = diasNoPeriodo > 0 ? saldoPeriodo1 / diasNoPeriodo : 0;
+  const projecao30Dias = saldoPeriodo1 + (saldoMedioDiario * 30);
 
   // Dados do cockpit
   const cockpitData = {
@@ -235,15 +236,15 @@ const Index = () => {
   // 5. Dependência de renda (Comprometimento Fixo: Despesas Fixas / Receitas Totais * 100)
   const despesasFixasPeriodo = useMemo(() => {
     const categoriasMap = new Map(categoriasV2.map(c => [c.id, c]));
-    return transacoesPeriodo
+    return transacoesPeriodo1
         .filter(t => {
             const cat = categoriasMap.get(t.categoryId || '');
             return cat?.nature === 'despesa_fixa';
         })
         .reduce((acc, t) => acc + t.amount, 0);
-  }, [transacoesPeriodo, categoriasV2]);
+  }, [transacoesPeriodo1, categoriasV2]);
   
-  const dependenciaRenda = receitasPeriodo > 0 ? (despesasFixasPeriodo / receitasPeriodo) * 100 : 0;
+  const dependenciaRenda = receitasPeriodo1 > 0 ? (despesasFixasPeriodo / receitasPeriodo1) * 100 : 0;
 
   return (
     <MainLayout>
@@ -261,7 +262,7 @@ const Index = () => {
           </div>
           <div className="ml-auto">
             <PeriodSelector 
-              initialRange={initialRange}
+              initialRanges={initialRanges}
               onDateRangeChange={handlePeriodChange} 
             />
           </div>
@@ -278,15 +279,15 @@ const Index = () => {
           <div className="lg:col-span-2 space-y-6">
             {/* Bloco 3 - Movimentações Relevantes */}
             <section className="animate-fade-in-up" style={{ animationDelay: '100ms' }}>
-              <MovimentacoesRelevantes transacoes={transacoesPeriodo} limit={6} />
+              <MovimentacoesRelevantes transacoes={transacoesPeriodo1} limit={6} />
             </section>
 
             {/* Fluxo de Caixa Heatmap */}
             <section className="animate-fade-in-up" style={{ animationDelay: '200ms' }}>
               <FluxoCaixaHeatmap 
-                month={dateRange.from ? format(dateRange.from, 'MM') : format(now, 'MM')} 
-                year={dateRange.from ? dateRange.from.getFullYear() : now.getFullYear()} 
-                transacoes={transacoesPeriodo} 
+                month={dateRanges.range1.from ? format(dateRanges.range1.from, 'MM') : format(now, 'MM')} 
+                year={dateRanges.range1.from ? dateRanges.range1.from.getFullYear() : now.getFullYear()} 
+                transacoes={transacoesPeriodo1} 
               />
             </section>
           </div>

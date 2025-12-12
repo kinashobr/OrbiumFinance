@@ -1,11 +1,11 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
-import { ChevronDown, Calendar as CalendarIcon, X } from "lucide-react";
+import { ChevronDown, Calendar as CalendarIcon, X, Equal } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { format, startOfMonth, endOfMonth, subMonths, startOfYear, endOfYear, subDays, isSameDay, isSameMonth, isSameYear } from "date-fns";
+import { format, startOfMonth, endOfMonth, subMonths, startOfYear, endOfYear, subDays, isSameDay, isSameMonth, isSameYear, startOfDay, endOfDay } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
 // Interface padronizada para range de data (usando Date)
@@ -14,9 +14,15 @@ export interface DateRange {
   to: Date | undefined;
 }
 
+// Nova interface para o estado de comparação
+export interface ComparisonDateRanges {
+  range1: DateRange;
+  range2: DateRange;
+}
+
 interface PeriodSelectorProps {
-  onDateRangeChange: (range: DateRange) => void;
-  initialRange: DateRange;
+  onDateRangeChange: (ranges: ComparisonDateRanges) => void;
+  initialRanges: ComparisonDateRanges;
   className?: string;
 }
 
@@ -37,10 +43,8 @@ const months = [
 
 const years = Array.from({ length: 10 }, (_, i) => new Date().getFullYear() - 5 + i);
 
+// Presets para o Período 1
 const presets = [
-  { id: "today", label: "Hoje" },
-  { id: "last7", label: "Últimos 7 dias" },
-  { id: "last30", label: "Últimos 30 dias" },
   { id: "thisMonth", label: "Este mês" },
   { id: "lastMonth", label: "Mês passado" },
   { id: "last3Months", label: "Últimos 3 meses" },
@@ -48,103 +52,80 @@ const presets = [
   { id: "all", label: "Todo o período" },
 ];
 
+// Presets para o Período 2 (Comparação)
+const comparisonPresets = [
+  { id: "previousPeriod", label: "Período Anterior" },
+  { id: "previousYear", label: "Ano Anterior" },
+  { id: "custom", label: "Personalizado" },
+  { id: "none", label: "Nenhuma Comparação" },
+];
+
 export function PeriodSelector({
   onDateRangeChange,
-  initialRange,
+  initialRanges,
   className,
 }: PeriodSelectorProps) {
   const [isOpen, setIsOpen] = useState(false);
-  const [range, setRange] = useState<DateRange>(initialRange);
-  const [customFrom, setCustomFrom] = useState<Date | undefined>(initialRange.from);
-  const [customTo, setCustomTo] = useState<Date | undefined>(initialRange.to);
-  const [selectedPreset, setSelectedPreset] = useState<string | null>(null);
+  const [ranges, setRanges] = useState<ComparisonDateRanges>(initialRanges);
+  const [editingRange, setEditingRange] = useState<'range1' | 'range2'>('range1');
+  const [customFrom, setCustomFrom] = useState<Date | undefined>(initialRanges.range1.from);
+  const [customTo, setCustomTo] = useState<Date | undefined>(initialRanges.range1.to);
+  const [selectedPreset1, setSelectedPreset1] = useState<string>('custom');
+  const [selectedPreset2, setSelectedPreset2] = useState<string>('none');
 
-  // Sincroniza o estado interno com o prop inicialRange
+  // Sincroniza o estado interno com o prop inicialRanges
   useEffect(() => {
-    setRange(initialRange);
-    setCustomFrom(initialRange.from);
-    setCustomTo(initialRange.to);
-    // Determina o preset inicial se for um dos padrões
-    const isInitialPreset = presets.find(p => {
-      if (p.id === 'all' && !initialRange.from && !initialRange.to) return true;
-      
-      const today = new Date();
-      let presetRange: DateRange = { from: undefined, to: undefined };
-      
-      switch (p.id) {
-        case "today":
-          presetRange = { from: today, to: today };
-          break;
-        case "last7":
-          presetRange = { from: subDays(today, 6), to: today };
-          break;
-        case "last30":
-          presetRange = { from: subDays(today, 29), to: today };
-          break;
-        case "thisMonth":
-          presetRange = { from: startOfMonth(today), to: endOfMonth(today) };
-          break;
-        case "lastMonth":
-          const lastMonth = subMonths(today, 1);
-          presetRange = { from: startOfMonth(lastMonth), to: endOfMonth(lastMonth) };
-          break;
-        case "last3Months":
-          const last3Months = subMonths(today, 2);
-          presetRange = { from: startOfMonth(last3Months), to: endOfMonth(today) };
-          break;
-        case "thisYear":
-          presetRange = { from: startOfYear(today), to: endOfYear(today) };
-          break;
-      }
+    setRanges(initialRanges);
+    // Determinar presets iniciais (simplificado)
+    setSelectedPreset1(initialRanges.range1.from ? 'custom' : 'all');
+    setSelectedPreset2(initialRanges.range2.from ? 'custom' : 'none');
+  }, [initialRanges]);
 
-      if (presetRange.from && presetRange.to && initialRange.from && initialRange.to) {
-        // Compara apenas a data, ignorando a hora
-        return isSameDay(presetRange.from, initialRange.from) && isSameDay(presetRange.to, initialRange.to);
-      }
-      return false;
-    });
+  // Função auxiliar para garantir que 'to' seja o final do dia
+  const normalizeRange = (range: DateRange): DateRange => ({
+    from: range.from ? startOfDay(range.from) : undefined,
+    to: range.to ? endOfDay(range.to) : undefined,
+  });
 
-    setSelectedPreset(isInitialPreset ? isInitialPreset.id : 'custom');
-  }, [initialRange]);
+  // Calcula o Período 2 automaticamente com base no Período 1
+  const calculatePreviousPeriod = useCallback((range: DateRange): DateRange => {
+    if (!range.from || !range.to) return { from: undefined, to: undefined };
+    
+    const diffInDays = Math.ceil((range.to.getTime() - range.from.getTime()) / (1000 * 60 * 60 * 24));
+    
+    const prevTo = subDays(range.from, 1);
+    const prevFrom = subDays(prevTo, diffInDays);
+    
+    return normalizeRange({ from: prevFrom, to: prevTo });
+  }, []);
 
-  const handleApply = useCallback((newRange: DateRange) => {
-    // Garante que o 'to' seja o final do dia, se definido
-    const finalRange: DateRange = {
-      from: newRange.from ? startOfDay(newRange.from) : undefined,
-      to: newRange.to ? endOfDay(newRange.to) : undefined,
+  const calculatePreviousYear = useCallback((range: DateRange): DateRange => {
+    if (!range.from || !range.to) return { from: undefined, to: undefined };
+    
+    const prevFrom = subMonths(range.from, 12);
+    const prevTo = subMonths(range.to, 12);
+    
+    return normalizeRange({ from: prevFrom, to: prevTo });
+  }, []);
+
+  // Aplica as mudanças e fecha o popover
+  const handleApply = useCallback((newRanges: ComparisonDateRanges) => {
+    const finalRanges: ComparisonDateRanges = {
+      range1: normalizeRange(newRanges.range1),
+      range2: normalizeRange(newRanges.range2),
     };
     
-    setRange(finalRange);
-    onDateRangeChange(finalRange);
+    setRanges(finalRanges);
+    onDateRangeChange(finalRanges);
     setIsOpen(false);
   }, [onDateRangeChange]);
   
-  const startOfDay = (date: Date) => {
-    const d = new Date(date);
-    d.setHours(0, 0, 0, 0);
-    return d;
-  };
-
-  const endOfDay = (date: Date) => {
-    const d = new Date(date);
-    d.setHours(23, 59, 59, 999);
-    return d;
-  };
-
-  const handlePresetClick = (presetId: string) => {
+  // Lógica de presets para o Período 1
+  const handlePreset1Click = (presetId: string) => {
     const today = new Date();
     let newRange: DateRange;
 
     switch (presetId) {
-      case "today":
-        newRange = { from: today, to: today };
-        break;
-      case "last7":
-        newRange = { from: subDays(today, 6), to: today };
-        break;
-      case "last30":
-        newRange = { from: subDays(today, 29), to: today };
-        break;
       case "thisMonth":
         newRange = { from: startOfMonth(today), to: endOfMonth(today) };
         break;
@@ -166,26 +147,80 @@ export function PeriodSelector({
         return;
     }
     
-    setSelectedPreset(presetId);
-    handleApply(newRange);
+    setSelectedPreset1(presetId);
+    setCustomFrom(newRange.from);
+    setCustomTo(newRange.to);
+    
+    // Atualiza o Período 2 automaticamente se estiver em 'Período Anterior'
+    let newRange2 = ranges.range2;
+    if (selectedPreset2 === 'previousPeriod') {
+      newRange2 = calculatePreviousPeriod(newRange);
+    } else if (selectedPreset2 === 'previousYear') {
+      newRange2 = calculatePreviousYear(newRange);
+    }
+
+    handleApply({ range1: newRange, range2: newRange2 });
   };
 
-  const handleCustomApply = () => {
-    if (customFrom && customTo && customFrom > customTo) {
-      // Swap dates if necessary
-      handleApply({ from: customTo, to: customFrom });
-    } else {
-      handleApply({ from: customFrom, to: customTo });
+  // Lógica de presets para o Período 2
+  const handlePreset2Change = (presetId: string) => {
+    setSelectedPreset2(presetId);
+    let newRange2: DateRange = { from: undefined, to: undefined };
+    
+    if (presetId === 'previousPeriod') {
+      newRange2 = calculatePreviousPeriod(ranges.range1);
+    } else if (presetId === 'previousYear') {
+      newRange2 = calculatePreviousYear(ranges.range1);
+    } else if (presetId === 'none') {
+      newRange2 = { from: undefined, to: undefined };
     }
-    setSelectedPreset('custom');
+    
+    // Se for personalizado, abre o calendário para o range 2
+    if (presetId === 'custom') {
+      setEditingRange('range2');
+      setCustomFrom(ranges.range2.from);
+      setCustomTo(ranges.range2.to);
+      return;
+    }
+
+    handleApply({ range1: ranges.range1, range2: newRange2 });
+  };
+
+  // Aplica o intervalo personalizado (usado para range1 ou range2)
+  const handleCustomApply = () => {
+    if (!customFrom && !customTo) return;
+    
+    const newRange: DateRange = (customFrom && customTo && customFrom > customTo)
+      ? { from: customTo, to: customFrom }
+      : { from: customFrom, to: customTo };
+
+    let newRanges = { ...ranges };
+    
+    if (editingRange === 'range1') {
+      newRanges.range1 = newRange;
+      setSelectedPreset1('custom');
+      
+      // Recalcula o Período 2 se estiver em modo automático
+      if (selectedPreset2 === 'previousPeriod') {
+        newRanges.range2 = calculatePreviousPeriod(newRange);
+      } else if (selectedPreset2 === 'previousYear') {
+        newRanges.range2 = calculatePreviousYear(newRange);
+      }
+    } else {
+      newRanges.range2 = newRange;
+      setSelectedPreset2('custom');
+    }
+    
+    handleApply(newRanges);
   };
 
   const handleClear = () => {
-    handleApply({ from: undefined, to: undefined });
-    setSelectedPreset('all');
+    handleApply({ range1: { from: undefined, to: undefined }, range2: { from: undefined, to: undefined } });
+    setSelectedPreset1('all');
+    setSelectedPreset2('none');
   };
 
-  const formatDateRange = useMemo(() => {
+  const formatDateRange = (range: DateRange) => {
     if (!range.from && !range.to) return "Todo o período";
     if (!range.from || !range.to) return "Selecione um período";
     
@@ -200,7 +235,10 @@ export function PeriodSelector({
     }
     
     return `${fromStr} - ${toStr}`;
-  }, [range]);
+  };
+
+  const displayRange1 = useMemo(() => formatDateRange(ranges.range1), [ranges.range1]);
+  const displayRange2 = useMemo(() => ranges.range2.from ? formatDateRange(ranges.range2) : "Nenhuma Comparação", [ranges.range2]);
 
   const renderDateSelect = (type: 'from' | 'to') => {
     const date = type === 'from' ? customFrom : customTo;
@@ -223,7 +261,7 @@ export function PeriodSelector({
     return (
       <div className="space-y-2">
         <label className="block text-xs font-medium text-muted-foreground">
-          {type === 'from' ? 'Período Inicial' : 'Período Final'}
+          {type === 'from' ? 'Data Inicial' : 'Data Final'}
         </label>
         <div className="flex gap-2">
           <Select value={monthValue} onValueChange={handleMonthChange}>
@@ -255,46 +293,102 @@ export function PeriodSelector({
     );
   };
 
+  // Define o título do popover e o range atual para edição
+  const popoverTitle = editingRange === 'range1' ? 'Período Principal (1)' : 'Período de Comparação (2)';
+  const currentRangeToEdit = editingRange === 'range1' ? ranges.range1 : ranges.range2;
+
+  // Atualiza o estado customFrom/customTo quando o range de edição muda
+  useEffect(() => {
+    const range = editingRange === 'range1' ? ranges.range1 : ranges.range2;
+    setCustomFrom(range.from);
+    setCustomTo(range.to);
+  }, [editingRange, ranges]);
+
   return (
     <Popover open={isOpen} onOpenChange={setIsOpen}>
       <PopoverTrigger asChild>
         <Button
           variant="outline"
           className={cn(
-            "w-[280px] justify-start text-left font-normal bg-muted border-border h-9",
-            (!range.from && !range.to) && "text-muted-foreground",
+            "w-[320px] justify-start text-left font-normal bg-muted border-border h-9",
+            (!ranges.range1.from && !ranges.range1.to) && "text-muted-foreground",
             className
           )}
         >
           <CalendarIcon className="mr-2 h-4 w-4" />
-          <span>{formatDateRange}</span>
+          <div className="flex flex-col items-start text-xs">
+            <span className="font-medium text-foreground">P1: {displayRange1}</span>
+            <span className="text-muted-foreground">P2: {displayRange2}</span>
+          </div>
           <ChevronDown className="ml-auto h-4 w-4 opacity-50" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-[600px] p-0 bg-card border-border" align="end">
-        <div className="grid grid-cols-3 gap-4 p-4">
-          {/* Coluna 1: Presets */}
+      <PopoverContent className="w-[650px] p-0 bg-card border-border" align="end">
+        <div className="grid grid-cols-5 gap-4 p-4">
+          {/* Coluna 1: Presets Período 1 */}
           <div className="col-span-1 space-y-2 border-r border-border pr-4">
             <p className="text-xs font-medium text-muted-foreground mb-2">
-              Períodos Pré-definidos
+              Período 1 (Principal)
             </p>
             {presets.map((preset) => (
               <Button
                 key={preset.id}
-                variant={selectedPreset === preset.id ? "default" : "ghost"}
+                variant={selectedPreset1 === preset.id ? "default" : "ghost"}
                 size="sm"
                 className="w-full justify-start text-sm h-8"
-                onClick={() => handlePresetClick(preset.id)}
+                onClick={() => handlePreset1Click(preset.id)}
               >
                 {preset.label}
               </Button>
             ))}
+            <Button
+              variant={selectedPreset1 === 'custom' ? "default" : "outline"}
+              size="sm"
+              className="w-full justify-start text-sm h-8 mt-2"
+              onClick={() => {
+                setSelectedPreset1('custom');
+                setEditingRange('range1');
+              }}
+            >
+              <CalendarIcon className="w-4 h-4 mr-2" />
+              Personalizar P1
+            </Button>
           </div>
 
-          {/* Coluna 2: Seleção Manual */}
-          <div className="col-span-2 space-y-4">
+          {/* Coluna 2: Presets Período 2 */}
+          <div className="col-span-1 space-y-2 border-r border-border pr-4">
             <p className="text-xs font-medium text-muted-foreground mb-2">
-              Intervalo Personalizado
+              Período 2 (Comparação)
+            </p>
+            {comparisonPresets.map((preset) => (
+              <Button
+                key={preset.id}
+                variant={selectedPreset2 === preset.id ? "default" : "ghost"}
+                size="sm"
+                className="w-full justify-start text-sm h-8"
+                onClick={() => handlePreset2Change(preset.id)}
+              >
+                {preset.label}
+              </Button>
+            ))}
+            {selectedPreset2 === 'custom' && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="w-full justify-start text-sm h-8 mt-2"
+                onClick={() => setEditingRange('range2')}
+              >
+                <CalendarIcon className="w-4 h-4 mr-2" />
+                Personalizar P2
+              </Button>
+            )}
+          </div>
+
+          {/* Coluna 3, 4, 5: Seleção Manual */}
+          <div className="col-span-3 space-y-4">
+            <p className="text-xs font-medium text-primary mb-2 flex items-center gap-2">
+              <Equal className="w-4 h-4" />
+              {popoverTitle}
             </p>
             
             {/* Seletores de Mês/Ano */}
@@ -312,7 +406,7 @@ export function PeriodSelector({
                   setCustomFrom(range?.from);
                   setCustomTo(range?.to);
                 }}
-                numberOfMonths={1} // Reduzido para 1 para caber melhor
+                numberOfMonths={2} // Aumentado para 2 meses para melhor visualização
                 locale={ptBR}
                 initialFocus
               />
@@ -327,7 +421,7 @@ export function PeriodSelector({
                 className="text-destructive hover:text-destructive"
               >
                 <X className="w-4 h-4 mr-1" />
-                Limpar
+                Limpar Tudo
               </Button>
               <Button
                 onClick={handleCustomApply}
@@ -335,7 +429,7 @@ export function PeriodSelector({
                 disabled={!customFrom && !customTo}
               >
                 <CalendarIcon className="w-4 h-4" />
-                Aplicar
+                Aplicar {editingRange === 'range1' ? 'P1' : 'P2'}
               </Button>
             </div>
           </div>
