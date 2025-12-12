@@ -46,7 +46,7 @@ const ReceitasDespesas = () => {
     dateRanges, // <-- Use context state
     setDateRanges, // <-- Use context setter
     markSeguroParcelPaid,
-    unmarkSeguroParcelaid, // <-- ADDED
+    unmarkSeguroParcelPaid, // <-- ADDED
   } = useFinance();
 
   // Local state for transfer groups
@@ -87,25 +87,22 @@ const ReceitasDespesas = () => {
     setDateRanges(ranges);
   }, [setDateRanges]);
 
-  // Filter transactions
-  const filteredTransactions = useMemo(() => {
-    const range = dateRanges.range1; // Use range1 for filtering transactions in this view
+  // Helper para filtrar transações por um range específico
+  const filterTransactionsByRange = useCallback((range: DateRange) => {
+    if (!range.from || !range.to) return transacoesV2;
     
-    return transactions.filter(t => {
-      const matchSearch = !searchTerm || t.description.toLowerCase().includes(searchTerm.toLowerCase());
-      const matchAccount = selectedAccountId === 'all' || t.accountId === selectedAccountId;
-      const matchCategory = selectedCategoryId === 'all' || t.categoryId === selectedCategoryId;
-      const matchType = selectedTypes.includes(t.operationType);
-      
+    return transacoesV2.filter(t => {
       const transactionDate = parseISO(t.date);
-      
-      // Filtro de período usando dateRange.range1
-      // range.from is startOfDay(D_start), range.to is endOfDay(D_end)
-      const matchPeriod = (!range.from || !range.to || isWithinInterval(transactionDate, { start: range.from, end: range.to }));
-      
-      return matchSearch && matchAccount && matchCategory && matchType && matchPeriod;
-    }).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-  }, [transactions, searchTerm, selectedAccountId, selectedCategoryId, selectedTypes, dateRanges]);
+      // range.from is startOfDay, range.to is endOfDay, so isWithinInterval is inclusive
+      return isWithinInterval(transactionDate, { start: range.from!, end: range.to! });
+    });
+  }, [transacoesV2]);
+
+  // Transações do Período 1 (Principal)
+  const transacoesPeriodo1 = useMemo(() => filterTransactionsByRange(dateRanges.range1), [filterTransactionsByRange, dateRanges.range1]);
+
+  // Transações do Período 2 (Comparação)
+  const transacoesPeriodo2 = useMemo(() => filterTransactionsByRange(dateRanges.range2), [filterTransactionsByRange, dateRanges.range2]);
 
   // Calculate account summaries
   const accountSummaries: AccountSummary[] = useMemo(() => {
@@ -482,7 +479,7 @@ const ReceitasDespesas = () => {
         const parcelaNumero = parseInt(parcelaNumeroStr);
         
         if (!isNaN(seguroId) && !isNaN(parcelaNumero)) {
-            unmarkSeguroParcelaid(seguroId, parcelaNumero); 
+            unmarkSeguroParcelPaid(seguroId, parcelaNumero); 
         }
     }
 
