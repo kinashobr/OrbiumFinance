@@ -13,6 +13,7 @@ import { LoanForm } from "@/components/loans/LoanForm";
 import { LoanAlerts } from "@/components/loans/LoanAlerts";
 import { LoanCharts } from "@/components/loans/LoanCharts";
 import { LoanDetailDialog } from "@/components/loans/LoanDetailDialog";
+import { LoanSimulator } from "@/components/loans/LoanSimulator";
 import { PeriodSelector, DateRange } from "@/components/dashboard/PeriodSelector";
 import { cn } from "@/lib/utils";
 import { startOfMonth, endOfMonth, isWithinInterval, format } from "date-fns";
