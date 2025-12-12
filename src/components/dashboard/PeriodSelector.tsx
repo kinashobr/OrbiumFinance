@@ -174,12 +174,15 @@ export function PeriodSelector({
         </Button>
       </PopoverTrigger>
       
-      {/* Popover Content - Aumentado para 650px para conter o calendário de 2 meses */}
-      <PopoverContent className="w-full p-3 bg-card border-border max-w-[650px]" align="end">
-        <div className="grid grid-cols-[150px_1fr] gap-3">
+      <PopoverContent 
+        className="p-3 bg-card border-border w-auto max-w-none"
+        side="bottom"
+        align="start"
+      >
+        <div className="flex gap-4">
           
-          {/* Coluna 1: Presets Rápidos (Botões Pequenos) */}
-          <div className="space-y-1.5">
+          {/* Coluna Presets */}
+          <div className="w-[150px] shrink-0 space-y-1.5">
             <Label className="text-xs font-medium text-muted-foreground px-1">Presets</Label>
             <div className="flex flex-col gap-1">
               {presets.map((preset) => (
@@ -187,44 +190,35 @@ export function PeriodSelector({
                   key={preset.id}
                   variant={selectedPreset === preset.id ? "default" : "outline"}
                   size="sm"
-                  className={cn(
-                    "w-full justify-start text-xs h-7 px-2",
-                    selectedPreset === preset.id && "bg-primary text-primary-foreground hover:bg-primary/90"
-                  )}
+                  className="w-full justify-start text-xs h-7 px-2"
                   onClick={() => handleSelectPreset(preset.id)}
                 >
                   {preset.label}
                 </Button>
               ))}
+
               <Button
-                variant={selectedPreset === 'custom' ? "default" : "outline"}
+                variant={selectedPreset === "custom" ? "default" : "outline"}
                 size="sm"
-                className={cn(
-                  "w-full justify-start text-xs h-7 px-2",
-                  selectedPreset === 'custom' && "bg-primary text-primary-foreground hover:bg-primary/90"
-                )}
-                onClick={() => setSelectedPreset('custom')}
+                className="w-full justify-start text-xs h-7 px-2"
+                onClick={() => setSelectedPreset("custom")}
               >
                 Personalizado
               </Button>
             </div>
           </div>
-          
-          {/* Coluna 2: Calendário e Ações */}
-          <div className="space-y-3">
-            {/* O Calendário é contido pelo max-w do Popover e pelo grid 1fr */}
-            <div className="flex justify-center">
-              <Calendar
-                mode="range"
-                selected={{ from: tempRange.from, to: tempRange.to }}
-                onSelect={(r) => setTempRange(r as DateRange)}
-                numberOfMonths={2}
-                locale={ptBR}
-                initialFocus
-                // Removendo classes de layout que podem causar conflito
-              />
-            </div>
-            
+
+          {/* Coluna Calendário */}
+          <div className="space-y-3 min-w-[600px]">
+            <Calendar
+              mode="range"
+              selected={{ from: tempRange.from, to: tempRange.to }}
+              onSelect={(r) => setTempRange(r as DateRange)}
+              numberOfMonths={2}
+              locale={ptBR}
+              initialFocus
+            />
+
             <div className="flex items-center gap-2 pt-2 border-t border-border/50">
               <Button 
                 onClick={handleCalendarApply} 
@@ -245,6 +239,7 @@ export function PeriodSelector({
               </Button>
             </div>
           </div>
+
         </div>
       </PopoverContent>
     </Popover>
