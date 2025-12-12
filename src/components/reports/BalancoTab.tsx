@@ -51,7 +51,7 @@ import {
 } from "@/components/ui/table";
 import { cn } from "@/lib/utils";
 import { ACCOUNT_TYPE_LABELS } from "@/types/finance";
-import { format, subMonths, startOfMonth, endOfMonth, parseISO, isWithinInterval, subDays } from "date-fns";
+import { format, subMonths, startOfMonth, endOfMonth, parseISO, isWithinInterval, subDays, startOfDay } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { ComparisonDateRanges, DateRange } from "@/types/finance";
 import { ContaCorrente, TransacaoCompleta } from "@/types/finance";
@@ -103,11 +103,14 @@ export function BalancoTab({ dateRanges }: BalancoTabProps) {
   const filterTransactionsByRange = useCallback((range: DateRange) => {
     if (!range.from || !range.to) return transacoesV2;
     
+    const start = startOfDay(range.from);
+    const end = range.to; // range.to já é endOfDay
+
     return transacoesV2.filter(t => {
       try {
-        const dataT = parseISO(t.date);
+        const transactionDate = startOfDay(parseISO(t.date));
         // range.from is startOfDay, range.to is endOfDay, so isWithinInterval is inclusive
-        return isWithinInterval(dataT, { start: range.from!, end: range.to! });
+        return isWithinInterval(transactionDate, { start, end });
       } catch {
         return false;
       }

@@ -40,7 +40,7 @@ import { ExpandablePanel } from "./ExpandablePanel";
 import { IndicatorBadge } from "./IndicatorBadge";
 import { DetailedIndicatorBadge } from "./DetailedIndicatorBadge";
 import { cn } from "@/lib/utils";
-import { format, subMonths, startOfMonth, endOfMonth, parseISO, isWithinInterval } from "date-fns";
+import { format, subMonths, startOfMonth, endOfMonth, parseISO, isWithinInterval, startOfDay } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { ComparisonDateRanges, DateRange } from "@/types/finance";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -157,11 +157,14 @@ export function DRETab({ dateRanges }: DRETabProps) {
   const filterTransactionsByRange = useCallback((range: DateRange) => {
     if (!range.from || !range.to) return transacoesV2;
     
+    const start = startOfDay(range.from);
+    const end = range.to; // range.to já é endOfDay
+
     return transacoesV2.filter(t => {
       try {
-        const dataT = parseISO(t.date);
+        const transactionDate = startOfDay(parseISO(t.date));
         // range.from is startOfDay, range.to is endOfDay, so isWithinInterval is inclusive
-        return isWithinInterval(dataT, { start: range.from!, end: range.to! });
+        return isWithinInterval(transactionDate, { start, end });
       } catch {
         return false;
       }
@@ -301,8 +304,8 @@ export function DRETab({ dateRanges }: DRETabProps) {
       // Filtra transações para o mês completo (inclusivo)
       const transacoesMes = transacoesV2.filter(t => {
         try {
-          const dataT = parseISO(t.date);
-          return isWithinInterval(dataT, { start: inicio, end: fim });
+          const d = startOfDay(parseISO(t.date));
+          return isWithinInterval(d, { start: inicio, end: fim });
         } catch {
           return false;
         }

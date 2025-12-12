@@ -3,7 +3,7 @@ import { MainLayout } from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
 import { RefreshCw, Tags, Plus } from "lucide-react";
 import { toast } from "sonner";
-import { isWithinInterval, startOfMonth, endOfMonth, parseISO, subDays } from "date-fns";
+import { isWithinInterval, startOfMonth, endOfMonth, parseISO, subDays, startOfDay } from "date-fns";
 
 // Types
 import { 
@@ -86,24 +86,34 @@ const ReceitasDespesas = () => {
     setDateRanges(ranges);
   }, [setDateRanges]);
 
-  // Filter transactions
+  // Helper para filtrar transações por um range específico
+  const filterTransactionsByRange = useCallback((range: DateRange) => {
+    if (!range.from || !range.to) return transacoesV2;
+    
+    const start = startOfDay(range.from);
+    const end = range.to; // range.to já é endOfDay
+
+    return transacoesV2.filter(t => {
+      const transactionDate = startOfDay(parseISO(t.date));
+      return isWithinInterval(transactionDate, { start, end });
+    });
+  }, [transacoesV2]);
+
+  // Filter transactions (usando a função ajustada)
   const filteredTransactions = useMemo(() => {
     const range = dateRanges.range1; // Use range1 for filtering transactions in this view
     
-    return transactions.filter(t => {
+    const periodTransactions = filterTransactionsByRange(range);
+
+    return periodTransactions.filter(t => {
       const matchSearch = !searchTerm || t.description.toLowerCase().includes(searchTerm.toLowerCase());
       const matchAccount = selectedAccountId === 'all' || t.accountId === selectedAccountId;
       const matchCategory = selectedCategoryId === 'all' || t.categoryId === selectedCategoryId;
       const matchType = selectedTypes.includes(t.operationType);
       
-      const transactionDate = parseISO(t.date);
-      
-      // Filtro de período usando dateRange.range1
-      const matchPeriod = (!range.from || isWithinInterval(transactionDate, { start: range.from, end: range.to || new Date() }));
-      
-      return matchSearch && matchAccount && matchCategory && matchType && matchPeriod;
+      return matchSearch && matchAccount && matchCategory && matchType;
     }).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-  }, [transactions, searchTerm, selectedAccountId, selectedCategoryId, selectedTypes, dateRanges]);
+  }, [transactions, searchTerm, selectedAccountId, selectedCategoryId, selectedTypes, dateRanges, filterTransactionsByRange]);
 
   // Calculate account summaries
   const accountSummaries: AccountSummary[] = useMemo(() => {
@@ -119,7 +129,8 @@ const ReceitasDespesas = () => {
       // 2. Calculate Period Transactions (transactions within the selected period)
       const accountTxInPeriod = transactions.filter(t => {
         if (t.accountId !== account.id) return false;
-        const transactionDate = parseISO(t.date);
+        
+        const transactionDate = startOfDay(parseISO(t.date)); // Usar startOfDay para comparação
         
         // Se o período não tem início, filtramos apenas até o fim (se houver)
         if (!periodStart) {

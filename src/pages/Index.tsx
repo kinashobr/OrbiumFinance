@@ -14,7 +14,7 @@ import {
   Activity,
   LayoutDashboard
 } from "lucide-react";
-import { startOfMonth, endOfMonth, isWithinInterval, format, subMonths, parseISO, subDays, endOfDay } from "date-fns";
+import { startOfMonth, endOfMonth, isWithinInterval, format, subMonths, parseISO, subDays, endOfDay, startOfDay } from "date-fns";
 
 const Index = () => {
   const { 
@@ -38,10 +38,13 @@ const Index = () => {
   const filterTransactionsByRange = useCallback((range: DateRange) => {
     if (!range.from || !range.to) return transacoesV2;
     
+    const start = startOfDay(range.from);
+    const end = range.to; // range.to já é endOfDay
+
     return transacoesV2.filter(t => {
-      const transactionDate = parseISO(t.date);
+      const transactionDate = startOfDay(parseISO(t.date));
       // range.from is startOfDay, range.to is endOfDay, so isWithinInterval is inclusive
-      return isWithinInterval(transactionDate, { start: range.from!, end: range.to! });
+      return isWithinInterval(transactionDate, { start, end });
     });
   }, [transacoesV2]);
 

@@ -12,7 +12,7 @@ import {
   DateRange, // Import new types
   ComparisonDateRanges, // Import new types
 } from "@/types/finance";
-import { parseISO, startOfMonth, endOfMonth, subDays, differenceInDays, endOfDay } from "date-fns"; // Import date-fns helpers
+import { parseISO, startOfMonth, endOfMonth, subDays, differenceInDays, endOfDay, startOfDay } from "date-fns"; // Import date-fns helpers
 
 // ============================================
 // FUNÇÕES AUXILIARES PARA DATAS
@@ -306,13 +306,9 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
         .filter(t => {
             if (t.accountId !== accountId) return false;
             try {
-                // CRITICAL FIX: Transações são armazenadas como YYYY-MM-DD. 
-                // Para comparação precisa, precisamos garantir que a data da transação seja tratada como o início do dia.
-                // No entanto, a comparação de strings ISO (t.date) com um objeto Date (targetDate) é complexa.
-                // Vamos converter t.date para Date e garantir que a comparação seja inclusiva.
-                
-                // Convertendo a string YYYY-MM-DD para Date (início do dia)
-                const transactionDate = parseISO(t.date);
+                // CRITICAL FIX: Usamos startOfDay na data da transação para garantir que a comparação
+                // seja feita no início do dia local, evitando desvios de fuso horário.
+                const transactionDate = startOfDay(parseISO(t.date));
                 
                 // Comparação inclusiva: transações até o final do dia alvo
                 return transactionDate <= targetDate;
