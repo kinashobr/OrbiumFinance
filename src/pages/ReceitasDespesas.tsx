@@ -739,7 +739,6 @@ const ReceitasDespesas = () => {
             accountSummary={viewingSummary}
             transactions={viewingTransactions}
             categories={categories}
-            allAccounts={accounts}
             onEditTransaction={handleEditTransaction}
             onDeleteTransaction={handleDeleteTransaction}
             onToggleConciliated={handleToggleConciliated}

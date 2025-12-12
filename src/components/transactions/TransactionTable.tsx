@@ -19,8 +19,8 @@ interface TransactionTableProps {
   onDelete: (id: string) => void;
   onToggleConciliated: (id: string, value: boolean) => void;
   onViewAttachments?: (transaction: TransacaoCompleta) => void;
-  selectedIds?: string[];
-  onSelectChange?: (ids: string[]) => void;
+  // Removido: selectedIds?: string[];
+  // Removido: onSelectChange?: (ids: string[]) => void;
 }
 
 const OPERATION_ICONS: Record<OperationType, typeof TrendingUp> = {
@@ -70,8 +70,6 @@ export function TransactionTable({
   onDelete,
   onToggleConciliated,
   onViewAttachments,
-  selectedIds = [],
-  onSelectChange
 }: TransactionTableProps) {
   const getAccountName = (id: string) => accounts.find(a => a.id === id)?.name || id;
   const getCategoryLabel = (id: string | null) => {
@@ -90,37 +88,16 @@ export function TransactionTable({
   const hasLinks = (t: TransacaoCompleta) => 
     t.links.investmentId || t.links.loanId || t.links.transferGroupId;
 
-  const handleSelectAll = (checked: boolean) => {
-    if (onSelectChange) {
-      onSelectChange(checked ? transactions.map(t => t.id) : []);
-    }
-  };
+  // Removido: handleSelectAll e handleSelectOne
 
-  const handleSelectOne = (id: string, checked: boolean) => {
-    if (onSelectChange) {
-      if (checked) {
-        onSelectChange([...selectedIds, id]);
-      } else {
-        onSelectChange(selectedIds.filter(i => i !== id));
-      }
-    }
-  };
-
-  const allSelected = transactions.length > 0 && selectedIds.length === transactions.length;
+  // Removido: allSelected
 
   return (
     <div className="rounded-lg border border-border overflow-hidden">
       <Table>
         <TableHeader>
           <TableRow className="border-border hover:bg-transparent">
-            {onSelectChange && (
-              <TableHead className="w-10">
-                <Checkbox
-                  checked={allSelected}
-                  onCheckedChange={handleSelectAll}
-                />
-              </TableHead>
-            )}
+            {/* Removido: Checkbox de seleção */}
             <TableHead className="text-muted-foreground">Data</TableHead>
             <TableHead className="text-muted-foreground">Descrição</TableHead>
             <TableHead className="text-muted-foreground">Conta</TableHead>
@@ -135,24 +112,17 @@ export function TransactionTable({
         <TableBody>
           {transactions.map((transaction) => {
             const Icon = OPERATION_ICONS[transaction.operationType];
-            const isSelected = selectedIds.includes(transaction.id);
+            // Removido: isSelected
 
             return (
               <TableRow 
                 key={transaction.id} 
                 className={cn(
                   "border-border hover:bg-muted/30 transition-colors",
-                  isSelected && "bg-primary/5"
+                  // Removido: isSelected && "bg-primary/5"
                 )}
               >
-                {onSelectChange && (
-                  <TableCell>
-                    <Checkbox
-                      checked={isSelected}
-                      onCheckedChange={(checked) => handleSelectOne(transaction.id, !!checked)}
-                    />
-                  </TableCell>
-                )}
+                {/* Removido: Célula de Checkbox */}
                 <TableCell className="text-muted-foreground whitespace-nowrap">
                   {formatDate(transaction.date)}
                 </TableCell>
@@ -282,7 +252,7 @@ export function TransactionTable({
           {transactions.length === 0 && (
             <TableRow>
               <TableCell 
-                colSpan={onSelectChange ? 10 : 9} 
+                colSpan={9} 
                 className="text-center py-10 text-muted-foreground"
               >
                 Nenhuma transação encontrada

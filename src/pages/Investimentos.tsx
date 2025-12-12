@@ -16,7 +16,7 @@ import { Plus, Trash2, TrendingUp, Wallet, Target, Shield, Bitcoin, DollarSign, 
 import { cn } from "@/lib/utils";
 import { useFinance } from "@/contexts/FinanceContext";
 import { EditableCell } from "@/components/EditableCell";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 import { PeriodSelector, DateRange } from "@/components/dashboard/PeriodSelector";
 import { startOfMonth, endOfMonth, parseISO } from "date-fns";
 
@@ -38,7 +38,6 @@ const isStablecoin = (name: string): boolean => {
 };
 
 const Investimentos = () => {
-  const { toast } = useToast();
   const { 
     investimentosRF, 
     addInvestimentoRF, 
@@ -252,7 +251,7 @@ const Investimentos = () => {
     
     setFormRendimento({ data: "", valor: "", descricao: "" });
     setShowAddRendimento(null);
-    toast({ title: "Rendimento registrado!" });
+    toast.success("Rendimento registrado!");
   };
 
   return (

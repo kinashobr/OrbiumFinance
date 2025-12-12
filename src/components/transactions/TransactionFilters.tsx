@@ -22,10 +22,7 @@ interface TransactionFiltersProps {
   onCategoryChange: (value: string) => void;
   selectedTypes: OperationType[];
   onTypesChange: (types: OperationType[]) => void;
-  dateFrom: string;
-  dateTo: string;
-  onDateFromChange: (value: string) => void;
-  onDateToChange: (value: string) => void;
+  // Removido: dateFrom, dateTo, onDateFromChange, onDateToChange
   onClearFilters: () => void;
 }
 
@@ -52,10 +49,6 @@ export function TransactionFilters({
   onCategoryChange,
   selectedTypes,
   onTypesChange,
-  dateFrom,
-  dateTo,
-  onDateFromChange,
-  onDateToChange,
   onClearFilters
 }: TransactionFiltersProps) {
   const [showAdvanced, setShowAdvanced] = useState(false);
@@ -63,16 +56,15 @@ export function TransactionFilters({
   const hasActiveFilters = searchTerm || 
     selectedAccountId !== 'all' || 
     selectedCategoryId !== 'all' || 
-    selectedTypes.length !== OPERATION_TYPE_OPTIONS.length ||
-    dateFrom || dateTo;
+    selectedTypes.length !== OPERATION_TYPE_OPTIONS.length;
+    // Removido: || dateFrom || dateTo;
 
   const activeFiltersCount = [
     searchTerm,
     selectedAccountId !== 'all' ? selectedAccountId : null,
     selectedCategoryId !== 'all' ? selectedCategoryId : null,
     selectedTypes.length !== OPERATION_TYPE_OPTIONS.length ? 'types' : null,
-    dateFrom,
-    dateTo
+    // Removido: dateFrom, dateTo
   ].filter(Boolean).length;
 
   const handleTypeToggle = (type: OperationType) => {
@@ -127,22 +119,6 @@ export function TransactionFilters({
             ))}
           </SelectContent>
         </Select>
-
-        {/* Datas */}
-        <Input
-          type="date"
-          value={dateFrom}
-          onChange={(e) => onDateFromChange(e.target.value)}
-          className="w-[140px]"
-          placeholder="De"
-        />
-        <Input
-          type="date"
-          value={dateTo}
-          onChange={(e) => onDateToChange(e.target.value)}
-          className="w-[140px]"
-          placeholder="Até"
-        />
 
         {/* Filtros avançados */}
         <Popover open={showAdvanced} onOpenChange={setShowAdvanced}>
@@ -227,22 +203,6 @@ export function TransactionFilters({
             <Badge variant="secondary" className="gap-1">
               Categoria: {categories.find(c => c.id === selectedCategoryId)?.label}
               <button onClick={() => onCategoryChange('all')} className="ml-1 hover:text-destructive">
-                <X className="w-3 h-3" />
-              </button>
-            </Badge>
-          )}
-          {dateFrom && (
-            <Badge variant="secondary" className="gap-1">
-              De: {new Date(dateFrom).toLocaleDateString('pt-BR')}
-              <button onClick={() => onDateFromChange('')} className="ml-1 hover:text-destructive">
-                <X className="w-3 h-3" />
-              </button>
-            </Badge>
-          )}
-          {dateTo && (
-            <Badge variant="secondary" className="gap-1">
-              Até: {new Date(dateTo).toLocaleDateString('pt-BR')}
-              <button onClick={() => onDateToChange('')} className="ml-1 hover:text-destructive">
                 <X className="w-3 h-3" />
               </button>
             </Badge>

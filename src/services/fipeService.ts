@@ -38,7 +38,7 @@ function normalizar(txt: string): string {
     .toLowerCase();
 }
 
-function tipoToFipe(tipo: 'carro' | 'moto' | 'caminhao'): TipoVeiculoFipe {
+export function tipoToFipe(tipo: 'carro' | 'moto' | 'caminhao'): TipoVeiculoFipe {
   switch (tipo) {
     case 'carro': return 'carros';
     case 'moto': return 'motos';
@@ -85,65 +85,3 @@ export async function buscarAnoPorValor(tipo: TipoVeiculoFipe, codigoMarca: stri
   const anos = await buscarAnos(tipo, codigoMarca, codigoModelo.toString());
   return anos.find(a => a.nome.includes(ano.toString()));
 }
-
-export interface ConsultaFipeParams {
-  tipo: 'carro' | 'moto' | 'caminhao';
-  marca: string;
-  modelo: string;
-  ano: number;
-}
-
-export interface ConsultaFipeResult {
-  success: boolean;
-  data?: FipeResult;
-  valorNumerico?: number;
-  error?: string;
-}
-
-export async function consultarFipeAutomatico(params: ConsultaFipeParams): Promise<ConsultaFipeResult> {
-  try {
-    const tipoFipe = tipoToFipe(params.tipo);
-    
-    // Buscar marca
-    const marca = await buscarMarcaPorNome(tipoFipe, params.marca);
-    if (!marca) {
-      return { success: false, error: `Marca "${params.marca}" não encontrada` };
-    }
-    
-    // Buscar modelo
-    const modelo = await buscarModeloPorNome(tipoFipe, marca.codigo, params.modelo);
-    if (!modelo) {
-      return { success: false, error: `Modelo "${params.modelo}" não encontrado para marca ${marca.nome}` };
-    }
-    
-    // Buscar ano
-    const ano = await buscarAnoPorValor(tipoFipe, marca.codigo, modelo.codigo.toString(), params.ano);
-    if (!ano) {
-      return { success: false, error: `Ano ${params.ano} não encontrado para ${marca.nome} ${modelo.nome}` };
-    }
-    
-    // Buscar valor FIPE
-    const resultado = await buscarValorFipe(tipoFipe, marca.codigo, modelo.codigo.toString(), ano.codigo);
-    
-    // Extrair valor numérico
-    const valorNumerico = parseFloat(
-      resultado.Valor
-        .replace('R$ ', '')
-        .replace(/\./g, '')
-        .replace(',', '.')
-    );
-    
-    return {
-      success: true,
-      data: resultado,
-      valorNumerico,
-    };
-  } catch (error) {
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : 'Erro desconhecido',
-    };
-  }
-}
-
-export { tipoToFipe };

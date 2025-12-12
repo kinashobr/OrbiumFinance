@@ -24,7 +24,6 @@ interface AccountStatementDialogProps {
   accountSummary: AccountSummary;
   transactions: TransacaoCompleta[];
   categories: Categoria[];
-  allAccounts: ContaCorrente[];
   onEditTransaction: (transaction: TransacaoCompleta) => void;
   onDeleteTransaction: (id: string) => void;
   onToggleConciliated: (id: string, value: boolean) => void;
@@ -38,7 +37,6 @@ export function AccountStatementDialog({
   accountSummary,
   transactions,
   categories,
-  allAccounts,
   onEditTransaction,
   onDeleteTransaction,
   onToggleConciliated,
@@ -264,7 +262,7 @@ export function AccountStatementDialog({
               <CardContent className="overflow-x-auto">
                 <TransactionTable
                   transactions={filteredTransactions}
-                  accounts={allAccounts}
+                  accounts={[account]}
                   categories={categories}
                   onEdit={onEditTransaction}
                   onDelete={onDeleteTransaction}

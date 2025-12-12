@@ -39,11 +39,9 @@ import { ReportCard } from "./ReportCard";
 import { ExpandablePanel } from "./ExpandablePanel";
 import { IndicatorBadge } from "./IndicatorBadge";
 import { DetailedIndicatorBadge } from "./DetailedIndicatorBadge";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
 import { format, subMonths, startOfMonth, endOfMonth, parseISO, isWithinInterval } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { CATEGORY_NATURE_LABELS } from "@/types/finance";
 import { DateRange } from "../dashboard/PeriodSelector";
 
 const COLORS = {
@@ -145,7 +143,6 @@ export function DRETab({ dateRange }: DRETabProps) {
   const {
     transacoesV2,
     categoriasV2,
-    contasMovimento,
     emprestimos,
   } = useFinance();
 

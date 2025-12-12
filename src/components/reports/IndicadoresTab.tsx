@@ -20,11 +20,9 @@ import {
   Info,
   Settings,
   Save,
-  X,
   Trash2,
 } from "lucide-react";
 import { useFinance } from "@/contexts/FinanceContext";
-import { IndicatorBadge } from "./IndicatorBadge";
 import { ExpandablePanel } from "./ExpandablePanel";
 import { DetailedIndicatorBadge } from "./DetailedIndicatorBadge";
 import { Button } from "@/components/ui/button";
