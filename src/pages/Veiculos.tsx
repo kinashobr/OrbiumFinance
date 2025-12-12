@@ -566,7 +566,7 @@ const Veiculos = () => {
                       const diasVenc = getDiasVencimento(item.vencimentoSeguro);
                       return (
                         <TableRow key={item.id}>
-                          <TableCell>
+                          <TableCell className="font-medium">
                             <div className="flex items-center gap-2">
                               <Car className="w-4 h-4 text-primary" />
                               <EditableCell value={item.modelo || "Pendente"} onSave={(v) => updateVeiculo(item.id, { modelo: String(v) })} />
@@ -794,7 +794,7 @@ const Veiculos = () => {
                                 variant="outline"
                                 size="sm"
                                 onClick={() => navigate('/receitas-despesas')}
-                                className="h-8 px-2 hover:bg-primary/10 hover:text-primary gap-1"
+                                className="h-8 px-3 hover:bg-primary/10 hover:text-primary gap-1"
                               >
                                 Pagar <ArrowRight className="w-3 h-3" />
                               </Button>
