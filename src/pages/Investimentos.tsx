@@ -373,7 +373,7 @@ const Investimentos = () => {
                           ))}
                         </Pie>
                         <Tooltip formatter={(value: number) => [formatCurrency(value), "Valor"]} />
-                      </RechartsPie>
+                      </PieChart>
                     </ResponsiveContainer>
                   </div>
                 </CardContent>

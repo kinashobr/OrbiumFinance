@@ -3,7 +3,7 @@ import { MainLayout } from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
 import { RefreshCw, Tags, Plus } from "lucide-react";
 import { toast } from "sonner";
-import { isWithinInterval, startOfMonth, endOfMonth, parseISO } from "date-fns";
+import { isWithinInterval, startOfMonth, endOfMonth, parseISO, subDays } from "date-fns";
 
 // Types
 import { 
