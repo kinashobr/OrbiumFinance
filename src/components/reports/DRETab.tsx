@@ -148,6 +148,9 @@ export function DRETab({ dateRange }: DRETabProps) {
   } = useFinance();
 
   const [periodo, setPeriodo] = useState<"mensal" | "trimestral" | "anual">("anual");
+  
+  const formatPercent = (value: number) => `${value.toFixed(1)}%`;
+  const now = new Date();
 
   // 1. Filtrar transações para o período selecionado
   const transacoesPeriodo = useMemo(() => {
@@ -165,7 +168,6 @@ export function DRETab({ dateRange }: DRETabProps) {
 
   // Cálculos da DRE
   const dre = useMemo(() => {
-    const now = new Date();
     
     // Mapear categorias por ID
     const categoriasMap = new Map(categoriasV2.map(c => [c.id, c]));
@@ -299,8 +301,10 @@ export function DRETab({ dateRange }: DRETabProps) {
       margemBruta,
       margemOperacional,
       margemLiquida,
+      totalDespesasFixas, // Adicionado para corrigir o erro
+      totalDespesasVariaveis, // Adicionado para corrigir o erro
     };
-  }, [transacoesPeriodo, categoriasV2, transacoesV2, getJurosTotais]);
+  }, [transacoesPeriodo, categoriasV2, transacoesV2, getJurosTotais, now]);
 
   const formatCurrency = (value: number) => `R$ ${value.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`;
 
@@ -404,7 +408,7 @@ export function DRETab({ dateRange }: DRETabProps) {
             <div className="h-[300px]">
               <ResponsiveContainer width="100%" height="100%">
                 <ComposedChart data={dre.evolucaoMensal}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
+                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(220, 20%, 18%)" vertical={false} />
                   <XAxis dataKey="mes" axisLine={false} tickLine={false} tick={{ fill: COLORS.muted, fontSize: 11 }} />
                   <YAxis
                     yAxisId="left"
