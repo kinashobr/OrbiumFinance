@@ -53,6 +53,7 @@ const Index = () => {
 
   // Saldo por conta (usando a data final do período 1 para o saldo atual)
   const saldosPorConta = useMemo(() => {
+    // CRITICAL FIX: Usamos a data final do período 1 para calcular o saldo atual
     const targetDate = dateRanges.range1.to; // D_end (endOfDay)
     
     return contasMovimento.map(conta => {

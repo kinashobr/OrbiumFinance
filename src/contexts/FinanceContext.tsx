@@ -42,7 +42,8 @@ function parseDateRanges(storedRanges: any): ComparisonDateRanges {
     const parseDate = (dateStr: string | undefined): Date | undefined => {
         if (!dateStr) return undefined;
         try {
-            const date = new Date(dateStr);
+            // Garante que a data seja tratada como UTC para evitar problemas de fuso horário
+            const date = parseISO(dateStr);
             return isNaN(date.getTime()) ? undefined : date;
         } catch {
             return undefined;
@@ -294,21 +295,25 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     const account = accounts.find(a => a.id === accountId);
     if (!account) return 0;
 
-    // FIX 1: Always start balance at 0. We rely entirely on transactions, including the synthetic 'initial_balance'.
+    // Saldo sempre começa em zero, pois o saldo inicial é uma transação sintética.
     let balance = 0; 
     
-    // If no date is provided, calculate global balance (end of all history)
+    // Se nenhuma data for fornecida, usa uma data futura para incluir todas as transações.
     const targetDate = date || new Date(9999, 11, 31);
 
-    // Filter transactions up to the target date
-    // CRITICAL FIX: Use <= targetDate if targetDate is endOfDay, or ensure targetDate is exclusive.
-    // Since we use endOfDay(subDays(periodStart, 1)) in ReceitasDespesas, the comparison should be inclusive (<=)
-    // to capture transactions on that final day.
+    // Filtra transações até o final do dia alvo (inclusivo)
     const transactionsBeforeDate = allTransactions
         .filter(t => {
             if (t.accountId !== accountId) return false;
             try {
+                // CRITICAL FIX: Transações são armazenadas como YYYY-MM-DD. 
+                // Para comparação precisa, precisamos garantir que a data da transação seja tratada como o início do dia.
+                // No entanto, a comparação de strings ISO (t.date) com um objeto Date (targetDate) é complexa.
+                // Vamos converter t.date para Date e garantir que a comparação seja inclusiva.
+                
+                // Convertendo a string YYYY-MM-DD para Date (início do dia)
                 const transactionDate = parseISO(t.date);
+                
                 // Comparação inclusiva: transações até o final do dia alvo
                 return transactionDate <= targetDate;
             } catch {

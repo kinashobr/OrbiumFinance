@@ -87,6 +87,7 @@ const Investimentos = () => {
 
   // Helper para calcular saldo atual de uma conta (usando a data final do período P1)
   const calculateAccountBalance = useCallback((accountId: string, targetDate: Date | undefined): number => {
+    // CRITICAL FIX: targetDate é o fim do período, então passamos ele diretamente para o cálculo
     return calculateBalanceUpToDate(accountId, targetDate, transacoesV2, contasMovimento);
   }, [calculateBalanceUpToDate, transacoesV2, contasMovimento]);
 

@@ -112,21 +112,34 @@ const ReceitasDespesas = () => {
     
     return accounts.map(account => {
       // 1. Calculate Period Initial Balance (balance right before periodStart)
-      const periodInitialBalance = calculateBalanceUpToDate(account.id, periodStart, transactions, accounts);
+      // CRITICAL FIX: Passamos o dia anterior ao início do período para obter o saldo acumulado ANTES do período.
+      const dateBeforePeriod = periodStart ? subDays(periodStart, 1) : undefined;
+      const periodInitialBalance = calculateBalanceUpToDate(account.id, dateBeforePeriod, transactions, accounts);
 
       // 2. Calculate Period Transactions (transactions within the selected period)
       const accountTxInPeriod = transactions.filter(t => {
         if (t.accountId !== account.id) return false;
         const transactionDate = parseISO(t.date);
-        return (!periodStart || isWithinInterval(transactionDate, { start: periodStart, end: periodEnd || new Date() }));
+        
+        // Se o período não tem início, filtramos apenas até o fim (se houver)
+        if (!periodStart) {
+            return !periodEnd || isWithinInterval(transactionDate, { start: new Date(0), end: periodEnd });
+        }
+        
+        // Se o período tem início, filtramos dentro do intervalo [periodStart, periodEnd]
+        return isWithinInterval(transactionDate, { start: periodStart, end: periodEnd || new Date() });
       });
 
-      // 3. Calculate Period Totals
+      // 3. Calculate Period Totals (apenas transações DENTRO do período)
       let totalIn = 0;
       let totalOut = 0;
       
       accountTxInPeriod.forEach(t => {
         const isCreditCard = account.accountType === 'cartao_credito';
+        
+        // Excluir a transação sintética de saldo inicial do cálculo de IN/OUT do período,
+        // pois ela já foi contabilizada no periodInitialBalance.
+        if (t.operationType === 'initial_balance') return;
         
         if (isCreditCard) {
           // Cartão de Crédito: Despesa (out) é uma saída, Transferência (in) é uma entrada
