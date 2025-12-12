@@ -23,6 +23,7 @@ const Index = () => {
     getValorFipeTotal,
     getAtivosTotal,
     getPassivosTotal,
+    calculateBalanceUpToDate, // Importado do contexto
   } = useFinance();
 
   // Inicializa o range para o mês atual
@@ -59,37 +60,19 @@ const Index = () => {
   // Transações do Período 2 (Comparação)
   const transacoesPeriodo2 = useMemo(() => filterTransactionsByRange(dateRanges.range2), [filterTransactionsByRange, dateRanges.range2]);
 
-  // Saldo por conta (usando todas as transações para o saldo atual)
+  // Saldo por conta (usando a data final do período 1 para o saldo atual)
   const saldosPorConta = useMemo(() => {
+    const targetDate = dateRanges.range1.to;
+    
     return contasMovimento.map(conta => {
-      const contaTx = transacoesV2.filter(t => t.accountId === conta.id);
-      
-      let balance = conta.startDate ? 0 : conta.initialBalance;
-      
-      contaTx.forEach(t => {
-        const isCreditCard = conta.accountType === 'cartao_credito';
-        
-        if (isCreditCard) {
-          if (t.operationType === 'despesa') {
-            balance -= t.amount;
-          } else if (t.operationType === 'transferencia') {
-            balance += t.amount;
-          }
-        } else {
-          if (t.flow === 'in' || t.flow === 'transfer_in' || t.operationType === 'initial_balance') {
-            balance += t.amount;
-          } else {
-            balance -= t.amount;
-          }
-        }
-      });
+      const saldo = calculateBalanceUpToDate(conta.id, targetDate, transacoesV2, contasMovimento);
       
       return {
         ...conta,
-        saldo: balance,
+        saldo: saldo,
       };
     });
-  }, [contasMovimento, transacoesV2]);
+  }, [contasMovimento, transacoesV2, dateRanges.range1.to, calculateBalanceUpToDate]);
 
   // Liquidez imediata (contas correntes e poupança)
   const liquidezImediata = useMemo(() => {
@@ -99,13 +82,24 @@ const Index = () => {
   }, [saldosPorConta]);
 
   // Total de todos os ativos (usando função do contexto)
-  const totalAtivos = getAtivosTotal();
+  // NOTA: getAtivosTotal e getPassivosTotal no contexto calculam o saldo GLOBAL (até hoje).
+  // Para o dashboard, usaremos o saldo calculado no período (saldosPorConta) para Ativos e Passivos.
+  
+  const totalAtivosPeriodo = useMemo(() => {
+    const saldoContasAtivas = saldosPorConta
+      .filter(c => c.accountType !== 'cartao_credito')
+      .reduce((acc, c) => acc + Math.max(0, c.saldo), 0);
+      
+    const valorVeiculos = getValorFipeTotal();
+                          
+    return saldoContasAtivas + valorVeiculos;
+  }, [saldosPorConta, getValorFipeTotal]);
 
-  // Total dívidas (empréstimos ativos)
+  // Total dívidas (empréstimos ativos) - Mantemos o cálculo global de passivos, pois dívidas são passivos de longo prazo.
   const totalDividas = getPassivosTotal();
 
   // Patrimônio total
-  const patrimonioTotal = totalAtivos - totalDividas;
+  const patrimonioTotal = totalAtivosPeriodo - totalDividas;
 
   // Receitas e despesas do período ATUAL (P1)
   const receitasPeriodo1 = useMemo(() => {
@@ -194,10 +188,10 @@ const Index = () => {
   // Dados para saúde financeira
   
   // 1. Liquidez Ratio (Liquidez Geral: Ativo Total / Passivo Total)
-  const liquidezRatio = totalDividas > 0 ? totalAtivos / totalDividas : 999;
+  const liquidezRatio = totalDividas > 0 ? totalAtivosPeriodo / totalDividas : 999;
 
   // 2. Endividamento Percent (Passivo Total / Ativo Total * 100)
-  const endividamentoPercent = totalAtivos > 0 ? (totalDividas / totalAtivos) * 100 : 0;
+  const endividamentoPercent = totalAtivosPeriodo > 0 ? (totalDividas / totalAtivosPeriodo) * 100 : 0;
   
   // 3. Diversificação (quantos tipos de ativos diferentes > 0)
   const tiposAtivos = [

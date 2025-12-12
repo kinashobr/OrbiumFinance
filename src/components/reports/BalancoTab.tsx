@@ -54,6 +54,7 @@ import { ACCOUNT_TYPE_LABELS } from "@/types/finance";
 import { format, subMonths, startOfMonth, endOfMonth, parseISO, isWithinInterval, subDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { ComparisonDateRanges, DateRange } from "../dashboard/PeriodSelector";
+import { ContaCorrente, TransacaoCompleta } from "@/types/finance";
 
 const COLORS = {
   success: "hsl(142, 76%, 36%)",
@@ -93,42 +94,10 @@ export function BalancoTab({ dateRanges }: BalancoTabProps) {
     getAtivosTotal,
     getPassivosTotal,
     getPatrimonioLiquido,
+    calculateBalanceUpToDate, // Importado do contexto
   } = useFinance();
 
   const { range1, range2 } = dateRanges;
-
-  // Helper para calcular saldo até uma data (usado para saldo inicial do período)
-  const calculateBalanceUpToDate = useCallback((accountId: string, date: Date | undefined, allTransactions: typeof transacoesV2, accounts: typeof contasMovimento): number => {
-    const account = accounts.find(a => a.id === accountId);
-    if (!account) return 0;
-
-    let balance = account.startDate ? 0 : account.initialBalance;
-    const targetDate = date || new Date(9999, 11, 31);
-    
-    const transactionsBeforeDate = allTransactions
-        .filter(t => t.accountId === accountId && parseISO(t.date) < targetDate)
-        .sort((a, b) => parseISO(a.date).getTime() - parseISO(b.date).getTime());
-
-    transactionsBeforeDate.forEach(t => {
-        const isCreditCard = account.accountType === 'cartao_credito';
-        
-        if (isCreditCard) {
-          if (t.operationType === 'despesa') {
-            balance -= t.amount;
-          } else if (t.operationType === 'transferencia') {
-            balance += t.amount;
-          }
-        } else {
-          if (t.flow === 'in' || t.flow === 'transfer_in' || t.operationType === 'initial_balance') {
-            balance += t.amount;
-          } else {
-            balance -= t.amount;
-          }
-        }
-    });
-
-    return balance;
-  }, [contasMovimento, transacoesV2]);
 
   // 1. Filtrar transações para um período específico
   const filterTransactionsByRange = useCallback((range: DateRange) => {
@@ -199,13 +168,12 @@ export function BalancoTab({ dateRanges }: BalancoTabProps) {
     const veiculosAtivos = veiculos.filter(v => v.status !== 'vendido');
     const valorVeiculos = veiculosAtivos.reduce((acc, v) => acc + (v.valorFipe || v.valorVeiculo || 0), 0);
 
-    // === TOTAL ATIVOS (Simplificado: usando o total global do contexto, mas deveria ser o total do período)
-    // Para manter a consistência com o cálculo de PL, usaremos o total de ativos calculado com base nos saldos do período.
+    // === TOTAL ATIVOS
     const totalAtivos = caixaEquivalentes + investimentosTotal + valorVeiculos;
 
     // === PASSIVOS ===
     const emprestimosAtivos = emprestimos.filter(e => e.status !== 'quitado');
-    const totalPassivos = getPassivosTotal(); // Usamos o total passivo global, pois dívidas não são filtradas por período
+    const totalPassivos = getPassivosTotal(); // Usamos o total passivo global, pois dívidas são passivos de longo prazo
 
     // Passivo curto prazo (próximos 12 meses)
     const passivoCurtoPrazo = emprestimosAtivos.reduce((acc, e) => {
@@ -282,7 +250,10 @@ export function BalancoTab({ dateRanges }: BalancoTabProps) {
 
       // Calcular o balanço no final deste mês (fim)
       const transacoesAteFimDoMes = transacoesV2.filter(t => parseISO(t.date) <= fim);
-      const balancoMes = calculateBalanco(transacoesAteFimDoMes, undefined); // Passamos undefined para calcular o saldo global até o fim do mês
+      
+      // O saldo inicial para o cálculo do balanço do mês é o saldo acumulado ANTES do início do mês
+      const inicioDoMes = startOfMonth(data);
+      const balancoMes = calculateBalanco(transacoesAteFimDoMes, inicioDoMes); 
 
       resultado.push({
         mes: mesLabel.charAt(0).toUpperCase() + mesLabel.slice(1),

@@ -231,7 +231,10 @@ export function DRETab({ dateRanges }: DRETabProps) {
     const totalDespesasVariaveis = despesasVariaveis.reduce((acc, d) => acc + d.valor, 0);
     const totalDespesas = totalDespesasFixas + totalDespesasVariaveis;
 
-    const jurosEmprestimos = getJurosTotais(); // Usamos o total de juros do contrato, pois o cálculo por período é complexo
+    // Juros e Encargos: Usamos apenas os pagamentos de empréstimo do período
+    const jurosEmprestimos = transactions
+      .filter(t => t.operationType === 'pagamento_emprestimo')
+      .reduce((acc, t) => acc + t.amount, 0);
 
     const resultadoBruto = totalReceitas - totalDespesasFixas;
     const resultadoOperacional = resultadoBruto - totalDespesasVariaveis;
@@ -264,7 +267,7 @@ export function DRETab({ dateRanges }: DRETabProps) {
       totalDespesasFixas,
       totalDespesasVariaveis,
     };
-  }, [categoriasV2, getJurosTotais]);
+  }, [categoriasV2]);
 
   // DRE para o Período 1 (Principal)
   const dre1 = useMemo(() => calculateDRE(transacoesPeriodo1), [calculateDRE, transacoesPeriodo1]);
@@ -406,7 +409,7 @@ export function DRETab({ dateRanges }: DRETabProps) {
 
             {/* Juros e Encargos */}
             <DREItem label="(-) JUROS E ENCARGOS" value={dre1.jurosEmprestimos} type="despesa" icon={<CreditCard className="w-4 h-4" />} />
-            <DREItem label="Juros de Empréstimos" value={dre1.jurosEmprestimos} type="despesa" level={1} />
+            <DREItem label="Pagamentos de Empréstimo" value={dre1.jurosEmprestimos} type="despesa" level={1} />
 
             {/* Resultado Líquido */}
             <DREItem label="RESULTADO LÍQUIDO" value={dre1.resultadoLiquido} type="resultado" icon={<DollarSign className="w-4 h-4" />} />

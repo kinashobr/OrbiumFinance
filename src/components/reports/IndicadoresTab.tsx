@@ -115,6 +115,7 @@ export function IndicadoresTab({ dateRanges }: IndicadoresTabProps) {
     getPatrimonioLiquido,
     getSaldoDevedor,
     getJurosTotais,
+    calculateBalanceUpToDate, // Importado do contexto
   } = useFinance();
 
   const { range1, range2 } = dateRanges;
@@ -207,39 +208,6 @@ export function IndicadoresTab({ dateRanges }: IndicadoresTabProps) {
     saveCustomIndicators(customIndicators.filter(i => i.id !== id));
     toast.success("Indicador removido");
   };
-
-  // Helper para calcular saldo até uma data (usado para saldo inicial do período)
-  const calculateBalanceUpToDate = useCallback((accountId: string, date: Date | undefined, allTransactions: typeof transacoesV2, accounts: typeof contasMovimento): number => {
-    const account = accounts.find(a => a.id === accountId);
-    if (!account) return 0;
-
-    let balance = account.startDate ? 0 : account.initialBalance;
-    const targetDate = date || new Date(9999, 11, 31);
-    
-    const transactionsBeforeDate = allTransactions
-        .filter(t => t.accountId === accountId && parseISO(t.date) < targetDate)
-        .sort((a, b) => parseISO(a.date).getTime() - parseISO(b.date).getTime());
-
-    transactionsBeforeDate.forEach(t => {
-        const isCreditCard = account.accountType === 'cartao_credito';
-        
-        if (isCreditCard) {
-          if (t.operationType === 'despesa') {
-            balance -= t.amount;
-          } else if (t.operationType === 'transferencia') {
-            balance += t.amount;
-          }
-        } else {
-          if (t.flow === 'in' || t.flow === 'transfer_in' || t.operationType === 'initial_balance') {
-            balance += t.amount;
-          } else {
-            balance -= t.amount;
-          }
-        }
-    });
-
-    return balance;
-  }, [contasMovimento, transacoesV2]);
 
   // 2. Calcular saldo de cada conta baseado nas transações do período (Saldo Final do Período)
   const calculateFinalBalances = useCallback((transactions: typeof transacoesV2, periodStart: Date | undefined) => {
@@ -425,7 +393,7 @@ export function IndicadoresTab({ dateRanges }: IndicadoresTabProps) {
       receitasMesAtual,
       despesasMesAtual,
     };
-  }, [transacoesV2, contasMovimento, emprestimos, veiculos, categoriasV2, getSaldoDevedor, getJurosTotais, getAtivosTotal, getPassivosTotal, getPatrimonioLiquido, calculateFinalBalances, calculateBalanceUpToDate]);
+  }, [transacoesV2, contasMovimento, emprestimos, veiculos, categoriasV2, getSaldoDevedor, getJurosTotais, calculateFinalBalances, calculateBalanceUpToDate]);
 
   // Cálculos para Período 1 e Período 2
   const indicadores1 = useMemo(() => calculateIndicatorsForRange(range1), [calculateIndicatorsForRange, range1]);
@@ -474,18 +442,6 @@ export function IndicadoresTab({ dateRanges }: IndicadoresTabProps) {
   const formatRatio = (value: number) => value >= 999 ? "∞" : `${value.toFixed(2)}x`;
   const formatCurrency = (value: number) => `R$ ${value.toLocaleString("pt-BR", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
   const formatMeses = (value: number) => value >= 999 ? "∞" : `${value.toFixed(1)} meses`;
-
-  // Sparkline generator
-  const generateSparkline = (current: number, trend: "up" | "down" | "stable" = "stable") => {
-    const base = Math.abs(current) * 0.7;
-    const range = Math.abs(current) * 0.3 || 10;
-    return Array.from({ length: 6 }, (_, i) => {
-      const progress = i / 5;
-      if (trend === "up") return base + range * progress + Math.random() * range * 0.2;
-      if (trend === "down") return base + range * (1 - progress) + Math.random() * range * 0.2;
-      return base + range * 0.5 + (Math.random() - 0.5) * range * 0.4;
-    }).concat([Math.abs(current)]);
-  };
 
   // Indicadores de Crescimento (Calculados separadamente para usar P1 vs P2)
   const crescimentoReceitas = useMemo(() => {

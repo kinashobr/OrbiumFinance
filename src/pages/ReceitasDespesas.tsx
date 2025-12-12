@@ -41,8 +41,7 @@ const ReceitasDespesas = () => {
     unmarkLoanParcelPaid,
     veiculos,
     addVeiculo,
-    // Removido: investimentosRF,
-    // Removido: addMovimentacaoInvestimento,
+    calculateBalanceUpToDate, // Importado do contexto
   } = useFinance();
 
   // Local state for transfer groups
@@ -98,45 +97,6 @@ const ReceitasDespesas = () => {
     setDateRanges(ranges);
   }, []);
 
-  // Helper function to calculate balance up to a specific date (exclusive)
-  const calculateBalanceUpToDate = useCallback((accountId: string, date: Date | undefined, allTransactions: TransacaoCompleta[], accounts: ContaCorrente[]): number => {
-    const account = accounts.find(a => a.id === accountId);
-    if (!account) return 0;
-
-    // Se a conta tem startDate, o saldo inicial é 0 e dependemos da transação sintética.
-    // Caso contrário, usamos o initialBalance legado.
-    let balance = account.startDate ? 0 : account.initialBalance; 
-    
-    // If no date is provided, calculate global balance (end of all history)
-    const targetDate = date || new Date(9999, 11, 31);
-
-    const transactionsBeforeDate = allTransactions
-        .filter(t => t.accountId === accountId && parseISO(t.date) < targetDate)
-        .sort((a, b) => parseISO(a.date).getTime() - parseISO(b.date).getTime());
-
-    transactionsBeforeDate.forEach(t => {
-        const isCreditCard = account.accountType === 'cartao_credito';
-        
-        if (isCreditCard) {
-          // Cartão de Crédito: Despesa (out) subtrai, Transferência (in) soma
-          if (t.operationType === 'despesa') {
-            balance -= t.amount;
-          } else if (t.operationType === 'transferencia') {
-            balance += t.amount;
-          }
-        } else {
-          // Contas normais: in soma, out subtrai
-          if (t.flow === 'in' || t.flow === 'transfer_in' || t.operationType === 'initial_balance') {
-            balance += t.amount;
-          } else {
-            balance -= t.amount;
-          }
-        }
-    });
-
-    return balance;
-  }, [accounts]); // Dependency on accounts is crucial here
-
   // Filter transactions
   const filteredTransactions = useMemo(() => {
     const range = dateRanges.range1; // Use range1 for filtering transactions in this view
@@ -163,9 +123,7 @@ const ReceitasDespesas = () => {
     
     return accounts.map(account => {
       // 1. Calculate Period Initial Balance (balance right before periodStart)
-      const periodInitialBalance = periodStart 
-        ? calculateBalanceUpToDate(account.id, periodStart, transactions, accounts)
-        : calculateBalanceUpToDate(account.id, undefined, transactions, accounts); // If no period selected, show global current balance as initial balance (end of all history)
+      const periodInitialBalance = calculateBalanceUpToDate(account.id, periodStart, transactions, accounts);
 
       // 2. Calculate Period Transactions (transactions within the selected period)
       const accountTxInPeriod = transactions.filter(t => {
@@ -435,13 +393,7 @@ const ReceitasDespesas = () => {
           const parcelaNumero = parseInt(parcelaNumeroStr);
           
           if (!isNaN(seguroId) && !isNaN(parcelaNumero)) {
-            // Note: addMovimentacaoInvestimento was removed, but markSeguroParcelPaid is still available
-            // We need to ensure markSeguroParcelPaid is called correctly.
-            // The logic for vehicle insurance payment is handled in MovimentarContaModal.tsx
-            // and the transaction is created as a 'despesa' linked via vehicleTransactionId.
-            // The context handles the update.
-            // Since the transaction is already created, we just need to ensure the context updates the SeguroVeiculo.
-            // The logic for this is in FinanceContext.tsx (markSeguroParcelPaid).
+            // The context handles the update via markSeguroParcelPaid
           }
         }
 
@@ -462,9 +414,7 @@ const ReceitasDespesas = () => {
         }
 
         if (transaction.operationType === 'rendimento' && transaction.links?.investmentId) {
-          // Note: addMovimentacaoInvestimento was removed. 
           // The transaction itself (type 'rendimento') is enough to update the account balance.
-          // No extra V1 logic needed here.
         }
         
         console.log("New Transactions to add:", newTransactions); // Debug log

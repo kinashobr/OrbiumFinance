@@ -8,6 +8,7 @@ import {
   Veiculo, // V2 Entity
   SeguroVeiculo, // V2 Entity
   ObjetivoFinanceiro, // V2 Entity
+  AccountType,
 } from "@/types/finance";
 import { parseISO } from "date-fns";
 
@@ -74,6 +75,9 @@ interface FinanceContextType {
   getPatrimonioLiquido: () => number;
   getAtivosTotal: () => number;
   getPassivosTotal: () => number;
+  
+  // Nova função de cálculo de saldo por data
+  calculateBalanceUpToDate: (accountId: string, date: Date | undefined, allTransactions: TransacaoCompleta[], accounts: ContaCorrente[]) => number;
 
   // Exportação e Importação
   exportData: () => void;
@@ -193,6 +197,48 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
   useEffect(() => { saveToStorage(STORAGE_KEYS.CONTAS_MOVIMENTO, contasMovimento); }, [contasMovimento]);
   useEffect(() => { saveToStorage(STORAGE_KEYS.CATEGORIAS_V2, categoriasV2); }, [categoriasV2]);
   useEffect(() => { saveToStorage(STORAGE_KEYS.TRANSACOES_V2, transacoesV2); }, [transacoesV2]);
+
+  // ============================================
+  // FUNÇÃO CENTRAL DE CÁLCULO DE SALDO POR DATA
+  // ============================================
+
+  const calculateBalanceUpToDate = useCallback((accountId: string, date: Date | undefined, allTransactions: TransacaoCompleta[], accounts: ContaCorrente[]): number => {
+    const account = accounts.find(a => a.id === accountId);
+    if (!account) return 0;
+
+    // Se a conta tem startDate, o saldo inicial é 0 e dependemos da transação sintética.
+    // Caso contrário, usamos o initialBalance legado.
+    let balance = account.startDate ? 0 : account.initialBalance; 
+    
+    // If no date is provided, calculate global balance (end of all history)
+    const targetDate = date || new Date(9999, 11, 31);
+
+    const transactionsBeforeDate = allTransactions
+        .filter(t => t.accountId === accountId && parseISO(t.date) < targetDate)
+        .sort((a, b) => parseISO(a.date).getTime() - parseISO(b.date).getTime());
+
+    transactionsBeforeDate.forEach(t => {
+        const isCreditCard = account.accountType === 'cartao_credito';
+        
+        if (isCreditCard) {
+          // Cartão de Crédito: Despesa (out) subtrai, Transferência (in) soma
+          if (t.operationType === 'despesa') {
+            balance -= t.amount;
+          } else if (t.operationType === 'transferencia') {
+            balance += t.amount;
+          }
+        } else {
+          // Contas normais: in soma, out subtrai
+          if (t.flow === 'in' || t.flow === 'transfer_in' || t.operationType === 'initial_balance') {
+            balance += t.amount;
+          } else {
+            balance -= t.amount;
+          }
+        }
+    });
+
+    return balance;
+  }, [contasMovimento, transacoesV2]); // Dependências para garantir que o useCallback seja refeito quando os dados mudam
 
   // ============================================
   // OPERAÇÕES DE ENTIDADES V2 (Empréstimos, Veículos, etc.)
@@ -346,39 +392,6 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
   const getCustoVeiculos = () => {
     return veiculos.filter(v => v.status !== 'vendido').reduce((acc, v) => acc + v.valorSeguro, 0);
   };
-
-  // Helper para calcular saldo até uma data (usado para getSaldoAtual)
-  const calculateBalanceUpToDate = useCallback((accountId: string, date: Date | undefined, allTransactions: TransacaoCompleta[], accounts: ContaCorrente[]): number => {
-    const account = accounts.find(a => a.id === accountId);
-    if (!account) return 0;
-
-    let balance = account.startDate ? 0 : account.initialBalance; 
-    const targetDate = date || new Date(9999, 11, 31);
-
-    const transactionsBeforeDate = allTransactions
-        .filter(t => t.accountId === accountId && parseISO(t.date) < targetDate)
-        .sort((a, b) => parseISO(a.date).getTime() - parseISO(b.date).getTime());
-
-    transactionsBeforeDate.forEach(t => {
-        const isCreditCard = account.accountType === 'cartao_credito';
-        
-        if (isCreditCard) {
-          if (t.operationType === 'despesa') {
-            balance -= t.amount;
-          } else if (t.operationType === 'transferencia') {
-            balance += t.amount;
-          }
-        } else {
-          if (t.flow === 'in' || t.flow === 'transfer_in' || t.operationType === 'initial_balance') {
-            balance += t.amount;
-          } else {
-            balance -= t.amount;
-          }
-        }
-    });
-
-    return balance;
-  }, [contasMovimento, transacoesV2]);
 
   const getSaldoAtual = useCallback(() => {
     let totalBalance = 0;
@@ -556,6 +569,7 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     getPatrimonioLiquido,
     getAtivosTotal,
     getPassivosTotal,
+    calculateBalanceUpToDate, // Exportando a função central
     exportData,
     importData,
     
