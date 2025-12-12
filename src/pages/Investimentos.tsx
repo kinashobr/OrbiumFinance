@@ -83,6 +83,15 @@ const Investimentos = () => {
   
   const [dateRanges, setDateRanges] = useState<ComparisonDateRanges>(initialRanges);
 
+  // --- ESTADOS FALTANTES ---
+  const [showAddRendimento, setShowAddRendimento] = useState<string | null>(null);
+  const [formRendimento, setFormRendimento] = useState({
+    data: new Date().toISOString().split('T')[0],
+    valor: "",
+    descricao: "",
+  });
+  // -------------------------
+
   const handlePeriodChange = useCallback((ranges: ComparisonDateRanges) => {
     setDateRanges(ranges);
   }, []);
@@ -209,7 +218,7 @@ const Investimentos = () => {
     // Adicionar transação (o contexto se encarrega de atualizar o saldo)
     addTransacaoV2(transaction);
     
-    setFormRendimento({ data: "", valor: "", descricao: "" });
+    setFormRendimento({ data: new Date().toISOString().split('T')[0], valor: "", descricao: "" });
     setShowAddRendimento(null);
     toast.success("Rendimento registrado!");
   };
