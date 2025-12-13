@@ -132,7 +132,7 @@ export function LoanDetailDialog({ emprestimo, open, onOpenChange }: LoanDetailD
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[900px] bg-card border-border max-h-[90vh] overflow-hidden flex flex-col">
+      <DialogContent className="sm:max-w-[1100px] bg-card border-border max-h-[90vh] overflow-hidden flex flex-col">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-3">
             <div className="p-2 rounded-lg bg-primary/10">
