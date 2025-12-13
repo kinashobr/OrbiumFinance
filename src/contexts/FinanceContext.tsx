@@ -91,7 +91,7 @@ interface FinanceContextType {
   updateSeguroVeiculo: (id: number, seguro: Partial<SeguroVeiculo>) => void;
   deleteSeguroVeiculo: (id: number) => void;
   markSeguroParcelPaid: (seguroId: number, parcelaNumero: number, transactionId: string) => void;
-  unmarkSeguroParcelPaid: (seguroId: number, parcelaNumero: number) => void;
+  unmarkSeguroParcelPaid: (seguroId: number, parcelaNumero: number) => void; // <-- CORRECTED NAME
   
   // Objetivos Financeiros
   objetivos: ObjetivoFinanceiro[];
@@ -448,7 +448,7 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     }));
   }, []);
   
-  const unmarkSeguroParcelPaid = useCallback((seguroId: number, parcelaNumero: number) => {
+  const unmarkSeguroParcelPaid = useCallback((seguroId: number, parcelaNumero: number) => { // <-- CORRECTED NAME
     setSegurosVeiculo(prevSeguros => prevSeguros.map(seguro => {
       if (seguro.id !== seguroId) return seguro;
       
@@ -679,7 +679,7 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     updateSeguroVeiculo,
     deleteSeguroVeiculo,
     markSeguroParcelPaid,
-    unmarkSeguroParcelPaid,
+    unmarkSeguroParcelPaid, // <-- CORRECTED NAME
     objetivos,
     addObjetivo,
     updateObjetivo,

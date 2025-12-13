@@ -48,7 +48,7 @@ const ReceitasDespesas = () => {
     dateRanges, // <-- Use context state
     setDateRanges, // <-- Use context setter
     markSeguroParcelPaid,
-    unmarkSeguroParcelaid, // <-- Use correct name
+    unmarkSeguroParcelPaid, // <-- Use correct name // <-- FIXED
   } = useFinance();
 
   // Local state for transfer groups
@@ -501,7 +501,7 @@ const ReceitasDespesas = () => {
         const parcelaNumero = parseInt(parcelaNumeroStr);
         
         if (!isNaN(seguroId) && !isNaN(parcelaNumero)) {
-            unmarkSeguroParcelaid(seguroId, parcelaNumero); 
+            unmarkSeguroParcelPaid(seguroId, parcelaNumero); // <-- FIXED
         }
     }
     
@@ -798,7 +798,7 @@ const ReceitasDespesas = () => {
 
         {/* KPI Sidebar - full width */}
         <div className="glass-card p-4">
-          <KPISidebar transactions={filteredTransactions} categories={categories} />
+          <KPISidebar transactions={transacoesPeriodo1} categories={categories} /> {/* <-- FIXED: Using transacoesPeriodo1 */}
         </div>
       </div>
 

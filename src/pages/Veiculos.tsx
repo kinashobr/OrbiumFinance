@@ -52,7 +52,7 @@ const Veiculos = () => {
     updateSeguroVeiculo,
     deleteSeguroVeiculo,
     markSeguroParcelPaid,
-    unmarkSeguroParcelaid, // <-- ADDED
+    unmarkSeguroParcelPaid, // <-- FIXED
     setTransacoesV2, // <-- ADDED
     getValorFipeTotal,
     transacoesV2,
@@ -225,7 +225,7 @@ const Veiculos = () => {
   const handleUnmarkSeguroParcelPaid = (seguroId: number, parcelaNumero: number, transactionId: string | undefined) => {
     if (!window.confirm("Tem certeza que deseja estornar este pagamento? A transação será excluída.")) return;
     
-    unmarkSeguroParcelaid(seguroId, parcelaNumero);
+    unmarkSeguroParcelPaid(seguroId, parcelaNumero);
     
     if (transactionId) {
       setTransacoesV2(prev => prev.filter(t => t.id !== transactionId));
