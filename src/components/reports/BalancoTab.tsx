@@ -470,6 +470,17 @@ export function BalancoTab({ dateRanges }: BalancoTabProps) {
         />
       </div>
 
+      {/* Card de Resumo do Passivo Circulante (NOVO) */}
+      <ReportCard
+        title="Passivo Curto Prazo (Obrigações no Período)"
+        value={formatCurrency(balanco1.passivos.curtoPrazo)}
+        subtitle={`Inclui parcelas de empréstimos, seguros e saldo devedor de cartões (${formatCurrency(balanco1.passivos.passivoCurtoPrazoSeguros)} em seguros)`}
+        status={balanco1.passivos.curtoPrazo > 0 ? "warning" : "success"}
+        icon={<CreditCard className="w-5 h-5" />}
+        delay={300}
+        size="lg"
+      />
+
       {/* Balanço Patrimonial Estruturado */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* ATIVO */}
