@@ -385,20 +385,24 @@
     pointer-events: none;
   }
 
+  /* Corrigindo todas as definições de stat-card para usar border-left direto */
   .stat-card-positive {
-    @apply border-l-4 border-l-success;
+    border-left: 4px solid hsl(var(--success));
   }
 
   .stat-card-negative {
-    @apply border-l-4 border-l-destructive;
+    border-left: 4px solid hsl(var(--destructive));
   }
 
   .stat-card-neutral {
-    @apply border-l-4 border-l-primary;
+    border-left: 4px solid hsl(var(--primary));
+  }
+  
+  .stat-card-warning {
+    border-left: 4px solid hsl(var(--warning));
   }
   
   .stat-card-info {
-    /* Corrigido para usar a cor customizada diretamente */
     border-left: 4px solid hsl(var(--info));
   }
 
