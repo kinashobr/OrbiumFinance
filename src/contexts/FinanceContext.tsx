@@ -91,7 +91,7 @@ interface FinanceContextType {
   updateSeguroVeiculo: (id: number, seguro: Partial<SeguroVeiculo>) => void;
   deleteSeguroVeiculo: (id: number) => void;
   markSeguroParcelPaid: (seguroId: number, parcelaNumero: number, transactionId: string) => void;
-  unmarkSeguroParcelPaid: (seguroId: number, parcelaNumero: number) => void; // <-- CORRECTED NAME
+  unmarkSeguroParcelPaid: (seguroId: number, parcelaNumero: number) => void;
   
   // Objetivos Financeiros
   objetivos: ObjetivoFinanceiro[];
@@ -123,19 +123,20 @@ interface FinanceContextType {
   getTotalDividas: () => number;
   getCustoVeiculos: () => number;
   getSaldoAtual: () => number;
-  getValorFipeTotal: () => number;
   
-  // Cálculos avançados para relatórios
-  getSaldoDevedor: () => number;
+  // Cálculos avançados para relatórios (AGORA PERIOD-AWARE)
+  getValorFipeTotal: (targetDate?: Date) => number;
+  getSaldoDevedor: (targetDate?: Date) => number;
   getJurosTotais: () => number;
   getDespesasFixas: () => number;
-  getPatrimonioLiquido: () => number;
-  getAtivosTotal: () => number;
-  getPassivosTotal: () => number;
+  getPatrimonioLiquido: (targetDate?: Date) => number;
+  getAtivosTotal: (targetDate?: Date) => number;
+  getPassivosTotal: (targetDate?: Date) => number;
   
   // Nova função de cálculo de saldo por data
   calculateBalanceUpToDate: (accountId: string, date: Date | undefined, allTransactions: TransacaoCompleta[], accounts: ContaCorrente[]) => number;
   calculateTotalInvestmentBalanceAtDate: (date: Date | undefined) => number;
+  calculatePaidInstallmentsUpToDate: (loanId: number, targetDate: Date) => number; // <-- NEW
 
   // Exportação e Importação
   exportData: () => void;
@@ -353,6 +354,38 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
         return acc + Math.max(0, balance);
     }, 0);
   }, [contasMovimento, transacoesV2, calculateBalanceUpToDate]);
+  
+  const calculatePaidInstallmentsUpToDate = useCallback((loanId: number, targetDate: Date): number => {
+    const loan = emprestimos.find(e => e.id === loanId);
+    if (!loan || !loan.dataInicio) return 0;
+
+    // 1. Find all payment transactions linked to this loan
+    const loanPayments = transacoesV2.filter(t => 
+      t.operationType === 'pagamento_emprestimo' && 
+      t.links?.loanId === `loan_${loanId}`
+    );
+
+    // 2. Filter payments that occurred on or before the targetDate
+    const paymentsUpToDate = loanPayments.filter(t => 
+      parseDateLocal(t.date) <= targetDate
+    );
+    
+    // 3. If payments are tracked by parcelaId, count unique parcelaIds paid up to date.
+    const paidParcelas = new Set<string>();
+    paymentsUpToDate.forEach(p => {
+        if (p.links?.parcelaId) {
+            paidParcelas.add(p.links.parcelaId);
+        }
+    });
+    
+    if (paidParcelas.size > 0) {
+        return paidParcelas.size;
+    }
+
+    // 4. Fallback: If no specific parcelaId is tracked, count the number of payments.
+    return paymentsUpToDate.length;
+
+  }, [emprestimos, transacoesV2]);
 
   // ============================================
   // OPERAÇÕES DE ENTIDADES V2 (Empréstimos, Veículos, etc.)
@@ -448,7 +481,7 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     }));
   }, []);
   
-  const unmarkSeguroParcelPaid = useCallback((seguroId: number, parcelaNumero: number) => { // <-- CORRECTED NAME
+  const unmarkSeguroParcelPaid = useCallback((seguroId: number, parcelaNumero: number) => {
     setSegurosVeiculo(prevSeguros => prevSeguros.map(seguro => {
       if (seguro.id !== seguroId) return seguro;
       
@@ -496,7 +529,7 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
   // Removida getInitialBalanceContraAccount
 
   // ============================================
-  // CÁLCULOS - Baseados em TransacoesV2
+  // CÁLCULOS - Baseados em TransacoesV2 (AGORA PERIOD-AWARE)
   // ============================================
 
   const getTotalReceitas = (mes?: string): number => {
@@ -538,14 +571,22 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     return totalBalance;
   }, [contasMovimento, transacoesV2, calculateBalanceUpToDate]);
 
-  const getValorFipeTotal = () => {
-    return veiculos.filter(v => v.status !== 'vendido').reduce((acc, v) => acc + v.valorFipe, 0);
-  };
+  const getValorFipeTotal = useCallback((targetDate?: Date) => {
+    const date = targetDate || new Date(9999, 11, 31);
+    return veiculos
+        .filter(v => v.status !== 'vendido' && parseDateLocal(v.dataCompra) <= date)
+        .reduce((acc, v) => acc + v.valorFipe, 0);
+  }, [veiculos]);
 
   // Cálculos avançados
-  const getSaldoDevedor = () => {
+  const getSaldoDevedor = useCallback((targetDate?: Date) => {
+    const date = targetDate || new Date(9999, 11, 31); // Use end of time if no date provided
+
     const saldoEmprestimos = emprestimos.reduce((acc, e) => {
-      const parcelasRestantes = e.meses - (e.parcelasPagas || 0);
+      // Calculate paid installments up to the target date
+      const paidUpToDate = calculatePaidInstallmentsUpToDate(e.id, date);
+      
+      const parcelasRestantes = e.meses - paidUpToDate;
       const saldoDevedor = Math.max(0, parcelasRestantes * e.parcela);
       return acc + saldoDevedor;
     }, 0);
@@ -553,12 +594,13 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     const saldoCartoes = contasMovimento
       .filter(c => c.accountType === 'cartao_credito')
       .reduce((acc, c) => {
-        const balance = calculateBalanceUpToDate(c.id, undefined, transacoesV2, contasMovimento);
-        return acc + Math.abs(Math.min(0, balance));
+        // Calculate CC balance up to the target date
+        const balance = calculateBalanceUpToDate(c.id, date, transacoesV2, contasMovimento);
+        return acc + Math.abs(Math.min(0, balance)); // Only negative balance is liability
       }, 0);
       
     return saldoEmprestimos + saldoCartoes;
-  };
+  }, [emprestimos, contasMovimento, transacoesV2, calculateBalanceUpToDate, calculatePaidInstallmentsUpToDate]);
 
   const getJurosTotais = () => {
     return emprestimos.reduce((acc, e) => {
@@ -576,26 +618,29 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     return despesasFixas.reduce((acc, t) => acc + t.amount, 0);
   };
 
-  const getAtivosTotal = useCallback(() => {
-    // Ativos = Saldo de contas (exceto CC) + Investimentos (V2) + Veículos
+  const getAtivosTotal = useCallback((targetDate?: Date) => {
+    const date = targetDate || new Date(9999, 11, 31);
+
+    // 1. Saldo de contas (exceto CC)
     const saldoContasAtivas = contasMovimento
       .filter(c => c.accountType !== 'cartao_credito')
       .reduce((acc, c) => {
-        const balance = calculateBalanceUpToDate(c.id, undefined, transacoesV2, contasMovimento);
+        const balance = calculateBalanceUpToDate(c.id, date, transacoesV2, contasMovimento);
         return acc + Math.max(0, balance); // Apenas saldos positivos são ativos
       }, 0);
       
-    const valorVeiculos = getValorFipeTotal();
+    // 2. Valor FIPE de veículos ativos na data
+    const valorVeiculos = getValorFipeTotal(date);
                           
     return saldoContasAtivas + valorVeiculos;
   }, [contasMovimento, transacoesV2, getValorFipeTotal, calculateBalanceUpToDate]);
 
-  const getPassivosTotal = useCallback(() => {
-    return getSaldoDevedor();
+  const getPassivosTotal = useCallback((targetDate?: Date) => {
+    return getSaldoDevedor(targetDate);
   }, [getSaldoDevedor]);
 
-  const getPatrimonioLiquido = useCallback(() => {
-    return getAtivosTotal() - getPassivosTotal();
+  const getPatrimonioLiquido = useCallback((targetDate?: Date) => {
+    return getAtivosTotal(targetDate) - getPassivosTotal(targetDate);
   }, [getAtivosTotal, getPassivosTotal]);
 
   // ============================================
@@ -679,7 +724,7 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     updateSeguroVeiculo,
     deleteSeguroVeiculo,
     markSeguroParcelPaid,
-    unmarkSeguroParcelPaid, // <-- CORRECTED NAME
+    unmarkSeguroParcelPaid,
     objetivos,
     addObjetivo,
     updateObjetivo,
@@ -711,6 +756,7 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     getPassivosTotal,
     calculateBalanceUpToDate, // Exportando a função central
     calculateTotalInvestmentBalanceAtDate,
+    calculatePaidInstallmentsUpToDate, // Exporting the new function
     exportData,
     importData,
     
