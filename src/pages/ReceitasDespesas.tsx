@@ -3,7 +3,7 @@ import { MainLayout } from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
 import { RefreshCw, Tags, Plus } from "lucide-react";
 import { toast } from "sonner";
-import { isWithinInterval, startOfMonth, endOfMonth, subDays, startOfDay, endOfDay, addMonths } from "date-fns";
+import { isWithinInterval, startOfMonth, endOfMonth, subDays, startOfDay, endOfDay, addMonths, format } from "date-fns";
 
 // Types
 import { 
@@ -742,7 +742,7 @@ const ReceitasDespesas = () => {
 
           return {
             numero: i + 1,
-            vencimento: vencimento.toISOString().split('T')[0],
+            vencimento: format(vencimento, 'yyyy-MM-dd'),
             valor: e.parcela,
             pago: !!paymentTx, // Considera pago se houver transação
             transactionId: paymentTx?.id,

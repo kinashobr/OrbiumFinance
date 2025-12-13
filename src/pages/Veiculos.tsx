@@ -36,7 +36,7 @@ import { toast } from "sonner";
 import { FipeConsultaDialog } from "@/components/vehicles/FipeConsultaDialog";
 import { TransacaoCompleta, generateTransactionId, OperationType, getFlowTypeFromOperation, getDomainFromOperation } from "@/types/finance";
 import { useNavigate } from "react-router-dom";
-import { differenceInMonths, addMonths, parseISO } from "date-fns";
+import { differenceInMonths, addMonths, parseISO, format } from "date-fns";
 
 const Veiculos = () => {
   const navigate = useNavigate();
@@ -51,7 +51,6 @@ const Veiculos = () => {
     addSeguroVeiculo,
     updateSeguroVeiculo,
     deleteSeguroVeiculo,
-    markSeguroParcelPaid,
     unmarkSeguroParcelPaid, // <-- FIXED
     setTransacoesV2, // <-- ADDED
     getValorFipeTotal,
@@ -168,7 +167,7 @@ const Veiculos = () => {
       parcelas.push({
         numero: i + 1,
         // Salvar como string YYYY-MM-DD
-        vencimento: dataVencimento.toISOString().split('T')[0],
+        vencimento: format(dataVencimento, 'yyyy-MM-dd'),
         valor: valorParcela, // Sem meia parcela
         paga: false,
       });
