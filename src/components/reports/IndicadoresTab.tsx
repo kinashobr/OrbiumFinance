@@ -220,6 +220,20 @@ export function IndicadoresTab({ dateRanges }: IndicadoresTabProps) {
     saveCustomIndicators(customIndicators.filter(i => i.id !== id));
     toast.success("Indicador removido");
   };
+  
+  // Implementação de handleReset
+  const handleReset = () => {
+    setNewIndicator({
+      nome: '',
+      descricao: '',
+      formula: '',
+      formato: 'percent',
+      limiteVerde: 0,
+      limiteAmarelo: 0,
+      invertido: false,
+    });
+    setDialogOpen(false);
+  };
 
   // 2. Calcular saldo de cada conta baseado nas transações do período (Saldo Final do Período)
   const calculateFinalBalances = useCallback((transactions: typeof transacoesV2, periodStart: Date | undefined) => {

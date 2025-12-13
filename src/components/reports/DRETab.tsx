@@ -125,7 +125,7 @@ function DREItem({ label, value, type, level = 0, icon, subItems }: DREItemProps
         >
           <span className="text-xs text-muted-foreground">{item.label}</span>
           <span className={cn("text-xs tabular-nums", type === "receita" ? "text-success/80" : "text-destructive/80")}>
-            {formatCurrency(item.valor)}
+            {formatCurrency(item.value)}
           </span>
         </div>
       ))}
