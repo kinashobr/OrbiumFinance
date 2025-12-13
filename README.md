@@ -1,55 +1,56 @@
-# Welcome to Orbium Finance Dashboard
+# Orbium Finance Dashboard
 
-## Project info
+## Informações do Projeto
 
-This is the repository for the Orbium Finance Dashboard application.
+Este é o repositório do aplicativo Orbium Finance Dashboard, uma ferramenta completa para gestão de finanças pessoais, investimentos e patrimônio.
 
-## How can I edit this code?
+## Como Editar o Código
 
-If you want to work locally using your own IDE, you can clone this repo and push changes.
+Se você deseja trabalhar localmente usando seu próprio IDE, pode clonar este repositório e enviar as alterações.
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+O único requisito é ter o Node.js e o npm instalados - [instale com nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
 
-Follow these steps:
+Siga estes passos:
 
 ```sh
-# Step 1: Clone the repository using the project's Git URL.
+# Passo 1: Clone o repositório usando a URL Git do projeto.
 git clone <YOUR_GIT_URL>
 
-# Step 2: Navigate to the project directory.
+# Passo 2: Navegue até o diretório do projeto.
 cd <YOUR_PROJECT_NAME>
 
-# Step 3: Install the necessary dependencies.
+# Passo 3: Instale as dependências necessárias.
 npm i
 
-# Step 4: Start the development server with auto-reloading and an instant preview.
+# Passo 4: Inicie o servidor de desenvolvimento com recarregamento automático e uma prévia instantânea.
 npm run dev
 ```
 
-**Edit a file directly in GitHub**
+**Edite um arquivo diretamente no GitHub**
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+- Navegue até o(s) arquivo(s) desejado(s).
+- Clique no botão "Editar" (ícone de lápis) no canto superior direito da visualização do arquivo.
+- Faça suas alterações e confirme o commit.
 
-**Use GitHub Codespaces**
+**Use o GitHub Codespaces**
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+- Navegue até a página principal do seu repositório.
+- Clique no botão "Code" (botão verde) próximo ao canto superior direito.
+- Selecione a aba "Codespaces".
+- Clique em "New codespace" para iniciar um novo ambiente Codespace.
+- Edite os arquivos diretamente no Codespace e confirme e envie suas alterações quando terminar.
 
-## What technologies are used for this project?
+## Tecnologias Utilizadas
 
-This project is built with:
+Este projeto é construído com:
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+- **Frontend Framework**: React 18 com TypeScript
+- **Styling**: Tailwind CSS com shadcn/ui components
+- **Routing**: React Router v6
+- **State Management**: React Context API
+- **Charts**: Recharts
+- **Icons**: Lucide React
 
-## Deployment
+## Implantação
 
-This application is designed to be deployed as a static web application.
+Esta aplicação foi projetada para ser implantada como um aplicativo web estático.
