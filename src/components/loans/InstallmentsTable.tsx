@@ -281,7 +281,7 @@ export function InstallmentsTable({ emprestimo, className }: InstallmentsTablePr
                         <StatusIcon className="w-3 h-3" />
                         {config.label}
                       </Badge>
-                    </TableCell>
+                    </TableCell> 
                     <TableCell className="text-center font-medium">
                       {isPaid ? formatCurrency(parcela.valorPago || emprestimo.parcela) : '-'}
                     </TableCell>
