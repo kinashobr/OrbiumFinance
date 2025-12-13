@@ -37,6 +37,8 @@
 
     --warning: 38 80% 50%;
     --warning-foreground: 25 30% 15%;
+    
+    --info: 199 89% 48%; /* Adicionado: Cor para Liquidez/Info */
 
     --border: 30 20% 82%;
     --input: 30 15% 88%;
@@ -100,6 +102,8 @@
 
     --warning: 38 92% 50%;
     --warning-foreground: 220 20% 4%;
+    
+    --info: 185 100% 50%; /* Adicionado: Cor para Liquidez/Info (Neon Cyan) */
 
     --border: 220 20% 18%;
     --input: 220 20% 14%;
@@ -161,6 +165,8 @@
 
     --warning: 40 85% 50%;
     --warning-foreground: 215 30% 15%;
+    
+    --info: 200 80% 50%; /* Adicionado: Cor para Liquidez/Info */
 
     --border: 210 20% 88%;
     --input: 210 15% 92%;
@@ -219,6 +225,8 @@
 
     --warning: 35 80% 48%;
     --warning-foreground: 150 25% 15%;
+    
+    --info: 165 60% 42%; /* Adicionado: Cor para Liquidez/Info */
 
     --border: 140 15% 85%;
     --input: 140 12% 90%;
@@ -277,6 +285,8 @@
 
     --warning: 45 100% 40%;
     --warning-foreground: 0 0% 0%;
+    
+    --info: 200 100% 35%; /* Adicionado: Cor para Liquidez/Info */
 
     --border: 0 0% 0%;
     --input: 0 0% 92%;
