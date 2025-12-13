@@ -397,13 +397,17 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     if (!loan || loan.meses === 0 || loan.taxaMensal === 0) return null;
 
     const taxa = loan.taxaMensal / 100;
+    
+    // Helper para arredondar para 2 casas decimais
+    const round = (num: number) => Math.round(num * 100) / 100;
+    
     let saldoDevedor = loan.valorTotal;
     
     // Simular o saldo devedor até a parcela anterior
     for (let i = 1; i < parcelaNumber; i++) {
       const juros = saldoDevedor * taxa;
       const amortizacao = loan.parcela - juros;
-      saldoDevedor = Math.max(0, saldoDevedor - amortizacao);
+      saldoDevedor = round(Math.max(0, saldoDevedor - amortizacao)); // Apply rounding here
     }
     
     // Calcular a parcela atual
@@ -412,9 +416,9 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     const novoSaldoDevedor = Math.max(0, saldoDevedor - amortizacao);
 
     return {
-      juros: Math.max(0, juros),
-      amortizacao: Math.max(0, amortizacao),
-      saldoDevedor: novoSaldoDevedor,
+      juros: round(Math.max(0, juros)),
+      amortizacao: round(Math.max(0, amortizacao)),
+      saldoDevedor: round(novoSaldoDevedor),
     };
   }, [emprestimos]);
 
