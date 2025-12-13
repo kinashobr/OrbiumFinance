@@ -62,7 +62,7 @@ export function CockpitCards({ data }: CockpitCardsProps) {
       value: formatCurrency(data.liquidezImediata),
       icon: Droplets,
       color: 'text-info',
-      bgColor: 'bg-info/30', // Aumentado para 30% de opacidade
+      bgColor: 'bg-info/50', // Aumentado para 50% de opacidade
       status: data.liquidezImediata > 0 ? 'info' : 'danger',
     },
     {
