@@ -74,6 +74,47 @@ interface DRETabProps {
   dateRanges: ComparisonDateRanges;
 }
 
+// Define formatCurrency outside DRETab so DREItem can use it
+const formatCurrency = (value: number) => `R$ ${value.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`;
+
+interface DREItemProps {
+  label: string;
+  value: number;
+  type: 'receita' | 'despesa' | 'subtotal' | 'resultado';
+  icon?: React.ReactNode;
+  level?: number;
+}
+
+function DREItem({ label, value, type, icon, level = 0 }: DREItemProps) {
+  const baseClasses = "flex items-center justify-between py-2 px-4 border-b border-border/50";
+  
+  const typeClasses = {
+    receita: "text-success",
+    despesa: "text-destructive",
+    subtotal: "font-semibold bg-muted/30 border-t border-b border-border/80",
+    resultado: "font-bold text-lg bg-primary/10 border-t-2 border-b-2 border-primary/50",
+  };
+  
+  // Calculate padding based on level (e.g., level 1 -> pl-8, level 0 -> pl-4)
+  const paddingClass = `pl-${4 + level * 4}`;
+
+  return (
+    <div className={cn(baseClasses, typeClasses[type], paddingClass)}>
+      <div className="flex items-center gap-2">
+        {icon}
+        <span className={cn("text-sm", type === 'resultado' && "text-base")}>{label}</span>
+      </div>
+      <span className={cn(
+        "font-medium whitespace-nowrap",
+        type === 'resultado' && "text-xl"
+      )}>
+        {formatCurrency(value)}
+      </span>
+    </div>
+  );
+}
+
+
 export function DRETab({ dateRanges }: DRETabProps) {
   const {
     transacoesV2,
@@ -329,8 +370,6 @@ export function DRETab({ dateRanges }: DRETabProps) {
     return resultado;
   }, [transacoesV2, now]);
 
-  const formatCurrency = (value: number) => `R$ ${value.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`;
-
   const getStatus = (value: number): KPIStatus => {
     if (value > 0) return "success";
     if (value < 0) return "danger";
@@ -494,7 +533,7 @@ export function DRETab({ dateRanges }: DRETabProps) {
                     contentStyle={{
                       backgroundColor: "hsl(var(--card))",
                       border: "1px solid hsl(var(--border))",
-                      borderRadius: "8px",
+                      borderRadius: "12px",
                     }}
                     formatter={(value: number) => [formatCurrency(value), "Valor"]}
                   />
