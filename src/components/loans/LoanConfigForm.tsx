@@ -86,7 +86,7 @@ export function LoanConfigForm({
   const handleSave = () => {
     if (!canSave) return;
 
-    onSave({
+    const payload: Partial<Emprestimo> = {
       contaCorrenteId: formData.contaCorrenteId,
       valorTotal: Number(formData.valorTotal),
       parcela: Number(formData.parcela),
@@ -94,9 +94,15 @@ export function LoanConfigForm({
       meses: Number(formData.meses),
       dataInicio: formData.dataInicio,
       observacoes: formData.observacoes,
-      status: 'ativo',
-      parcelasPagas: 0,
-    });
+    };
+
+    if (isPending) {
+      // Se for a primeira configuração, define status e parcelas pagas
+      payload.status = 'ativo';
+      payload.parcelasPagas = 0;
+    }
+    
+    onSave(payload);
     
     // Fecha o modal após salvar
     onCancel();

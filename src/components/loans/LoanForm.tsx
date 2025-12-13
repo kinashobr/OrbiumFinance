@@ -42,6 +42,7 @@ interface LoanFormProps {
     taxaMensal: number;
     valorTotal: number;
     contaCorrenteId?: string;
+    dataInicio: string;
   }) => void;
   contasCorrentes?: ContaCorrente[];
   className?: string;
@@ -95,6 +96,7 @@ export function LoanForm({ onSubmit, contasCorrentes = [], className }: LoanForm
       taxaMensal: Number(formData.taxaMensal),
       valorTotal: Number(formData.valorTotal),
       contaCorrenteId: formData.contaCorrenteId,
+      dataInicio: formData.dataInicio || new Date().toISOString().split('T')[0],
     });
 
     setFormData({
