@@ -125,7 +125,7 @@ function DREItem({ label, value, type, level = 0, icon, subItems }: DREItemProps
         >
           <span className="text-xs text-muted-foreground">{item.label}</span>
           <span className={cn("text-xs tabular-nums", type === "receita" ? "text-success/80" : "text-destructive/80")}>
-            {formatCurrency(item.value)}
+            {formatCurrency(item.valor)}
           </span>
         </div>
       ))}
@@ -177,10 +177,9 @@ export function DRETab({ dateRanges }: DRETabProps) {
   const calculateDRE = useCallback((transactions: TransacaoCompleta[]) => {
     const categoriasMap = new Map(categoriasV2.map(c => [c.id, c]));
 
+    // 1. RECEITAS: Apenas operações de 'receita' e 'rendimento'
     const transacoesReceita = transactions.filter(t => 
-      t.flow === 'in' && 
-      t.operationType !== 'transferencia' &&
-      t.operationType !== 'liberacao_emprestimo'
+      t.operationType === 'receita' || t.operationType === 'rendimento'
     );
 
     const receitasAgrupadas = new Map<string, number>();
@@ -196,19 +195,19 @@ export function DRETab({ dateRanges }: DRETabProps) {
     });
     receitasPorCategoria.sort((a, b) => b.valor - a.valor);
 
+    // 2. DESPESAS OPERACIONAIS: Todas as saídas que NÃO são transferências, aplicações, resgates ou pagamentos de empréstimo
     const despesasFixas: { categoria: string; valor: number }[] = [];
     const despesasVariaveis: { categoria: string; valor: number }[] = [];
     
-    const transacoesDespesa = transactions.filter(t => 
-      t.flow === 'out' && 
-      t.operationType !== 'transferencia' &&
-      t.operationType !== 'aplicacao'
+    const transacoesDespesaOperacional = transactions.filter(t => 
+      (t.operationType === 'despesa' || t.operationType === 'veiculo') &&
+      t.flow === 'out'
     );
 
     const despesasFixasMap = new Map<string, number>();
     const despesasVariaveisMap = new Map<string, number>();
 
-    transacoesDespesa.forEach(t => {
+    transacoesDespesaOperacional.forEach(t => {
       const cat = categoriasMap.get(t.categoryId || '');
       const catLabel = cat?.label || 'Outras Despesas';
       const nature = cat?.nature || 'despesa_variavel';
@@ -216,6 +215,7 @@ export function DRETab({ dateRanges }: DRETabProps) {
       if (nature === 'despesa_fixa') {
         despesasFixasMap.set(catLabel, (despesasFixasMap.get(catLabel) || 0) + t.amount);
       } else {
+        // Inclui despesa_variavel e outros (fallback)
         despesasVariaveisMap.set(catLabel, (despesasVariaveisMap.get(catLabel) || 0) + t.amount);
       }
     });
@@ -230,22 +230,23 @@ export function DRETab({ dateRanges }: DRETabProps) {
     despesasVariaveis.sort((a, b) => b.valor - a.valor);
 
     const totalReceitas = receitasPorCategoria.reduce((acc, r) => acc + r.valor, 0);
-    const totalDespesasFixas = despesasFixas.reduce((acc, d) => acc + d.valor, 0);
-    const totalDespesasVariaveis = despesasVariaveis.reduce((acc, d) => acc + d.valor, 0);
-    const totalDespesas = totalDespesasFixas + totalDespesasVariaveis;
-
-    // Juros e Encargos: Usamos apenas os pagamentos de empréstimo do período
+    const despesasOperacionaisFixas = despesasFixas.reduce((acc, d) => acc + d.valor, 0);
+    const despesasOperacionaisVariaveis = despesasVariaveis.reduce((acc, d) => acc + d.valor, 0);
+    
+    // Juros e Encargos (Pagamentos de Empréstimo)
     const jurosEmprestimos = transactions
       .filter(t => t.operationType === 'pagamento_emprestimo')
       .reduce((acc, t) => acc + t.amount, 0);
+      
+    const totalDespesasOperacionais = despesasOperacionaisFixas + despesasOperacionaisVariaveis;
 
-    const resultadoBruto = totalReceitas - totalDespesasFixas;
-    const resultadoOperacional = resultadoBruto - totalDespesasVariaveis;
-    const resultadoLiquido = resultadoOperacional - jurosEmprestimos;
+    const resultadoBruto = totalReceitas - despesasOperacionaisFixas;
+    const resultadoOperacional = resultadoBruto - despesasOperacionaisVariaveis;
+    const resultadoLiquido = resultadoOperacional - jurosEmprestimos; // Juros e Encargos
 
     const composicaoDespesas = [
-      { name: "Despesas Fixas", value: totalDespesasFixas, color: COLORS.danger },
-      { name: "Despesas Variáveis", value: totalDespesasVariaveis, color: COLORS.warning },
+      { name: "Despesas Fixas", value: despesasOperacionaisFixas, color: COLORS.danger },
+      { name: "Despesas Variáveis", value: despesasOperacionaisVariaveis, color: COLORS.warning },
       { name: "Juros e Encargos", value: jurosEmprestimos, color: COLORS.accent },
     ].filter(item => item.value > 0);
 
@@ -255,7 +256,7 @@ export function DRETab({ dateRanges }: DRETabProps) {
 
     return {
       totalReceitas,
-      totalDespesas,
+      totalDespesas: totalDespesasOperacionais + jurosEmprestimos, // Total de saídas operacionais + juros
       resultadoLiquido,
       resultadoBruto,
       resultadoOperacional,
@@ -267,8 +268,8 @@ export function DRETab({ dateRanges }: DRETabProps) {
       margemBruta,
       margemOperacional,
       margemLiquida,
-      totalDespesasFixas,
-      totalDespesasVariaveis,
+      totalDespesasFixas: despesasOperacionaisFixas,
+      totalDespesasVariaveis: despesasOperacionaisVariaveis,
     };
   }, [categoriasV2]);
 
@@ -310,10 +311,10 @@ export function DRETab({ dateRanges }: DRETabProps) {
       });
 
       const receitasMes = transacoesMes
-        .filter(t => t.flow === 'in' && t.operationType !== 'transferencia' && t.operationType !== 'liberacao_emprestimo')
+        .filter(t => t.operationType === 'receita' || t.operationType === 'rendimento')
         .reduce((acc, t) => acc + t.amount, 0);
       const despesasMes = transacoesMes
-        .filter(t => t.flow === 'out' && t.operationType !== 'transferencia' && t.operationType !== 'aplicacao')
+        .filter(t => t.operationType === 'despesa' || t.operationType === 'pagamento_emprestimo' || t.operationType === 'veiculo')
         .reduce((acc, t) => acc + t.amount, 0);
 
       resultado.push({
@@ -343,7 +344,7 @@ export function DRETab({ dateRanges }: DRETabProps) {
           value={formatCurrency(dre1.totalReceitas)}
           status="success"
           icon={<TrendingUp className="w-5 h-5" />}
-          tooltip="Soma de todas as entradas (exceto transferências e empréstimos)"
+          tooltip="Soma de todas as entradas (exceto transferências, resgates e empréstimos)"
           delay={0}
         />
         <ReportCard
@@ -351,7 +352,7 @@ export function DRETab({ dateRanges }: DRETabProps) {
           value={formatCurrency(dre1.totalDespesas)}
           status="danger"
           icon={<TrendingDown className="w-5 h-5" />}
-          tooltip="Soma de todas as saídas (exceto transferências e aplicações)"
+          tooltip="Soma de todas as saídas operacionais e pagamentos de empréstimo"
           delay={50}
         />
         <ReportCard
@@ -359,7 +360,7 @@ export function DRETab({ dateRanges }: DRETabProps) {
           value={formatCurrency(dre1.resultadoLiquido)}
           status={getStatus(dre1.resultadoLiquido)}
           icon={<DollarSign className="w-5 h-5" />}
-          tooltip="Receita Total - Despesa Total - Juros"
+          tooltip="Receita Total - Despesa Operacional - Juros/Encargos"
           delay={100}
         />
         <ReportCard
@@ -411,8 +412,7 @@ export function DRETab({ dateRanges }: DRETabProps) {
             <DREItem label="RESULTADO OPERACIONAL" value={dre1.resultadoOperacional} type="subtotal" icon={<Equal className="w-4 h-4" />} />
 
             {/* Juros e Encargos */}
-            <DREItem label="(-) JUROS E ENCARGOS" value={dre1.jurosEmprestimos} type="despesa" icon={<CreditCard className="w-4 h-4" />} />
-            <DREItem label="Pagamentos de Empréstimo" value={dre1.jurosEmprestimos} type="despesa" level={1} />
+            <DREItem label="(-) JUROS E ENCARGOS (Pagamentos de Empréstimo)" value={dre1.jurosEmprestimos} type="despesa" icon={<CreditCard className="w-4 h-4" />} />
 
             {/* Resultado Líquido */}
             <DREItem label="RESULTADO LÍQUIDO" value={dre1.resultadoLiquido} type="resultado" icon={<DollarSign className="w-4 h-4" />} />

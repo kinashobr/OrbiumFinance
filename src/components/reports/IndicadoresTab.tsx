@@ -285,15 +285,17 @@ export function IndicadoresTab({ dateRanges }: IndicadoresTabProps) {
     const saldosPorConta = calculateFinalBalances(transacoesPeriodo, range.from);
     
     // Ativos
+    // Contas Circulantes (incluindo Renda Fixa e Poupança)
     const contasLiquidas = contasMovimento.filter(c => 
-      ['conta_corrente', 'poupanca', 'reserva_emergencia'].includes(c.accountType)
+      ['conta_corrente', 'poupanca', 'reserva_emergencia', 'aplicacao_renda_fixa'].includes(c.accountType)
     );
     const caixaTotal = contasLiquidas.reduce((acc, c) => acc + Math.max(0, saldosPorConta[c.id] || 0), 0);
 
-    const contasInvestimento = contasMovimento.filter(c => 
-      ['aplicacao_renda_fixa', 'criptoativos', 'objetivos_financeiros'].includes(c.accountType)
+    // Contas Não Circulantes (Apenas Cripto e Objetivos)
+    const contasInvestimentoNaoCirculante = contasMovimento.filter(c => 
+      ['criptoativos', 'objetivos_financeiros'].includes(c.accountType)
     );
-    const investimentosTotal = contasInvestimento.reduce((acc, c) => acc + Math.max(0, saldosPorConta[c.id] || 0), 0);
+    const investimentosTotal = contasInvestimentoNaoCirculante.reduce((acc, c) => acc + Math.max(0, saldosPorConta[c.id] || 0), 0);
     
     const valorVeiculos = veiculos.filter(v => v.status !== 'vendido').reduce((acc, v) => acc + (v.valorFipe || v.valorVeiculo || 0), 0);
 
@@ -301,23 +303,24 @@ export function IndicadoresTab({ dateRanges }: IndicadoresTabProps) {
 
     // Passivos
     const emprestimosAtivos = emprestimos.filter(e => e.status !== 'quitado');
-    const saldoDevedor = getSaldoDevedor(); // Saldo devedor global
+    const saldoDevedor = getSaldoDevedor(); // Saldo devedor global (Principal + Juros restantes)
     const totalPassivos = getPassivosTotal(); // Total passivo global
 
     // Passivo curto prazo (próximos 12 meses de parcelas + saldo CC)
     const passivoCurtoPrazo = emprestimosAtivos.reduce((acc, e) => {
-      const parcelasRestantes = Math.min(12, e.meses - (e.parcelasPagas || 0));
-      return acc + (e.parcela * parcelasRestantes);
+      const parcelasRestantes = Math.max(0, e.meses - (e.parcelasPagas || 0));
+      const parcelasCurtoPrazo = Math.min(12, parcelasRestantes);
+      return acc + (e.parcela * parcelasCurtoPrazo);
     }, 0) + contasMovimento
       .filter(c => c.accountType === 'cartao_credito')
       .reduce((acc, c) => acc + Math.abs(Math.min(0, saldosPorConta[c.id] || 0)), 0);
 
     // Receitas e Despesas do período
     const calcReceitas = (trans: typeof transacoesV2) => trans
-      .filter(t => t.flow === 'in' && t.operationType !== 'transferencia' && t.operationType !== 'liberacao_emprestimo')
+      .filter(t => t.operationType === 'receita' || t.operationType === 'rendimento')
       .reduce((acc, t) => acc + t.amount, 0);
     const calcDespesas = (trans: typeof transacoesV2) => trans
-      .filter(t => t.flow === 'out' && t.operationType !== 'transferencia' && t.operationType !== 'aplicacao')
+      .filter(t => t.operationType === 'despesa' || t.operationType === 'pagamento_emprestimo' || t.operationType === 'veiculo')
       .reduce((acc, t) => acc + t.amount, 0);
 
     const receitasMesAtual = calcReceitas(transacoesPeriodo);
@@ -328,7 +331,7 @@ export function IndicadoresTab({ dateRanges }: IndicadoresTabProps) {
     const categoriasMap = new Map(categoriasV2.map(c => [c.id, c]));
     let despesasFixasMes = 0;
     
-    transacoesPeriodo.filter(t => t.flow === 'out' && t.operationType !== 'transferencia').forEach(t => {
+    transacoesPeriodo.filter(t => t.flow === 'out' && t.operationType !== 'transferencia' && t.operationType !== 'aplicacao').forEach(t => {
       const cat = categoriasMap.get(t.categoryId || '');
       if (cat?.nature === 'despesa_fixa') {
         despesasFixasMes += t.amount;
@@ -625,7 +628,7 @@ export function IndicadoresTab({ dateRanges }: IndicadoresTabProps) {
               </div>
             </div>
             <DialogFooter>
-              <Button variant="outline" onClick={() => setDialogOpen(false)}>
+              <Button variant="outline" onClick={handleReset}>
                 Cancelar
               </Button>
               <Button onClick={handleAddIndicator} className="gap-2">

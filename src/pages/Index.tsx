@@ -70,10 +70,10 @@ const Index = () => {
     });
   }, [contasMovimento, transacoesV2, dateRanges.range1.to, calculateBalanceUpToDate]);
 
-  // Liquidez imediata (contas correntes e poupança)
+  // Liquidez imediata (contas correntes, poupança, reserva e RENDA FIXA)
   const liquidezImediata = useMemo(() => {
     return saldosPorConta
-      .filter(c => c.accountType === 'conta_corrente' || c.accountType === 'poupanca' || c.accountType === 'reserva_emergencia')
+      .filter(c => c.accountType === 'conta_corrente' || c.accountType === 'poupanca' || c.accountType === 'reserva_emergencia' || c.accountType === 'aplicacao_renda_fixa')
       .reduce((acc, c) => acc + c.saldo, 0);
   }, [saldosPorConta]);
 

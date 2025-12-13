@@ -171,35 +171,34 @@ export function BalancoTab({ dateRanges }: BalancoTabProps) {
     const saldosPorConta = calculateFinalBalances(transactions, periodStart);
 
     // === ATIVOS ===
+    
+    // Renda Fixa e Equivalentes (Ativo Circulante)
     const contasCirculantes = contasMovimento.filter(c => 
-      ['conta_corrente', 'poupanca', 'reserva_emergencia'].includes(c.accountType)
+      ['conta_corrente', 'poupanca', 'reserva_emergencia', 'aplicacao_renda_fixa'].includes(c.accountType)
     );
     const caixaEquivalentes = contasCirculantes.reduce((acc, c) => acc + Math.max(0, saldosPorConta[c.id] || 0), 0);
+    
+    // Saldo Renda Fixa (para detalhamento)
+    const saldoRendaFixa = contasMovimento.filter(c => c.accountType === 'aplicacao_renda_fixa' || c.accountType === 'poupanca').reduce((acc, c) => acc + Math.max(0, saldosPorConta[c.id] || 0), 0);
 
-    const contasInvestimento = contasMovimento.filter(c => 
-      ['aplicacao_renda_fixa', 'criptoativos', 'objetivos_financeiros'].includes(c.accountType)
+    // Investimentos (Ativo Não Circulante) - Apenas Cripto e Objetivos
+    const contasInvestimentoNaoCirculante = contasMovimento.filter(c => 
+      ['criptoativos', 'objetivos_financeiros'].includes(c.accountType)
     );
     
-    const saldoRendaFixa = contasInvestimento.filter(c => c.accountType === 'aplicacao_renda_fixa' || c.accountType === 'poupanca').reduce((acc, c) => acc + Math.max(0, saldosPorConta[c.id] || 0), 0);
-    const saldoCripto = contasInvestimento.filter(c => c.accountType === 'criptoativos' && !c.name.toLowerCase().includes('stable')).reduce((acc, c) => acc + Math.max(0, saldosPorConta[c.id] || 0), 0);
-    const saldoStable = contasInvestimento.filter(c => c.accountType === 'criptoativos' && c.name.toLowerCase().includes('stable')).reduce((acc, c) => acc + Math.max(0, saldosPorConta[c.id] || 0), 0);
-    const saldoObjetivos = contasInvestimento.filter(c => c.accountType === 'objetivos_financeiros').reduce((acc, c) => acc + Math.max(0, saldosPorConta[c.id] || 0), 0);
+    const saldoCripto = contasInvestimentoNaoCirculante.filter(c => c.accountType === 'criptoativos' && !c.name.toLowerCase().includes('stable')).reduce((acc, c) => acc + Math.max(0, saldosPorConta[c.id] || 0), 0);
+    const saldoStable = contasInvestimentoNaoCirculante.filter(c => c.accountType === 'criptoativos' && c.name.toLowerCase().includes('stable')).reduce((acc, c) => acc + Math.max(0, saldosPorConta[c.id] || 0), 0);
+    const saldoObjetivos = contasInvestimentoNaoCirculante.filter(c => c.accountType === 'objetivos_financeiros').reduce((acc, c) => acc + Math.max(0, saldosPorConta[c.id] || 0), 0);
     
-    const investimentosTotal = saldoRendaFixa + saldoCripto + saldoStable + saldoObjetivos;
+    const investimentosNaoCirculantes = saldoCripto + saldoStable + saldoObjetivos;
 
     const veiculosAtivos = veiculos.filter(v => v.status !== 'vendido');
     const valorVeiculos = veiculosAtivos.reduce((acc, v) => acc + (v.valorFipe || v.valorVeiculo || 0), 0);
 
-    const totalAtivos = caixaEquivalentes + investimentosTotal + valorVeiculos;
+    const totalAtivos = caixaEquivalentes + investimentosNaoCirculantes + valorVeiculos;
 
     // === PASSIVOS ===
     const emprestimosAtivos = emprestimos.filter(e => e.status !== 'quitado');
-    
-    // Saldo devedor de empréstimos (simplificado: valor total - valor pago)
-    const saldoDevedorEmprestimos = emprestimosAtivos.reduce((acc, e) => {
-      const valorPago = (e.parcelasPagas || 0) * e.parcela;
-      return acc + Math.max(0, e.valorTotal - valorPago);
-    }, 0);
     
     // Saldo devedor de cartões de crédito (saldos negativos)
     const saldoDevedorCartoes = contasMovimento
@@ -209,16 +208,25 @@ export function BalancoTab({ dateRanges }: BalancoTabProps) {
         return acc + Math.abs(Math.min(0, balance));
       }, 0);
       
-    const totalPassivos = saldoDevedorEmprestimos + saldoDevedorCartoes;
-
     // Passivo curto prazo (próximos 12 meses de parcelas + saldo CC)
-    const passivoCurtoPrazo = emprestimosAtivos.reduce((acc, e) => {
-      const parcelasRestantes = Math.min(12, e.meses - (e.parcelasPagas || 0));
-      return acc + (e.parcela * parcelasRestantes);
-    }, 0) + saldoDevedorCartoes;
+    const passivoCurtoPrazoEmprestimos = emprestimosAtivos.reduce((acc, e) => {
+      const parcelasRestantes = Math.max(0, e.meses - (e.parcelasPagas || 0));
+      const parcelasCurtoPrazo = Math.min(12, parcelasRestantes);
+      return acc + (e.parcela * parcelasCurtoPrazo);
+    }, 0);
     
+    const passivoCurtoPrazo = passivoCurtoPrazoEmprestimos + saldoDevedorCartoes;
+    
+    // Saldo Devedor Total de Empréstimos (Principal + Juros restantes)
+    const saldoDevedorEmprestimosTotal = emprestimosAtivos.reduce((acc, e) => {
+        const parcelasRestantes = Math.max(0, e.meses - (e.parcelasPagas || 0));
+        return acc + (e.parcela * parcelasRestantes);
+    }, 0);
+    
+    const totalPassivos = saldoDevedorEmprestimosTotal + saldoDevedorCartoes;
+
     // Passivo longo prazo
-    const passivoLongoPrazo = totalPassivos - passivoCurtoPrazo;
+    const passivoLongoPrazo = Math.max(0, totalPassivos - passivoCurtoPrazo);
 
     // === PATRIMÔNIO LÍQUIDO ===
     const patrimonioLiquido = totalAtivos - totalPassivos;
@@ -226,7 +234,7 @@ export function BalancoTab({ dateRanges }: BalancoTabProps) {
     // === RESULTADO DO PERÍODO (Fluxo de Caixa) ===
     const calcularResultado = (transacoes: typeof transacoesV2) => {
       const entradas = transacoes
-        .filter(t => t.flow === 'in' && t.operationType !== 'transferencia' && t.operationType !== 'liberacao_emprestimo')
+        .filter(t => t.flow === 'in' && t.operationType !== 'transferencia' && t.operationType !== 'liberacao_emprestimo' && t.operationType !== 'resgate')
         .reduce((acc, t) => acc + t.amount, 0);
       const saidas = transacoes
         .filter(t => t.flow === 'out' && t.operationType !== 'transferencia' && t.operationType !== 'aplicacao')
@@ -239,8 +247,17 @@ export function BalancoTab({ dateRanges }: BalancoTabProps) {
     return {
       saldosPorConta,
       ativos: {
-        circulantes: { caixa: caixaEquivalentes },
-        naoCirculantes: { investimentos: investimentosTotal, rendaFixa: saldoRendaFixa, criptoativos: saldoCripto, stablecoins: saldoStable, objetivos: saldoObjetivos, veiculos: valorVeiculos },
+        circulantes: { 
+            caixa: caixaEquivalentes, 
+            rendaFixa: saldoRendaFixa, // Detalhe
+        },
+        naoCirculantes: { 
+            investimentos: investimentosNaoCirculantes, 
+            criptoativos: saldoCripto, 
+            stablecoins: saldoStable, 
+            objetivos: saldoObjetivos, 
+            veiculos: valorVeiculos 
+        },
         total: totalAtivos,
       },
       passivos: {
@@ -248,6 +265,8 @@ export function BalancoTab({ dateRanges }: BalancoTabProps) {
         longoPrazo: passivoLongoPrazo,
         total: totalPassivos,
         emprestimos: emprestimosAtivos,
+        saldoDevedorCartoes, // Detalhe
+        passivoCurtoPrazoEmprestimos, // Detalhe
       },
       patrimonioLiquido,
       resultadoPeriodo,
@@ -318,8 +337,7 @@ export function BalancoTab({ dateRanges }: BalancoTabProps) {
   // Composição dos ativos para gráfico pizza (usando P1)
   const composicaoAtivos = useMemo(() => {
     const items = [
-      { name: "Caixa e Equivalentes", value: balanco1.ativos.circulantes.caixa, color: COLORS.primary },
-      { name: "Renda Fixa", value: balanco1.ativos.naoCirculantes.rendaFixa, color: COLORS.success },
+      { name: "Caixa e Renda Fixa", value: balanco1.ativos.circulantes.caixa, color: COLORS.primary },
       { name: "Criptoativos", value: balanco1.ativos.naoCirculantes.criptoativos, color: COLORS.gold },
       { name: "Stablecoins", value: balanco1.ativos.naoCirculantes.stablecoins, color: COLORS.cyan },
       { name: "Objetivos", value: balanco1.ativos.naoCirculantes.objetivos, color: COLORS.accent },
@@ -376,17 +394,17 @@ export function BalancoTab({ dateRanges }: BalancoTabProps) {
           value={formatCurrency(balanco1.ativos.circulantes.caixa)}
           status="success"
           icon={<Banknote className="w-5 h-5" />}
-          tooltip="Recursos de alta liquidez: contas correntes, poupança, reserva"
+          tooltip="Recursos de alta liquidez: contas correntes, poupança, reserva e renda fixa"
           delay={50}
           trend={variacoes.circulantes}
           trendLabel={range2.from ? "Período 2" : undefined}
         />
         <ReportCard
-          title="Investimentos"
+          title="Investimentos Não Circulantes"
           value={formatCurrency(balanco1.ativos.naoCirculantes.investimentos)}
           status="success"
           icon={<PiggyBank className="w-5 h-5" />}
-          tooltip="Renda fixa, criptoativos, stablecoins e objetivos"
+          tooltip="Criptoativos e Objetivos de longo prazo"
           delay={100}
           trend={variacoes.investimentos}
           trendLabel={range2.from ? "Período 2" : undefined}
@@ -449,11 +467,11 @@ export function BalancoTab({ dateRanges }: BalancoTabProps) {
                   <TableCell colSpan={3} className="font-semibold text-success text-sm">
                     <div className="flex items-center gap-2">
                       <Banknote className="w-4 h-4" />
-                      ATIVO CIRCULANTE
+                      ATIVO CIRCULANTE (Alta Liquidez)
                     </div>
                   </TableCell>
                 </TableRow>
-                {contasMovimento.filter(c => ['conta_corrente', 'poupanca', 'reserva_emergencia'].includes(c.accountType)).map(conta => (
+                {contasMovimento.filter(c => ['conta_corrente', 'poupanca', 'reserva_emergencia', 'aplicacao_renda_fixa'].includes(c.accountType)).map(conta => (
                   <TableRow key={conta.id} className="border-border hover:bg-muted/20">
                     <TableCell className="pl-6 flex items-center gap-2">
                       <ChevronRight className="w-3 h-3 text-muted-foreground" />
@@ -481,29 +499,15 @@ export function BalancoTab({ dateRanges }: BalancoTabProps) {
                   <TableCell colSpan={3} className="font-semibold text-primary text-sm">
                     <div className="flex items-center gap-2">
                       <Target className="w-4 h-4" />
-                      ATIVO NÃO CIRCULANTE
+                      ATIVO NÃO CIRCULANTE (Longo Prazo / Imobilizado)
                     </div>
                   </TableCell>
                 </TableRow>
-                {balanco1.ativos.naoCirculantes.rendaFixa > 0 && (
-                  <TableRow className="border-border hover:bg-muted/20">
-                    <TableCell className="pl-6 flex items-center gap-2">
-                      <ChevronRight className="w-3 h-3 text-muted-foreground" />
-                      Aplicações em Renda Fixa
-                    </TableCell>
-                    <TableCell className="text-right font-medium text-primary">
-                      {formatCurrency(balanco1.ativos.naoCirculantes.rendaFixa)}
-                    </TableCell>
-                    <TableCell className="text-right text-muted-foreground">
-                      {balanco1.ativos.total > 0 ? formatPercent((balanco1.ativos.naoCirculantes.rendaFixa / balanco1.ativos.total) * 100) : "0%"}
-                    </TableCell>
-                  </TableRow>
-                )}
                 {balanco1.ativos.naoCirculantes.criptoativos > 0 && (
                   <TableRow className="border-border hover:bg-muted/20">
                     <TableCell className="pl-6 flex items-center gap-2">
                       <Bitcoin className="w-3 h-3 text-gold" />
-                      Criptoativos
+                      Criptoativos (Voláteis)
                     </TableCell>
                     <TableCell className="text-right font-medium text-primary">
                       {formatCurrency(balanco1.ativos.naoCirculantes.criptoativos)}
@@ -591,33 +595,50 @@ export function BalancoTab({ dateRanges }: BalancoTabProps) {
                   <TableCell colSpan={3} className="font-semibold text-warning text-sm">
                     <div className="flex items-center gap-2">
                       <AlertTriangle className="w-4 h-4" />
-                      PASSIVO CIRCULANTE (até 12 meses)
+                      PASSIVO CIRCULANTE (Até 12 meses)
                     </div>
                   </TableCell>
                 </TableRow>
-                {balanco1.passivos.emprestimos.filter(e => (e.meses - (e.parcelasPagas || 0)) <= 12).map(emp => (
-                  <TableRow key={emp.id} className="border-border hover:bg-muted/20">
+                
+                {/* Detalhe: Saldo Cartão de Crédito */}
+                {balanco1.passivos.saldoDevedorCartoes > 0 && (
+                  <TableRow className="border-border hover:bg-muted/20">
                     <TableCell className="pl-6 flex items-center gap-2">
-                      <Building2 className="w-3 h-3 text-warning" />
-                      {emp.contrato}
+                      <CreditCard className="w-3 h-3 text-warning" />
+                      Saldo Devedor Cartões
                     </TableCell>
                     <TableCell className="text-right font-medium text-warning">
-                      {formatCurrency(emp.parcela * Math.min(12, emp.meses - (emp.parcelasPagas || 0)))}
+                      {formatCurrency(balanco1.passivos.saldoDevedorCartoes)}
                     </TableCell>
                     <TableCell className="text-right text-muted-foreground">
-                      {balanco1.ativos.total > 0 ? formatPercent((emp.parcela * Math.min(12, emp.meses - (emp.parcelasPagas || 0)) / balanco1.ativos.total) * 100) : "0%"}
-                    </TableCell>
-                  </TableRow>
-                ))}
-                {balanco1.passivos.curtoPrazo > 0 && (
-                  <TableRow className="border-border bg-muted/20">
-                    <TableCell className="font-medium text-foreground pl-4">Subtotal Curto Prazo</TableCell>
-                    <TableCell className="text-right font-semibold text-warning">{formatCurrency(balanco1.passivos.curtoPrazo)}</TableCell>
-                    <TableCell className="text-right text-muted-foreground">
-                      {balanco1.ativos.total > 0 ? formatPercent((balanco1.passivos.curtoPrazo / balanco1.ativos.total) * 100) : "0%"}
+                      {balanco1.ativos.total > 0 ? formatPercent((balanco1.passivos.saldoDevedorCartoes / balanco1.ativos.total) * 100) : "0%"}
                     </TableCell>
                   </TableRow>
                 )}
+                
+                {/* Detalhe: Parcelas Empréstimo Curto Prazo */}
+                {balanco1.passivos.passivoCurtoPrazoEmprestimos > 0 && (
+                  <TableRow className="border-border hover:bg-muted/20">
+                    <TableCell className="pl-6 flex items-center gap-2">
+                      <Building2 className="w-3 h-3 text-warning" />
+                      Parcelas Empréstimos (12 meses)
+                    </TableCell>
+                    <TableCell className="text-right font-medium text-warning">
+                      {formatCurrency(balanco1.passivos.passivoCurtoPrazoEmprestimos)}
+                    </TableCell>
+                    <TableCell className="text-right text-muted-foreground">
+                      {balanco1.ativos.total > 0 ? formatPercent((balanco1.passivos.passivoCurtoPrazoEmprestimos / balanco1.ativos.total) * 100) : "0%"}
+                    </TableCell>
+                  </TableRow>
+                )}
+                
+                <TableRow className="border-border bg-muted/20">
+                  <TableCell className="font-medium text-foreground pl-4">Subtotal Curto Prazo</TableCell>
+                  <TableCell className="text-right font-semibold text-warning">{formatCurrency(balanco1.passivos.curtoPrazo)}</TableCell>
+                  <TableCell className="text-right text-muted-foreground">
+                    {balanco1.ativos.total > 0 ? formatPercent((balanco1.passivos.curtoPrazo / balanco1.ativos.total) * 100) : "0%"}
+                  </TableCell>
+                </TableRow>
 
                 {/* PASSIVO NÃO CIRCULANTE */}
                 {balanco1.passivos.longoPrazo > 0 && (
@@ -626,12 +647,12 @@ export function BalancoTab({ dateRanges }: BalancoTabProps) {
                       <TableCell colSpan={3} className="font-semibold text-destructive text-sm">
                         <div className="flex items-center gap-2">
                           <CreditCard className="w-4 h-4" />
-                          PASSIVO NÃO CIRCULANTE (longo prazo)
+                          PASSIVO NÃO CIRCULANTE (Longo Prazo)
                         </div>
                       </TableCell>
                     </TableRow>
                     <TableRow className="border-border hover:bg-muted/20">
-                      <TableCell className="pl-6">Empréstimos e Financiamentos</TableCell>
+                      <TableCell className="pl-6">Empréstimos e Financiamentos (Principal)</TableCell>
                       <TableCell className="text-right font-medium text-destructive">
                         {formatCurrency(balanco1.passivos.longoPrazo)}
                       </TableCell>
