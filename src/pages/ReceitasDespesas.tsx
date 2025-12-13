@@ -452,7 +452,7 @@ const ReceitasDespesas = () => {
             dataCompra: finalTx.date,
             valorVeiculo: finalTx.amount,
             valorSeguro: 0,
-            vencimentoSeguro: '',
+            vencimentoSeguro: "",
             parcelaSeguro: 0,
             valorFipe: 0,
             compraTransactionId: finalTx.id,
@@ -720,20 +720,34 @@ const ReceitasDespesas = () => {
       .map(i => ({ id: i.id, name: i.name }));
   }, [accounts]);
 
+  // --- CORREÇÃO: Gerar lista de empréstimos com parcelas simuladas aqui ---
   const loans = useMemo(() => {
     return emprestimos
       .filter(e => e.status !== 'pendente_config')
       .map(e => {
-        // Generate parcelas array if loan has meses configured
+        // Simulação de parcelas (Método Price simplificado)
         const parcelas = e.meses > 0 ? Array.from({ length: e.meses }, (_, i) => {
-          // Usa parseDateLocal para garantir que a data de início seja interpretada corretamente
+          // Usa parseDateLocal para garantir que a data de início seja interpretada localmente
           const vencimento = parseDateLocal(e.dataInicio || new Date().toISOString().split('T')[0]);
-          vencimento.setMonth(vencimento.getMonth() + i + 1);
+          // A primeira parcela vence 1 mês após a data de início (i=0 -> 1 mês)
+          vencimento.setMonth(vencimento.getMonth() + i + 1); 
+          
+          // Verifica se a parcela já foi paga (usando o contador de parcelas pagas)
+          const isPaid = i < (e.parcelasPagas || 0);
+          
+          // Tenta encontrar a transação de pagamento real
+          const paymentTx = transactions.find(t => 
+            t.operationType === 'pagamento_emprestimo' && 
+            t.links?.loanId === `loan_${e.id}` &&
+            t.links?.parcelaId === (i + 1).toString()
+          );
+
           return {
             numero: i + 1,
             vencimento: vencimento.toISOString().split('T')[0],
             valor: e.parcela,
-            pago: i < (e.parcelasPagas || 0),
+            pago: isPaid || !!paymentTx, // Considera pago se for pago no legado OU se houver transação
+            transactionId: paymentTx?.id,
           };
         }) : [];
 
@@ -746,7 +760,8 @@ const ReceitasDespesas = () => {
           totalParcelas: e.meses,
         };
       });
-  }, [emprestimos]);
+  }, [emprestimos, transactions]);
+  // -----------------------------------------------------------------------
 
   // Get viewing account data
   const viewingAccount = viewingAccountId ? accounts.find(a => a.id === viewingAccountId) : null;

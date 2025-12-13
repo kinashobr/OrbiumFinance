@@ -33,6 +33,7 @@ interface LoanInfo {
     vencimento: string;
     valor: number;
     pago: boolean;
+    transactionId?: string; // Adicionado para rastrear se foi pago
   }[];
   valorParcela?: number;
   totalParcelas?: number;
