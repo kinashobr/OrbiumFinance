@@ -730,8 +730,8 @@ const ReceitasDespesas = () => {
         
         // Simulação de parcelas (Método Price simplificado)
         const parcelas = e.meses > 0 ? Array.from({ length: e.meses }, (_, i) => {
-          // A parcela N (índice i) vence i + 1 meses após a data de início.
-          const vencimento = addMonths(startDate, i + 1);
+          // A parcela N (índice i) vence i meses após a data de início, se dataInicio for a data da primeira parcela.
+          const vencimento = addMonths(startDate, i);
           
           // Tenta encontrar a transação de pagamento real
           const paymentTx = transactions.find(t => 
