@@ -62,8 +62,10 @@ export function CockpitCards({ data }: CockpitCardsProps) {
       value: formatCurrency(data.liquidezImediata),
       icon: Droplets,
       color: 'text-info',
-      bgColor: 'bg-info/10', // Ajustado para consistência
+      // Usando estilo inline para garantir que a opacidade funcione com a cor customizada --info
+      bgColor: 'bg-info/10', 
       status: data.liquidezImediata > 0 ? 'info' : 'danger',
+      customBgStyle: { backgroundColor: 'hsl(var(--info) / 0.1)' }
     },
     {
       id: 'compromissos',
@@ -91,7 +93,7 @@ export function CockpitCards({ data }: CockpitCardsProps) {
     warning: "border-l-warning",
     danger: "border-l-destructive",
     neutral: "border-l-primary",
-    info: "border-l-info", // Corrigido para usar border-l-info
+    info: "border-l-info",
   };
 
   return (
@@ -108,7 +110,10 @@ export function CockpitCards({ data }: CockpitCardsProps) {
             <span className="text-xs text-muted-foreground font-medium uppercase tracking-wide whitespace-normal">
               {card.title}
             </span>
-            <div className={cn("p-2 rounded-xl", card.bgColor)}>
+            <div 
+              className={cn("p-2 rounded-xl", card.bgColor)}
+              style={card.customBgStyle} // Aplica o estilo inline aqui
+            >
               <card.icon className={cn("h-5 w-5", card.color)} />
             </div>
           </div>
