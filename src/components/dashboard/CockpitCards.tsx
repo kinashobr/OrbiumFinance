@@ -61,8 +61,8 @@ export function CockpitCards({ data }: CockpitCardsProps) {
       title: 'Liquidez Imediata',
       value: formatCurrency(data.liquidezImediata),
       icon: Droplets,
-      color: 'text-primary',
-      bgColor: 'bg-primary/10',
+      color: 'text-info',
+      bgColor: 'bg-info/30', // Aumentado para 30% de opacidade
       status: data.liquidezImediata > 0 ? 'info' : 'danger',
     },
     {
