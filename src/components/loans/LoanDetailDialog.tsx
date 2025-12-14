@@ -20,6 +20,7 @@ import {
   StickyNote,
   Settings,
   Edit,
+  Award, // Adicionado Award
 } from "lucide-react";
 import { Emprestimo } from "@/types/finance";
 import { useFinance } from "@/contexts/FinanceContext";
@@ -125,8 +126,8 @@ export function LoanDetailDialog({ emprestimo, open, onOpenChange }: LoanDetailD
     const percentualQuitado = emprestimo.meses > 0 ? (parcelasPagas / emprestimo.meses) * 100 : 0;
     const cetEfetivo = emprestimo.meses > 0 ? ((custoTotal / emprestimo.valorTotal - 1) / emprestimo.meses) * 12 * 100 : 0;
     
-    const dataFinal = new Date();
-    dataFinal.setMonth(dataFinal.getMonth() + parcelasRestantes);
+    const dataFinal = new Date(emprestimo.dataInicio || new Date().toISOString().split('T')[0]);
+    dataFinal.setMonth(dataFinal.getMonth() + emprestimo.meses);
 
     const proximaParcela = new Date();
     proximaParcela.setDate(10);
@@ -235,6 +236,7 @@ export function LoanDetailDialog({ emprestimo, open, onOpenChange }: LoanDetailD
             <div className="flex-1 overflow-y-auto mt-4 pr-1 scrollbar-thin">
               {/* Aba Geral */}
               <TabsContent value="geral" className="mt-0 space-y-4">
+                {/* Row 1: Main Financials */}
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                   <LoanCard
                     title="Valor Contratado"
@@ -266,6 +268,7 @@ export function LoanDetailDialog({ emprestimo, open, onOpenChange }: LoanDetailD
                   />
                 </div>
 
+                {/* Row 2: Progress and Costs */}
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                   <LoanCard
                     title="Parcelas Pagas"
@@ -297,62 +300,69 @@ export function LoanDetailDialog({ emprestimo, open, onOpenChange }: LoanDetailD
                   />
                 </div>
 
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="glass-card p-4 space-y-3">
-                    <h4 className="font-medium text-sm flex items-center gap-2">
-                      <Calendar className="w-4 h-4 text-primary" />
-                      Datas Importantes
-                    </h4>
-                    <div className="space-y-2 text-sm">
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">Próxima parcela:</span>
-                        <span className="font-medium">{isQuitado ? '—' : calculos.proximaParcela.toLocaleDateString("pt-BR")}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">Data final:</span>
-                        <span className="font-medium">{isQuitado ? '—' : calculos.dataFinal.toLocaleDateString("pt-BR")}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">Meses restantes:</span>
-                        <span className="font-medium">{isQuitado ? '0' : calculos.parcelasRestantes}</span>
-                      </div>
-                    </div>
-                  </div>
+                {/* NEW: Progress, Dates, and Economy Panel (Full Width) */}
+                <div className="glass-card p-5 space-y-4">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        {/* 1. Progresso Financeiro */}
+                        <div className="p-3 rounded-lg bg-muted/30 border border-border/50">
+                            <h4 className="font-medium text-sm flex items-center gap-2 text-primary">
+                                <Award className="w-4 h-4" />
+                                Progresso Financeiro
+                            </h4>
+                            <p className="text-2xl font-bold text-primary mt-1">
+                                {calculos.progressoFinanceiro.toFixed(1)}%
+                            </p>
+                            <p className="text-xs text-muted-foreground mt-1">
+                                Amortização acumulada do principal
+                            </p>
+                        </div>
 
-                  <div className="glass-card p-4 space-y-3">
-                    <h4 className="font-medium text-sm flex items-center gap-2">
-                      <DollarSign className="w-4 h-4 text-success" />
-                      Economia Potencial
-                    </h4>
-                    <div className="space-y-2 text-sm">
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">Custo total:</span>
-                        <span className="font-medium">{formatCurrency(calculos.custoTotal)}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">Juros total:</span>
-                        <span className="font-medium text-warning">{formatCurrency(calculos.jurosTotalContrato)}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">Economia quitação:</span>
-                        <span className="font-bold text-success">{formatCurrency(calculos.economiaQuitacao)}</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
+                        {/* 2. Datas Importantes */}
+                        <div className="p-3 rounded-lg bg-muted/30 border border-border/50">
+                            <h4 className="font-medium text-sm flex items-center gap-2 text-info">
+                                <Calendar className="w-4 h-4" />
+                                Datas
+                            </h4>
+                            <div className="space-y-1 text-sm mt-1">
+                                <div className="flex justify-between">
+                                    <span className="text-muted-foreground">Próxima parcela:</span>
+                                    <span className="font-medium">{isQuitado ? '—' : calculos.proximaParcela.toLocaleDateString("pt-BR")}</span>
+                                </div>
+                                <div className="flex justify-between">
+                                    <span className="text-muted-foreground">Data final:</span>
+                                    <span className="font-medium">{isQuitado ? '—' : calculos.dataFinal.toLocaleDateString("pt-BR")}</span>
+                                </div>
+                            </div>
+                        </div>
 
-                {/* Barra de progresso */}
-                <div className="glass-card p-4">
-                  <div className="flex justify-between text-sm mb-2">
-                    <span className="text-muted-foreground">Progresso Financeiro (Amortização)</span>
-                    <span className="font-medium">{calculos.progressoFinanceiro.toFixed(1)}%</span>
-                  </div>
-                  <div className="h-4 bg-muted rounded-full overflow-hidden">
-                    <div
-                      className="h-full bg-gradient-to-r from-success to-primary transition-all duration-500"
-                      style={{ width: `${calculos.progressoFinanceiro}%` }}
-                    />
-                  </div>
+                        {/* 3. Economia Potencial */}
+                        <div className="p-3 rounded-lg bg-muted/30 border border-border/50">
+                            <h4 className="font-medium text-sm flex items-center gap-2 text-success">
+                                <DollarSign className="w-4 h-4" />
+                                Economia Quitação
+                            </h4>
+                            <p className="text-2xl font-bold text-success mt-1">
+                                {formatCurrency(calculos.economiaQuitacao)}
+                            </p>
+                            <p className="text-xs text-muted-foreground mt-1">
+                                Juros restantes que seriam economizados
+                            </p>
+                        </div>
+                    </div>
+
+                    {/* Progress Bar (Full Width) */}
+                    <div className="pt-3 border-t border-border/50">
+                        <div className="flex justify-between text-sm mb-1">
+                            <span className="text-muted-foreground">Progresso de Quitação (Parcelas)</span>
+                            <span className="font-medium">{calculos.percentualQuitado.toFixed(1)}%</span>
+                        </div>
+                        <div className="h-3 bg-muted rounded-full overflow-hidden">
+                            <div
+                                className="h-full bg-gradient-to-r from-success to-primary transition-all duration-500"
+                                style={{ width: `${calculos.percentualQuitado}%` }}
+                            />
+                        </div>
+                    </div>
                 </div>
               </TabsContent>
 

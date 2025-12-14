@@ -43,7 +43,7 @@ const Emprestimos = () => {
   }, [setDateRanges]);
 
   // Helper function to calculate the next due date for a loan
-  const getNextDueDate = (loan: Emprestimo): Date | null => {
+  const getNextDueDate = useCallback((loan: Emprestimo): Date | null => {
     if (!loan.dataInicio || loan.meses === 0) return null;
     
     // Use the dynamically calculated paid installments up to the end of the period
@@ -60,7 +60,7 @@ const Emprestimos = () => {
     dueDate.setMonth(dueDate.getMonth() + nextParcela - 1);
     
     return dueDate;
-  };
+  }, [calculatePaidInstallmentsUpToDate, dateRanges.range1.to]);
 
   // Cálculos principais
   const calculos = useMemo(() => {
@@ -74,6 +74,7 @@ const Emprestimos = () => {
         if (e.status === 'quitado' || e.status === 'pendente_config') return acc;
         
         const paidCount = calculatePaidInstallmentsUpToDate(e.id, dateRanges.range1.to || new Date());
+        // Simplificação: Multiplica o número de parcelas pagas pelo valor da parcela fixa
         return acc + (paidCount * e.parcela);
     }, 0);
     

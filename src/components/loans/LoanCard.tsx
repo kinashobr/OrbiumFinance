@@ -62,6 +62,12 @@ export function LoanCard({
     md: "text-xl",
     lg: "text-2xl",
   };
+  
+  const iconSizes = {
+    sm: "w-4 h-4",
+    md: "w-5 h-5",
+    lg: "w-6 h-6",
+  };
 
   const TrendIcon = trend && trend > 0 ? TrendingUp : trend && trend < 0 ? TrendingDown : Minus;
 
@@ -106,7 +112,15 @@ export function LoanCard({
             status === "neutral" && "bg-primary/10 text-primary",
             status === "info" && "bg-neon-cyan/10 text-neon-cyan"
           )}>
-            {icon}
+            {/* Ensure icon size is correct */}
+            {/* Assuming the icon passed is a Lucide icon component */}
+            {typeof icon === 'object' && 'type' in icon && (icon.type as any).displayName === 'Icon' ? (
+              <span className={iconSizes[size]}>
+                {icon}
+              </span>
+            ) : (
+              icon
+            )}
           </div>
         )}
       </div>

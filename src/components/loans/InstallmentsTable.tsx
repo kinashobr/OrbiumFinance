@@ -43,7 +43,7 @@ const getDueDate = (startDateStr: string, installmentNumber: number): Date => {
 };
 
 export function InstallmentsTable({ emprestimo, className }: InstallmentsTableProps) {
-  const { transacoesV2, calculateLoanSchedule } = useFinance();
+  const { transacoesV2, calculateLoanSchedule, calculatePaidInstallmentsUpToDate } = useFinance();
   
   // Buscar transações de pagamento vinculadas a este empréstimo
   const payments = useMemo(() => {
@@ -127,7 +127,9 @@ export function InstallmentsTable({ emprestimo, className }: InstallmentsTablePr
   const totalParcelasPagas = parcelas.filter(p => p.status === 'pago').length;
   
   // Saldo Devedor Real (último saldo calculado)
+  // Encontra a última parcela paga no cronograma
   const ultimaParcelaPaga = parcelas.filter(p => p.status === 'pago').pop();
+  // O saldo devedor real é o saldo DEVEDOR da última parcela paga, ou o valor total se nenhuma foi paga.
   const saldoDevedorReal = ultimaParcelaPaga ? ultimaParcelaPaga.saldoDevedor : emprestimo.valorTotal;
   
   // Progresso Financeiro (Amortização Acumulada / Valor Total)
