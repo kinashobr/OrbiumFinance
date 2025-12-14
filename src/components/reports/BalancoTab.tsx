@@ -86,6 +86,27 @@ interface BalancoTabProps {
   dateRanges: ComparisonDateRanges;
 }
 
+// Custom label component for PieChart to prevent truncation
+const CustomPieLabel = ({ cx, cy, midAngle, outerRadius, percent, name }: any) => {
+  const RADIAN = Math.PI / 180;
+  const radius = outerRadius * 1.1; // Position label slightly outside
+  const x = cx + radius * Math.cos(-midAngle * RADIAN);
+  const y = cy + radius * Math.sin(-midAngle * RADIAN);
+  
+  return (
+    <text 
+      x={x} 
+      y={y} 
+      fill="hsl(var(--foreground))" 
+      textAnchor={x > cx ? 'start' : 'end'} 
+      dominantBaseline="central"
+      fontSize={12}
+    >
+      {`${name} (${(percent * 100).toFixed(0)}%)`}
+    </text>
+  );
+};
+
 export function BalancoTab({ dateRanges }: BalancoTabProps) {
   const {
     transacoesV2,
@@ -852,8 +873,8 @@ export function BalancoTab({ dateRanges }: BalancoTabProps) {
                   innerRadius={60}
                   outerRadius={100}
                   paddingAngle={2}
-                  label={({ name, percent }) => `${name} (${(percent * 100).toFixed(0)}%)`}
-                  labelLine={false}
+                  label={CustomPieLabel} // Use CustomPieLabel
+                  labelLine
                 >
                   {composicaoAtivos.filter(d => d.value > 0).map((entry, index) => (
                     <Cell key={`cell-${index}`} fill={PIE_COLORS[index % PIE_COLORS.length]} />

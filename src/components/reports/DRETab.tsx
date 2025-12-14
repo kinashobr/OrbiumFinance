@@ -114,6 +114,27 @@ function DREItem({ label, value, type, icon, level = 0 }: DREItemProps) {
   );
 }
 
+// Custom label component for PieChart to prevent truncation
+const CustomPieLabel = ({ cx, cy, midAngle, outerRadius, percent, name }: any) => {
+  const RADIAN = Math.PI / 180;
+  const radius = outerRadius * 1.1; // Position label slightly outside
+  const x = cx + radius * Math.cos(-midAngle * RADIAN);
+  const y = cy + radius * Math.sin(-midAngle * RADIAN);
+  
+  return (
+    <text 
+      x={x} 
+      y={y} 
+      fill="hsl(var(--foreground))" 
+      textAnchor={x > cx ? 'start' : 'end'} 
+      dominantBaseline="central"
+      fontSize={12}
+    >
+      {`${name} (${(percent * 100).toFixed(0)}%)`}
+    </text>
+  );
+};
+
 
 export function DRETab({ dateRanges }: DRETabProps) {
   const {
@@ -522,8 +543,8 @@ export function DRETab({ dateRanges }: DRETabProps) {
                     innerRadius={60}
                     outerRadius={100}
                     paddingAngle={2}
-                    label={({ name, percent }) => `${name} (${(percent * 100).toFixed(0)}%)`}
-                    labelLine={{ stroke: COLORS.muted, strokeWidth: 1 }}
+                    label={CustomPieLabel}
+                    labelLine
                   >
                     {dre1.composicaoDespesas.map((entry, index) => (
                       <Cell key={`cell-${index}`} fill={PIE_COLORS[index % PIE_COLORS.length]} />

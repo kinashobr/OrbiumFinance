@@ -23,6 +23,27 @@ import { startOfMonth, endOfMonth, subDays } from "date-fns";
 import { ContaCorrente, TransacaoCompleta } from "@/types/finance";
 import { InvestmentEvolutionChart } from "@/components/investments/InvestmentEvolutionChart";
 
+// Custom label component for PieChart to prevent truncation
+const CustomPieLabel = ({ cx, cy, midAngle, outerRadius, percent, name }: any) => {
+  const RADIAN = Math.PI / 180;
+  const radius = outerRadius * 1.1; // Position label slightly outside
+  const x = cx + radius * Math.cos(-midAngle * RADIAN);
+  const y = cy + radius * Math.sin(-midAngle * RADIAN);
+  
+  return (
+    <text 
+      x={x} 
+      y={y} 
+      fill="hsl(var(--foreground))" 
+      textAnchor={x > cx ? 'start' : 'end'} 
+      dominantBaseline="central"
+      fontSize={12}
+    >
+      {`${name} (${(percent * 100).toFixed(0)}%)`}
+    </text>
+  );
+};
+
 const pieColors = [
   "hsl(142, 76%, 36%)",
   "hsl(199, 89%, 48%)",
@@ -327,8 +348,8 @@ const Investimentos = () => {
                           cy="50%"
                           outerRadius={100}
                           fill="#8884d8"
-                          label={({ name, percent }) => `${name} (${(percent * 100).toFixed(0)}%)`}
-                          labelLine={false}
+                          label={CustomPieLabel} // Use CustomPieLabel for better positioning
+                          labelLine
                         >
                           {distribuicaoCarteira.filter(d => d.value > 0).map((entry, index) => (
                             <Cell key={`cell-${index}`} fill={pieColors[index % pieColors.length]} />
