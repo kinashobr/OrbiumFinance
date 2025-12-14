@@ -97,7 +97,8 @@ export function ReportCard({
             <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground truncate">
               {title}
             </p>
-            <p className={cn("font-bold mt-1 whitespace-nowrap", valueSizes[size], statusTextColors[status])}>
+            {/* Removido whitespace-nowrap do valor principal */}
+            <p className={cn("font-bold mt-1", valueSizes[size], statusTextColors[status])}>
               {value}
             </p>
             {subtitle && (
