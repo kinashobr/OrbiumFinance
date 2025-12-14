@@ -598,12 +598,14 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     setEmprestimos(prev => prev.map(e => {
       if (e.id !== loanId) return e;
       
-      const parcelasPagas = (e.parcelasPagas || 0) + 1;
+      // A contagem de parcelas pagas é feita dinamicamente em calculatePaidInstallmentsUpToDate
+      // Aqui, apenas garantimos que o status seja 'ativo' se não estiver quitado
+      const isQuitado = (e.parcelasPagas || 0) + 1 >= e.meses;
       
       return {
         ...e,
-        parcelasPagas,
-        status: parcelasPagas >= e.meses ? 'quitado' : e.status,
+        // Não atualizamos parcelasPagas aqui, pois ela é calculada via transações
+        status: isQuitado ? 'quitado' : 'ativo',
       };
     }));
   }, []);
@@ -612,11 +614,10 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     setEmprestimos(prev => prev.map(e => {
       if (e.id !== loanId) return e;
       
-      const parcelasPagas = Math.max(0, (e.parcelasPagas || 0) - 1);
-      
+      // A contagem de parcelas pagas é feita dinamicamente em calculatePaidInstallmentsUpToDate
+      // Aqui, apenas garantimos que o status seja 'ativo'
       return {
         ...e,
-        parcelasPagas,
         status: 'ativo',
       };
     }));

@@ -40,12 +40,21 @@ import {
 } from "recharts";
 import { cn } from "@/lib/utils";
 import { useChartColors } from "@/hooks/useChartColors";
+import { parseDateLocal } from "@/lib/utils"; // Importado para usar getDueDate
 
 interface LoanDetailDialogProps {
   emprestimo: Emprestimo | null;
   open: boolean;
   onOpenChange: (open: boolean) => void; // CORRIGIDO: Tipagem para (open: boolean) => void
 }
+
+// Helper function to calculate the due date of an installment (copied from context for clarity)
+const getDueDate = (startDateStr: string, installmentNumber: number): Date => {
+  const startDate = parseDateLocal(startDateStr);
+  const dueDate = new Date(startDate);
+  dueDate.setMonth(dueDate.getMonth() + installmentNumber - 1);
+  return dueDate;
+};
 
 export function LoanDetailDialog({ emprestimo, open, onOpenChange }: LoanDetailDialogProps) {
   const { 
@@ -126,14 +135,17 @@ export function LoanDetailDialog({ emprestimo, open, onOpenChange }: LoanDetailD
     const percentualQuitado = emprestimo.meses > 0 ? (parcelasPagas / emprestimo.meses) * 100 : 0;
     const cetEfetivo = emprestimo.meses > 0 ? ((custoTotal / emprestimo.valorTotal - 1) / emprestimo.meses) * 12 * 100 : 0;
     
-    const dataFinal = new Date(emprestimo.dataInicio || new Date().toISOString().split('T')[0]);
-    dataFinal.setMonth(dataFinal.getMonth() + emprestimo.meses);
+    // 5. Datas Corretas
+    const dataInicioStr = emprestimo.dataInicio || new Date().toISOString().split('T')[0];
+    
+    // Data Final: Vencimento da última parcela (meses)
+    const dataFinal = getDueDate(dataInicioStr, emprestimo.meses);
 
-    const proximaParcela = new Date();
-    proximaParcela.setDate(10);
-    if (proximaParcela <= new Date()) {
-      proximaParcela.setMonth(proximaParcela.getMonth() + 1);
-    }
+    // Próxima Parcela: Vencimento da parcela (parcelasPagas + 1)
+    const proximaParcela = parcelasPagas < emprestimo.meses 
+        ? getDueDate(dataInicioStr, parcelasPagas + 1)
+        : null;
+
 
     return {
       parcelasPagas, // Calculated based on transactions
@@ -326,11 +338,15 @@ export function LoanDetailDialog({ emprestimo, open, onOpenChange }: LoanDetailD
                             <div className="space-y-1 text-sm mt-1">
                                 <div className="flex justify-between">
                                     <span className="text-muted-foreground">Próxima parcela:</span>
-                                    <span className="font-medium">{isQuitado ? '—' : calculos.proximaParcela.toLocaleDateString("pt-BR")}</span>
+                                    <span className="font-medium">
+                                        {isQuitado ? '—' : calculos.proximaParcela?.toLocaleDateString("pt-BR") || 'N/A'}
+                                    </span>
                                 </div>
                                 <div className="flex justify-between">
                                     <span className="text-muted-foreground">Data final:</span>
-                                    <span className="font-medium">{isQuitado ? '—' : calculos.dataFinal.toLocaleDateString("pt-BR")}</span>
+                                    <span className="font-medium">
+                                        {isQuitado ? 'Quitado' : calculos.dataFinal.toLocaleDateString("pt-BR")}
+                                    </span>
                                 </div>
                             </div>
                         </div>
