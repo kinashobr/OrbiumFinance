@@ -71,15 +71,6 @@ const navSections: NavSection[] = [
     ],
   },
   {
-    id: "patrimonio",
-    title: "Patrimônio",
-    icon: Building,
-    items: [
-      { title: "Relatórios", path: "/relatorios", icon: FileBarChart },
-      { title: "Veículos", path: "/veiculos", icon: Car },
-    ],
-  },
-  {
     id: "investimentos",
     title: "Investimentos",
     icon: TrendingUp,
@@ -87,12 +78,28 @@ const navSections: NavSection[] = [
       { title: "Carteira Geral", path: "/investimentos", icon: PieChart },
     ],
   },
+  {
+    id: "patrimonio",
+    title: "Patrimônio",
+    icon: Building,
+    items: [
+      { title: "Veículos", path: "/veiculos", icon: Car },
+    ],
+  },
+  {
+    id: "relatorios",
+    title: "Relatórios",
+    icon: FileBarChart,
+    items: [
+      { title: "Relatórios", path: "/relatorios", icon: BarChart3 },
+    ],
+  },
 ];
 
 
 export function Sidebar() {
   const [collapsed, setCollapsed] = useState(false);
-  const [openSections, setOpenSections] = useState<string[]>(["financeiro", "patrimonio", "investimentos"]);
+  const [openSections, setOpenSections] = useState<string[]>(["financeiro", "patrimonio", "investimentos", "relatorios"]);
   const location = useLocation();
   const { exportData, importData } = useFinance();
   const { theme, setTheme, themes } = useTheme();
