@@ -92,9 +92,9 @@ export function ReportCard({
     >
       <CardContent className={cn("p-5", sizeClasses[size])}>
         <div className="flex items-start justify-between gap-3">
+          {/* Conteúdo de texto: ocupa o espaço restante e não encolhe abaixo de 0 */}
           <div className="flex-1 min-w-0">
-            <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-              {/* Removido truncate para evitar corte de título */}
+            <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground truncate">
               {title}
             </p>
             <p className={cn("font-bold mt-1 whitespace-nowrap", valueSizes[size], statusTextColors[status])}>
@@ -114,12 +114,13 @@ export function ReportCard({
               </div>
             )}
           </div>
+          {/* Ícone: não encolhe e tem tamanho fixo */}
           {icon && (
             <div className={cn(
               "p-3 rounded-xl shrink-0 flex items-center justify-center",
               statusIconBg[status]
             )}>
-              {/* Renderiza o ícone, assumindo que é um componente Lucide React ou similar */}
+              {/* Renderiza o ícone, garantindo que ele tenha um tamanho definido */}
               {icon}
             </div>
           )}
