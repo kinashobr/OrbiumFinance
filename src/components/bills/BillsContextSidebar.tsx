@@ -38,7 +38,7 @@ export function BillsContextSidebar({
   const items = [
     {
       id: 'receita',
-      label: 'Receita Prevista',
+      label: 'Receita Prev.',
       icon: TrendingUp,
       value: localRevenueForecast,
       color: 'text-success',
@@ -48,7 +48,7 @@ export function BillsContextSidebar({
     },
     {
       id: 'a_pagar',
-      label: 'A Pagar (Pendente)',
+      label: 'A Pagar',
       icon: Clock,
       value: totalExpectedExpense,
       color: 'text-destructive',
@@ -66,30 +66,30 @@ export function BillsContextSidebar({
 
   return (
     <div className={cn(
-      "space-y-4",
-      isMobile ? "p-4" : "p-4 border-r border-border h-full"
+      "space-y-3",
+      isMobile ? "p-4" : "p-2 border-r border-border h-full" // Reduzido padding para p-2
     )}>
-      <h3 className="text-sm font-semibold text-muted-foreground flex items-center gap-2">
-        <Target className="w-4 h-4" />
-        Contexto do Mês
+      <h3 className="text-xs font-semibold text-muted-foreground flex items-center gap-1">
+        <Target className="w-3 h-3" />
+        Contexto
       </h3>
       
       {/* Saldo Previsto (Maior Destaque) */}
       <Card className={cn(
-        "p-3 shadow-lg",
+        "p-2 shadow-lg", // Reduzido padding para p-2
         netForecast >= 0 ? "stat-card-positive" : "stat-card-negative"
       )}>
         <div className="flex items-center justify-between">
-          <Label className="text-sm font-medium flex items-center gap-1">
-            <Calculator className="w-4 h-4" />
+          <Label className="text-xs font-medium flex items-center gap-1">
+            <Calculator className="w-3 h-3" />
             SALDO PREVISTO
           </Label>
-          <span className="text-xs text-muted-foreground">
-            {pendingCount} pendentes
+          <span className="text-[10px] text-muted-foreground">
+            {pendingCount} pend.
           </span>
         </div>
         <p className={cn(
-          "text-2xl font-bold mt-1",
+          "text-xl font-bold mt-0.5", // Reduzido para text-xl
           netForecast >= 0 ? "text-success" : "text-destructive"
         )}>
           {formatCurrency(netForecast)}
@@ -99,10 +99,10 @@ export function BillsContextSidebar({
       <Separator />
 
       {/* Itens de Apoio */}
-      <div className="space-y-3">
+      <div className="space-y-2">
         {items.map(item => (
-          <div key={item.id} className="space-y-1">
-            <Label className="text-xs text-muted-foreground flex items-center gap-1">
+          <div key={item.id} className="space-y-0.5">
+            <Label className="text-[10px] text-muted-foreground flex items-center gap-1">
               <item.icon className={cn("w-3 h-3", item.color)} />
               {item.label}
             </Label>
@@ -112,14 +112,14 @@ export function BillsContextSidebar({
                   value={item.value} 
                   type="currency" 
                   onSave={setLocalRevenueForecast}
-                  className={cn("text-base font-bold", item.color)}
+                  className={cn("text-sm font-bold", item.color)} // Reduzido para text-sm
                 />
-                <p className="text-[10px] text-muted-foreground">
+                <p className="text-[9px] text-muted-foreground">
                   Sugestão: {formatCurrency(item.suggestion)}
                 </p>
               </>
             ) : (
-              <p className={cn("text-base font-bold", item.color)}>
+              <p className={cn("text-sm font-bold", item.color)}>
                 {formatCurrency(item.value)}
               </p>
             )}

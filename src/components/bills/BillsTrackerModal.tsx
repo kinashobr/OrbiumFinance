@@ -109,8 +109,8 @@ export function BillsTrackerModal({ open, onOpenChange }: BillsTrackerModalProps
         {/* Header Principal - Ultra Compacto */}
         <DialogHeader className="border-b pb-2 pt-3 px-4 shrink-0">
           <div className="flex items-center justify-between">
-            <DialogTitle className="flex items-center gap-2 text-lg">
-              <Calendar className="w-5 h-5 text-primary" />
+            <DialogTitle className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
+              <Calendar className="w-4 h-4 text-primary" />
               Contas a Pagar - {format(referenceDate, 'MMMM/yyyy')}
             </DialogTitle>
             
@@ -158,7 +158,8 @@ export function BillsTrackerModal({ open, onOpenChange }: BillsTrackerModalProps
         <div className="flex flex-1 overflow-hidden">
           
           {/* Coluna 1: Sidebar de Contexto (Fixo em telas grandes) */}
-          <div className="hidden lg:block w-[260px] shrink-0 overflow-y-auto scrollbar-thin">
+          {/* Reduzindo a largura de w-[260px] para w-[140px] */}
+          <div className="hidden lg:block w-[140px] shrink-0 overflow-y-auto scrollbar-thin">
             {SidebarContent}
           </div>
 
