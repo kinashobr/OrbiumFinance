@@ -87,7 +87,7 @@ export type TransactionDomain = 'operational' | 'investment' | 'financing' | 'as
 // Meta informações
 export interface TransactionMeta {
   createdBy: string;
-  source: 'manual' | 'import' | 'api';
+  source: 'manual' | 'import' | 'api' | 'bill_tracker'; // CORRIGIDO: Adicionado 'bill_tracker'
   createdAt: string;
   updatedAt?: string;
   notes?: string;

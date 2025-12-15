@@ -6,7 +6,7 @@ import { useFinance } from "@/contexts/FinanceContext";
 import { BillsTrackerList } from "./BillsTrackerList";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
-import { BillTracker } from "@/types/finance";
+import { BillTracker, formatCurrency } from "@/types/finance"; // CORRIGIDO: Importado formatCurrency
 
 interface BillsTrackerModalProps {
   open: boolean;
