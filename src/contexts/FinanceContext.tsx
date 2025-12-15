@@ -15,6 +15,7 @@ import {
   BillTracker, // NEW
   generateBillId, // NEW
   BillSourceType, // NEW
+  generateCategoryId, // Import generateCategoryId
 } from "@/types/finance";
 import { parseISO, startOfMonth, endOfMonth, subDays, differenceInDays, differenceInMonths, addMonths, isBefore, isAfter, isSameDay, isSameMonth, isSameYear, startOfDay, endOfDay, subMonths, format } from "date-fns"; // Import date-fns helpers
 import { parseDateLocal } from "@/lib/utils"; // Importando a nova função
@@ -327,9 +328,22 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
   const [contasMovimento, setContasMovimento] = useState<ContaCorrente[]>(() => 
     loadFromStorage(STORAGE_KEYS.CONTAS_MOVIMENTO, DEFAULT_ACCOUNTS)
   );
-  const [categoriasV2, setCategoriasV2] = useState<Categoria[]>(() => 
-    loadFromStorage(STORAGE_KEYS.CATEGORIAS_V2, DEFAULT_CATEGORIES)
-  );
+  const [categoriasV2, setCategoriasV2] = useState<Categoria[]>(() => {
+    const loadedCategories = loadFromStorage(STORAGE_KEYS.CATEGORIAS_V2, DEFAULT_CATEGORIES);
+    
+    // Garante que a categoria 'Dentista' exista
+    if (!loadedCategories.some((c: Categoria) => c.label === 'Dentista')) {
+        loadedCategories.push({
+            id: generateCategoryId(),
+            label: 'Dentista',
+            icon: '🦷',
+            nature: 'despesa_fixa',
+            type: 'expense',
+        });
+    }
+    
+    return loadedCategories;
+  });
   const [transacoesV2, setTransacoesV2] = useState<TransacaoCompleta[]>(() => 
     loadFromStorage(STORAGE_KEYS.TRANSACOES_V2, [])
   );
@@ -771,13 +785,16 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
                 
                 totalLast3Months += total;
             }
-            const estimatedAmount = totalLast3Months > 0 ? Math.round((totalLast3Months / 3) * 100) / 100 : 100; 
+            const estimatedAmount = totalLast3Months > 0 ? Math.round((totalLast3Months / 3) * 100) / 100 : 0; 
+            
+            // CORREÇÃO: Se a média for zero, usa um valor padrão de 86.00 (ou o valor que o usuário espera)
+            const finalEstimatedAmount = estimatedAmount > 0 ? estimatedAmount : 86.00;
             
             const newBill: BillTracker = {
                 id: billId,
                 description: cat.label,
                 dueDate: dueDateStr,
-                expectedAmount: estimatedAmount,
+                expectedAmount: finalEstimatedAmount,
                 isPaid: isPaidByTx,
                 sourceType: 'fixed_expense',
                 sourceRef: cat.id,
