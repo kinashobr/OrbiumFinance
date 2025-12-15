@@ -13,7 +13,7 @@ import {
   ComparisonDateRanges, // Import new types
   generateAccountId,
 } from "@/types/finance";
-import { parseISO, startOfMonth, endOfMonth, subDays, differenceInDays, differenceInMonths, addMonths, isBefore, isAfter, isSameDay, isSameMonth, isSameYear, startOfDay, endOfDay, isPast, isToday } from "date-fns"; // Import date-fns helpers
+import { parseISO, startOfMonth, endOfMonth, subDays, differenceInDays, differenceInMonths, addMonths, isBefore, isAfter, isSameDay, isSameMonth, isSameYear, startOfDay, endOfDay } from "date-fns"; // Import date-fns helpers
 import { parseDateLocal } from "@/lib/utils"; // Importando a nova função
 
 // ============================================
@@ -106,9 +106,6 @@ interface FinanceContextType {
   
   calculateLoanPrincipalDueInNextMonths: (targetDate: Date, months: number) => number; 
   
-  // NEW: Check for overdue loan installments
-  hasOverdueLoanInstallments: (targetDate: Date) => boolean;
-  
   // Veículos
   veiculos: Veiculo[];
   addVeiculo: (veiculo: Omit<Veiculo, "id">) => void;
@@ -124,10 +121,7 @@ interface FinanceContextType {
   markSeguroParcelPaid: (seguroId: number, parcelaNumero: number, transactionId: string) => void;
   unmarkSeguroParcelPaid: (seguroId: number, parcelaNumero: number) => void;
   
-  // NEW: Check for overdue insurance installments
-  hasOverdueSeguroInstallments: (targetDate: Date) => boolean;
-  
-  // Objetivos
+  // Objetivos Financeiros
   objetivos: ObjetivoFinanceiro[];
   addObjetivo: (obj: Omit<ObjetivoFinanceiro, "id">) => void;
   updateObjetivo: (id: number, obj: Partial<ObjetivoFinanceiro>) => void;
@@ -519,43 +513,6 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
         return acc + principalDue;
     }, 0);
   }, [emprestimos, calculatePaidInstallmentsUpToDate, calculateLoanSchedule]);
-  
-  // NEW FUNCTION: Check for overdue loan installments
-  const hasOverdueLoanInstallments = useCallback((targetDate: Date): boolean => {
-    const today = startOfDay(targetDate);
-    
-    return emprestimos.some(loan => {
-        if (!loan.dataInicio || loan.meses === 0 || loan.status === 'quitado' || loan.status === 'pendente_config') return false;
-        
-        const paidCount = calculatePaidInstallmentsUpToDate(loan.id, today);
-        
-        // Check the next expected installment
-        const nextParcela = paidCount + 1;
-        if (nextParcela > loan.meses) return false; // All paid
-        
-        const dueDate = getDueDate(loan.dataInicio, nextParcela);
-        
-        // If due date is in the past (but not today) and it hasn't been paid yet
-        return isPast(dueDate) && !isToday(dueDate);
-    });
-  }, [emprestimos, calculatePaidInstallmentsUpToDate]);
-  
-  // NEW FUNCTION: Check for overdue insurance installments
-  const hasOverdueSeguroInstallments = useCallback((targetDate: Date): boolean => {
-    const today = startOfDay(targetDate);
-    
-    return segurosVeiculo.some(seguro => {
-        return seguro.parcelas.some(parcela => {
-            if (parcela.paga) return false;
-            
-            const dueDate = parseDateLocal(parcela.vencimento);
-            
-            // If due date is in the past (but not today) and it hasn't been paid yet
-            return isPast(dueDate) && !isToday(dueDate);
-        });
-    });
-  }, [segurosVeiculo]);
-
 
   // ============================================
   // FUNÇÕES DE CÁLCULO DE SEGUROS (ACCRUAL) - REFINADAS
@@ -980,7 +937,6 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     calculateLoanSchedule, // <-- EXPORTED NEW FUNCTION
     calculateLoanAmortizationAndInterest, 
     calculateLoanPrincipalDueInNextMonths, 
-    hasOverdueLoanInstallments, // <-- EXPOSED NEW FUNCTION
     veiculos,
     addVeiculo,
     updateVeiculo,
@@ -991,8 +947,7 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     updateSeguroVeiculo,
     deleteSeguroVeiculo,
     markSeguroParcelPaid,
-    unmarkSeguroParcelPaid, // <-- CORRIGIDO
-    hasOverdueSeguroInstallments, // <-- EXPOSED NEW FUNCTION
+    unmarkSeguroParcelPaid,
     objetivos,
     addObjetivo,
     updateObjetivo,

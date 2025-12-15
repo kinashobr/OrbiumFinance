@@ -316,7 +316,13 @@ export function Sidebar() {
         <div className="my-4 mx-2 h-px sidebar-divider" />
 
         {/* Import/Export Section */}
-        <div className={cn("flex gap-2", collapsed ? "flex-col items-center" : "flex-row")}>
+        <div className={cn("px-1", collapsed && "px-0")}>
+          {!collapsed && (
+            <p className="text-xs sidebar-section-label mb-2 px-2">
+              Transferir Dados
+            </p>
+          )}
+          <div className={cn("flex gap-2", collapsed ? "flex-col items-center" : "flex-row")}>
             {collapsed ? (
               <>
                 <Tooltip>
@@ -380,15 +386,13 @@ export function Sidebar() {
             onChange={handleFileChange}
             className="hidden"
           />
-        
+        </div>
 
         {/* Divider */}
         <div className="my-4 mx-2 h-px sidebar-divider" />
 
         {/* Alertas Inteligentes */}
-        <div className="w-full">
-          <SidebarAlertas collapsed={collapsed} />
-        </div>
+        <SidebarAlertas collapsed={collapsed} />
       </div>
 
       {/* Footer - Theme Selector */}
