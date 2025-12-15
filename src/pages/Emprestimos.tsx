@@ -40,8 +40,7 @@ const Emprestimos = () => {
   const [selectedLoan, setSelectedLoan] = useState<Emprestimo | null>(null);
   const [detailDialogOpen, setDetailDialogOpen] = useState(false);
   
-  // NEW STATE: Flag para controlar se a abertura automática já ocorreu
-  const [autoOpenHandled, setAutoOpenHandled] = useState(false);
+  // Removendo autoOpenHandled para permitir reabertura ao navegar
   
   const handlePeriodChange = useCallback((ranges: ComparisonDateRanges) => {
     setDateRanges(ranges);
@@ -52,14 +51,16 @@ const Emprestimos = () => {
 
   // Effect to handle auto-opening configuration for pending loans
   useEffect(() => {
-    if (!autoOpenHandled && pendingLoans.length === 1 && pendingLoans[0].status === 'pendente_config') {
+    // Se houver empréstimos pendentes, abre o modal para o primeiro
+    if (pendingLoans.length > 0 && pendingLoans[0].status === 'pendente_config') {
       setSelectedLoan(pendingLoans[0]);
       setDetailDialogOpen(true);
-      setAutoOpenHandled(true); // Marca como tratado para não reabrir
     }
-    // Se o modal for fechado manualmente, autoOpenHandled permanece true, impedindo a reabertura.
-    // Se o empréstimo for configurado, ele sai da lista pendingLoans, e o efeito não dispara.
-  }, [pendingLoans, autoOpenHandled]);
+    // Se não houver pendentes, mas o modal estiver aberto, fecha.
+    else if (detailDialogOpen && selectedLoan?.status !== 'ativo' && selectedLoan?.status !== 'quitado') {
+        setDetailDialogOpen(false);
+    }
+  }, [pendingLoans]); // Depende apenas de pendingLoans
 
   // Helper function to calculate the next due date for a loan
   const getNextDueDate = useCallback((loan: Emprestimo): Date | null => {
