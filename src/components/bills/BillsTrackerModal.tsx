@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Calendar, CheckCircle2, Clock, TrendingUp, TrendingDown, DollarSign, Calculator, Menu, LogOut } from "lucide-react";
+import { Calendar, CheckCircle2, Clock, TrendingUp, TrendingDown, DollarSign, Calculator, Menu, LogOut, X } from "lucide-react";
 import { useFinance } from "@/contexts/FinanceContext";
 import { BillsTrackerList } from "./BillsTrackerList";
 import { BillsContextSidebar } from "./BillsContextSidebar"; // NEW IMPORT
@@ -109,7 +109,7 @@ export function BillsTrackerModal({ open, onOpenChange }: BillsTrackerModalProps
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent 
-        className="max-w-6xl max-h-[95vh] overflow-hidden flex flex-col p-0"
+        className="max-w-7xl max-h-[95vh] overflow-hidden flex flex-col p-0" // Aumentado para max-w-7xl
         hideCloseButton 
       >
         
@@ -158,6 +158,16 @@ export function BillsTrackerModal({ open, onOpenChange }: BillsTrackerModalProps
                   <span className="text-xs">{paidCount} Pagas</span>
                 </div>
               </div>
+              
+              {/* Botão de fechar (Visível em todas as telas) */}
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                className="h-8 w-8"
+                onClick={handleSaveAndClose}
+              >
+                <X className="w-4 h-4" />
+              </Button>
             </div>
           </div>
         </DialogHeader>
@@ -181,16 +191,6 @@ export function BillsTrackerModal({ open, onOpenChange }: BillsTrackerModalProps
             />
           </div>
         </div>
-        
-        {/* Botão de fechar no canto superior direito (para desktop) */}
-        <Button 
-          variant="ghost" 
-          size="icon" 
-          className="absolute top-3 right-3 h-8 w-8 hidden lg:flex"
-          onClick={handleSaveAndClose}
-        >
-          <LogOut className="w-4 h-4" />
-        </Button>
       </DialogContent>
     </Dialog>
   );
