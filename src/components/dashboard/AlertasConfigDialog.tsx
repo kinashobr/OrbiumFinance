@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Dialog,
   DialogContent,
@@ -18,7 +18,11 @@ import {
   Save,
   CreditCard,
   Repeat,
-  Shield
+  Shield,
+  Settings2,
+  Car,
+  DollarSign,
+  Percent,
 } from "lucide-react";
 
 interface AlertaConfig {
@@ -39,42 +43,58 @@ const ALERTA_INFO: Record<string, { icon: React.ElementType; descricao: string; 
   "saldo-negativo": {
     icon: AlertTriangle,
     descricao: "Alerta quando o saldo total das contas ficar negativo",
-    unidade: ""
-  },
-  "dividas-altas": {
-    icon: Target,
-    descricao: "Alerta quando dívidas ultrapassarem X% do saldo disponível",
-    unidade: "%"
-  },
-  "margem-baixa": {
-    icon: Target,
-    descricao: "Alerta quando a margem de poupança ficar abaixo de X%",
-    unidade: "%"
+    unidade: "R$"
   },
   "emprestimos-pendentes": {
-    icon: Target,
+    icon: Settings2,
     descricao: "Alerta sobre empréstimos aguardando configuração",
     unidade: ""
   },
-  "comprometimento-renda": {
-    icon: CreditCard,
-    descricao: "Alerta quando parcelas de empréstimo ultrapassam X% da receita mensal",
-    unidade: "%"
+  "veiculos-pendentes": {
+    icon: Car,
+    descricao: "Alerta sobre veículos comprados aguardando cadastro completo",
+    unidade: ""
   },
-  "rigidez-orcamentaria": {
-    icon: Repeat,
-    descricao: "Alerta quando despesas fixas ultrapassam X% das despesas totais",
-    unidade: "%"
+  "parcela-emprestimo-vencida": {
+    icon: CreditCard,
+    descricao: "Alerta se houver parcela de empréstimo em atraso",
+    unidade: ""
   },
   "seguro-vencendo": {
     icon: Shield,
-    descricao: "Alerta quando seguros de veículos estão próximos do vencimento (60 dias)",
-    unidade: ""
+    descricao: "Alerta quando seguros de veículos estão próximos do vencimento",
+    unidade: "dias"
+  },
+  "comprometimento-renda": {
+    icon: Percent,
+    descricao: "Alerta quando parcelas de empréstimo e despesas fixas ultrapassam X% da receita",
+    unidade: "%"
+  },
+  "margem-baixa": {
+    icon: DollarSign,
+    descricao: "Alerta quando a margem de poupança (Resultado Líquido / Receita) ficar abaixo de X%",
+    unidade: "%"
   },
 };
 
+const DEFAULT_CONFIG: AlertaConfig[] = [
+  { id: "saldo-negativo", nome: "Risco de Descoberto", ativo: true, tolerancia: 0 },
+  { id: "emprestimos-pendentes", nome: "Configuração de Empréstimo", ativo: true, tolerancia: 0 },
+  { id: "veiculos-pendentes", nome: "Cadastro de Veículo Pendente", ativo: true, tolerancia: 0 },
+  { id: "parcela-emprestimo-vencida", nome: "Parcela de Empréstimo Vencida", ativo: true, tolerancia: 0 },
+  { id: "seguro-vencendo", nome: "Seguro Próximo ao Vencimento", ativo: true, tolerancia: 30 },
+  { id: "comprometimento-renda", nome: "Comprometimento de Renda", ativo: true, tolerancia: 30 },
+  { id: "margem-baixa", nome: "Margem de Poupança Baixa", ativo: true, tolerancia: 10 },
+];
+
+
 export function AlertasConfigDialog({ open, onOpenChange, config, onSave }: AlertasConfigDialogProps) {
   const [localConfig, setLocalConfig] = useState<AlertaConfig[]>(config);
+
+  useEffect(() => {
+    // Sincroniza a configuração local com a prop 'config' quando o diálogo abre
+    setLocalConfig(config);
+  }, [config]);
 
   const handleToggle = (id: string) => {
     setLocalConfig(prev =>
@@ -83,7 +103,17 @@ export function AlertasConfigDialog({ open, onOpenChange, config, onSave }: Aler
   };
 
   const handleToleranciaChange = (id: string, value: string) => {
-    const numValue = parseFloat(value) || 0;
+    const info = ALERTA_INFO[id];
+    let numValue = parseFloat(value.replace(',', '.')) || 0;
+    
+    // Se for R$, permite valores negativos
+    if (info?.unidade === 'R$') {
+        // Mantém o valor como está
+    } else {
+        // Para percentual ou dias, garante que seja positivo
+        numValue = Math.max(0, numValue);
+    }
+
     setLocalConfig(prev =>
       prev.map(c => (c.id === id ? { ...c, tolerancia: numValue } : c))
     );
@@ -95,7 +125,22 @@ export function AlertasConfigDialog({ open, onOpenChange, config, onSave }: Aler
   };
 
   const handleReset = () => {
-    setLocalConfig(config);
+    // Recarrega a configuração padrão (ou a última salva)
+    const configMap = new Map(config.map((c: AlertaConfig) => [c.id, c]));
+    const resetConfig = DEFAULT_CONFIG.map(defaultAlert => {
+        if (configMap.has(defaultAlert.id)) {
+            return { ...defaultAlert, ...configMap.get(defaultAlert.id)! };
+        }
+        return defaultAlert;
+    });
+    setLocalConfig(resetConfig);
+  };
+  
+  const formatTolerancia = (value: number, unidade: string) => {
+      if (unidade === 'R$') {
+          return value.toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+      }
+      return value.toString();
   };
 
   return (
@@ -114,7 +159,9 @@ export function AlertasConfigDialog({ open, onOpenChange, config, onSave }: Aler
         <div className="space-y-4 py-4">
           {localConfig.map((alerta, index) => {
             const info = ALERTA_INFO[alerta.id];
-            const Icon = info?.icon || Target;
+            if (!info) return null; // Skip removed/unknown alerts
+            
+            const Icon = info.icon;
 
             return (
               <div key={alerta.id}>
@@ -128,7 +175,7 @@ export function AlertasConfigDialog({ open, onOpenChange, config, onSave }: Aler
                       <div>
                         <Label className="font-medium">{alerta.nome}</Label>
                         <p className="text-xs text-muted-foreground">
-                          {info?.descricao}
+                          {info.descricao}
                         </p>
                       </div>
                     </div>
@@ -138,19 +185,18 @@ export function AlertasConfigDialog({ open, onOpenChange, config, onSave }: Aler
                     />
                   </div>
 
-                  {alerta.ativo && info?.unidade && (
+                  {alerta.ativo && info.unidade && (
                     <div className="flex items-center gap-2 pl-11">
                       <Label className="text-xs text-muted-foreground whitespace-nowrap">
                         Limite:
                       </Label>
                       <div className="relative flex-1 max-w-24">
                         <Input
-                          type="number"
-                          value={alerta.tolerancia}
+                          type="text"
+                          inputMode="decimal"
+                          value={formatTolerancia(alerta.tolerancia, info.unidade)}
                           onChange={(e) => handleToleranciaChange(alerta.id, e.target.value)}
                           className="h-8 text-sm pr-8"
-                          min={0}
-                          max={500}
                         />
                         {info.unidade && (
                           <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">

@@ -10,7 +10,10 @@ import {
   ChevronRight,
   X,
   Repeat,
-  Shield
+  Shield,
+  Car,
+  DollarSign,
+  CheckCircle2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -23,6 +26,7 @@ import {
 import { cn, parseDateLocal } from "@/lib/utils";
 import { useFinance } from "@/contexts/FinanceContext";
 import { AlertasConfigDialog } from "./AlertasConfigDialog";
+import { differenceInDays, addMonths, isBefore, isAfter, isSameDay } from "date-fns";
 
 interface Alerta {
   id: string;
@@ -45,46 +49,51 @@ const ALERTA_INFO: Record<string, { icon: React.ElementType; descricao: string; 
     descricao: "Alerta quando o saldo total das contas ficar negativo",
     unidade: ""
   },
-  "dividas-altas": {
-    icon: Target,
-    descricao: "Alerta quando dívidas ultrapassarem X% do saldo disponível",
-    unidade: "%"
-  },
-  "margem-baixa": {
-    icon: Target,
-    descricao: "Alerta quando a margem de poupança ficar abaixo de X%",
-    unidade: "%"
-  },
   "emprestimos-pendentes": {
-    icon: Target,
-    descricao: "Alerta sobre empréstimos aguardando configuração",
+    icon: Settings2,
+    descricao: "Empréstimos aguardando configuração de contrato",
     unidade: ""
   },
-  "comprometimento-renda": {
-    icon: CreditCard,
-    descricao: "Alerta quando parcelas de empréstimo ultrapassam X% da receita mensal",
-    unidade: "%"
+  "veiculos-pendentes": {
+    icon: Car,
+    descricao: "Veículos comprados aguardando cadastro completo",
+    unidade: ""
   },
-  "rigidez-orcamentaria": {
-    icon: Repeat,
-    descricao: "Alerta quando despesas fixas ultrapassam X% das despesas totais",
-    unidade: "%"
+  "parcela-emprestimo-vencida": {
+    icon: CreditCard,
+    descricao: "Parcela de empréstimo em atraso",
+    unidade: ""
   },
   "seguro-vencendo": {
     icon: Shield,
-    descricao: "Alerta quando seguros de veículos estão próximos do vencimento (60 dias)",
+    descricao: "Seguro de veículo vencendo nos próximos 30 dias",
+    unidade: ""
+  },
+  "comprometimento-renda": {
+    icon: Percent,
+    descricao: "Parcelas de empréstimo e despesas fixas ultrapassam X% da receita",
+    unidade: "%"
+  },
+  "margem-baixa": {
+    icon: DollarSign,
+    descricao: "Margem de poupança abaixo de X%",
+    unidade: "%"
+  },
+  "conquista-amortizacao": {
+    icon: CheckCircle2,
+    descricao: "Empréstimo atingiu um marco de quitação (50% ou 75%)",
     unidade: ""
   },
 };
 
 const DEFAULT_CONFIG: AlertaConfig[] = [
-  { id: "saldo-negativo", nome: "Saldo Negativo", ativo: true, tolerancia: 0 },
-  { id: "dividas-altas", nome: "Dívidas Altas", ativo: true, tolerancia: 200 },
-  { id: "margem-baixa", nome: "Margem Baixa", ativo: true, tolerancia: 10 },
-  { id: "emprestimos-pendentes", nome: "Empréstimos Pendentes", ativo: true, tolerancia: 0 },
-  { id: "comprometimento-renda", nome: "Comprometimento Renda", ativo: true, tolerancia: 30 },
-  { id: "rigidez-orcamentaria", nome: "Rigidez Orçamentária", ativo: true, tolerancia: 60 },
-  { id: "seguro-vencendo", nome: "Seguro Vencendo", ativo: true, tolerancia: 0 },
+  { id: "saldo-negativo", nome: "Risco de Descoberto", ativo: true, tolerancia: 0 },
+  { id: "emprestimos-pendentes", nome: "Configuração de Empréstimo", ativo: true, tolerancia: 0 },
+  { id: "veiculos-pendentes", nome: "Cadastro de Veículo Pendente", ativo: true, tolerancia: 0 },
+  { id: "parcela-emprestimo-vencida", nome: "Parcela de Empréstimo Vencida", ativo: true, tolerancia: 0 },
+  { id: "seguro-vencendo", nome: "Seguro Próximo ao Vencimento", ativo: true, tolerancia: 30 }, // 30 dias
+  { id: "comprometimento-renda", nome: "Comprometimento de Renda", ativo: true, tolerancia: 30 }, // 30%
+  { id: "margem-baixa", nome: "Margem de Poupança Baixa", ativo: true, tolerancia: 10 }, // 10%
 ];
 
 interface SidebarAlertasProps {
@@ -99,8 +108,12 @@ export function SidebarAlertas({ collapsed = false }: SidebarAlertasProps) {
     segurosVeiculo,
     categoriasV2,
     getSaldoAtual,
-    getSaldoDevedor,
+    getPendingLoans,
+    getPendingVehicles,
+    hasOverdueLoanInstallments, // NEW
+    hasOverdueSeguroInstallments, // NEW
   } = useFinance();
+  
   const [configOpen, setConfigOpen] = useState(false);
   const [alertasConfig, setAlertasConfig] = useState<AlertaConfig[]>(() => {
     const saved = localStorage.getItem("alertas-config");
@@ -110,7 +123,6 @@ export function SidebarAlertas({ collapsed = false }: SidebarAlertasProps) {
     // Merge saved config with new defaults
     return DEFAULT_CONFIG.map(defaultAlert => {
         if (configMap.has(defaultAlert.id)) {
-            // FIX: Use non-null assertion '!' since we checked 'has'
             return { ...defaultAlert, ...configMap.get(defaultAlert.id)! };
         }
         return defaultAlert;
@@ -127,13 +139,7 @@ export function SidebarAlertas({ collapsed = false }: SidebarAlertasProps) {
     // 1. Saldo total das contas (Global)
     const saldoContas = getSaldoAtual(); 
 
-    // 2. Dívidas (Global)
-    const totalDividas = getSaldoDevedor(); 
-    
-    // 3. Empréstimos pendentes (Configuration pending)
-    const emprestimosPendentes = emprestimos.filter(e => e.status === 'pendente_config').length;
-
-    // 4. Transações do mês (Current Month)
+    // 2. Transações do mês (Current Month)
     const transacoesMes = transacoesV2.filter(t => {
       try {
         const d = parseDateLocal(t.date);
@@ -151,7 +157,7 @@ export function SidebarAlertas({ collapsed = false }: SidebarAlertasProps) {
       .filter(t => t.operationType === 'despesa' || t.operationType === 'pagamento_emprestimo')
       .reduce((acc, t) => acc + t.amount, 0);
       
-    // 5. Despesas Fixas do Mês
+    // 3. Despesas Fixas do Mês (para comprometimento)
     const categoriasMap = new Map(categoriasV2.map(c => [c.id, c]));
     const despesasFixasMes = transacoesMes
         .filter(t => {
@@ -159,137 +165,181 @@ export function SidebarAlertas({ collapsed = false }: SidebarAlertasProps) {
             return cat?.nature === 'despesa_fixa';
         })
         .reduce((acc, t) => acc + t.amount, 0);
-
-    // 6. Margem de Poupança (Savings Rate)
-    const margemPoupanca = receitasMes > 0 ? ((receitasMes - despesasMes) / receitasMes) * 100 : 0;
-    
-    // 7. Total de Parcelas de Empréstimo do Mês (Debt Service)
+        
+    // 4. Total de Parcelas de Empréstimo do Mês (Debt Service)
     const parcelasEmprestimoMes = transacoesMes
         .filter(t => t.operationType === 'pagamento_emprestimo')
         .reduce((acc, t) => acc + t.amount, 0);
         
-    // 8. Seguros vencendo em 60 dias
-    const dataLimiteSeguro = new Date();
-    dataLimiteSeguro.setDate(dataLimiteSeguro.getDate() + 60);
+    // 5. Seguros vencendo em 30 dias (usando a tolerância padrão)
+    const dataLimiteSeguro = addMonths(now, 1); // 30 dias é aproximadamente 1 mês
     
     const segurosVencendo = segurosVeiculo.filter(s => {
         try {
             const vigenciaFim = parseDateLocal(s.vigenciaFim);
-            return vigenciaFim > now && vigenciaFim <= dataLimiteSeguro;
+            // Verifica se a vigência termina entre hoje e o limite de 30 dias
+            return isAfter(vigenciaFim, now) && isBefore(vigenciaFim, dataLimiteSeguro);
         } catch {
             return false;
         }
     }).length;
+
+    // 6. Margem de Poupança (Savings Rate)
+    const margemPoupanca = receitasMes > 0 ? ((receitasMes - despesasMes) / receitasMes) * 100 : 0;
+    
+    // 7. Comprometimento de Renda (Parcelas + Fixas / Receita)
+    const comprometimentoRenda = receitasMes > 0 ? ((parcelasEmprestimoMes + despesasFixasMes) / receitasMes) * 100 : 0;
 
 
     return {
       saldoContas,
       receitasMes,
       despesasMes,
-      totalDividas,
-      emprestimosPendentes,
+      emprestimosPendentes: getPendingLoans().length,
+      veiculosPendentes: getPendingVehicles().length,
       margemPoupanca,
-      despesasFixasMes,
-      parcelasEmprestimoMes,
+      comprometimentoRenda,
       segurosVencendo,
     };
-  }, [transacoesV2, emprestimos, segurosVeiculo, categoriasV2, getSaldoAtual, getSaldoDevedor]);
+  }, [transacoesV2, emprestimos, segurosVeiculo, categoriasV2, getSaldoAtual, getPendingLoans, getPendingVehicles]);
 
   // Gerar alertas baseados nas configurações
   const alertas = useMemo(() => {
     const alerts: Alerta[] = [];
     const configMap = new Map(alertasConfig.map(c => [c.id, c]));
+    const today = new Date();
 
-    // 1. Saldo negativo
-    if (configMap.get("saldo-negativo")?.ativo && metricas.saldoContas < 0) {
+    // --- 1. Ação Imediata ---
+
+    // 1.1. Saldo negativo
+    const configSaldo = configMap.get("saldo-negativo");
+    if (configSaldo?.ativo && metricas.saldoContas < configSaldo.tolerancia) {
       alerts.push({
         id: "saldo-negativo",
         tipo: "danger",
-        titulo: "Saldo Negativo",
-        descricao: `R$ ${metricas.saldoContas.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`,
+        titulo: "Risco de Descoberto",
+        descricao: `Saldo atual: R$ ${metricas.saldoContas.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`,
         rota: "/receitas-despesas"
       });
     }
-
-    // 2. Dívidas altas (Debt to Asset Ratio - using totalDividas vs saldoContas as proxy)
-    const toleranciaDividas = configMap.get("dividas-altas")?.tolerancia || 200;
-    if (configMap.get("dividas-altas")?.ativo && metricas.totalDividas > metricas.saldoContas * (toleranciaDividas / 100) && metricas.saldoContas > 0) {
-      alerts.push({
-        id: "dividas-altas",
-        tipo: "warning",
-        titulo: "Dívidas Elevadas",
-        descricao: `Dívida total: R$ ${metricas.totalDividas.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`,
-        rota: "/emprestimos"
-      });
-    }
-
-    // 3. Margem baixa (Savings Rate)
-    const toleranciaMargem = configMap.get("margem-baixa")?.tolerancia || 10;
-    if (configMap.get("margem-baixa")?.ativo && metricas.margemPoupanca < toleranciaMargem && metricas.receitasMes > 0) {
-      alerts.push({
-        id: "margem-baixa",
-        tipo: "warning",
-        titulo: "Margem Baixa",
-        descricao: `${metricas.margemPoupanca.toFixed(1)}% de poupança`,
-        rota: "/receitas-despesas"
-      });
-    }
-
-    // 4. Empréstimos pendentes
+    
+    // 1.2. Empréstimos Pendentes de Configuração
     if (configMap.get("emprestimos-pendentes")?.ativo && metricas.emprestimosPendentes > 0) {
       alerts.push({
         id: "emprestimos-pendentes",
         tipo: "info",
         titulo: "Configurar Empréstimos",
-        descricao: `${metricas.emprestimosPendentes} pendente(s)`,
+        descricao: `${metricas.emprestimosPendentes} contrato(s) aguardando detalhes.`,
         rota: "/emprestimos"
       });
     }
     
-    // 5. Alto Comprometimento de Renda (Debt Service Ratio)
-    const configComprometimento = configMap.get("comprometimento-renda");
-    const toleranciaComprometimento = configComprometimento?.tolerancia || 30;
-    const comprometimentoRenda = metricas.receitasMes > 0 ? (metricas.parcelasEmprestimoMes / metricas.receitasMes) * 100 : 0;
-    
-    if (configComprometimento?.ativo && comprometimentoRenda > toleranciaComprometimento && metricas.receitasMes > 0) {
+    // 1.3. Veículos Pendentes de Cadastro
+    if (configMap.get("veiculos-pendentes")?.ativo && metricas.veiculosPendentes > 0) {
+      alerts.push({
+        id: "veiculos-pendentes",
+        tipo: "info",
+        titulo: "Cadastro de Veículo Pendente",
+        descricao: `${metricas.veiculosPendentes} veículo(s) aguardando detalhes.`,
+        rota: "/veiculos"
+      });
+    }
+
+    // 1.4. Parcela de Empréstimo Vencida
+    if (configMap.get("parcela-emprestimo-vencida")?.ativo && hasOverdueLoanInstallments(today)) {
         alerts.push({
-            id: "comprometimento-renda",
+            id: "parcela-emprestimo-vencida",
             tipo: "danger",
-            titulo: "Comprometimento Alto",
-            descricao: `${comprometimentoRenda.toFixed(1)}% da renda em parcelas`,
+            titulo: "Parcela de Empréstimo Vencida",
+            descricao: `Pelo menos uma parcela está em atraso.`,
             rota: "/emprestimos"
         });
     }
     
-    // 6. Rigidez Orçamentária (Fixed Expense Ratio)
-    const configRigidez = configMap.get("rigidez-orcamentaria");
-    const toleranciaRigidez = configRigidez?.tolerancia || 60;
-    const rigidezOrcamentaria = metricas.despesasMes > 0 ? (metricas.despesasFixasMes / metricas.despesasMes) * 100 : 0;
-    
-    if (configRigidez?.ativo && rigidezOrcamentaria > toleranciaRigidez && metricas.despesasMes > 0) {
-        alerts.push({
-            id: "rigidez-orcamentaria",
-            tipo: "warning",
-            titulo: "Rigidez Orçamentária",
-            descricao: `${rigidezOrcamentaria.toFixed(1)}% das despesas são fixas`,
-            rota: "/receitas-despesas"
-        });
-    }
-    
-    // 7. Seguro Vencendo
+    // 1.5. Seguro Vencendo (30 dias)
     const configSeguro = configMap.get("seguro-vencendo");
     if (configSeguro?.ativo && metricas.segurosVencendo > 0) {
         alerts.push({
             id: "seguro-vencendo",
             tipo: "warning",
             titulo: "Seguro Vencendo",
-            descricao: `${metricas.segurosVencendo} seguro(s) vencendo em 60 dias`,
+            descricao: `${metricas.segurosVencendo} seguro(s) vencendo em 30 dias.`,
+            rota: "/veiculos"
+        });
+    }
+    
+    // 1.6. Parcela de Seguro Vencida
+    if (hasOverdueSeguroInstallments(today)) {
+        alerts.push({
+            id: "parcela-seguro-vencida",
+            tipo: "danger",
+            titulo: "Parcela de Seguro Vencida",
+            descricao: `Pelo menos uma parcela de seguro está em atraso.`,
             rota: "/veiculos"
         });
     }
 
+    // --- 2. Risco Estrutural ---
+
+    // 2.1. Comprometimento de Renda
+    const configComprometimento = configMap.get("comprometimento-renda");
+    const toleranciaComprometimento = configComprometimento?.tolerancia || 30;
+    
+    if (configComprometimento?.ativo && metricas.comprometimentoRenda > toleranciaComprometimento && metricas.receitasMes > 0) {
+        alerts.push({
+            id: "comprometimento-renda",
+            tipo: metricas.comprometimentoRenda > 50 ? "danger" : "warning",
+            titulo: "Comprometimento Alto",
+            descricao: `${metricas.comprometimentoRenda.toFixed(1)}% da renda em dívidas/fixas.`,
+            rota: "/relatorios"
+        });
+    }
+    
+    // 2.2. Margem de Poupança Baixa
+    const configMargem = configMap.get("margem-baixa");
+    const toleranciaMargem = configMargem?.tolerancia || 10;
+    
+    if (configMargem?.ativo && metricas.margemPoupanca < toleranciaMargem && metricas.receitasMes > 0) {
+        alerts.push({
+            id: "margem-baixa",
+            tipo: "warning",
+            titulo: "Margem de Poupança Baixa",
+            descricao: `${metricas.margemPoupanca.toFixed(1)}% de poupança.`,
+            rota: "/relatorios"
+        });
+    }
+    
+    // --- 3. Oportunidade/Conquista (Simplificado) ---
+    
+    // 3.1. Conquista de Amortização (Exemplo: 50% ou 75% do principal)
+    emprestimos.forEach(loan => {
+        if (loan.status === 'ativo' && loan.meses > 0) {
+            const paidCount = loan.parcelasPagas || 0;
+            const progress = (paidCount / loan.meses) * 100;
+            
+            if (progress >= 50 && progress < 75 && !dismissedAlertas.has(`conquista-50-${loan.id}`)) {
+                alerts.push({
+                    id: `conquista-50-${loan.id}`,
+                    tipo: "success",
+                    titulo: "Conquista: 50% Amortizado!",
+                    descricao: `Empréstimo ${loan.contrato} atingiu 50% de quitação.`,
+                    rota: "/emprestimos"
+                });
+            } else if (progress >= 75 && progress < 100 && !dismissedAlertas.has(`conquista-75-${loan.id}`)) {
+                alerts.push({
+                    id: `conquista-75-${loan.id}`,
+                    tipo: "success",
+                    titulo: "Conquista: Reta Final!",
+                    descricao: `Empréstimo ${loan.contrato} atingiu 75% de quitação.`,
+                    rota: "/emprestimos"
+                });
+            }
+        }
+    });
+
+
     return alerts.filter(a => !dismissedAlertas.has(a.id));
-  }, [metricas, alertasConfig, dismissedAlertas]);
+  }, [metricas, alertasConfig, dismissedAlertas, emprestimos, hasOverdueLoanInstallments, hasOverdueSeguroInstallments]);
 
   const handleSaveConfig = (newConfig: AlertaConfig[]) => {
     setAlertasConfig(newConfig);
@@ -301,7 +351,7 @@ export function SidebarAlertas({ collapsed = false }: SidebarAlertasProps) {
   };
 
   const getAlertIcon = (alertaId: string) => {
-    const info = ALERTA_INFO[alertaId];
+    const info = ALERTA_INFO[alertaId.split('-')[0]]; // Usa a chave base
     return info?.icon || Target;
   };
 
