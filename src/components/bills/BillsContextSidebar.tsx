@@ -80,16 +80,16 @@ export function BillsContextSidebar({
         netForecast >= 0 ? "stat-card-positive" : "stat-card-negative"
       )}>
         <div className="flex items-center justify-between">
-          <Label className="text-xs font-medium flex items-center gap-1">
+          <Label className="text-[10px] font-medium flex items-center gap-1">
             <Calculator className="w-3 h-3" />
             SALDO PREVISTO
           </Label>
-          <span className="text-[10px] text-muted-foreground">
+          <span className="text-[9px] text-muted-foreground">
             {pendingCount} pend.
           </span>
         </div>
         <p className={cn(
-          "text-xl font-bold mt-0.5", // Reduzido para text-xl
+          "text-lg font-bold mt-0.5", // Reduzido de text-xl para text-lg
           netForecast >= 0 ? "text-success" : "text-destructive"
         )}>
           {formatCurrency(netForecast)}
