@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback } "react";
 import {
   Table,
   TableBody,
@@ -350,32 +350,32 @@ export function BillsTrackerList({
                   <Panel defaultSize={5} minSize={5} className="p-0">
                     <TableHead className="text-muted-foreground w-10 text-center p-1 text-xs">Pagar</TableHead>
                   </Panel>
-                  <PanelResizeHandle withHandle className="w-1 bg-border/50 hover:bg-border" />
+                  <PanelResizeHandle className="w-1 bg-border/50 hover:bg-border" />
                   
                   <Panel defaultSize={10} minSize={8} className="p-0">
                     <TableHead className="text-muted-foreground w-20 p-1 text-xs">Vencimento</TableHead>
                   </Panel>
-                  <PanelResizeHandle withHandle className="w-1 bg-border/50 hover:bg-border" />
+                  <PanelResizeHandle className="w-1 bg-border/50 hover:bg-border" />
                   
                   <Panel defaultSize={30} minSize={20} className="p-0">
                     <TableHead className="text-muted-foreground p-1 text-xs">Descrição</TableHead>
                   </Panel>
-                  <PanelResizeHandle withHandle className="w-1 bg-border/50 hover:bg-border" />
+                  <PanelResizeHandle className="w-1 bg-border/50 hover:bg-border" />
                   
                   <Panel defaultSize={15} minSize={10} className="p-0">
                     <TableHead className="text-muted-foreground w-20 p-1 text-xs">Conta Pgto</TableHead>
                   </Panel>
-                  <PanelResizeHandle withHandle className="w-1 bg-border/50 hover:bg-border" />
+                  <PanelResizeHandle className="w-1 bg-border/50 hover:bg-border" />
                   
                   <Panel defaultSize={10} minSize={8} className="p-0">
                     <TableHead className="text-muted-foreground w-16 p-1 text-xs">Tipo</TableHead>
                   </Panel>
-                  <PanelResizeHandle withHandle className="w-1 bg-border/50 hover:bg-border" />
+                  <PanelResizeHandle className="w-1 bg-border/50 hover:bg-border" />
                   
                   <Panel defaultSize={15} minSize={10} className="p-0">
                     <TableHead className="text-muted-foreground w-20 text-right p-1 text-xs">Valor</TableHead>
                   </Panel>
-                  <PanelResizeHandle withHandle className="w-1 bg-border/50 hover:bg-border" />
+                  <PanelResizeHandle className="w-1 bg-border/50 hover:bg-border" />
                   
                   <Panel defaultSize={10} minSize={5} className="p-0">
                     <TableHead className="text-muted-foreground w-10 text-center p-1 text-xs">Ações</TableHead>
@@ -411,7 +411,7 @@ export function BillsTrackerList({
                             />
                           </TableCell>
                         </Panel>
-                        <PanelResizeHandle withHandle className="w-1 bg-border/50 hover:bg-border" />
+                        <PanelResizeHandle className="w-1 bg-border/50 hover:bg-border" />
                         
                         <Panel defaultSize={10} minSize={8} className="p-0">
                           <TableCell className={cn("font-medium whitespace-nowrap text-xs p-1", isOverdue && "text-destructive")}>
@@ -421,14 +421,14 @@ export function BillsTrackerList({
                             </div>
                           </TableCell>
                         </Panel>
-                        <PanelResizeHandle withHandle className="w-1 bg-border/50 hover:bg-border" />
+                        <PanelResizeHandle className="w-1 bg-border/50 hover:bg-border" />
                         
                         <Panel defaultSize={30} minSize={20} className="p-0">
                           <TableCell className="text-xs max-w-[200px] truncate p-1">
                             {bill.description}
                           </TableCell>
                         </Panel>
-                        <PanelResizeHandle withHandle className="w-1 bg-border/50 hover:bg-border" />
+                        <PanelResizeHandle className="w-1 bg-border/50 hover:bg-border" />
                         
                         <Panel defaultSize={15} minSize={10} className="p-0">
                           <TableCell className="text-xs p-1">
@@ -450,7 +450,7 @@ export function BillsTrackerList({
                             </Select>
                           </TableCell>
                         </Panel>
-                        <PanelResizeHandle withHandle className="w-1 bg-border/50 hover:bg-border" />
+                        <PanelResizeHandle className="w-1 bg-border/50 hover:bg-border" />
                         
                         <Panel defaultSize={10} minSize={8} className="p-0">
                           <TableCell className="p-1">
@@ -460,7 +460,7 @@ export function BillsTrackerList({
                             </Badge>
                           </TableCell>
                         </Panel>
-                        <PanelResizeHandle withHandle className="w-1 bg-border/50 hover:bg-border" />
+                        <PanelResizeHandle className="w-1 bg-border/50 hover:bg-border" />
                         
                         <Panel defaultSize={15} minSize={10} className="p-0">
                           <TableCell className={cn("text-right font-semibold whitespace-nowrap p-1", isPaid ? "text-success" : "text-destructive")}>
@@ -476,7 +476,7 @@ export function BillsTrackerList({
                             )}
                           </TableCell>
                         </Panel>
-                        <PanelResizeHandle withHandle className="w-1 bg-border/50 hover:bg-border" />
+                        <PanelResizeHandle className="w-1 bg-border/50 hover:bg-border" />
                         
                         <Panel defaultSize={10} minSize={5} className="p-0">
                           <TableCell className="text-center p-1">
