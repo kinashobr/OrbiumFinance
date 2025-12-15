@@ -212,7 +212,7 @@ export function SidebarAlertas({ collapsed = false }: SidebarAlertasProps) {
       parcelasEmprestimoMes,
       segurosVencendo,
     };
-  }, [transacoesV2, emprestimos, segurosVeiculos, categoriasV2, contasMovimento, getSaldoDevedor, parsedAlertStartDate, calculateBalanceUpToDate]);
+  }, [transacoesV2, emprestimos, segurosVeiculo, categoriasV2, contasMovimento, getSaldoDevedor, parsedAlertStartDate, calculateBalanceUpToDate]);
 
   // Gerar alertas baseados nas configurações
   const alertas = useMemo(() => {
