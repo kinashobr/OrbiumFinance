@@ -40,6 +40,9 @@ const Emprestimos = () => {
   const [selectedLoan, setSelectedLoan] = useState<Emprestimo | null>(null);
   const [detailDialogOpen, setDetailDialogOpen] = useState(false);
   
+  // NEW STATE: Flag para controlar se a abertura automática já ocorreu
+  const [autoOpenHandled, setAutoOpenHandled] = useState(false);
+  
   const handlePeriodChange = useCallback((ranges: ComparisonDateRanges) => {
     setDateRanges(ranges);
   }, [setDateRanges]);
@@ -49,11 +52,14 @@ const Emprestimos = () => {
 
   // Effect to handle auto-opening configuration for pending loans
   useEffect(() => {
-    if (pendingLoans.length === 1 && pendingLoans[0].status === 'pendente_config') {
+    if (!autoOpenHandled && pendingLoans.length === 1 && pendingLoans[0].status === 'pendente_config') {
       setSelectedLoan(pendingLoans[0]);
       setDetailDialogOpen(true);
+      setAutoOpenHandled(true); // Marca como tratado para não reabrir
     }
-  }, [pendingLoans]);
+    // Se o modal for fechado manualmente, autoOpenHandled permanece true, impedindo a reabertura.
+    // Se o empréstimo for configurado, ele sai da lista pendingLoans, e o efeito não dispara.
+  }, [pendingLoans, autoOpenHandled]);
 
   // Helper function to calculate the next due date for a loan
   const getNextDueDate = useCallback((loan: Emprestimo): Date | null => {
@@ -82,7 +88,7 @@ const Emprestimos = () => {
     // Saldo Devedor Total (Apenas Empréstimos)
     const principalEmprestimos = getLoanPrincipalRemaining(targetDate);
     
-    // Dívida Cartões (Mantida para cálculo interno, mas não exibida no card principal)
+    // Dívida Cartões (Mantida para referência, mas não exibida no card principal)
     const dividaCartoes = getCreditCardDebt(targetDate);
     
     const totalContratado = emprestimos.reduce((acc, e) => acc + e.valorTotal, 0);
