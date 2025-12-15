@@ -44,7 +44,7 @@ export function BillsTrackerList({
   onAddBill,
   currentDate,
 }: BillsTrackerListProps) {
-  const { addTransacaoV2, categoriasV2, contasMovimento, markLoanParcelPaid, unmarkLoanParcelPaid, markSeguroParcelPaid, unmarkSeguroParcelaid, setTransacoesV2 } = useFinance();
+  const { addTransacaoV2, categoriasV2, contasMovimento, markLoanParcelPaid, unmarkLoanParcelPaid, markSeguroParcelPaid, unmarkSeguroParcelPaid, setTransacoesV2 } = useFinance();
   
   const [newBillData, setNewBillData] = useState({
     description: '',
@@ -125,7 +125,7 @@ export function BillsTrackerList({
         } else if (bill.sourceType === 'insurance_installment' && bill.sourceRef && bill.parcelaNumber) {
             const seguroId = parseInt(bill.sourceRef);
             if (!isNaN(seguroId)) {
-                unmarkSeguroParcelaid(seguroId, bill.parcelaNumber);
+                unmarkSeguroParcelPaid(seguroId, bill.parcelaNumber);
             }
         }
         
@@ -215,7 +215,7 @@ export function BillsTrackerList({
     onUpdateBill(bill.id, { isPaid: true, paymentDate, transactionId });
     toast.success(`Conta "${bill.description}" paga e registrada!`);
 
-  }, [addTransacaoV2, onUpdateBill, categoriasV2, contasMovimento, currentDate, markLoanParcelPaid, markSeguroParcelPaid, unmarkLoanParcelPaid, unmarkSeguroParcelaid, setTransacoesV2]);
+  }, [addTransacaoV2, onUpdateBill, categoriasV2, contasMovimento, currentDate, markLoanParcelPaid, markSeguroParcelPaid, unmarkLoanParcelPaid, unmarkSeguroParcelPaid, setTransacoesV2]);
 
   const pendingBills = bills.filter(b => !b.isPaid);
   const paidBills = bills.filter(b => b.isPaid);
