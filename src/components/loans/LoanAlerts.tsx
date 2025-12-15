@@ -29,9 +29,10 @@ interface AlertItem {
 interface LoanAlertsProps {
   emprestimos: Emprestimo[];
   className?: string;
+  onOpenPendingConfig?: () => void; // <-- PROPRIEDADE ADICIONADA
 }
 
-export function LoanAlerts({ emprestimos, className }: LoanAlertsProps) {
+export function LoanAlerts({ emprestimos, className, onOpenPendingConfig }: LoanAlertsProps) {
   const { calculateLoanSchedule, calculatePaidInstallmentsUpToDate } = useFinance();
   const hoje = new Date();
   const activeLoans = useMemo(() => emprestimos.filter(e => e.status === 'ativo' || e.status === 'pendente_config'), [emprestimos]);
@@ -44,26 +45,8 @@ export function LoanAlerts({ emprestimos, className }: LoanAlertsProps) {
 
   // NEW: Function to open the detail dialog for the first pending loan
   const handleOpenPendingConfig = () => {
-    if (firstPendingLoan) {
-      // Since LoanAlerts is used inside Emprestimos.tsx, we need a way to communicate
-      // back to the parent component to open the dialog. We can't directly use hooks
-      // like setSelectedLoan/setDetailDialogOpen here.
-      // The simplest way is to trigger a navigation/state change that the parent listens to,
-      // but since this component is already on the Emprestimos page, we'll rely on the
-      // parent component to pass a prop if needed, or, for simplicity in this context,
-      // we'll assume the parent component (Emprestimos.tsx) will handle the state change
-      // based on a custom event or a prop passed down.
-      // Since we cannot modify the parent component's props from here without a request,
-      // I will add a placeholder action that the user can implement in Emprestimos.tsx
-      // if they want a direct click action on the alert itself.
-      // For now, I will add a console log and a visual indicator.
-      console.log("Action: Open Loan Config Dialog for:", firstPendingLoan.contrato);
-      
-      // Since we cannot directly access the parent's state, we will rely on the user
-      // clicking the 'Eye' icon in the table, or we need to modify the Emprestimos.tsx
-      // component to pass a handler down.
-      // Let's assume the user will implement the handler in Emprestimos.tsx later,
-      // and we will just add the action property to the alert item.
+    if (firstPendingLoan && onOpenPendingConfig) {
+      onOpenPendingConfig();
     }
   };
 
@@ -222,7 +205,7 @@ export function LoanAlerts({ emprestimos, className }: LoanAlertsProps) {
     }
 
     return items;
-  }, [activeLoans, emprestimos, calculateLoanSchedule, calculatePaidInstallmentsUpToDate, firstPendingLoan]);
+  }, [activeLoans, emprestimos, calculateLoanSchedule, calculatePaidInstallmentsUpToDate, firstPendingLoan, onOpenPendingConfig]);
 
   const typeStyles = {
     warning: "bg-warning/10 border-warning/30 text-warning",
