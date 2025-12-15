@@ -107,7 +107,9 @@ export function BillsTrackerModal({ open, onOpenChange }: BillsTrackerModalProps
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent 
         className="max-w-6xl max-h-[90vh] overflow-hidden flex flex-col p-0"
-        // Removendo o botão de fechar 'X'
+        // Propriedade para remover o botão de fechar 'X'
+        hideCloseButton 
+        // Propriedades para prevenir o fechamento externo
         onInteractOutside={(e) => e.preventDefault()}
         onEscapeKeyDown={(e) => e.preventDefault()}
       >
