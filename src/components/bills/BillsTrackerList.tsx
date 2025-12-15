@@ -20,6 +20,7 @@ import { cn, parseDateLocal } from "@/lib/utils";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { EditableCell } from "../EditableCell"; // Import EditableCell
+import { ResizablePanel, ResizablePanelGroup, ResizableHandle } from "react-resizable-panels"; // NEW IMPORTS
 
 interface BillsTrackerListProps {
   bills: BillTracker[];
@@ -228,21 +229,32 @@ export function BillsTrackerList({
     onUpdateBill(bill.id, { isPaid: true, paymentDate, transactionId });
     toast.success(`Conta "${bill.description}" paga e registrada!`);
 
-  }, [addTransacaoV2, onUpdateBill, categoriasV2, contasMovimento, currentDate, markLoanParcelPaid, markSeguroParcelPaid, unmarkLoanParcelPaid, unmarkSeguroParcelPaid, setTransacoesV2]);
+  }, [addTransacaoV2, onUpdateBill, categoriasV2, contasMovimento, currentDate, markLoanParcelPaid, markSeguroParcelPaid, unmarkLoanParcelPaid, unmarkSeguroParcelaid, setTransacoesV2]);
 
-  const pendingBills = bills.filter(b => !b.isPaid);
-  const paidBills = bills.filter(b => b.isPaid);
+  // --- Lógica de Ordenação e Filtro ---
+  const sortedBills = useMemo(() => {
+    // 1. Filtra contas excluídas
+    const filtered = bills.filter(b => !b.isExcluded);
+    
+    // 2. Separa pendentes e pagas
+    const pending = filtered.filter(b => !b.isPaid);
+    const paid = filtered.filter(b => b.isPaid);
+    
+    // 3. Ordena pendentes por vencimento (mais próximo primeiro)
+    pending.sort((a, b) => parseDateLocal(a.dueDate).getTime() - parseDateLocal(b.dueDate).getTime());
+    
+    // 4. Ordena pagas por data de pagamento (mais recente primeiro)
+    paid.sort((a, b) => parseDateLocal(b.paymentDate || b.dueDate).getTime() - parseDateLocal(a.paymentDate || a.dueDate).getTime());
+    
+    // 5. Concatena: Pendentes + Pagas (Pagamento vai para o final)
+    return [...pending, ...paid];
+  }, [bills]);
   
-  const totalPending = pendingBills.reduce((acc, b) => acc + b.expectedAmount, 0);
+  const totalPending = sortedBills.filter(b => !b.isPaid).reduce((acc, b) => acc + b.expectedAmount, 0);
 
   const formatDate = (dateStr: string) => {
     const date = parseDateLocal(dateStr);
     return date.toLocaleDateString("pt-BR", { day: "2-digit", month: "short" });
-  };
-  
-  const getAccountName = (accountId: string | undefined) => {
-    if (!accountId) return 'N/A';
-    return contasMovimento.find(c => c.id === accountId)?.name || 'N/A';
   };
   
   const availableAccounts = useMemo(() => 
@@ -321,193 +333,193 @@ export function BillsTrackerList({
         </div>
       </div>
 
-      {/* Tabela de Contas Pendentes */}
+      {/* Tabela de Contas (Consolidada) */}
       <div className="glass-card p-3 flex-1 flex flex-col min-h-0">
         <div className="flex items-center justify-between mb-2 shrink-0">
-          <h3 className="text-sm font-semibold text-foreground">Contas Pendentes ({pendingBills.length})</h3>
+          <h3 className="text-sm font-semibold text-foreground">Contas do Mês ({sortedBills.length})</h3>
           <Badge variant="destructive" className="text-xs">
-            Total: {formatCurrency(totalPending)}
+            Pendentes: {formatCurrency(totalPending)}
           </Badge>
         </div>
         
         <div className="rounded-lg border border-border overflow-y-auto flex-1 min-h-[100px]">
-          <Table className="min-w-[750px]"> {/* Aumentado min-width */}
-            <TableHeader className="sticky top-0 bg-card z-10">
-              <TableRow className="border-border hover:bg-transparent h-8">
-                <TableHead className="text-muted-foreground w-10 text-center p-1 text-xs">Pagar</TableHead>
-                <TableHead className="text-muted-foreground w-20 p-1 text-xs">Vencimento</TableHead>
-                <TableHead className="text-muted-foreground p-1 text-xs">Descrição</TableHead>
-                <TableHead className="text-muted-foreground w-16 p-1 text-xs">Tipo</TableHead>
-                <TableHead className="text-muted-foreground w-20 p-1 text-xs">Conta Pgto</TableHead> {/* NEW COLUMN */}
-                <TableHead className="text-muted-foreground w-20 text-right p-1 text-xs">Valor</TableHead>
-                <TableHead className="text-muted-foreground w-10 text-center p-1 text-xs">Exc.</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {pendingBills.map((bill) => {
-                const config = SOURCE_CONFIG[bill.sourceType] || SOURCE_CONFIG.ad_hoc;
-                const Icon = config.icon;
-                const dueDate = parseDateLocal(bill.dueDate);
-                const isOverdue = dueDate < currentDate && !bill.isPaid;
-                
-                const isEditable = bill.sourceType !== 'loan_installment' && bill.sourceType !== 'insurance_installment';
-                
-                return (
-                  <TableRow 
-                    key={bill.id} 
-                    className={cn(
-                      "hover:bg-muted/30 transition-colors h-8",
-                      isOverdue && "bg-destructive/5 hover:bg-destructive/10"
-                    )}
-                  >
-                    <TableCell className="text-center p-1">
-                      <Checkbox
-                        checked={bill.isPaid}
-                        onCheckedChange={(checked) => handleMarkAsPaid(bill, checked as boolean)}
-                        className="w-4 h-4"
-                      />
-                    </TableCell>
-                    <TableCell className={cn("font-medium whitespace-nowrap text-xs p-1", isOverdue && "text-destructive")}>
-                      <div className="flex items-center gap-1">
-                        {isOverdue && <AlertTriangle className="w-3 h-3 text-destructive" />}
-                        {formatDate(bill.dueDate)}
-                      </div>
-                    </TableCell>
-                    <TableCell className="text-xs max-w-[200px] truncate p-1">
-                      {bill.description}
-                    </TableCell>
-                    <TableCell className="p-1">
-                      <Badge variant="outline" className={cn("gap-1 text-[10px] px-1 py-0", config.color)}>
-                        <Icon className="w-3 h-3" />
-                        {config.label}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-xs p-1">
-                      <Select 
-                        value={bill.suggestedAccountId || ''} 
-                        onValueChange={(v) => handleUpdateSuggestedAccount(bill, v)}
-                      >
-                        <SelectTrigger className="h-6 text-xs p-1">
-                          <SelectValue placeholder="Conta..." />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {accountOptions.map(opt => (
-                            <SelectItem key={opt.value} value={opt.value} className="text-xs">
-                              {opt.label}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </TableCell>
-                    <TableCell className="text-right font-semibold text-destructive whitespace-nowrap p-1">
-                      {isEditable ? (
-                        <EditableCell 
-                          value={bill.expectedAmount} 
-                          type="currency" 
-                          onSave={(v) => handleUpdateExpectedAmount(bill, Number(v))}
-                          className="text-destructive text-right text-xs"
-                        />
-                      ) : (
-                        formatCurrency(bill.expectedAmount)
-                      )}
-                    </TableCell>
-                    <TableCell className="text-center p-1">
-                      {isEditable && (
-                        <Button 
-                          variant="ghost" 
-                          size="icon" 
-                          className="h-6 w-6 text-muted-foreground hover:text-destructive"
-                          onClick={() => handleExcludeBill(bill)}
-                          title="Excluir da lista deste mês"
-                        >
-                          <X className="w-3 h-3" />
-                        </Button>
-                      )}
-                    </TableCell>
-                  </TableRow>
-                );
-              })}
-              {pendingBills.length === 0 && (
-                <TableRow>
-                  <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
-                    <Check className="w-6 h-6 mx-auto mb-2 text-success" />
-                    Todas as contas pendentes foram pagas!
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
-        </div>
-      </div>
-      
-      {/* Tabela de Contas Pagas (Compacta) */}
-      {paidBills.length > 0 && (
-        <div className="glass-card p-3 shrink-0">
-          <h3 className="text-sm font-semibold text-foreground mb-2">Contas Pagas ({paidBills.length})</h3>
-          <div className="rounded-lg border border-border overflow-x-auto">
-            <Table className="min-w-[750px]">
-              <TableHeader>
+          <ResizablePanelGroup direction="horizontal" className="min-w-[800px]">
+            <Table>
+              <TableHeader className="sticky top-0 bg-card z-10">
                 <TableRow className="border-border hover:bg-transparent h-8">
-                  <TableHead className="text-muted-foreground w-10 text-center p-1 text-xs">Pago</TableHead>
-                  <TableHead className="text-muted-foreground w-20 p-1 text-xs">Pagamento</TableHead>
-                  <TableHead className="text-muted-foreground p-1 text-xs">Descrição</TableHead>
-                  <TableHead className="text-muted-foreground w-16 p-1 text-xs">Tipo</TableHead>
-                  <TableHead className="text-muted-foreground w-20 p-1 text-xs">Conta Pgto</TableHead>
-                  <TableHead className="text-muted-foreground w-20 text-right p-1 text-xs">Valor</TableHead>
-                  <TableHead className="text-muted-foreground w-10 text-center p-1 text-xs">Info</TableHead>
+                  <ResizablePanel defaultSize={5} minSize={5} className="p-0">
+                    <TableHead className="text-muted-foreground w-10 text-center p-1 text-xs">Pagar</TableHead>
+                  </ResizablePanel>
+                  <ResizableHandle withHandle className="w-1 bg-border/50 hover:bg-border" />
+                  
+                  <ResizablePanel defaultSize={10} minSize={8} className="p-0">
+                    <TableHead className="text-muted-foreground w-20 p-1 text-xs">Vencimento</TableHead>
+                  </ResizablePanel>
+                  <ResizableHandle withHandle className="w-1 bg-border/50 hover:bg-border" />
+                  
+                  <ResizablePanel defaultSize={35} minSize={20} className="p-0">
+                    <TableHead className="text-muted-foreground p-1 text-xs">Descrição</TableHead>
+                  </ResizablePanel>
+                  <ResizableHandle withHandle className="w-1 bg-border/50 hover:bg-border" />
+                  
+                  <ResizablePanel defaultSize={15} minSize={10} className="p-0">
+                    <TableHead className="text-muted-foreground w-20 p-1 text-xs">Conta Pgto</TableHead>
+                  </ResizablePanel>
+                  <ResizableHandle withHandle className="w-1 bg-border/50 hover:bg-border" />
+                  
+                  <ResizablePanel defaultSize={10} minSize={8} className="p-0">
+                    <TableHead className="text-muted-foreground w-16 p-1 text-xs">Tipo</TableHead>
+                  </ResizablePanel>
+                  <ResizableHandle withHandle className="w-1 bg-border/50 hover:bg-border" />
+                  
+                  <ResizablePanel defaultSize={15} minSize={10} className="p-0">
+                    <TableHead className="text-muted-foreground w-20 text-right p-1 text-xs">Valor</TableHead>
+                  </ResizablePanel>
+                  <ResizableHandle withHandle className="w-1 bg-border/50 hover:bg-border" />
+                  
+                  <ResizablePanel defaultSize={10} minSize={5} className="p-0">
+                    <TableHead className="text-muted-foreground w-10 text-center p-1 text-xs">Ações</TableHead>
+                  </ResizablePanel>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {paidBills.map((bill) => {
+                {sortedBills.map((bill) => {
                   const config = SOURCE_CONFIG[bill.sourceType] || SOURCE_CONFIG.ad_hoc;
                   const Icon = config.icon;
+                  const dueDate = parseDateLocal(bill.dueDate);
+                  const isOverdue = dueDate < currentDate && !bill.isPaid;
+                  const isPaid = bill.isPaid;
+                  
+                  const isEditable = bill.sourceType !== 'loan_installment' && bill.sourceType !== 'insurance_installment';
                   
                   return (
-                    <TableRow key={bill.id} className="bg-success/5 hover:bg-success/10 transition-colors h-8">
-                      <TableCell className="text-center p-1">
-                        <Checkbox
-                          checked={bill.isPaid}
-                          onCheckedChange={(checked) => handleMarkAsPaid(bill, checked as boolean)}
-                          className="w-4 h-4 border-success data-[state=checked]:bg-success"
-                        />
-                      </TableCell>
-                      <TableCell className="font-medium text-success whitespace-nowrap text-xs p-1">
-                        {bill.paymentDate ? formatDate(bill.paymentDate) : '-'}
-                      </TableCell>
-                      <TableCell className="text-xs max-w-[250px] truncate p-1">
-                        {bill.description}
-                      </TableCell>
-                      <TableCell className="p-1">
-                        <Badge variant="outline" className={cn("gap-1 text-[10px] px-1 py-0", config.color)}>
-                          <Icon className="w-3 h-3" />
-                          {config.label}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-xs p-1">
-                        {getAccountName(bill.suggestedAccountId)}
-                      </TableCell>
-                      <TableCell className="text-right font-semibold text-success whitespace-nowrap text-xs p-1">
-                        {formatCurrency(bill.expectedAmount)}
-                      </TableCell>
-                      <TableCell className="text-center p-1">
-                        {/* Botão para ver transação no extrato */}
-                        <Button 
-                          variant="ghost" 
-                          size="icon" 
-                          className="h-6 w-6 text-muted-foreground"
-                          onClick={() => toast.info(`Transação ID: ${bill.transactionId}`)}
-                        >
-                          <Info className="w-3 h-3" />
-                        </Button>
-                      </TableCell>
+                    <TableRow 
+                      key={bill.id} 
+                      className={cn(
+                        "hover:bg-muted/30 transition-colors h-8",
+                        isOverdue && "bg-destructive/5 hover:bg-destructive/10",
+                        isPaid && "bg-success/5 hover:bg-success/10 border-l-4 border-success/50" // Highlight paid rows
+                      )}
+                    >
+                      <ResizablePanelGroup direction="horizontal" className="min-w-[800px]">
+                        <ResizablePanel defaultSize={5} minSize={5} className="p-0">
+                          <TableCell className="text-center p-1">
+                            <Checkbox
+                              checked={isPaid}
+                              onCheckedChange={(checked) => handleMarkAsPaid(bill, checked as boolean)}
+                              className={cn("w-4 h-4", isPaid && "border-success data-[state=checked]:bg-success")}
+                            />
+                          </TableCell>
+                        </ResizablePanel>
+                        <ResizableHandle withHandle className="w-1 bg-border/50 hover:bg-border" />
+                        
+                        <ResizablePanel defaultSize={10} minSize={8} className="p-0">
+                          <TableCell className={cn("font-medium whitespace-nowrap text-xs p-1", isOverdue && "text-destructive")}>
+                            <div className="flex items-center gap-1">
+                              {isOverdue && <AlertTriangle className="w-3 h-3 text-destructive" />}
+                              {isPaid ? formatDate(bill.paymentDate!) : formatDate(bill.dueDate)}
+                            </div>
+                          </TableCell>
+                        </ResizablePanel>
+                        <ResizableHandle withHandle className="w-1 bg-border/50 hover:bg-border" />
+                        
+                        <ResizablePanel defaultSize={35} minSize={20} className="p-0">
+                          <TableCell className="text-xs max-w-[200px] truncate p-1">
+                            {bill.description}
+                          </TableCell>
+                        </ResizablePanel>
+                        <ResizableHandle withHandle className="w-1 bg-border/50 hover:bg-border" />
+                        
+                        <ResizablePanel defaultSize={15} minSize={10} className="p-0">
+                          <TableCell className="text-xs p-1">
+                            <Select 
+                              value={bill.suggestedAccountId || ''} 
+                              onValueChange={(v) => handleUpdateSuggestedAccount(bill, v)}
+                              disabled={isPaid}
+                            >
+                              <SelectTrigger className="h-6 text-xs p-1">
+                                <SelectValue placeholder="Conta..." />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {accountOptions.map(opt => (
+                                  <SelectItem key={opt.value} value={opt.value} className="text-xs">
+                                    {opt.label}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </TableCell>
+                        </ResizablePanel>
+                        <ResizableHandle withHandle className="w-1 bg-border/50 hover:bg-border" />
+                        
+                        <ResizablePanel defaultSize={10} minSize={8} className="p-0">
+                          <TableCell className="p-1">
+                            <Badge variant="outline" className={cn("gap-1 text-[10px] px-1 py-0", config.color)}>
+                              <Icon className="w-3 h-3" />
+                              {config.label}
+                            </Badge>
+                          </TableCell>
+                        </ResizablePanel>
+                        <ResizableHandle withHandle className="w-1 bg-border/50 hover:bg-border" />
+                        
+                        <ResizablePanel defaultSize={15} minSize={10} className="p-0">
+                          <TableCell className={cn("text-right font-semibold whitespace-nowrap p-1", isPaid ? "text-success" : "text-destructive")}>
+                            {isEditable && !isPaid ? (
+                              <EditableCell 
+                                value={bill.expectedAmount} 
+                                type="currency" 
+                                onSave={(v) => handleUpdateExpectedAmount(bill, Number(v))}
+                                className={cn("text-right text-xs", isPaid ? "text-success" : "text-destructive")}
+                              />
+                            ) : (
+                              formatCurrency(bill.expectedAmount)
+                            )}
+                          </TableCell>
+                        </ResizablePanel>
+                        <ResizableHandle withHandle className="w-1 bg-border/50 hover:bg-border" />
+                        
+                        <ResizablePanel defaultSize={10} minSize={5} className="p-0">
+                          <TableCell className="text-center p-1">
+                            {isEditable && !isPaid && (
+                              <Button 
+                                variant="ghost" 
+                                size="icon" 
+                                className="h-6 w-6 text-muted-foreground hover:text-destructive"
+                                onClick={() => handleExcludeBill(bill)}
+                                title="Excluir da lista deste mês"
+                              >
+                                <X className="w-3 h-3" />
+                              </Button>
+                            )}
+                            {isPaid && (
+                                <Button 
+                                  variant="ghost" 
+                                  size="icon" 
+                                  className="h-6 w-6 text-muted-foreground"
+                                  onClick={() => toast.info(`Transação ID: ${bill.transactionId}`)}
+                                >
+                                  <Info className="w-3 h-3" />
+                                </Button>
+                            )}
+                          </TableCell>
+                        </ResizablePanel>
+                      </ResizablePanelGroup>
                     </TableRow>
                   );
                 })}
+                {sortedBills.length === 0 && (
+                  <TableRow>
+                    <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
+                      <Check className="w-6 h-6 mx-auto mb-2 text-success" />
+                      Nenhuma conta pendente ou paga neste mês.
+                    </TableCell>
+                  </TableRow>
+                )}
               </TableBody>
             </Table>
-          </div>
+          </ResizablePanelGroup>
         </div>
-      )}
+      </div>
     </div>
   );
 }

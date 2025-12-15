@@ -12,10 +12,10 @@ interface BillsContextSidebarProps {
   localRevenueForecast: number;
   setLocalRevenueForecast: (value: number) => void;
   previousMonthRevenue: number;
-  totalExpectedExpense: number;
+  totalExpectedExpense: number; // Total PENDENTE
   totalPaid: number;
   pendingCount: number;
-  netForecast: number;
+  netForecast: number; // Saldo Previsto (Receita - Total PENDENTE)
   isMobile?: boolean;
   onSaveAndClose: () => void; // NEW PROP
 }

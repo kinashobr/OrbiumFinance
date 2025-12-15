@@ -55,11 +55,13 @@ export function BillsTrackerModal({ open, onOpenChange }: BillsTrackerModalProps
     }
   }, [open, monthlyRevenueForecast, previousMonthRevenue]);
 
+  // Total de despesas PENDENTES
   const totalExpectedExpense = useMemo(() => 
     billsForPeriod.filter(b => !b.isPaid).reduce((acc, b) => acc + b.expectedAmount, 0),
     [billsForPeriod]
   );
   
+  // Total de despesas PAGAS
   const totalPaid = useMemo(() => 
     billsForPeriod.filter(b => b.isPaid).reduce((acc, b) => acc + b.expectedAmount, 0),
     [billsForPeriod]
@@ -69,6 +71,7 @@ export function BillsTrackerModal({ open, onOpenChange }: BillsTrackerModalProps
   const paidCount = billsForPeriod.filter(b => b.isPaid).length;
   const pendingCount = totalBills - paidCount;
   
+  // Saldo Previsto = Receita Prevista - Total PENDENTE
   const netForecast = localRevenueForecast - totalExpectedExpense;
 
   const handleUpdateBill = (id: string, updates: Partial<BillTracker>) => {
