@@ -52,7 +52,7 @@ import {
 } from "@/components/ui/table";
 import { cn, parseDateLocal } from "@/lib/utils";
 import { ACCOUNT_TYPE_LABELS } from "@/types/finance";
-import { format, subMonths, startOfMonth, endOfMonth, isWithinInterval, subDays, startOfDay, endOfDay, addMonths, isBefore, isAfter, isSameDay } from "date-fns";
+import { format, subMonths, startOfMonth, endOfMonth, isWithinInterval, subDays, startOfDay, endOfDay, addMonths, isBefore, isAfter, isSameDay, differenceInMonths } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { ComparisonDateRanges, DateRange } from "@/types/finance";
 import { ContaCorrente, TransacaoCompleta } from "@/types/finance";
@@ -114,7 +114,7 @@ export function BalancoTab({ dateRanges }: BalancoTabProps) {
     emprestimos,
     veiculos,
     categoriasV2,
-    segurosVeiculo, // <-- ADDED
+    segurosVeiculo,
     getAtivosTotal,
     getPassivosTotal,
     getPatrimonioLiquido,
@@ -125,6 +125,8 @@ export function BalancoTab({ dateRanges }: BalancoTabProps) {
     getSegurosAPagar, // <-- NEW
     calculateLoanPrincipalDueInNextMonths, // <-- NEW
     getSaldoDevedor, // <-- ADDED
+    getCreditCardDebt, // <-- ADDED
+    getLoanPrincipalRemaining, // <-- ADDED
   } = useFinance();
 
   const { range1, range2 } = dateRanges;
@@ -264,21 +266,15 @@ export function BalancoTab({ dateRanges }: BalancoTabProps) {
     // 1. Total Passivos (from context)
     const totalPassivos = getPassivosTotal(finalDate);
     
-    // 2. Saldo devedor de cartões de crédito (saldos negativos na data final)
-    const saldoDevedorCartoes = contasMovimento
-      .filter(c => c.accountType === 'cartao_credito')
-      .reduce((acc, c) => {
-        const balance = saldosPorConta[c.id] || 0;
-        return acc + Math.abs(Math.min(0, balance)); // Only negative balance is liability
-      }, 0);
+    // 2. Saldo devedor de cartões de crédito (Passivo Circulante)
+    const saldoDevedorCartoes = getCreditCardDebt(finalDate);
       
     // 3. Total Insurance Payable (from context)
     const segurosAPagarTotal = getSegurosAPagar(finalDate);
     
-    // 4. Total Loan Principal Remaining (Total Debt - CC Balance)
-    const totalDebt = getSaldoDevedor(finalDate);
-    const totalLoanPrincipalRemaining = Math.max(0, totalDebt - saldoDevedorCartoes);
-
+    // 4. Total Loan Principal Remaining (Principal de Empréstimos)
+    const totalLoanPrincipalRemaining = getLoanPrincipalRemaining(finalDate);
+    
     // --- SHORT TERM CALCULATIONS (12 months lookahead from finalDate) ---
     
     // 4a. Loan Principal Due in Next 12 Months
@@ -365,7 +361,7 @@ export function BalancoTab({ dateRanges }: BalancoTabProps) {
       patrimonioLiquido,
       resultadoPeriodo,
     };
-  }, [contasMovimento, emprestimos, veiculos, transacoesV2, segurosVeiculo, calculateFinalBalances, getAtivosTotal, getPassivosTotal, getValorFipeTotal, filterTransactionsByRange, getSegurosAApropriar, getSegurosAPagar, calculateLoanPrincipalDueInNextMonths, getSaldoDevedor]);
+  }, [contasMovimento, emprestimos, veiculos, transacoesV2, segurosVeiculo, calculateFinalBalances, getAtivosTotal, getPassivosTotal, getValorFipeTotal, filterTransactionsByRange, getSegurosAApropriar, getSegurosAPagar, calculateLoanPrincipalDueInNextMonths, getCreditCardDebt, getLoanPrincipalRemaining]);
 
   // Balanço para o Período 1 (Principal)
   const balanco1 = useMemo(() => calculateBalanco(range1), [calculateBalanco, range1]);
@@ -379,7 +375,7 @@ export function BalancoTab({ dateRanges }: BalancoTabProps) {
     
     return {
       ativosTotal: calculatePercentChange(balanco1.ativos.total, balanco2.ativos.total),
-      circulantes: calculatePercentChange(balanco1.ativos.circulantes.caixa, balanco2.ativos.circulantes.caixa),
+      circulantes: calculatePercentChange(balanco1.ativos.circulantes.caixa + balanco1.ativos.circulantes.segurosAApropriar, balanco2.ativos.circulantes.caixa + balanco2.ativos.circulantes.segurosAApropriar),
       investimentos: calculatePercentChange(balanco1.ativos.naoCirculantes.investimentos, balanco2.ativos.naoCirculantes.investimentos),
       passivosTotal: calculatePercentChange(balanco1.passivos.total, balanco2.passivos.total),
       patrimonioLiquido: calculatePercentChange(balanco1.patrimonioLiquido, balanco2.patrimonioLiquido),
@@ -392,7 +388,7 @@ export function BalancoTab({ dateRanges }: BalancoTabProps) {
     const liquidezGeral = balanco1.passivos.total > 0 ? balanco1.ativos.total / balanco1.passivos.total : 999;
     const passivoCurtoPrazo = balanco1.passivos.curtoPrazo;
     const liquidezCorrente = passivoCurtoPrazo > 0 
-      ? balanco1.ativos.circulantes.caixa / passivoCurtoPrazo 
+      ? (balanco1.ativos.circulantes.caixa + balanco1.ativos.circulantes.segurosAApropriar) / passivoCurtoPrazo 
       : 999;
     const endividamento = balanco1.ativos.total > 0 ? (balanco1.passivos.total / balanco1.ativos.total) * 100 : 0;
     const coberturaAtivos = balanco1.passivos.total > 0 ? balanco1.ativos.total / balanco1.passivos.total : 999;
@@ -509,7 +505,7 @@ export function BalancoTab({ dateRanges }: BalancoTabProps) {
           value={formatCurrency(balanco1.passivos.total)}
           status={balanco1.passivos.total > 0 ? "danger" : "success"}
           icon={<TrendingDown className="w-5 h-5" />}
-          tooltip="Soma de todas as obrigações: empréstimos e financiamentos"
+          tooltip="Soma de todas as obrigações: empréstimos, cartões de crédito e seguros a pagar"
           delay={150}
           trend={variacoes.passivosTotal}
           trendLabel={range2.from ? "Período 2" : undefined}
@@ -926,7 +922,7 @@ export function BalancoTab({ dateRanges }: BalancoTabProps) {
           <DetailedIndicatorBadge
             title="Liquidez Geral"
             value={formatRatio(metricas.liquidezGeral.valor)}
-            status={metricas.liquidezGeral.status}
+            status={metricas.liquidez.geral.status}
             trend={getTrend(variacoes.ativosTotal || 0)}
             trendLabel={range2.from ? `${(variacoes.ativosTotal || 0).toFixed(1)}% vs P2` : undefined}
             descricao="Capacidade de pagar todas as dívidas. Ideal: acima de 2x"
