@@ -991,7 +991,7 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     updateSeguroVeiculo,
     deleteSeguroVeiculo,
     markSeguroParcelPaid,
-    unmarkSeguroParcelaid,
+    unmarkSeguroParcelPaid, // <-- CORRIGIDO
     hasOverdueSeguroInstallments, // <-- EXPOSED NEW FUNCTION
     objetivos,
     addObjetivo,
