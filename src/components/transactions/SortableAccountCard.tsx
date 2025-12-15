@@ -9,6 +9,7 @@ interface SortableAccountCardProps {
   onMovimentar: (accountId: string) => void;
   onViewHistory: (accountId: string) => void;
   onEdit?: (accountId: string) => void;
+  onImport?: (accountId: string) => void; // NOVO PROP
 }
 
 export function SortableAccountCard({
@@ -16,6 +17,7 @@ export function SortableAccountCard({
   onMovimentar,
   onViewHistory,
   onEdit,
+  onImport, // RECEBIDO AQUI
 }: SortableAccountCardProps) {
   const {
     attributes,
@@ -51,6 +53,7 @@ export function SortableAccountCard({
         onMovimentar={onMovimentar}
         onViewHistory={onViewHistory}
         onEdit={onEdit}
+        onImport={onImport} // PASSADO AQUI
       />
     </div>
   );

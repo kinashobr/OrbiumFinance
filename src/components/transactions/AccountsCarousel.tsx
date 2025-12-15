@@ -28,6 +28,7 @@ interface AccountsCarouselProps {
   onViewHistory: (accountId: string) => void;
   onAddAccount?: () => void;
   onEditAccount?: (accountId: string) => void;
+  onImportAccount?: (accountId: string) => void; // NOVO PROP
 }
 
 export function AccountsCarousel({ 
@@ -35,7 +36,8 @@ export function AccountsCarousel({
   onMovimentar, 
   onViewHistory,
   onAddAccount,
-  onEditAccount
+  onEditAccount,
+  onImportAccount, // RECEBIDO AQUI
 }: AccountsCarouselProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const { contasMovimento, setContasMovimento } = useFinance();
@@ -154,6 +156,7 @@ export function AccountsCarousel({
                   onMovimentar={onMovimentar}
                   onViewHistory={onViewHistory}
                   onEdit={onEditAccount}
+                  onImport={onImportAccount} // PASSADO AQUI
                 />
               ))}
 

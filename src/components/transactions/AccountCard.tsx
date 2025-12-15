@@ -11,6 +11,7 @@ interface AccountCardProps {
   onMovimentar: (accountId: string) => void;
   onViewHistory: (accountId: string) => void;
   onEdit?: (accountId: string) => void;
+  onImport?: (accountId: string) => void; // NOVO PROP
 }
 
 const ACCOUNT_ICONS: Record<string, typeof Building2> = {
@@ -20,7 +21,7 @@ const ACCOUNT_ICONS: Record<string, typeof Building2> = {
   'trending-up': TrendingUp,
 };
 
-export function AccountCard({ summary, onMovimentar, onViewHistory, onEdit }: AccountCardProps) {
+export function AccountCard({ summary, onMovimentar, onViewHistory, onEdit, onImport }: AccountCardProps) {
   const {
     accountId,
     accountName,
@@ -83,6 +84,11 @@ export function AccountCard({ summary, onMovimentar, onViewHistory, onEdit }: Ac
             {onEdit && (
               <DropdownMenuItem onClick={() => onEdit(accountId)}>
                 Editar Conta
+              </DropdownMenuItem>
+            )}
+            {onImport && (
+              <DropdownMenuItem onClick={() => onImport(accountId)}>
+                Importar Extrato
               </DropdownMenuItem>
             )}
           </DropdownMenuContent>

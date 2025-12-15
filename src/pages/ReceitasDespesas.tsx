@@ -23,7 +23,8 @@ import { CategoryFormModal } from "@/components/transactions/CategoryFormModal";
 import { CategoryListModal } from "@/components/transactions/CategoryListModal";
 import { AccountStatementDialog } from "@/components/transactions/AccountStatementDialog";
 import { PeriodSelector } from "@/components/dashboard/PeriodSelector";
-import { BillsTrackerModal } from "@/components/bills/BillsTrackerModal"; // <-- NEW IMPORT
+import { BillsTrackerModal } from "@/components/bills/BillsTrackerModal";
+import { ImportTransactionDialog } from "@/components/transactions/ImportTransactionDialog"; // <-- NOVO IMPORT
 
 // Context
 import { useFinance } from "@/contexts/FinanceContext";
@@ -49,7 +50,7 @@ const ReceitasDespesas = () => {
     dateRanges, // <-- Use context state
     setDateRanges, // <-- Use context setter
     markSeguroParcelPaid,
-    unmarkSeguroParcelPaid, // CORRIGIDO: Nome da função
+    unmarkSeguroParcelaid, // CORRIGIDO: Nome da função
   } = useFinance();
 
   // Local state for transfer groups
@@ -74,6 +75,10 @@ const ReceitasDespesas = () => {
   
   // Bills Tracker Modal (NEW STATE)
   const [showBillsTrackerModal, setShowBillsTrackerModal] = useState(false);
+  
+  // Import Modal State (NEW)
+  const [showImportModal, setShowImportModal] = useState(false);
+  const [accountToImport, setAccountToImport] = useState<ContaCorrente | null>(null);
 
   // Filter state (mantido para filtros internos da tabela, mas datas são controladas pelo PeriodSelector)
   const [searchTerm, setSearchTerm] = useState("");
@@ -207,6 +212,15 @@ const ReceitasDespesas = () => {
   const handleViewStatement = (accountId: string) => {
     setViewingAccountId(accountId);
     setShowStatementDialog(true);
+  };
+  
+  // NEW HANDLER: Import Extrato
+  const handleImportExtrato = (accountId: string) => {
+    const account = accounts.find(a => a.id === accountId);
+    if (account) {
+      setAccountToImport(account);
+      setShowImportModal(true);
+    }
   };
 
   const handleTransactionSubmit = (transaction: TransacaoCompleta, transferGroup?: TransferGroup) => {
@@ -505,7 +519,7 @@ const ReceitasDespesas = () => {
         const parcelaNumero = parseInt(parcelaNumeroStr);
         
         if (!isNaN(seguroId) && !isNaN(parcelaNumero)) {
-            unmarkSeguroParcelPaid(seguroId, parcelaNumero); // CORRIGIDO
+            unmarkSeguroParcelaid(seguroId, parcelaNumero);
         }
     }
     
@@ -805,6 +819,7 @@ const ReceitasDespesas = () => {
             onViewHistory={handleViewStatement}
             onAddAccount={() => { setEditingAccount(undefined); setShowAccountModal(true); }}
             onEditAccount={handleEditAccount}
+            onImportAccount={handleImportExtrato} // <-- NOVO HANDLER
           />
         </div>
 
@@ -819,7 +834,7 @@ const ReceitasDespesas = () => {
 
         {/* KPI Sidebar - full width */}
         <div className="glass-card p-4">
-          <KPISidebar transactions={transacoesPeriodo1} categories={categories} /> {/* <-- FIXED: Using transacoesPeriodo1 */}
+          <KPISidebar transactions={transacoesPeriodo1} categories={categories} />
         </div>
       </div>
 
@@ -884,6 +899,15 @@ const ReceitasDespesas = () => {
         open={showBillsTrackerModal}
         onOpenChange={setShowBillsTrackerModal}
       />
+      
+      {/* Import Transaction Dialog (NEW) */}
+      {accountToImport && (
+        <ImportTransactionDialog
+          open={showImportModal}
+          onOpenChange={setShowImportModal}
+          account={accountToImport}
+        />
+      )}
     </MainLayout>
   );
 };
