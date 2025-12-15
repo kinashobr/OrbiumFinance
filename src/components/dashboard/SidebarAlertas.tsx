@@ -14,7 +14,7 @@ import {
   Car,
   DollarSign,
   CheckCircle2,
-  Percent, // <-- CORRIGIDO: Importando Percent
+  Percent,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -138,6 +138,7 @@ export function SidebarAlertas({ collapsed = false }: SidebarAlertasProps) {
     const anoAtual = now.getFullYear();
 
     // 1. Saldo total das contas (Global)
+    // Usamos getSaldoAtual() que calcula o saldo até o final do histórico (hoje)
     const saldoContas = getSaldoAtual(); 
 
     // 2. Transações do mês (Current Month)
@@ -454,7 +455,7 @@ export function SidebarAlertas({ collapsed = false }: SidebarAlertasProps) {
                   onClick={() => alerta.rota && navigate(alerta.rota)}
                 >
                   <Icon className="w-3.5 h-3.5 mt-0.5 shrink-0" />
-                  <div className="flex-1 min-w-0">
+                  <div className="flex-1 min-w-0 overflow-hidden"> {/* Adicionado overflow-hidden */}
                     <p className="font-medium truncate">{alerta.titulo}</p>
                     <p className="text-[10px] opacity-80 truncate">{alerta.descricao}</p>
                   </div>
