@@ -166,7 +166,7 @@ export function BillsTrackerModal({ open, onOpenChange }: BillsTrackerModalProps
         <div className="flex flex-1 overflow-hidden">
           
           {/* Coluna 1: Sidebar de Contexto (Fixo em telas grandes) */}
-          <div className="hidden lg:block w-[200px] shrink-0 overflow-y-auto scrollbar-thin">
+          <div className="hidden lg:block w-[240px] shrink-0 overflow-y-auto scrollbar-thin"> {/* Increased width from 200px to 240px */}
             {SidebarContent}
           </div>
 

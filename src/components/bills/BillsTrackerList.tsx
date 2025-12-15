@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, useEffect } from "react";
 import {
   Table,
   TableBody,
@@ -37,6 +37,30 @@ const SOURCE_CONFIG: Record<BillSourceType, { icon: React.ElementType; color: st
   ad_hoc: { icon: Info, color: 'text-primary', label: 'Avulsa' },
 };
 
+// Define column keys and initial widths (in pixels)
+const COLUMN_KEYS = ['pay', 'due', 'description', 'account', 'type', 'amount', 'actions'] as const;
+type ColumnKey = typeof COLUMN_KEYS[number];
+
+const INITIAL_WIDTHS: Record<ColumnKey, number> = {
+  pay: 40,
+  due: 80,
+  description: 300, // Start wide
+  account: 112, // w-28
+  type: 64, // w-16
+  amount: 80,
+  actions: 40,
+};
+
+const columnHeaders: { key: ColumnKey, label: string, align?: 'center' | 'right' }[] = [
+  { key: 'pay', label: 'Pagar', align: 'center' },
+  { key: 'due', label: 'Vencimento' },
+  { key: 'description', label: 'Descrição' },
+  { key: 'account', label: 'Conta Pgto' },
+  { key: 'type', label: 'Tipo' },
+  { key: 'amount', label: 'Valor', align: 'right' },
+  { key: 'actions', label: 'Ações', align: 'center' },
+];
+
 export function BillsTrackerList({
   bills,
   onUpdateBill,
@@ -53,6 +77,70 @@ export function BillsTrackerList({
   });
   
   const [adHocType, setAdHocType] = useState<'fixed_expense' | 'variable_expense'>('variable_expense');
+
+  // --- Column Resizing State and Logic ---
+  const [columnWidths, setColumnWidths] = useState<Record<ColumnKey, number>>(() => {
+    try {
+      const saved = localStorage.getItem('bills_column_widths');
+      return saved ? JSON.parse(saved) : INITIAL_WIDTHS;
+    } catch {
+      return INITIAL_WIDTHS;
+    }
+  });
+  
+  useEffect(() => {
+    localStorage.setItem('bills_column_widths', JSON.stringify(columnWidths));
+  }, [columnWidths]);
+
+  const [resizingColumn, setResizingColumn] = useState<ColumnKey | null>(null);
+  const [startX, setStartX] = useState(0);
+  const [startWidth, setStartWidth] = useState(0);
+
+  const handleMouseDown = (e: React.MouseEvent, key: ColumnKey) => {
+    e.preventDefault();
+    setResizingColumn(key);
+    setStartX(e.clientX);
+    setStartWidth(columnWidths[key]);
+  };
+
+  const handleMouseMove = useCallback((e: MouseEvent) => {
+    if (!resizingColumn) return;
+
+    const deltaX = e.clientX - startX;
+    const newWidth = Math.max(30, startWidth + deltaX); // Minimum width of 30px
+
+    setColumnWidths(prev => ({
+      ...prev,
+      [resizingColumn]: newWidth,
+    }));
+  }, [resizingColumn, startX, startWidth]);
+
+  const handleMouseUp = useCallback(() => {
+    setResizingColumn(null);
+  }, []);
+
+  useEffect(() => {
+    if (resizingColumn) {
+      window.addEventListener('mousemove', handleMouseMove);
+      window.addEventListener('mouseup', handleMouseUp);
+      document.body.style.cursor = 'col-resize';
+    } else {
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', handleMouseUp);
+      document.body.style.cursor = 'default';
+    }
+
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', handleMouseUp);
+      document.body.style.cursor = 'default';
+    };
+  }, [resizingColumn, handleMouseMove, handleMouseUp]);
+  
+  const totalWidth = useMemo(() => {
+    return Object.values(columnWidths).reduce((sum, w) => sum + w, 0);
+  }, [columnWidths]);
+  // ---------------------------------------------
 
   const formatAmount = (value: string) => {
     const cleaned = value.replace(/[^\d,]/g, '');
@@ -325,16 +413,29 @@ export function BillsTrackerList({
         </div>
         
         <div className="rounded-lg border border-border overflow-y-auto flex-1 min-h-[100px]">
-          <Table className="min-w-[800px]">
+          <Table style={{ minWidth: `${totalWidth}px` }}>
             <TableHeader className="sticky top-0 bg-card z-10">
               <TableRow className="border-border hover:bg-transparent h-8">
-                <TableHead className="text-muted-foreground w-10 text-center p-1 text-xs">Pagar</TableHead>
-                <TableHead className="text-muted-foreground w-20 p-1 text-xs">Vencimento</TableHead>
-                <TableHead className="text-muted-foreground p-1 text-xs">Descrição</TableHead>
-                <TableHead className="text-muted-foreground w-20 p-1 text-xs">Conta Pgto</TableHead>
-                <TableHead className="text-muted-foreground w-16 p-1 text-xs">Tipo</TableHead>
-                <TableHead className="text-muted-foreground w-20 text-right p-1 text-xs">Valor</TableHead>
-                <TableHead className="text-muted-foreground w-10 text-center p-1 text-xs">Ações</TableHead>
+                {columnHeaders.map((header) => (
+                  <TableHead 
+                    key={header.key} 
+                    className={cn(
+                      "text-muted-foreground p-1 text-xs relative",
+                      header.align === 'center' && 'text-center',
+                      header.align === 'right' && 'text-right'
+                    )}
+                    style={{ width: columnWidths[header.key] }}
+                  >
+                    {header.label}
+                    {/* Resizer Handle */}
+                    {header.key !== 'actions' && (
+                      <div
+                        className="absolute right-0 top-0 h-full w-1 cursor-col-resize hover:bg-primary/30 transition-colors"
+                        onMouseDown={(e) => handleMouseDown(e, header.key)}
+                      />
+                    )}
+                  </TableHead>
+                ))}
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -356,7 +457,7 @@ export function BillsTrackerList({
                       isPaid && "bg-success/5 hover:bg-success/10 border-l-4 border-success/50"
                     )}
                   >
-                    <TableCell className="text-center p-1 w-10">
+                    <TableCell className="text-center p-1" style={{ width: columnWidths.pay }}>
                       <Checkbox
                         checked={isPaid}
                         onCheckedChange={(checked) => handleMarkAsPaid(bill, checked as boolean)}
@@ -364,24 +465,24 @@ export function BillsTrackerList({
                       />
                     </TableCell>
                     
-                    <TableCell className={cn("font-medium whitespace-nowrap text-xs p-1 w-20", isOverdue && "text-destructive")}>
+                    <TableCell className={cn("font-medium whitespace-nowrap text-xs p-1", isOverdue && "text-destructive")} style={{ width: columnWidths.due }}>
                       <div className="flex items-center gap-1">
                         {isOverdue && <AlertTriangle className="w-3 h-3 text-destructive" />}
                         {isPaid ? formatDate(bill.paymentDate!) : formatDate(bill.dueDate)}
                       </div>
                     </TableCell>
                     
-                    <TableCell className="text-xs max-w-[200px] truncate p-1">
+                    <TableCell className="text-xs max-w-[200px] truncate p-1" style={{ width: columnWidths.description }}>
                       {bill.description}
                     </TableCell>
                     
-                    <TableCell className="text-xs p-1 w-20">
+                    <TableCell className="text-xs p-1" style={{ width: columnWidths.account }}>
                       <Select 
                         value={bill.suggestedAccountId || ''} 
                         onValueChange={(v) => handleUpdateSuggestedAccount(bill, v)}
                         disabled={isPaid}
                       >
-                        <SelectTrigger className="h-6 text-xs p-1">
+                        <SelectTrigger className="h-6 text-xs p-1 w-full">
                           <SelectValue placeholder="Conta..." />
                         </SelectTrigger>
                         <SelectContent>
@@ -394,14 +495,14 @@ export function BillsTrackerList({
                       </Select>
                     </TableCell>
                     
-                    <TableCell className="p-1 w-16">
+                    <TableCell className="p-1" style={{ width: columnWidths.type }}>
                       <Badge variant="outline" className={cn("gap-1 text-[10px] px-1 py-0", config.color)}>
                         <Icon className="w-3 h-3" />
                         {config.label}
                       </Badge>
                     </TableCell>
                     
-                    <TableCell className={cn("text-right font-semibold whitespace-nowrap p-1 w-20", isPaid ? "text-success" : "text-destructive")}>
+                    <TableCell className={cn("text-right font-semibold whitespace-nowrap p-1", isPaid ? "text-success" : "text-destructive")} style={{ width: columnWidths.amount }}>
                       {isEditable && !isPaid ? (
                         <EditableCell 
                           value={bill.expectedAmount} 
@@ -414,7 +515,7 @@ export function BillsTrackerList({
                       )}
                     </TableCell>
                     
-                    <TableCell className="text-center p-1 w-10">
+                    <TableCell className="text-center p-1" style={{ width: columnWidths.actions }}>
                       {isEditable && !isPaid && (
                         <Button 
                           variant="ghost" 
