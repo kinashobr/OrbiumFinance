@@ -76,7 +76,7 @@ export function BillsContextSidebar({
       
       {/* Saldo Previsto (Maior Destaque) */}
       <Card className={cn(
-        "p-2 shadow-lg", // Reduzido padding para p-2
+        "p-4 shadow-lg", // Reduzido padding para p-2
         netForecast >= 0 ? "stat-card-positive" : "stat-card-negative"
       )}>
         <div className="flex items-center justify-between">
