@@ -19,6 +19,7 @@ import { BillTracker, BillSourceType, formatCurrency, TransacaoCompleta, getDoma
 import { cn, parseDateLocal } from "@/lib/utils";
 import { toast } from "sonner";
 import { format } from "date-fns";
+import { EditableCell } from "@/components/EditableCell";
 
 interface BillsTrackerListProps {
   bills: BillTracker[];
@@ -85,6 +86,26 @@ export function BillsTrackerList({
     const parsed = parseFloat(value.replace('.', '').replace(',', '.'));
     return isNaN(parsed) ? 0 : parsed;
   };
+  
+  const handleEditBill = (bill: BillTracker, field: 'description' | 'expectedAmount' | 'dueDate', newValue: string | number) => {
+    if (bill.sourceType !== 'ad_hoc') {
+        toast.error("Apenas contas avulsas podem ser editadas diretamente.");
+        return;
+    }
+    
+    let updates: Partial<BillTracker> = {};
+    
+    if (field === 'expectedAmount') {
+        updates.expectedAmount = parseAmount(String(newValue));
+    } else if (field === 'dueDate') {
+        updates.dueDate = String(newValue);
+    } else if (field === 'description') {
+        updates.description = String(newValue);
+    }
+    
+    onUpdateBill(bill.id, updates);
+    toast.success("Conta avulsa atualizada!");
+  };
 
   const handleAddAdHocBill = () => {
     const amount = parseAmount(newBillData.amount);
@@ -108,6 +129,7 @@ export function BillsTrackerList({
   };
   
   const handleToggleCheck = (billId: string, isChecked: boolean) => {
+    handleSavePayments(); // Salva o estado atual antes de mudar
     setCheckedBills(prev => ({ ...prev, [billId]: isChecked }));
   };
 
@@ -125,7 +147,7 @@ export function BillsTrackerList({
 
     billsToProcess.forEach(bill => {
       const isCurrentlyPaid = bill.isPaid;
-      const shouldBePaid = bill.shouldBePaid;
+      const shouldBePaid = checkedBills[bill.id] || false; // Use checkedBills directly
 
       if (shouldBePaid && !isCurrentlyPaid) {
         // --- MARCAR COMO PAGO ---
@@ -264,8 +286,8 @@ export function BillsTrackerList({
         
         {showAdHocForm && (
           <div className="mt-4 space-y-3 p-3 border rounded-lg bg-muted/30">
-            <div className="grid grid-cols-3 gap-3">
-              <div className="col-span-3">
+            <div className="grid grid-cols-4 gap-3">
+              <div className="col-span-4">
                 <Label className="text-xs">Descrição *</Label>
                 <Input
                   value={newBillData.description}
@@ -274,7 +296,7 @@ export function BillsTrackerList({
                   className="h-8 text-sm"
                 />
               </div>
-              <div>
+              <div className="col-span-2">
                 <Label className="text-xs">Valor (R$) *</Label>
                 <Input
                   type="text"
@@ -285,7 +307,7 @@ export function BillsTrackerList({
                   className="h-8 text-sm"
                 />
               </div>
-              <div>
+              <div className="col-span-2">
                 <Label className="text-xs">Vencimento *</Label>
                 <Input
                   type="date"
@@ -296,7 +318,7 @@ export function BillsTrackerList({
               </div>
               <Button 
                 onClick={handleAddAdHocBill} 
-                className="col-span-1 h-8 text-xs"
+                className="col-span-4 h-8 text-xs"
                 disabled={!newBillData.description || parseAmount(newBillData.amount) <= 0 || !newBillData.dueDate}
               >
                 Adicionar
@@ -362,14 +384,41 @@ export function BillsTrackerList({
                     <TableCell className={cn("font-medium whitespace-nowrap", isOverdue && "text-destructive")}>
                       <div className="flex items-center gap-1">
                         {isOverdue && <AlertTriangle className="w-3 h-3 text-destructive" />}
-                        {formatDate(bill.dueDate)}
+                        {bill.sourceType === 'ad_hoc' ? (
+                            <EditableCell 
+                                value={bill.dueDate} 
+                                onSave={(v) => handleEditBill(bill, 'dueDate', v)} 
+                                type="date"
+                                className="p-0 h-auto min-h-0"
+                            />
+                        ) : (
+                            formatDate(bill.dueDate)
+                        )}
                       </div>
                     </TableCell>
                     <TableCell className="text-sm max-w-[250px] truncate">
-                      {bill.description}
+                      {bill.sourceType === 'ad_hoc' ? (
+                          <EditableCell 
+                              value={bill.description} 
+                              onSave={(v) => handleEditBill(bill, 'description', v)} 
+                              type="text"
+                              className="p-0 h-auto min-h-0"
+                          />
+                      ) : (
+                          bill.description
+                      )}
                     </TableCell>
                     <TableCell className="text-right font-semibold text-destructive whitespace-nowrap">
-                      {formatCurrency(bill.expectedAmount)}
+                      {bill.sourceType === 'ad_hoc' ? (
+                          <EditableCell 
+                              value={bill.expectedAmount} 
+                              onSave={(v) => handleEditBill(bill, 'expectedAmount', v)} 
+                              type="currency"
+                              className="p-0 h-auto min-h-0 text-right"
+                          />
+                      ) : (
+                          formatCurrency(bill.expectedAmount)
+                      )}
                     </TableCell>
                     <TableCell>
                       <Badge variant="outline" className={cn("gap-1 text-xs", config.color)}>
@@ -439,10 +488,28 @@ export function BillsTrackerList({
                         {bill.paymentDate ? formatDate(bill.paymentDate) : '-'}
                       </TableCell>
                       <TableCell className="text-sm max-w-[250px] truncate">
-                        {bill.description}
+                        {bill.sourceType === 'ad_hoc' ? (
+                            <EditableCell 
+                                value={bill.description} 
+                                onSave={(v) => handleEditBill(bill, 'description', v)} 
+                                type="text"
+                                className="p-0 h-auto min-h-0"
+                            />
+                        ) : (
+                            bill.description
+                        )}
                       </TableCell>
                       <TableCell className="text-right font-semibold text-success whitespace-nowrap">
-                        {formatCurrency(bill.expectedAmount)}
+                        {bill.sourceType === 'ad_hoc' ? (
+                            <EditableCell 
+                                value={bill.expectedAmount} 
+                                onSave={(v) => handleEditBill(bill, 'expectedAmount', v)} 
+                                type="currency"
+                                className="p-0 h-auto min-h-0 text-right"
+                            />
+                        ) : (
+                            formatCurrency(bill.expectedAmount)
+                        )}
                       </TableCell>
                       <TableCell>
                         <Badge variant="outline" className={cn("gap-1 text-xs", config.color)}>

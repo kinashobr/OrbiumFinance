@@ -639,15 +639,13 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
   }, []);
   
   const getBillsForPeriod = useCallback((date: Date): BillTracker[] => {
-    const start = startOfMonth(date);
-    const end = endOfMonth(date);
     const monthYear = format(date, 'yyyy-MM');
     
     const existingBillsMap = new Map<string, BillTracker>();
     
     // 1. Carregar Bills Ad-Hoc e Bills já persistidas (para manter o status isPaid)
     billsTracker.forEach(bill => {
-        // Bills Ad-Hoc são sempre mantidas
+        // Bills Ad-Hoc are always kept
         if (bill.sourceType === 'ad_hoc') {
             existingBillsMap.set(bill.id, bill);
         }
@@ -678,17 +676,9 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
                     t.links?.parcelaId === i.toString()
                 );
                 
-                // Se já existe no tracker ou já foi paga por transação, atualiza o status
                 const existing = existingBillsMap.get(billId);
-                if (existing || isPaidByTx) {
-                    if (existing) {
-                        existingBillsMap.set(billId, { ...existing, isPaid: isPaidByTx });
-                    }
-                    // Se já foi paga por transação, não precisamos criar um novo BillTracker
-                    if (isPaidByTx) return; 
-                }
                 
-                // Se não existe e não foi paga, cria
+                // Se não existe no tracker, cria. Se existe, garante que o status de pago está correto.
                 if (!existing) {
                     const newBill: BillTracker = {
                         id: billId,
@@ -703,6 +693,9 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
                         suggestedCategoryId: categoriasV2.find(c => c.label === 'Pag. Empréstimo')?.id,
                     };
                     existingBillsMap.set(billId, newBill);
+                } else {
+                    // Se existe, atualiza o status de pago baseado na transação (se for mais recente/confiável)
+                    existingBillsMap.set(billId, { ...existing, isPaid: isPaidByTx });
                 }
                 
                 break; // Encontramos a parcela do mês, podemos parar
@@ -720,15 +713,9 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
                 const dueDateStr = format(dueDate, 'yyyy-MM-dd');
                 
                 // Se já existe no tracker ou já foi paga por transação, atualiza o status
-                const isPaidByTx = parcela.paga; // Usamos o status do seguro, que é atualizado via transação
+                const isPaidByTx = parcela.paga; 
                 
                 const existing = existingBillsMap.get(billId);
-                if (existing || isPaidByTx) {
-                    if (existing) {
-                        existingBillsMap.set(billId, { ...existing, isPaid: isPaidByTx });
-                    }
-                    if (isPaidByTx) return;
-                }
                 
                 if (!existing) {
                     const newBill: BillTracker = {
@@ -744,16 +731,18 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
                         suggestedCategoryId: categoriasV2.find(c => c.label.toLowerCase() === 'seguro')?.id,
                     };
                     existingBillsMap.set(billId, newBill);
+                } else {
+                    existingBillsMap.set(billId, { ...existing, isPaid: isPaidByTx });
                 }
             }
         });
     });
     
-    // 4. Gerar Bills de Despesas Fixas (fixed_expense) - Simplificação: Apenas as que não foram pagas
+    // 4. Gerar Bills de Despesas Fixas (fixed_expense)
     const fixedExpenseCategories = categoriasV2.filter(c => c.nature === 'despesa_fixa' && c.label.toLowerCase() !== 'seguro');
     
     fixedExpenseCategories.forEach(cat => {
-        // Simplificação: Assume que a despesa fixa vence no dia 10 (conforme o pedido do usuário)
+        // Simplificação: Assume que a despesa fixa vence no dia 10
         const dueDate = new Date(date.getFullYear(), date.getMonth(), 10);
         const dueDateStr = format(dueDate, 'yyyy-MM-dd');
         const billId = `fixed_${cat.id}_${monthYear}`;
@@ -765,16 +754,8 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
             t.date.startsWith(monthYear)
         );
         
-        // 4b. Se já existe no tracker ou já foi paga por transação, atualiza o status
         const existing = existingBillsMap.get(billId);
-        if (existing || isPaidByTx) {
-            if (existing) {
-                existingBillsMap.set(billId, { ...existing, isPaid: isPaidByTx });
-            }
-            if (isPaidByTx) return;
-        }
         
-        // 4c. Se não existe e não foi paga, cria (com valor médio/estimado)
         if (!existing) {
             // Cálculo de valor médio (média dos últimos 3 meses)
             let totalLast3Months = 0;
@@ -790,7 +771,6 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
                 
                 totalLast3Months += total;
             }
-            // Se houver histórico, usa a média. Caso contrário, usa 100 como estimativa.
             const estimatedAmount = totalLast3Months > 0 ? Math.round((totalLast3Months / 3) * 100) / 100 : 100; 
             
             const newBill: BillTracker = {
@@ -805,6 +785,8 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
                 suggestedCategoryId: cat.id,
             };
             existingBillsMap.set(billId, newBill);
+        } else {
+            existingBillsMap.set(billId, { ...existing, isPaid: isPaidByTx });
         }
     });
     
