@@ -145,6 +145,10 @@ interface FinanceContextType {
   dateRanges: ComparisonDateRanges;
   setDateRanges: Dispatch<SetStateAction<ComparisonDateRanges>>;
   
+  // Alert Filtering (NEW)
+  alertStartDate: string; // YYYY-MM-DD string
+  setAlertStartDate: Dispatch<SetStateAction<string>>;
+  
   // Cálculos principais
   getTotalReceitas: (mes?: string) => number;
   getTotalDespesas: (mes?: string) => number;
@@ -216,6 +220,9 @@ const STORAGE_KEYS = {
   
   // Data Filtering (NEW)
   DATE_RANGES: "fin_date_ranges_v1",
+  
+  // Alert Filtering (NEW)
+  ALERT_START_DATE: "fin_alert_start_date_v1",
 };
 
 // ============================================
@@ -226,6 +233,9 @@ const initialEmprestimos: Emprestimo[] = [];
 const initialVeiculos: Veiculo[] = [];
 const initialSegurosVeiculo: SeguroVeiculo[] = [];
 const initialObjetivos: ObjetivoFinanceiro[] = [];
+
+// Default alert start date is 6 months ago
+const defaultAlertStartDate = subMonths(new Date(), 6).toISOString().split('T')[0];
 
 // ============================================
 // FUNÇÕES AUXILIARES DE LOCALSTORAGE
@@ -311,6 +321,11 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
   const [dateRanges, setDateRanges] = useState<ComparisonDateRanges>(() => 
     loadFromStorage(STORAGE_KEYS.DATE_RANGES, DEFAULT_RANGES)
   );
+  
+  // Alert Filtering State (NEW)
+  const [alertStartDate, setAlertStartDate] = useState<string>(() => 
+    loadFromStorage(STORAGE_KEYS.ALERT_START_DATE, defaultAlertStartDate)
+  );
 
   // ============================================
   // EFEITOS PARA PERSISTÊNCIA AUTOMÁTICA
@@ -323,6 +338,9 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
   
   // NEW EFFECT for dateRanges
   useEffect(() => { saveToStorage(STORAGE_KEYS.DATE_RANGES, dateRanges); }, [dateRanges]);
+  
+  // NEW EFFECT for alertStartDate
+  useEffect(() => { saveToStorage(STORAGE_KEYS.ALERT_START_DATE, alertStartDate); }, [alertStartDate]);
   
   // Core V2 persistence
   useEffect(() => { saveToStorage(STORAGE_KEYS.CONTAS_MOVIMENTO, contasMovimento); }, [contasMovimento]);
@@ -964,6 +982,10 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     // Data Filtering (NEW)
     dateRanges,
     setDateRanges,
+    
+    // Alert Filtering (NEW)
+    alertStartDate,
+    setAlertStartDate,
     
     getTotalReceitas,
     getTotalDespesas,

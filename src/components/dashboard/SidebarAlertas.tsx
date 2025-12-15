@@ -23,6 +23,7 @@ import {
 import { cn, parseDateLocal } from "@/lib/utils";
 import { useFinance } from "@/contexts/FinanceContext";
 import { AlertasConfigDialog } from "./AlertasConfigDialog";
+import { isAfter, isSameDay, startOfDay } from "date-fns";
 
 interface Alerta {
   id: string;
@@ -100,6 +101,8 @@ export function SidebarAlertas({ collapsed = false }: SidebarAlertasProps) {
     categoriasV2,
     getSaldoAtual,
     getSaldoDevedor,
+    alertStartDate, // NEW
+    setAlertStartDate, // NEW
   } = useFinance();
   const [configOpen, setConfigOpen] = useState(false);
   const [alertasConfig, setAlertasConfig] = useState<AlertaConfig[]>(() => {
@@ -118,6 +121,11 @@ export function SidebarAlertas({ collapsed = false }: SidebarAlertasProps) {
   });
   const [dismissedAlertas, setDismissedAlertas] = useState<Set<string>>(new Set());
 
+  // Parse alertStartDate once
+  const parsedAlertStartDate = useMemo(() => {
+    return startOfDay(parseDateLocal(alertStartDate));
+  }, [alertStartDate]);
+
   // Calcular métricas
   const metricas = useMemo(() => {
     const now = new Date();
@@ -125,6 +133,9 @@ export function SidebarAlertas({ collapsed = false }: SidebarAlertasProps) {
     const anoAtual = now.getFullYear();
 
     // 1. Saldo total das contas (Global)
+    // Nota: getSaldoAtual já calcula o saldo final global, mas precisamos filtrar
+    // as transações que contribuem para o saldo a partir da data de corte.
+    // Para simplificar, vamos usar o saldo global, mas filtrar as transações de fluxo.
     const saldoContas = getSaldoAtual(); 
 
     // 2. Dívidas (Global)
@@ -133,42 +144,54 @@ export function SidebarAlertas({ collapsed = false }: SidebarAlertasProps) {
     // 3. Empréstimos pendentes (Configuration pending)
     const emprestimosPendentes = emprestimos.filter(e => e.status === 'pendente_config').length;
 
-    // 4. Transações do mês (Current Month)
+    // 4. Transações do mês (Current Month) - Filtradas pela data de corte
     const transacoesMes = transacoesV2.filter(t => {
       try {
         const d = parseDateLocal(t.date);
-        return d.getMonth() === mesAtual && d.getFullYear() === anoAtual;
+        // Filtra transações que ocorreram no mês atual E após a data de corte
+        return d.getMonth() === mesAtual && d.getFullYear() === anoAtual && (isAfter(d, parsedAlertStartDate) || isSameDay(d, parsedAlertStartDate));
       } catch {
         return false;
       }
     });
+    
+    // 5. Transações de Fluxo (Receitas/Despesas) - Filtradas pela data de corte
+    const transacoesFluxo = transacoesV2.filter(t => {
+        try {
+            const d = parseDateLocal(t.date);
+            // Filtra transações que ocorreram APÓS ou NA data de corte
+            return isAfter(d, parsedAlertStartDate) || isSameDay(d, parsedAlertStartDate);
+        } catch {
+            return false;
+        }
+    });
 
-    const receitasMes = transacoesMes
+    const receitasMes = transacoesFluxo
       .filter(t => t.operationType === 'receita' || t.operationType === 'rendimento')
       .reduce((acc, t) => acc + t.amount, 0);
 
-    const despesasMes = transacoesMes
+    const despesasMes = transacoesFluxo
       .filter(t => t.operationType === 'despesa' || t.operationType === 'pagamento_emprestimo')
       .reduce((acc, t) => acc + t.amount, 0);
       
-    // 5. Despesas Fixas do Mês
+    // 6. Despesas Fixas do Mês (Filtradas pela data de corte)
     const categoriasMap = new Map(categoriasV2.map(c => [c.id, c]));
-    const despesasFixasMes = transacoesMes
+    const despesasFixasMes = transacoesFluxo
         .filter(t => {
             const cat = categoriasMap.get(t.categoryId || '');
             return cat?.nature === 'despesa_fixa';
         })
         .reduce((acc, t) => acc + t.amount, 0);
 
-    // 6. Margem de Poupança (Savings Rate)
+    // 7. Margem de Poupança (Savings Rate)
     const margemPoupanca = receitasMes > 0 ? ((receitasMes - despesasMes) / receitasMes) * 100 : 0;
     
-    // 7. Total de Parcelas de Empréstimo do Mês (Debt Service)
-    const parcelasEmprestimoMes = transacoesMes
+    // 8. Total de Parcelas de Empréstimo do Mês (Debt Service)
+    const parcelasEmprestimoMes = transacoesFluxo
         .filter(t => t.operationType === 'pagamento_emprestimo')
         .reduce((acc, t) => acc + t.amount, 0);
         
-    // 8. Seguros vencendo em 60 dias
+    // 9. Seguros vencendo em 60 dias (Não depende da data de corte)
     const dataLimiteSeguro = new Date();
     dataLimiteSeguro.setDate(dataLimiteSeguro.getDate() + 60);
     
@@ -193,7 +216,7 @@ export function SidebarAlertas({ collapsed = false }: SidebarAlertasProps) {
       parcelasEmprestimoMes,
       segurosVencendo,
     };
-  }, [transacoesV2, emprestimos, segurosVeiculo, categoriasV2, getSaldoAtual, getSaldoDevedor]);
+  }, [transacoesV2, emprestimos, segurosVeiculo, categoriasV2, getSaldoAtual, getSaldoDevedor, parsedAlertStartDate]);
 
   // Gerar alertas baseados nas configurações
   const alertas = useMemo(() => {
@@ -295,6 +318,10 @@ export function SidebarAlertas({ collapsed = false }: SidebarAlertasProps) {
     setAlertasConfig(newConfig);
     localStorage.setItem("alertas-config", JSON.stringify(newConfig));
   };
+  
+  const handleStartDateChange = (date: string) => {
+    setAlertStartDate(date);
+  };
 
   const handleDismiss = (alertaId: string) => {
     setDismissedAlertas(prev => new Set([...prev, alertaId]));
@@ -356,6 +383,8 @@ export function SidebarAlertas({ collapsed = false }: SidebarAlertasProps) {
           onOpenChange={setConfigOpen}
           config={alertasConfig}
           onSave={handleSaveConfig}
+          initialStartDate={alertStartDate}
+          onStartDateChange={handleStartDateChange}
         />
       </>
     );
@@ -435,6 +464,8 @@ export function SidebarAlertas({ collapsed = false }: SidebarAlertasProps) {
         onOpenChange={setConfigOpen}
         config={alertasConfig}
         onSave={handleSaveConfig}
+        initialStartDate={alertStartDate}
+        onStartDateChange={handleStartDateChange}
       />
     </div>
   );

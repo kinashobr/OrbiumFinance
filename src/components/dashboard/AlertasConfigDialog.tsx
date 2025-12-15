@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Dialog,
   DialogContent,
@@ -18,7 +18,8 @@ import {
   Save,
   CreditCard,
   Repeat,
-  Shield
+  Shield,
+  Calendar
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -34,6 +35,9 @@ interface AlertasConfigDialogProps {
   onOpenChange: (open: boolean) => void;
   config: AlertaConfig[];
   onSave: (config: AlertaConfig[]) => void;
+  // NEW PROP
+  initialStartDate: string;
+  onStartDateChange: (date: string) => void;
 }
 
 const ALERTA_INFO: Record<string, { icon: React.ElementType; descricao: string; unidade: string }> = {
@@ -74,8 +78,23 @@ const ALERTA_INFO: Record<string, { icon: React.ElementType; descricao: string; 
   },
 };
 
-export function AlertasConfigDialog({ open, onOpenChange, config, onSave }: AlertasConfigDialogProps) {
+export function AlertasConfigDialog({ 
+  open, 
+  onOpenChange, 
+  config, 
+  onSave,
+  initialStartDate,
+  onStartDateChange
+}: AlertasConfigDialogProps) {
   const [localConfig, setLocalConfig] = useState<AlertaConfig[]>(config);
+  const [startDate, setStartDate] = useState(initialStartDate);
+
+  useEffect(() => {
+    if (open) {
+      setLocalConfig(config);
+      setStartDate(initialStartDate);
+    }
+  }, [open, config, initialStartDate]);
 
   const handleToggle = (id: string) => {
     setLocalConfig(prev =>
@@ -92,11 +111,13 @@ export function AlertasConfigDialog({ open, onOpenChange, config, onSave }: Aler
 
   const handleSave = () => {
     onSave(localConfig);
+    onStartDateChange(startDate);
     onOpenChange(false);
   };
 
   const handleReset = () => {
     setLocalConfig(config);
+    setStartDate(initialStartDate);
   };
 
   return (
@@ -113,6 +134,26 @@ export function AlertasConfigDialog({ open, onOpenChange, config, onSave }: Aler
         </DialogHeader>
 
         <div className="space-y-4 py-4">
+          {/* Configuração de Data de Início */}
+          <div className="p-3 rounded-lg bg-muted/50 border border-border space-y-2">
+            <div className="flex items-center gap-2">
+              <Calendar className="w-4 h-4 text-primary" />
+              <Label className="font-medium text-sm">Data de Início da Análise</Label>
+            </div>
+            <Input
+              type="date"
+              value={startDate}
+              onChange={(e) => setStartDate(e.target.value)}
+              className="w-full"
+            />
+            <p className="text-xs text-muted-foreground">
+              Apenas transações e saldos a partir desta data serão considerados para os alertas de desempenho (Margem, Rigidez, Comprometimento).
+            </p>
+          </div>
+          
+          <Separator />
+
+          {/* Configurações de Alerta */}
           {localConfig.map((alerta, index) => {
             const info = ALERTA_INFO[alerta.id];
             const Icon = info?.icon || Target;
