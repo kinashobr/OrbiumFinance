@@ -253,6 +253,22 @@ export interface ImportedTransaction {
   
   // Meta
   sourceType: 'csv' | 'ofx';
+  
+  // NEW: Rastreamento de contabilização
+  isContabilized?: boolean;
+  contabilizedTransactionId?: string;
+}
+
+// NOVO: Metadados do Extrato Importado
+export interface ImportedStatement {
+  id: string;
+  accountId: string;
+  fileName: string;
+  importDate: string; // ISO string
+  startDate: string; // YYYY-MM-DD (data da transação mais antiga)
+  endDate: string; // YYYY-MM-DD (data da transação mais recente)
+  status: 'pending' | 'partial' | 'complete'; // Status de revisão
+  rawTransactions: ImportedTransaction[]; // Transações brutas do arquivo
 }
 
 // Schema de Exportação V2 (Simplificado)
@@ -264,6 +280,7 @@ export interface FinanceExportV2 {
     categories: Categoria[];
     transactions: TransacaoCompleta[];
     transferGroups: TransferGroup[];
+    importedStatements: ImportedStatement[]; // ADICIONADO
   };
 }
 
@@ -342,6 +359,10 @@ export function generateBillId(): string {
 
 export function generateRuleId(): string {
   return `rule_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+}
+
+export function generateStatementId(): string {
+  return `stmt_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 }
 
 export function formatCurrency(value: number, currency = 'BRL'): string {

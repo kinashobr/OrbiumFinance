@@ -24,7 +24,7 @@ import { CategoryListModal } from "@/components/transactions/CategoryListModal";
 import { AccountStatementDialog } from "@/components/transactions/AccountStatementDialog";
 import { PeriodSelector } from "@/components/dashboard/PeriodSelector";
 import { BillsTrackerModal } from "@/components/bills/BillsTrackerModal";
-import { ImportTransactionDialog } from "@/components/transactions/ImportTransactionDialog";
+import { StatementManagerDialog } from "@/components/transactions/StatementManagerDialog"; // RENOMEADO
 
 // Context
 import { useFinance } from "@/contexts/FinanceContext";
@@ -76,9 +76,13 @@ const ReceitasDespesas = () => {
   // Bills Tracker Modal (NEW STATE)
   const [showBillsTrackerModal, setShowBillsTrackerModal] = useState(false);
   
-  // Import Modal State (NEW)
-  const [showImportModal, setShowImportModal] = useState(false);
-  const [accountToImport, setAccountToImport] = useState<ContaCorrente | null>(null);
+  // Import Modal State (UPDATED)
+  const [showStatementManagerModal, setShowStatementManagerModal] = useState(false);
+  const [accountToManage, setAccountToManage] = useState<ContaCorrente | null>(null);
+  
+  // NEW STATE: Consolidated Review (Fase 2)
+  const [showConsolidatedReview, setShowConsolidatedReview] = useState(false);
+  const [accountForConsolidatedReview, setAccountForConsolidatedReview] = useState<string | null>(null);
 
   // Filter state (mantido para filtros internos da tabela, mas datas são controladas pelo PeriodSelector)
   const [searchTerm, setSearchTerm] = useState("");
@@ -86,7 +90,6 @@ const ReceitasDespesas = () => {
   const [selectedCategoryId, setSelectedCategoryId] = useState("all");
   const [selectedTypes, setSelectedTypes] = useState<OperationType[]>(['receita', 'despesa', 'transferencia', 'aplicacao', 'resgate', 'pagamento_emprestimo', 'liberacao_emprestimo', 'veiculo', 'rendimento', 'initial_balance']);
   
-  // Removendo dateFrom/dateTo do estado local, pois PeriodSelector controla isso
   const dateFrom = dateRanges.range1.from ? dateRanges.range1.from.toISOString().split('T')[0] : "";
   const dateTo = dateRanges.range1.to ? dateRanges.range1.to.toISOString().split('T')[0] : "";
 
@@ -118,7 +121,7 @@ const ReceitasDespesas = () => {
   // Transações do Período 2 (Comparação)
   const transacoesPeriodo2 = useMemo(() => filterTransactionsByRange(dateRanges.range2), [filterTransactionsByRange, dateRanges.range2]);
 
-  // Contas visíveis (agora todas são visíveis, pois a contrapartida foi removida)
+  // Contas visíveis
   const visibleAccounts = useMemo(() => {
     return accounts.filter(a => !a.hidden);
   }, [accounts]);
@@ -133,31 +136,23 @@ const ReceitasDespesas = () => {
       let periodInitialBalance = 0;
       
       if (periodStart) {
-          // 1. Calculate Period Initial Balance (balance accumulated UP TO the day BEFORE periodStart)
           const dayBeforeStart = subDays(periodStart, 1);
           periodInitialBalance = calculateBalanceUpToDate(account.id, dayBeforeStart, transactions, accounts);
       }
-      // Se periodStart é undefined (Todo o período), periodInitialBalance é 0.
       
-      // 2. Calculate Period Transactions (transactions strictly ON or AFTER periodStart, up to periodEnd)
       const accountTxInPeriod = transactions.filter(t => {
         if (t.accountId !== account.id) return false;
         
         const transactionDate = parseDateLocal(t.date);
         
-        // Normaliza os limites do período para garantir que o dia inteiro seja incluído
         const rangeFrom = periodStart ? startOfDay(periodStart) : undefined;
         const rangeTo = periodEnd ? endOfDay(periodEnd) : undefined;
         
-        // Se o período NÃO está definido (Todo o período), incluímos todas as transações.
         if (!rangeFrom) return true; 
         
-        // Se o período está definido:
-        // Incluímos transações ON or AFTER periodStart, up to periodEnd.
         return transactionDate >= rangeFrom && transactionDate <= (rangeTo || new Date());
       });
 
-      // 3. Calculate Period Totals
       let totalIn = 0;
       let totalOut = 0;
       
@@ -179,10 +174,8 @@ const ReceitasDespesas = () => {
         }
       });
       
-      // 4. Calculate Period Final Balance
       const periodFinalBalance = periodInitialBalance + totalIn - totalOut;
       
-      // 5. Reconciliation Status (based on transactions in the period)
       const conciliatedCount = accountTxInPeriod.filter(t => t.conciliated).length;
       const reconciliationStatus = accountTxInPeriod.length === 0 || conciliatedCount === accountTxInPeriod.length ? 'ok' : 'warning' as const;
 
@@ -214,30 +207,27 @@ const ReceitasDespesas = () => {
     setShowStatementDialog(true);
   };
   
-  // NEW HANDLER: Import Extrato
+  // UPDATED HANDLER: Import Extrato
   const handleImportExtrato = (accountId: string) => {
     const account = accounts.find(a => a.id === accountId);
-    if (account) {
-      setAccountToImport(account);
-      setShowImportModal(true);
+    if (account && account.accountType === 'conta_corrente') {
+      setAccountToManage(account);
+      setShowStatementManagerModal(true);
+    } else {
+        toast.error("A importação de extrato é permitida apenas para Contas Correntes.");
     }
   };
   
-  // NEW HANDLER: Close Import Modal
-  const handleCloseImportModal = (open: boolean) => {
-    setShowImportModal(open);
-    if (!open) {
-        // Limpa o estado da conta de importação ao fechar
-        setAccountToImport(null);
-    }
+  // NEW HANDLER: Start Consolidated Review (Fase 2)
+  const handleStartConsolidatedReview = (accountId: string) => {
+    setAccountForConsolidatedReview(accountId);
+    setShowConsolidatedReview(true);
   };
 
   const handleTransactionSubmit = (transaction: TransacaoCompleta, transferGroup?: TransferGroup) => {
-    // Clone para não mutar o objeto recebido e garantir links
     const tx = { ...transaction, links: { ...(transaction.links || {}) } };
 
     if (editingTransaction) {
-      // Quando editar, atualiza transação e possíveis transações vinculadas pelo grupo
       const linkedGroupId = editingTransaction.links?.transferGroupId;
       if (linkedGroupId) {
         setTransacoesV2(prev => prev.map(t => {
@@ -289,18 +279,15 @@ const ReceitasDespesas = () => {
       return;
     }
 
-    // === Criação de transações (não edição) ===
     const newTransactions: TransacaoCompleta[] = [];
     const baseTx = { ...tx, links: { ...(tx.links || {}) } };
 
-    // 1. Transferência / pagamento CC
     if (transferGroup) {
       const tg = transferGroup;
       const fromAccount = accounts.find(a => a.id === tg.fromAccountId);
       const toAccount = accounts.find(a => a.id === tg.toAccountId);
       const isToCreditCard = toAccount?.accountType === 'cartao_credito';
 
-      // Transação original (clone)
       const originalTx: TransacaoCompleta = {
         ...baseTx,
         id: generateTransactionId(),
@@ -314,7 +301,6 @@ const ReceitasDespesas = () => {
       };
 
       if (isToCreditCard) {
-        // Transação original (entrada no CC)
         const ccTx: TransacaoCompleta = {
           ...originalTx,
           accountId: tg.toAccountId,
@@ -330,7 +316,6 @@ const ReceitasDespesas = () => {
           }
         };
 
-        // Transação de saída da conta corrente
         const fromTx: TransacaoCompleta = {
           ...originalTx,
           id: generateTransactionId(),
@@ -349,7 +334,6 @@ const ReceitasDespesas = () => {
 
         newTransactions.push(fromTx, ccTx);
       } else {
-        // Transferência normal (origem -> destino)
         const outTx: TransacaoCompleta = {
           ...originalTx,
           id: generateTransactionId(),
@@ -385,7 +369,6 @@ const ReceitasDespesas = () => {
         newTransactions.push(outTx, inTx);
       }
     } else {
-      // Sem transferGroup: adiciona apenas a transação original (garantindo id única)
       const simpleTx: TransacaoCompleta = { 
         ...baseTx, 
         id: tx.id || generateTransactionId(),
@@ -400,23 +383,19 @@ const ReceitasDespesas = () => {
       newTransactions.push(simpleTx);
     }
 
-    // 2. Aplicação / Resgate (Partida dobrada entre contas)
     const isInvestmentFlow = (baseTx.operationType === 'aplicacao' || baseTx.operationType === 'resgate') && baseTx.links?.investmentId;
 
     if (isInvestmentFlow) {
       const isAplicacao = baseTx.operationType === 'aplicacao';
       const groupId = isAplicacao ? `app_${Date.now()}` : `res_${Date.now()}`;
       
-      // Transação 1 (Conta Corrente) - Já está em newTransactions[0] se não for transferência, ou é a baseTx
       const primaryTx = newTransactions.find(t => t.id === baseTx.id) || newTransactions[0];
       
-      // Atualiza links e flow da transação primária
       primaryTx.links.transferGroupId = groupId;
       primaryTx.flow = isAplicacao ? 'out' : 'in';
       primaryTx.operationType = isAplicacao ? 'aplicacao' : 'resgate';
       primaryTx.domain = 'investment';
 
-      // Transação 2 (Conta de Investimento)
       const secondaryTx: TransacaoCompleta = {
         ...primaryTx,
         id: generateTransactionId(),
@@ -426,7 +405,7 @@ const ReceitasDespesas = () => {
         domain: 'investment',
         description: isAplicacao ? (baseTx.description || `Aplicação recebida de conta corrente`) : (baseTx.description || `Resgate enviado para conta corrente`),
         links: {
-          investmentId: primaryTx.accountId, // Referência à conta oposta
+          investmentId: primaryTx.accountId,
           loanId: primaryTx.links.loanId || null,
           transferGroupId: groupId,
           parcelaId: primaryTx.links.parcelaId || null,
@@ -438,13 +417,11 @@ const ReceitasDespesas = () => {
         }
       };
       
-      // Adiciona a transação secundária se ainda não estiver lá
       if (!newTransactions.some(t => t.id === secondaryTx.id)) {
         newTransactions.push(secondaryTx);
       }
     }
 
-    // 3. Handle special operation types (Loan/Vehicle)
     const finalTx = newTransactions.find(t => t.id === tx.id) || newTransactions[0];
 
     if (finalTx.operationType === 'liberacao_emprestimo' && finalTx.meta?.numeroContrato) {
@@ -469,12 +446,11 @@ const ReceitasDespesas = () => {
       }
     }
     
-    // NEW LOGIC: Handle Vehicle Purchase (triggers pending vehicle registration)
     if (finalTx.operationType === 'veiculo' && finalTx.meta?.vehicleOperation === 'compra') {
         addVeiculo({
-            modelo: finalTx.description, // Use description as temporary model name
+            modelo: finalTx.description,
             marca: '',
-            tipo: finalTx.meta.tipoVeiculo || 'carro', // Default to 'carro' if not specified
+            tipo: finalTx.meta.tipoVeiculo || 'carro',
             ano: 0,
             dataCompra: finalTx.date,
             valorVeiculo: finalTx.amount,
@@ -487,7 +463,6 @@ const ReceitasDespesas = () => {
         });
     }
     
-    // 4. Handle Seguro Payment (NEW LOGIC)
     if (finalTx.links?.vehicleTransactionId && finalTx.flow === 'out') {
         const [seguroIdStr, parcelaNumeroStr] = finalTx.links.vehicleTransactionId.split('_');
         const seguroId = parseInt(seguroIdStr);
@@ -498,7 +473,6 @@ const ReceitasDespesas = () => {
         }
     }
     
-    // Adiciona todas as transações criadas
     newTransactions.forEach(t => addTransacaoV2(t));
   };
 
@@ -513,7 +487,6 @@ const ReceitasDespesas = () => {
 
     const transactionToDelete = transactions.find(t => t.id === id);
 
-    // Reverter marcação de pagamento empréstimo
     if (transactionToDelete?.operationType === 'pagamento_emprestimo' && transactionToDelete.links?.loanId) {
       const loanIdNum = parseInt(transactionToDelete.links.loanId.replace('loan_', ''));
       if (!isNaN(loanIdNum)) {
@@ -521,7 +494,6 @@ const ReceitasDespesas = () => {
       }
     }
     
-    // Reverter marcação de pagamento seguro (NEW LOGIC)
     if (transactionToDelete?.links?.vehicleTransactionId && transactionToDelete.flow === 'out') {
         const [seguroIdStr, parcelaNumeroStr] = transactionToDelete.links.vehicleTransactionId.split('_');
         const seguroId = parseInt(seguroIdStr);
@@ -532,14 +504,11 @@ const ReceitasDespesas = () => {
         }
     }
     
-    // Reverter criação de veículo pendente (NEW LOGIC)
     if (transactionToDelete?.operationType === 'veiculo' && transactionToDelete.meta?.vehicleOperation === 'compra') {
         const vehicleId = veiculos.find(v => v.compraTransactionId === id)?.id;
         if (vehicleId) {
-            // Assuming we only delete the vehicle if it's still pending registration
             const vehicle = veiculos.find(v => v.id === vehicleId);
             if (vehicle?.status === 'pendente_cadastro') {
-                // Only delete if it hasn't been fully configured yet
                 deleteVeiculo(vehicleId);
             }
         }
@@ -560,18 +529,6 @@ const ReceitasDespesas = () => {
     setTransacoesV2(prev => prev.map(t => t.id === id ? { ...t, conciliated: value } : t));
   };
 
-  // Transaction count by category
-  const transactionCountByCategory = useMemo(() => {
-    const counts: Record<string, number> = {};
-    transactions.forEach(t => {
-      if (t.categoryId) {
-        counts[t.categoryId] = (counts[t.categoryId] || 0) + 1;
-      }
-    });
-    return counts;
-  }, [transactions]);
-
-
   const handleReconcile = (accountId: string) => {
     setTransacoesV2(prev => prev.map(t => 
       t.accountId === accountId ? { ...t, conciliated: true } : t
@@ -584,7 +541,6 @@ const ReceitasDespesas = () => {
     const isNewAccount = !editingAccount;
     const initialBalanceAmount = initialBalanceValue ?? 0;
     
-    // A conta em si é salva com initialBalance: 0
     const newAccount: ContaCorrente = { ...account, initialBalance: 0 };
 
     if (isNewAccount) {
@@ -593,7 +549,6 @@ const ReceitasDespesas = () => {
       if (initialBalanceAmount !== 0) {
         const txId = generateTransactionId();
         
-        // Transação única: Entrada/Saída na conta do usuário
         const userTx: TransacaoCompleta = {
           id: txId,
           date: account.startDate!,
@@ -624,10 +579,8 @@ const ReceitasDespesas = () => {
         addTransacaoV2(userTx);
       }
     } else {
-      // Edição
       setContasMovimento(prev => prev.map(a => a.id === newAccount.id ? newAccount : a));
 
-      // Encontra a transação de saldo inicial existente
       const existingInitialTx = transactions.find(t => 
           t.accountId === newAccount.id && t.operationType === 'initial_balance'
       );
@@ -635,7 +588,6 @@ const ReceitasDespesas = () => {
       if (initialBalanceAmount !== 0) {
         const txId = existingInitialTx?.id || generateTransactionId();
         
-        // Transação 1: Atualiza/Cria userTx
         const userTx: TransacaoCompleta = {
           id: txId,
           date: newAccount.startDate!,
@@ -669,7 +621,6 @@ const ReceitasDespesas = () => {
             return newTxs;
         });
       } else {
-        // Se o saldo inicial for 0, remove a transação existente
         if (existingInitialTx) {
           setTransacoesV2(prev => prev.filter(t => t.id !== existingInitialTx.id));
         }
@@ -686,7 +637,6 @@ const ReceitasDespesas = () => {
       return;
     }
     
-    // Remove a conta e as transações de saldo inicial (se existirem)
     setContasMovimento(prev => prev.filter(a => a.id !== accountId));
     setTransacoesV2(prev => prev.filter(t => t.accountId !== accountId));
   };
@@ -694,7 +644,6 @@ const ReceitasDespesas = () => {
   const handleEditAccount = (accountId: string) => {
     const account = accounts.find(a => a.id === accountId);
     if (account) {
-      // Encontra a transação de saldo inicial para obter o valor real
       const initialTx = transactions.find(t => 
           t.accountId === accountId && t.operationType === 'initial_balance'
       );
@@ -704,7 +653,6 @@ const ReceitasDespesas = () => {
           initialBalanceValue = initialTx.flow === 'in' ? initialTx.amount : -initialTx.amount;
       }
       
-      // Cria um objeto temporário para passar o valor real do saldo inicial para o formulário
       const accountForEdit: ContaCorrente & { initialBalanceValue?: number } = {
           ...account,
           initialBalanceValue: initialBalanceValue, 
@@ -747,20 +695,15 @@ const ReceitasDespesas = () => {
       .map(i => ({ id: i.id, name: i.name }));
   }, [accounts]);
 
-  // --- CORREÇÃO: Gerar lista de empréstimos com parcelas simuladas aqui ---
   const loans = useMemo(() => {
     return emprestimos
       .filter(e => e.status !== 'pendente_config')
       .map(e => {
-        // Usa parseDateLocal para garantir que a data de início seja interpretada localmente
         const startDate = parseDateLocal(e.dataInicio || new Date().toISOString().split('T')[0]);
         
-        // Simulação de parcelas (Método Price simplificado)
         const parcelas = e.meses > 0 ? Array.from({ length: e.meses }, (_, i) => {
-          // A parcela N (índice i) vence i meses após a data de início, se dataInicio for a data da primeira parcela.
           const vencimento = addMonths(startDate, i);
           
-          // Tenta encontrar a transação de pagamento real
           const paymentTx = transactions.find(t => 
             t.operationType === 'pagamento_emprestimo' && 
             t.links?.loanId === `loan_${e.id}` &&
@@ -771,7 +714,7 @@ const ReceitasDespesas = () => {
             numero: i + 1,
             vencimento: format(vencimento, 'yyyy-MM-dd'),
             valor: e.parcela,
-            pago: !!paymentTx, // Considera pago se houver transação
+            pago: !!paymentTx,
             transactionId: paymentTx?.id,
           };
         }) : [];
@@ -786,7 +729,6 @@ const ReceitasDespesas = () => {
         };
       });
   }, [emprestimos, transactions]);
-  // -----------------------------------------------------------------------
 
   // Get viewing account data
   const viewingAccount = viewingAccountId ? accounts.find(a => a.id === viewingAccountId) : null;
@@ -828,7 +770,7 @@ const ReceitasDespesas = () => {
             onViewHistory={handleViewStatement}
             onAddAccount={() => { setEditingAccount(undefined); setShowAccountModal(true); }}
             onEditAccount={handleEditAccount}
-            onImportAccount={handleImportExtrato} // <-- NOVO HANDLER
+            onImportAccount={handleImportExtrato}
           />
         </div>
 
@@ -903,22 +845,34 @@ const ReceitasDespesas = () => {
         />
       )}
       
-      {/* Bills Tracker Modal (NEW) */}
+      {/* Bills Tracker Modal */}
       <BillsTrackerModal
         open={showBillsTrackerModal}
         onOpenChange={setShowBillsTrackerModal}
       />
       
-      {/* Import Transaction Dialog (NEW) */}
-      {accountToImport && (
-        <ImportTransactionDialog
-          open={showImportModal}
-          onOpenChange={handleCloseImportModal}
-          account={accountToImport}
-          // PASSANDO DADOS DE VÍNCULO
+      {/* Statement Manager Dialog (Fase 1) */}
+      {accountToManage && (
+        <StatementManagerDialog
+          open={showStatementManagerModal}
+          onOpenChange={setShowStatementManagerModal}
+          account={accountToManage}
           investments={investments}
           loans={loans}
+          onStartConsolidatedReview={handleStartConsolidatedReview} // Passa o novo handler
         />
+      )}
+      
+      {/* Consolidated Review Dialog (Fase 2 - Placeholder) */}
+      {/* Será implementado na Fase 2 */}
+      {showConsolidatedReview && (
+        <div className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm flex items-center justify-center">
+            <div className="p-8 rounded-lg bg-card border">
+                <h2 className="text-xl font-bold">Aguardando Fase 2...</h2>
+                <p>Revisão Consolidada para {accountForConsolidatedReview}</p>
+                <Button onClick={() => setShowConsolidatedReview(false)} className="mt-4">Fechar</Button>
+            </div>
+        </div>
       )}
     </MainLayout>
   );

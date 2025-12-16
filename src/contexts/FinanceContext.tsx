@@ -17,6 +17,10 @@ import {
   BillSourceType, // NEW
   StandardizationRule, // <-- NEW IMPORT
   generateRuleId, // <-- NEW IMPORT
+  ImportedStatement, // <-- NEW IMPORT
+  ImportedTransaction, // <-- NEW IMPORT
+  generateStatementId, // <-- NEW IMPORT
+  OperationType, // <-- NEW IMPORT
 } from "@/types/finance";
 import { parseISO, startOfMonth, endOfMonth, subDays, differenceInDays, differenceInMonths, addMonths, isBefore, isAfter, isSameDay, isSameMonth, isSameYear, startOfDay, endOfDay, subMonths, format } from "date-fns"; // Import date-fns helpers
 import { parseDateLocal } from "@/lib/utils"; // Importando a nova função
@@ -82,15 +86,172 @@ const getDueDate = (startDateStr: string, installmentNumber: number): Date => {
 };
 
 // ============================================
+// FUNÇÕES DE PARSING (MOVIDAS DO DIALOG)
+// ============================================
+
+// Helper para normalizar valor (R$ 1.234,56 -> 1234.56)
+const normalizeAmount = (amountStr: string): number => {
+    let cleaned = amountStr.trim();
+    const isNegative = cleaned.startsWith('-');
+    
+    if (isNegative) {
+        cleaned = cleaned.substring(1);
+    }
+    
+    cleaned = cleaned.replace(/[^\d.,]/g, '');
+
+    if (cleaned.includes(',') && cleaned.includes('.')) {
+        cleaned = cleaned.replace(/\./g, '').replace(',', '.');
+    } else if (cleaned.includes(',')) {
+        cleaned = cleaned.replace(',', '.');
+    } else if (cleaned.includes('.')) {
+        const parts = cleaned.split('.');
+        if (parts.length > 2) {
+            const lastPart = parts.pop();
+            cleaned = parts.join('') + '.' + lastPart;
+        }
+    }
+    
+    const parsed = parseFloat(cleaned);
+    
+    return isNegative ? -parsed : parsed;
+};
+
+// Helper para normalizar data OFX (YYYYMMDD -> YYYY-MM-DD)
+const normalizeOfxDate = (dateStr: string): string => {
+    if (dateStr.length >= 8) {
+        return `${dateStr.substring(0, 4)}-${dateStr.substring(4, 6)}-${dateStr.substring(6, 8)}`;
+    }
+    return dateStr;
+};
+
+// Parsing CSV
+const parseCSV = (content: string, accountId: string): ImportedTransaction[] => {
+    const lines = content.trim().split('\n');
+    if (lines.length < 2) return [];
+
+    const separator = lines[0].includes('\t') ? '\t' : ',';
+    
+    const header = lines[0].toLowerCase();
+    const cols = header.split(separator);
+    
+    const normalizeHeader = (h: string) => h.normalize("NFD").replace(/[\u0300-\u036f]/g, '').trim();
+    
+    const dataIndex = cols.findIndex(h => normalizeHeader(h).includes('data'));
+    const valorIndex = cols.findIndex(h => normalizeHeader(h).includes('valor'));
+    const descIndex = cols.findIndex(h => normalizeHeader(h).includes('descri'));
+
+    if (dataIndex === -1 || valorIndex === -1 || descIndex === -1) {
+        throw new Error(`CSV inválido. Colunas 'Data', 'Valor' e 'Descrição' são obrigatórias. Separador detectado: '${separator}'`);
+    }
+
+    const transactions: ImportedTransaction[] = [];
+    for (let i = 1; i < lines.length; i++) {
+        const lineCols = lines[i].split(separator).map(c => c.trim().replace(/^"|"$/g, ''));
+        
+        if (lineCols.length > Math.max(dataIndex, valorIndex, descIndex)) {
+            const dateStr = lineCols[dataIndex];
+            const amountStr = lineCols[valorIndex];
+            const originalDescription = lineCols[descIndex];
+            
+            if (!dateStr || !amountStr || !originalDescription) continue;
+
+            const amount = normalizeAmount(amountStr);
+            
+            let normalizedDate = dateStr;
+            if (dateStr.includes('/')) {
+                const parts = dateStr.split('/');
+                if (parts.length === 3) {
+                    normalizedDate = `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
+                }
+            } else if (dateStr.includes('-') && dateStr.split('-')[0].length === 4) {
+            } else {
+                normalizedDate = normalizeOfxDate(dateStr);
+            }
+            
+            if (normalizedDate.length < 10 || isNaN(parseDateLocal(normalizedDate).getTime())) {
+                continue;
+            }
+
+            transactions.push({
+                id: generateTransactionId(),
+                date: normalizedDate,
+                amount: Math.abs(amount),
+                originalDescription,
+                accountId,
+                categoryId: null,
+                operationType: amount < 0 ? 'despesa' : 'receita',
+                description: originalDescription,
+                isTransfer: false,
+                destinationAccountId: null,
+                tempInvestmentId: null,
+                tempLoanId: null,
+                tempVehicleOperation: null,
+                sourceType: 'csv',
+                isContabilized: false,
+                contabilizedTransactionId: undefined,
+            });
+        }
+    }
+    return transactions;
+};
+
+// Parsing OFX
+const parseOFX = (content: string, accountId: string): ImportedTransaction[] => {
+    const transactions: ImportedTransaction[] = [];
+    const stmtTrnRegex = /<STMTTRN>([\s\S]*?)<\/STMTTRN>/g;
+    let match;
+
+    while ((match = stmtTrnRegex.exec(content)) !== null) {
+        const stmtTrnBlock = match[1];
+        
+        const dtPostedMatch = stmtTrnBlock.match(/<DTPOSTED>(\d+)/);
+        const trnAmtMatch = stmtTrnBlock.match(/<TRNAMT>([\d.-]+)/);
+        const memoMatch = stmtTrnBlock.match(/<MEMO>([\s\S]*?)</);
+
+        if (dtPostedMatch && trnAmtMatch && memoMatch) {
+            const dateStr = dtPostedMatch[1];
+            const amount = parseFloat(trnAmtMatch[1]);
+            const originalDescription = memoMatch[1].trim();
+            
+            if (isNaN(amount)) continue;
+
+            const normalizedDate = normalizeOfxDate(dateStr);
+            
+            const operationType: OperationType = amount < 0 ? 'despesa' : 'receita';
+
+            transactions.push({
+                id: generateTransactionId(),
+                date: normalizedDate,
+                amount: Math.abs(amount),
+                originalDescription,
+                accountId,
+                categoryId: null,
+                operationType,
+                description: originalDescription,
+                isTransfer: false,
+                destinationAccountId: null,
+                tempInvestmentId: null,
+                tempLoanId: null,
+                tempVehicleOperation: null,
+                sourceType: 'ofx',
+                isContabilized: false,
+                contabilizedTransactionId: undefined,
+            });
+        }
+    }
+    return transactions;
+};
+
+// ============================================
 // INTERFACE DO CONTEXTO (Atualizada)
 // ============================================
 
-// NEW TYPE: Detailed Amortization Schedule Item
 export interface AmortizationItem {
     parcela: number;
     juros: number;
     amortizacao: number;
-    saldoDevedor: number; // Saldo após o pagamento desta parcela
+    saldoDevedor: number;
 }
 
 interface FinanceContextType {
@@ -102,13 +263,8 @@ interface FinanceContextType {
   getPendingLoans: () => Emprestimo[];
   markLoanParcelPaid: (loanId: number, valorPago: number, dataPagamento: string, parcelaNumero?: number) => void;
   unmarkLoanParcelPaid: (loanId: number) => void;
-  
-  // NEW: Function to calculate the full amortization schedule
   calculateLoanSchedule: (loanId: number) => AmortizationItem[];
-  
-  // NEW: Function to get specific installment details
   calculateLoanAmortizationAndInterest: (loanId: number, parcelaNumber: number) => AmortizationItem | null;
-  
   calculateLoanPrincipalDueInNextMonths: (targetDate: Date, months: number) => number; 
   
   // Veículos
@@ -157,6 +313,13 @@ interface FinanceContextType {
   standardizationRules: StandardizationRule[];
   addStandardizationRule: (rule: Omit<StandardizationRule, "id">) => void;
   deleteStandardizationRule: (id: string) => void;
+  
+  // NEW: Imported Statements Management (Fase 1)
+  importedStatements: ImportedStatement[];
+  processStatementFile: (file: File, accountId: string) => Promise<{ success: boolean; message: string }>;
+  deleteImportedStatement: (statementId: string) => void;
+  getTransactionsForReview: (accountId: string, range: DateRange) => ImportedTransaction[];
+  updateImportedStatement: (statementId: string, updates: Partial<ImportedStatement>) => void;
   
   // Data Filtering (NEW)
   dateRanges: ComparisonDateRanges;
@@ -233,23 +396,26 @@ const STORAGE_KEYS = {
   VEICULOS: "neon_finance_veiculos",
   SEGUROS_VEICULO: "neon_finance_seguros_veiculo",
   OBJETIVOS: "neon_finance_objetivos",
-  BILLS_TRACKER: "neon_finance_bills_tracker", // NEW KEY
+  BILLS_TRACKER: "neon_finance_bills_tracker",
   
   // Core V2
   CONTAS_MOVIMENTO: "fin_accounts_v1",
   CATEGORIAS_V2: "fin_categories_v1",
   TRANSACOES_V2: "fin_transactions_v1",
   
-  // Standardization Rules (NEW KEY)
+  // Standardization Rules
   STANDARDIZATION_RULES: "fin_standardization_rules_v1",
   
-  // Data Filtering (NEW)
+  // NEW: Imported Statements
+  IMPORTED_STATEMENTS: "fin_imported_statements_v1",
+  
+  // Data Filtering
   DATE_RANGES: "fin_date_ranges_v1",
   
-  // Alert Filtering (NEW)
+  // Alert Filtering
   ALERT_START_DATE: "fin_alert_start_date_v1",
   
-  // NEW: Revenue Forecast
+  // Revenue Forecast
   MONTHLY_REVENUE_FORECAST: "fin_monthly_revenue_forecast_v1",
 };
 
@@ -261,8 +427,9 @@ const initialEmprestimos: Emprestimo[] = [];
 const initialVeiculos: Veiculo[] = [];
 const initialSegurosVeiculo: SeguroVeiculo[] = [];
 const initialObjetivos: ObjetivoFinanceiro[] = [];
-const initialBillsTracker: BillTracker[] = []; // NEW INITIAL STATE
-const initialStandardizationRules: StandardizationRule[] = []; // NEW INITIAL STATE
+const initialBillsTracker: BillTracker[] = [];
+const initialStandardizationRules: StandardizationRule[] = [];
+const initialImportedStatements: ImportedStatement[] = []; // NEW INITIAL STATE
 
 // Default alert start date is 6 months ago
 const defaultAlertStartDate = subMonths(new Date(), 6).toISOString().split('T')[0];
@@ -282,7 +449,6 @@ function loadFromStorage<T>(key: string, defaultValue: T): T {
           return parseDateRanges(parsed) as unknown as T;
       }
       
-      // Retorna o valor parseado, que pode ser um array vazio se o usuário limpou
       return parsed;
     }
   } catch (error) {
@@ -294,12 +460,10 @@ function loadFromStorage<T>(key: string, defaultValue: T): T {
 
 function saveToStorage<T>(key: string, data: T): void {
   try {
-    // Special handling for date ranges: convert Date objects to ISO strings
     let dataToStore = data;
     if (key === STORAGE_KEYS.DATE_RANGES) {
         const ranges = data as unknown as ComparisonDateRanges;
         dataToStore = {
-            // Salvamos apenas a string YYYY-MM-DD para evitar problemas de fuso horário na leitura
             range1: {
                 from: ranges.range1.from?.toISOString().split('T')[0],
                 to: ranges.range1.to?.toISOString().split('T')[0],
@@ -336,7 +500,7 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     loadFromStorage(STORAGE_KEYS.OBJETIVOS, initialObjetivos)
   );
   
-  // NEW: Bill Tracker State
+  // Bill Tracker State
   const [billsTracker, setBillsTracker] = useState<BillTracker[]>(() => 
     loadFromStorage(STORAGE_KEYS.BILLS_TRACKER, initialBillsTracker)
   );
@@ -352,22 +516,27 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     loadFromStorage(STORAGE_KEYS.TRANSACOES_V2, [])
   );
   
-  // Standardization Rules State (NEW)
+  // Standardization Rules State
   const [standardizationRules, setStandardizationRules] = useState<StandardizationRule[]>(() => 
     loadFromStorage(STORAGE_KEYS.STANDARDIZATION_RULES, initialStandardizationRules)
   );
   
-  // Data Filtering State (NEW)
+  // NEW: Imported Statements State
+  const [importedStatements, setImportedStatements] = useState<ImportedStatement[]>(() => 
+    loadFromStorage(STORAGE_KEYS.IMPORTED_STATEMENTS, initialImportedStatements)
+  );
+  
+  // Data Filtering State
   const [dateRanges, setDateRanges] = useState<ComparisonDateRanges>(() => 
     loadFromStorage(STORAGE_KEYS.DATE_RANGES, DEFAULT_RANGES)
   );
   
-  // Alert Filtering State (NEW)
+  // Alert Filtering State
   const [alertStartDate, setAlertStartDate] = useState<string>(() => 
     loadFromStorage(STORAGE_KEYS.ALERT_START_DATE, defaultAlertStartDate)
   );
   
-  // NEW: Revenue Forecast State
+  // Revenue Forecast State
   const [monthlyRevenueForecast, setMonthlyRevenueForecast] = useState<number>(() => 
     loadFromStorage(STORAGE_KEYS.MONTHLY_REVENUE_FORECAST, 0)
   );
@@ -380,21 +549,12 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
   useEffect(() => { saveToStorage(STORAGE_KEYS.VEICULOS, veiculos); }, [veiculos]);
   useEffect(() => { saveToStorage(STORAGE_KEYS.SEGUROS_VEICULO, segurosVeiculo); }, [segurosVeiculo]);
   useEffect(() => { saveToStorage(STORAGE_KEYS.OBJETIVOS, objetivos); }, [objetivos]);
-  useEffect(() => { saveToStorage(STORAGE_KEYS.BILLS_TRACKER, billsTracker); }, [billsTracker]); // NEW EFFECT
-  
-  // NEW EFFECT for Standardization Rules
+  useEffect(() => { saveToStorage(STORAGE_KEYS.BILLS_TRACKER, billsTracker); }, [billsTracker]);
   useEffect(() => { saveToStorage(STORAGE_KEYS.STANDARDIZATION_RULES, standardizationRules); }, [standardizationRules]);
-  
-  // NEW EFFECT for dateRanges
+  useEffect(() => { saveToStorage(STORAGE_KEYS.IMPORTED_STATEMENTS, importedStatements); }, [importedStatements]); // NEW EFFECT
   useEffect(() => { saveToStorage(STORAGE_KEYS.DATE_RANGES, dateRanges); }, [dateRanges]);
-  
-  // NEW EFFECT for alertStartDate
   useEffect(() => { saveToStorage(STORAGE_KEYS.ALERT_START_DATE, alertStartDate); }, [alertStartDate]);
-  
-  // NEW EFFECT for monthlyRevenueForecast
   useEffect(() => { saveToStorage(STORAGE_KEYS.MONTHLY_REVENUE_FORECAST, monthlyRevenueForecast); }, [monthlyRevenueForecast]);
-  
-  // Core V2 persistence
   useEffect(() => { saveToStorage(STORAGE_KEYS.CONTAS_MOVIMENTO, contasMovimento); }, [contasMovimento]);
   useEffect(() => { saveToStorage(STORAGE_KEYS.CATEGORIAS_V2, categoriasV2); }, [categoriasV2]);
   useEffect(() => { saveToStorage(STORAGE_KEYS.TRANSACOES_V2, transacoesV2); }, [transacoesV2]);
@@ -410,10 +570,8 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
 
     let balance = 0; 
     
-    // Se não houver data, calcula o saldo global (fim de todo o histórico)
     const targetDate = date || new Date(9999, 11, 31);
 
-    // Filtra transações até a data limite (inclusive)
     const transactionsBeforeDate = allTransactions
         .filter(t => t.accountId === accountId && parseDateLocal(t.date) <= targetDate)
         .sort((a, b) => parseDateLocal(a.date).getTime() - parseDateLocal(b.date).getTime());
@@ -421,16 +579,13 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     transactionsBeforeDate.forEach(t => {
         const isCreditCard = account.accountType === 'cartao_credito';
         
-        // 1. Tratar transações operacionais e de transferência
         if (isCreditCard) {
-          // Cartão de Crédito: Despesa (out) subtrai, Transferência (in) soma (Pagamento de Fatura)
-          if (t.flow === 'out') { // Despesa (out)
+          if (t.flow === 'out') {
             balance -= t.amount;
-          } else if (t.flow === 'in') { // Transferência (in) - Pagamento de Fatura
+          } else if (t.flow === 'in') {
             balance += t.amount;
           }
         } else {
-          // Contas normais: in soma, out subtrai
           if (t.flow === 'in' || t.flow === 'transfer_in') {
             balance += t.amount;
           } else {
@@ -440,7 +595,7 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     });
 
     return balance;
-  }, [contasMovimento, transacoesV2]); // Dependências para garantir que o useCallback seja refeito quando os dados mudam
+  }, [contasMovimento, transacoesV2]);
 
   const calculateTotalInvestmentBalanceAtDate = useCallback((date: Date | undefined): number => {
     const targetDate = date || new Date(9999, 11, 31);
@@ -465,18 +620,15 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     const loan = emprestimos.find(e => e.id === loanId);
     if (!loan || !loan.dataInicio) return 0;
 
-    // 1. Find all payment transactions linked to this loan
     const loanPayments = transacoesV2.filter(t => 
       t.operationType === 'pagamento_emprestimo' && 
       t.links?.loanId === `loan_${loanId}`
     );
 
-    // 2. Filter payments that occurred on or before the targetDate
     const paymentsUpToDate = loanPayments.filter(t => 
       parseDateLocal(t.date) <= targetDate
     );
     
-    // 3. If payments are tracked by parcelaId, count unique parcelaIds paid up to date.
     const paidParcelas = new Set<string>();
     paymentsUpToDate.forEach(p => {
         if (p.links?.parcelaId) {
@@ -488,13 +640,12 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
         return paidParcelas.size;
     }
 
-    // 4. Fallback: If no specific parcelaId is tracked, count the number of payments.
     return paymentsUpToDate.length;
 
   }, [emprestimos, transacoesV2]);
   
   // ============================================
-  // NOVO: CÁLCULO DE CRONOGRAMA DE AMORTIZAÇÃO (MÉTODO PRICE)
+  // CÁLCULO DE CRONOGRAMA DE AMORTIZAÇÃO (MÉTODO PRICE)
   // ============================================
   
   const calculateLoanSchedule = useCallback((loanId: number): AmortizationItem[] => {
@@ -504,7 +655,6 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     const taxa = loan.taxaMensal / 100;
     const parcelaFixa = loan.parcela;
     
-    // Helper para arredondar para 2 casas decimais
     const round = (num: number) => Math.round(num * 100) / 100;
     
     let saldoDevedor = loan.valorTotal;
@@ -512,7 +662,6 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
 
     for (let i = 1; i <= loan.meses; i++) {
       if (saldoDevedor <= 0) {
-        // Se o saldo já foi quitado, preenche o restante com zeros
         schedule.push({
           parcela: i,
           juros: 0,
@@ -525,7 +674,6 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
       const juros = saldoDevedor * taxa;
       let amortizacao = parcelaFixa - juros;
       
-      // Ajuste para a última parcela (garantir que o saldo feche em zero)
       if (i === loan.meses) {
           amortizacao = saldoDevedor;
       }
@@ -550,7 +698,6 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
       return schedule.find(item => item.parcela === parcelaNumber) || null;
   }, [calculateLoanSchedule]);
   
-  // NEW FUNCTION: Calculates the total principal amortization due in the next N months from targetDate
   const calculateLoanPrincipalDueInNextMonths = useCallback((targetDate: Date, months: number): number => {
     const lookaheadDate = addMonths(targetDate, months);
     
@@ -559,23 +706,17 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
 
         let principalDue = 0;
         
-        // 1. Determine the number of installments already paid up to targetDate
         const paidUpToDate = calculatePaidInstallmentsUpToDate(e.id, targetDate);
-        
-        // 2. Get the full schedule
         const schedule = calculateLoanSchedule(e.id);
         
         schedule.forEach(item => {
             const dueDate = getDueDate(e.dataInicio!, item.parcela);
             
-            // If the installment is already paid (or considered paid by the system logic up to targetDate), skip it.
             if (item.parcela <= paidUpToDate) {
                 return;
             }
             
-            // If the installment is due within the next 'months' (i.e., dueDate is before or on lookaheadDate)
             if (isBefore(dueDate, lookaheadDate) || isSameDay(dueDate, lookaheadDate)) {
-                // The principal due is the amortization component of this installment
                 principalDue += item.amortizacao;
             }
         });
@@ -585,7 +726,7 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
   }, [emprestimos, calculatePaidInstallmentsUpToDate, calculateLoanSchedule]);
 
   // ============================================
-  // FUNÇÕES DE CÁLCULO DE SEGUROS (ACCRUAL) - REFINADAS
+  // FUNÇÕES DE CÁLCULO DE SEGUROS (ACCRUAL)
   // ============================================
 
   const getSegurosAApropriar = useCallback((targetDate?: Date) => {
@@ -596,28 +737,21 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
             const vigenciaInicio = parseDateLocal(seguro.vigenciaInicio);
             const vigenciaFim = parseDateLocal(seguro.vigenciaFim);
             
-            // Se a vigência ainda não começou, ou já terminou, não há ativo a apropriar
             if (isAfter(vigenciaInicio, date) || isBefore(vigenciaFim, date)) return acc;
             
-            // 1. Calcular o total de dias de vigência
             const totalDays = differenceInDays(vigenciaFim, vigenciaInicio) + 1;
             if (totalDays <= 0) return acc;
             
             const dailyAccrual = seguro.valorTotal / totalDays;
             
-            // 2. Calcular os dias consumidos (do início da vigência até a data de referência)
-            // O consumo começa no dia da vigência e termina no dia da data de referência (inclusive)
             const daysConsumed = differenceInDays(date, vigenciaInicio) + 1;
             
-            // 3. Ativo Remanescente = Valor Total - (Dias Consumidos * Custo Diário)
             const accruedExpense = Math.min(seguro.valorTotal, dailyAccrual * daysConsumed);
             
             const segurosAApropriar = Math.max(0, seguro.valorTotal - accruedExpense);
             
-            // Arredondar para 2 casas decimais
             return acc + Math.round(segurosAApropriar * 100) / 100;
         } catch (e) {
-            console.error("Error calculating Seguros a Apropriar:", e);
             return acc;
         }
     }, 0);
@@ -627,32 +761,137 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     const date = targetDate || new Date();
     
     return segurosVeiculo.reduce((acc, seguro) => {
-        // 1. Calcular o total pago (em dinheiro/cartão) até a data de referência
         let totalPaid = 0;
         
         seguro.parcelas.forEach(parcela => {
             if (parcela.paga && parcela.transactionId) {
                 const paymentTx = transacoesV2.find(t => t.id === parcela.transactionId);
                 
-                // Se a transação de pagamento existe e ocorreu na data ou antes da data de referência
                 if (paymentTx && parseDateLocal(paymentTx.date) <= date) {
-                    // Usamos o valor pago na transação (que pode incluir juros/descontos)
                     totalPaid += paymentTx.amount; 
                 }
             }
         });
         
-        // 2. Seguros a Pagar = Valor Total do Prêmio - Total Pago (em dinheiro/cartão)
-        // Nota: O Passivo a Pagar é o quanto falta pagar do prêmio total.
         const segurosAPagar = Math.max(0, seguro.valorTotal - totalPaid);
         
-        // Arredondar para 2 casas decimais
         return acc + Math.round(segurosAPagar * 100) / 100;
     }, 0);
   }, [segurosVeiculo, transacoesV2]);
 
   // ============================================
-  // OPERAÇÕES DE BILL TRACKER (NEW)
+  // OPERAÇÕES DE IMPORTED STATEMENTS (FASE 1)
+  // ============================================
+  
+  const applyRules = useCallback((transactions: ImportedTransaction[], rules: StandardizationRule[]): ImportedTransaction[] => {
+    return transactions.map(tx => {
+      let updatedTx = { ...tx };
+      const originalDesc = tx.originalDescription.toLowerCase();
+      
+      for (const rule of rules) {
+        if (originalDesc.includes(rule.pattern.toLowerCase())) {
+          updatedTx.categoryId = rule.categoryId;
+          updatedTx.operationType = rule.operationType;
+          updatedTx.description = rule.descriptionTemplate;
+          
+          if (rule.operationType === 'transferencia') {
+              updatedTx.isTransfer = true;
+              updatedTx.tempInvestmentId = null;
+              updatedTx.tempLoanId = null;
+              updatedTx.tempVehicleOperation = null;
+          } else {
+              updatedTx.isTransfer = false;
+              updatedTx.destinationAccountId = null;
+          }
+          
+          break;
+        }
+      }
+      return updatedTx;
+    });
+  }, []);
+
+  const processStatementFile = useCallback(async (file: File, accountId: string): Promise<{ success: boolean; message: string }> => {
+    try {
+      const content = await file.text();
+      let rawTransactions: ImportedTransaction[] = [];
+      
+      if (content.toLowerCase().includes('<ofx>')) {
+        rawTransactions = parseOFX(content, accountId);
+      } else if (file.name.toLowerCase().endsWith('.csv') || content.includes('\t') || content.includes(',')) {
+        rawTransactions = parseCSV(content, accountId);
+      } else {
+        return { success: false, message: "Formato de arquivo não reconhecido. Use .csv ou .ofx." };
+      }
+      
+      if (rawTransactions.length === 0) {
+        return { success: false, message: "Nenhuma transação válida encontrada no arquivo." };
+      }
+      
+      // Aplica as regras de padronização
+      const processedTransactions = applyRules(rawTransactions, standardizationRules);
+      
+      // Determina o período
+      const dates = processedTransactions.map(t => parseDateLocal(t.date)).sort((a, b) => a.getTime() - b.getTime());
+      const startDate = dates[0] ? format(dates[0], 'yyyy-MM-dd') : new Date().toISOString().split('T')[0];
+      const endDate = dates[dates.length - 1] ? format(dates[dates.length - 1], 'yyyy-MM-dd') : new Date().toISOString().split('T')[0];
+      
+      // Cria o novo extrato
+      const newStatement: ImportedStatement = {
+          id: generateStatementId(),
+          accountId,
+          fileName: file.name,
+          importDate: new Date().toISOString(),
+          startDate,
+          endDate,
+          status: 'pending',
+          rawTransactions: processedTransactions,
+      };
+      
+      setImportedStatements(prev => [...prev, newStatement]);
+      
+      return { success: true, message: `${processedTransactions.length} transações carregadas do extrato ${file.name}.` };
+      
+    } catch (e: any) {
+      console.error("Parsing Error:", e);
+      return { success: false, message: e.message || "Erro ao processar o arquivo. Verifique o formato." };
+    }
+  }, [standardizationRules, applyRules]);
+
+  const deleteImportedStatement = useCallback((statementId: string) => {
+    setImportedStatements(prev => prev.filter(s => s.id !== statementId));
+  }, []);
+  
+  const updateImportedStatement = useCallback((statementId: string, updates: Partial<ImportedStatement>) => {
+    setImportedStatements(prev => prev.map(s => s.id === statementId ? { ...s, ...updates } : s));
+  }, []);
+  
+  const getTransactionsForReview = useCallback((accountId: string, range: DateRange): ImportedTransaction[] => {
+    const allRawTransactions: ImportedTransaction[] = [];
+    
+    // 1. Consolidar todas as transações brutas pendentes para a conta
+    importedStatements
+        .filter(s => s.accountId === accountId)
+        .forEach(s => {
+            s.rawTransactions
+                .filter(t => !t.isContabilized) // Apenas transações não contabilizadas
+                .forEach(t => allRawTransactions.push(t));
+        });
+        
+    // 2. Filtrar pelo range de datas
+    if (!range.from || !range.to) return allRawTransactions;
+    
+    const rangeFrom = startOfDay(range.from);
+    const rangeTo = endOfDay(range.to);
+    
+    return allRawTransactions.filter(t => {
+        const transactionDate = parseDateLocal(t.date);
+        return isWithinInterval(transactionDate, { start: rangeFrom, end: rangeTo });
+    });
+  }, [importedStatements]);
+
+  // ============================================
+  // OPERAÇÕES DE BILL TRACKER
   // ============================================
   
   const addBill = useCallback((bill: Omit<BillTracker, "id" | "isPaid">) => {
@@ -689,22 +928,18 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     
     const existingBillsMap = new Map<string, BillTracker>();
     
-    // 1. Carregar Bills Ad-Hoc e Bills já persistidas (para manter o status isPaid/isExcluded)
     billsTracker.forEach(bill => {
         const billDate = parseDateLocal(bill.dueDate);
         
-        // Bills Ad-Hoc are kept if they fall in the current month or are pending/excluded
         if (bill.sourceType === 'ad_hoc' && (isSameMonth(billDate, date) || !bill.isPaid)) {
             existingBillsMap.set(bill.id, bill);
         }
         
-        // Bills de recorrência que caem no mês (mantidas para status)
         if (isSameMonth(billDate, date)) {
             existingBillsMap.set(bill.id, bill);
         }
     });
     
-    // Helper to get the value of a category from the previous month
     const getPreviousMonthExpense = (categoryId: string): number => {
         const tx = transacoesV2.filter(t => 
             (t.operationType === 'despesa' || t.operationType === 'pagamento_emprestimo') && 
@@ -714,7 +949,6 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
         return tx.reduce((acc, t) => acc + t.amount, 0);
     };
     
-    // 2. Gerar Bills de Empréstimos (loan_installment)
     emprestimos.forEach(loan => {
         if (loan.status !== 'ativo' || !loan.dataInicio || loan.meses === 0) return;
         
@@ -761,7 +995,6 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
         }
     });
     
-    // 3. Gerar Bills de Seguros (insurance_installment)
     segurosVeiculo.forEach(seguro => {
         seguro.parcelas.forEach(parcela => {
             const dueDate = parseDateLocal(parcela.vencimento);
@@ -799,11 +1032,10 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
         });
     });
     
-    // 4. Gerar Bills de Despesas Fixas (fixed_expense)
     const fixedExpenseCategories = categoriasV2.filter(c => c.nature === 'despesa_fixa' && c.label.toLowerCase() !== 'seguro');
     
     fixedExpenseCategories.forEach(cat => {
-        const dueDate = new Date(date.getFullYear(), date.getMonth(), 10); // Assume dia 10
+        const dueDate = new Date(date.getFullYear(), date.getMonth(), 10);
         const dueDateStr = format(dueDate, 'yyyy-MM-dd');
         const billId = `fixed_${cat.id}_${monthYear}`;
         
@@ -842,11 +1074,10 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
         }
     });
     
-    // 5. Gerar Bills de Despesas Variáveis (variable_expense)
     const variableExpenseCategories = categoriasV2.filter(c => c.nature === 'despesa_variavel');
     
     variableExpenseCategories.forEach(cat => {
-        const dueDate = new Date(date.getFullYear(), date.getMonth(), 25); // Assume dia 25
+        const dueDate = new Date(date.getFullYear(), date.getMonth(), 25);
         const dueDateStr = format(dueDate, 'yyyy-MM-dd');
         const billId = `variable_${cat.id}_${monthYear}`;
         
@@ -874,7 +1105,7 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
                 dueDate: dueDateStr,
                 expectedAmount: estimatedAmount || 0,
                 isPaid: false,
-                sourceType: 'variable_expense', // Changed to variable_expense
+                sourceType: 'variable_expense',
                 sourceRef: cat.id,
                 suggestedAccountId: contasMovimento.find(c => c.accountType === 'conta_corrente')?.id,
                 suggestedCategoryId: cat.id,
@@ -885,15 +1116,14 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
         }
     });
     
-    // 6. Retorna a lista consolidada, filtrando excluídos e ordenando
     return Array.from(existingBillsMap.values())
-        .filter(b => !b.isExcluded || isSameMonth(parseDateLocal(b.dueDate), date)) // Only filter out excluded if they are NOT from the current month
+        .filter(b => !b.isExcluded || isSameMonth(parseDateLocal(b.dueDate), date))
         .sort((a, b) => parseDateLocal(a.dueDate).getTime() - parseDateLocal(b.dueDate).getTime());
 }, [billsTracker, emprestimos, segurosVeiculo, categoriasV2, transacoesV2, contasMovimento, calculateLoanSchedule]);
 
 
   // ============================================
-  // OPERAÇÕES DE ENTIDADES V2 (Empréstimos, Veículos, etc.)
+  // OPERAÇÕES DE ENTIDADES V2
   // ============================================
 
   const addEmprestimo = (emprestimo: Omit<Emprestimo, "id">) => {
@@ -988,7 +1218,6 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
       
       const updatedParcelas = seguro.parcelas.map(parcela => {
         if (parcela.numero === parcelaNumero) {
-          // Remove transactionId and mark as not paid
           return { ...parcela, paga: false, transactionId: undefined };
         }
         return parcela;
@@ -1020,7 +1249,7 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
   };
   
   // ============================================
-  // OPERAÇÕES DE REGRAS DE PADRONIZAÇÃO (NEW)
+  // OPERAÇÕES DE REGRAS DE PADRONIZAÇÃO
   // ============================================
   
   const addStandardizationRule = useCallback((rule: Omit<StandardizationRule, "id">) => {
@@ -1043,10 +1272,8 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     return contasMovimento.filter(c => c.accountType === 'conta_corrente');
   }, [contasMovimento]);
   
-  // Removida getInitialBalanceContraAccount
-
   // ============================================
-  // CÁLCULOS - Baseados em TransacoesV2 (AGORA PERIOD-AWARE)
+  // CÁLCULOS - Baseados em TransacoesV2
   // ============================================
 
   const getTotalReceitas = (mes?: string): number => {
@@ -1079,7 +1306,6 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     let totalBalance = 0;
 
     contasMovimento.forEach(conta => {
-      // Calcula o saldo final global (end of all history)
       const balance = calculateBalanceUpToDate(conta.id, undefined, transacoesV2, contasMovimento);
       
       totalBalance += balance;
@@ -1095,7 +1321,6 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
         .reduce((acc, v) => acc + v.valorFipe, 0);
   }, [veiculos]);
 
-  // NEW: Calculates the remaining principal on all active loans
   const getLoanPrincipalRemaining = useCallback((targetDate?: Date) => {
     const date = targetDate || new Date(9999, 11, 31);
 
@@ -1117,7 +1342,6 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     }, 0);
   }, [emprestimos, calculatePaidInstallmentsUpToDate, calculateLoanSchedule]);
 
-  // NEW: Calculates the total negative balance on all credit card accounts
   const getCreditCardDebt = useCallback((targetDate?: Date) => {
     const date = targetDate || new Date(9999, 11, 31);
 
@@ -1125,11 +1349,10 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
       .filter(c => c.accountType === 'cartao_credito')
       .reduce((acc, c) => {
         const balance = calculateBalanceUpToDate(c.id, date, transacoesV2, contasMovimento);
-        return acc + Math.abs(Math.min(0, balance)); // Only negative balance is liability
+        return acc + Math.abs(Math.min(0, balance));
       }, 0);
   }, [contasMovimento, transacoesV2, calculateBalanceUpToDate]);
 
-  // UPDATED: getSaldoDevedor now uses the new helpers
   const getSaldoDevedor = useCallback((targetDate?: Date) => {
     const saldoEmprestimos = getLoanPrincipalRemaining(targetDate);
     const saldoCartoes = getCreditCardDebt(targetDate);
@@ -1155,18 +1378,14 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
   const getAtivosTotal = useCallback((targetDate?: Date) => {
     const date = targetDate || new Date(9999, 11, 31);
 
-    // 1. Saldo de contas (exceto CC)
     const saldoContasAtivas = contasMovimento
       .filter(c => c.accountType !== 'cartao_credito')
       .reduce((acc, c) => {
         const balance = calculateBalanceUpToDate(c.id, date, transacoesV2, contasMovimento);
-        return acc + Math.max(0, balance); // Apenas saldos positivos são ativos
+        return acc + Math.max(0, balance);
       }, 0);
       
-    // 2. Valor FIPE de veículos ativos na data
     const valorVeiculos = getValorFipeTotal(date);
-    
-    // 3. Seguros a Apropriar (Prepaid Insurance Asset)
     const segurosAApropriar = getSegurosAApropriar(date); 
                           
     return saldoContasAtivas + valorVeiculos + segurosAApropriar; 
@@ -1174,8 +1393,6 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
 
   const getPassivosTotal = useCallback((targetDate?: Date) => {
     const saldoDevedor = getSaldoDevedor(targetDate);
-    
-    // 2. Seguros a Pagar (Insurance Payable Liability)
     const segurosAPagar = getSegurosAPagar(targetDate); 
     
     return saldoDevedor + segurosAPagar; 
@@ -1186,7 +1403,7 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
   }, [getAtivosTotal, getPassivosTotal]);
 
   // ============================================
-  // EXPORTAÇÃO E IMPORTAÇÃO (Atualizado para V2)
+  // EXPORTAÇÃO E IMPORTAÇÃO
   // ============================================
 
   const exportData = () => {
@@ -1198,16 +1415,16 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
         categories: categoriasV2,
         transactions: transacoesV2,
         transferGroups: [],
+        importedStatements: importedStatements, // EXPORTANDO NOVO ESTADO
       }
     };
 
-    // Adiciona entidades V2 mantidas para compatibilidade de exportação
     (data.data as any).emprestimos = emprestimos;
     (data.data as any).veiculos = veiculos;
     (data.data as any).segurosVeiculo = segurosVeiculo;
     (data.data as any).objetivos = objetivos;
-    (data.data as any).billsTracker = billsTracker; // NEW EXPORT
-    (data.data as any).standardizationRules = standardizationRules; // NEW EXPORT
+    (data.data as any).billsTracker = billsTracker;
+    (data.data as any).standardizationRules = standardizationRules;
 
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
@@ -1224,20 +1441,19 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
       const data = JSON.parse(text);
 
       if (data.schemaVersion === '2.0' && data.data) {
-        // Importa coleções V2
         if (data.data.accounts) {
             setContasMovimento(data.data.accounts);
         }
         if (data.data.categories) setCategoriasV2(data.data.categories);
         if (data.data.transactions) setTransacoesV2(data.data.transactions);
         
-        // Importa entidades V2 mantidas
         if (data.data.emprestimos) setEmprestimos(data.data.emprestimos);
         if (data.data.veiculos) setVeiculos(data.data.veiculos);
         if (data.data.segurosVeiculo) setSegurosVeiculo(data.data.segurosVeiculo);
         if (data.data.objetivos) setObjetivos(data.data.objetivos);
-        if (data.data.billsTracker) setBillsTracker(data.data.billsTracker); // NEW IMPORT
-        if (data.data.standardizationRules) setStandardizationRules(data.data.standardizationRules); // NEW IMPORT
+        if (data.data.billsTracker) setBillsTracker(data.data.billsTracker);
+        if (data.data.standardizationRules) setStandardizationRules(data.data.standardizationRules);
+        if (data.data.importedStatements) setImportedStatements(data.data.importedStatements); // IMPORTANDO NOVO ESTADO
         
         return { success: true, message: "Dados V2 importados com sucesso!" };
       } else {
@@ -1279,7 +1495,6 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     updateObjetivo,
     deleteObjetivo,
     
-    // Bill Tracker (NEW)
     billsTracker,
     addBill,
     updateBill,
@@ -1295,20 +1510,23 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     setTransacoesV2,
     addTransacaoV2,
     
-    // Standardization Rules (NEW)
     standardizationRules,
     addStandardizationRule,
     deleteStandardizationRule,
     
-    // Data Filtering (NEW)
+    // Imported Statements (Fase 1)
+    importedStatements,
+    processStatementFile,
+    deleteImportedStatement,
+    getTransactionsForReview,
+    updateImportedStatement,
+    
     dateRanges,
     setDateRanges,
     
-    // Alert Filtering (NEW)
     alertStartDate,
     setAlertStartDate,
     
-    // Revenue Forecast (NEW)
     monthlyRevenueForecast,
     setMonthlyRevenueForecast,
     getRevenueForPreviousMonth,
