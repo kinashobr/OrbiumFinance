@@ -2,7 +2,7 @@ import { useState, useMemo, useCallback, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { FileText, Check, Loader2, AlertCircle, Calendar, ArrowRight, X } from "lucide-react";
+import { FileText, Check, Loader2, AlertCircle, Calendar, ArrowRight, X, Settings } from "lucide-react";
 import { 
   ContaCorrente, Categoria, ImportedTransaction, StandardizationRule, 
   TransacaoCompleta, TransferGroup, generateTransactionId, generateTransferGroupId, 
@@ -14,7 +14,8 @@ import { toast } from "sonner";
 import { parseDateLocal, cn } from "@/lib/utils";
 import { TransactionReviewTable } from "./TransactionReviewTable";
 import { StandardizationRuleFormModal } from "./StandardizationRuleFormModal";
-import { PeriodSelector } from "../dashboard/PeriodSelector";
+import { ReviewContextSidebar } from "./ReviewContextSidebar"; // NEW IMPORT
+import { StandardizationRuleManagerModal } from "./StandardizationRuleManagerModal"; // NEW IMPORT
 import { startOfMonth, endOfMonth, format, subDays, startOfDay, endOfDay } from "date-fns";
 
 // Interface simplificada para Empréstimo
@@ -53,6 +54,7 @@ export function ConsolidatedReviewDialog({
     getTransactionsForReview,
     standardizationRules,
     addStandardizationRule,
+    deleteStandardizationRule, // ADDED
     addTransacaoV2,
     updateImportedStatement,
     importedStatements,
@@ -77,6 +79,9 @@ export function ConsolidatedReviewDialog({
   // Estado para o modal de regra
   const [showRuleModal, setShowRuleModal] = useState(false);
   const [txForRule, setTxForRule] = useState<ImportedTransaction | null>(null);
+  
+  // Estado para o gerenciador de regras
+  const [showRuleManagerModal, setShowRuleManagerModal] = useState(false);
 
   // 1. Carregar e filtrar transações pendentes
   const loadTransactions = useCallback(() => {
@@ -284,9 +289,6 @@ export function ConsolidatedReviewDialog({
       else if (tx.operationType === 'pagamento_emprestimo' && tx.tempLoanId) {
         newTransactions.push(baseTx);
         const loanIdNum = parseInt(tx.tempLoanId.replace('loan_', ''));
-        // NOTE: Não podemos determinar o número da parcela aqui, pois o extrato não informa.
-        // O usuário precisará vincular a parcela manualmente na tela de Empréstimos se quiser o cronograma exato.
-        // Por enquanto, apenas marcamos o pagamento no loan tracker (se houver)
         if (!isNaN(loanIdNum)) {
             markLoanParcelPaid(loanIdNum, tx.amount, tx.date);
         }
@@ -349,97 +351,101 @@ export function ConsolidatedReviewDialog({
     onOpenChange(false);
   };
   
-  // Lógica para o PeriodSelector (simples, pois não precisamos de range2 aqui)
-  const handlePeriodChange = (ranges: ComparisonDateRanges) => {
+  // Lógica para o PeriodSelector
+  const handlePeriodChange = useCallback((ranges: ComparisonDateRanges) => {
     setReviewRange(ranges.range1);
+  }, []);
+  
+  const handleApplyFilter = () => {
+    loadTransactions();
   };
   
-  // Simulação de ranges para o PeriodSelector
-  const dummyRanges: ComparisonDateRanges = useMemo(() => ({
-    range1: reviewRange,
-    range2: { from: undefined, to: undefined }
-  }), [reviewRange]);
+  const handleManageRules = () => {
+    setShowRuleManagerModal(true);
+  };
+  
+  const pendingCount = transactionsToReview.filter(tx => {
+    const isCategorized = tx.categoryId || tx.isTransfer || tx.tempInvestmentId || tx.tempLoanId || tx.tempVehicleOperation;
+    return !isCategorized;
+  }).length;
+  
+  const totalCount = transactionsToReview.length;
 
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent className="max-w-7xl h-[95vh] p-0 overflow-hidden flex flex-col">
-          <DialogHeader className="px-6 pt-6 pb-4 border-b shrink-0">
+          <DialogHeader className="px-4 pt-3 pb-2 border-b shrink-0">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <FileText className="w-5 h-5 text-primary" />
                 <div>
-                  <DialogTitle className="text-xl">Revisão Consolidada - {account?.name}</DialogTitle>
-                  <DialogDescription className="text-sm">
-                    {transactionsToReview.length} transações pendentes de {importedStatements.filter(s => s.accountId === accountId).length} extrato(s)
+                  <DialogTitle className="text-lg">Revisão Consolidada</DialogTitle>
+                  <DialogDescription className="text-xs">
+                    {account?.name}
                   </DialogDescription>
                 </div>
               </div>
-              <Button variant="ghost" size="icon" onClick={() => onOpenChange(false)}>
-                <X className="w-4 h-4" />
-              </Button>
+              <div className="flex items-center gap-2">
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  className="h-8 w-8"
+                  onClick={() => onOpenChange(false)}
+                >
+                  <X className="w-4 h-4" />
+                </Button>
+              </div>
             </div>
           </DialogHeader>
 
-          <div className="flex-1 overflow-hidden flex flex-col">
-            {/* Filtro de Período */}
-            <div className="p-4 border-b shrink-0 flex items-center gap-4">
-              <Calendar className="w-5 h-5 text-muted-foreground" />
-              <span className="text-sm font-medium text-muted-foreground">Filtrar por Período:</span>
-              <PeriodSelector 
-                initialRanges={dummyRanges}
-                onDateRangeChange={handlePeriodChange}
-                className="w-[280px]"
+          <div className="flex flex-1 overflow-hidden">
+            
+            {/* Coluna Lateral (Controle e Status) */}
+            <div className="w-[280px] shrink-0 overflow-y-auto scrollbar-thin">
+              <ReviewContextSidebar
+                accountId={accountId}
+                statements={importedStatements.filter(s => s.accountId === accountId)}
+                pendingCount={pendingCount}
+                totalCount={totalCount}
+                reviewRange={reviewRange}
+                onPeriodChange={handlePeriodChange}
+                onApplyFilter={handleApplyFilter}
+                onContabilize={handleContabilize}
+                onClose={() => onOpenChange(false)}
+                onManageRules={handleManageRules}
               />
-              <Button onClick={loadTransactions} variant="outline" size="sm" className="gap-2">
-                <ArrowRight className="w-4 h-4" />
-                Aplicar Filtro
-              </Button>
             </div>
 
-            {/* Tabela de Revisão */}
-            <ScrollArea className="flex-1">
-              <div className="p-4">
-                {loading ? (
-                  <div className="flex flex-col items-center justify-center h-64 text-muted-foreground">
-                    <Loader2 className="w-8 h-8 animate-spin mb-3" />
-                    Carregando transações...
-                  </div>
-                ) : transactionsToReview.length === 0 ? (
-                  <div className="flex flex-col items-center justify-center h-64 text-muted-foreground">
-                    <Check className="w-8 h-8 text-success mb-3" />
-                    <p className="text-lg font-medium">Nenhuma transação pendente neste período.</p>
-                    <p className="text-sm">Importe mais extratos ou ajuste o filtro de datas.</p>
-                  </div>
-                ) : (
-                  <TransactionReviewTable
-                    transactions={transactionsToReview}
-                    accounts={accounts}
-                    categories={categories}
-                    investments={investments}
-                    loans={loans}
-                    onUpdateTransaction={handleUpdateTransaction}
-                    onCreateRule={handleCreateRule}
-                  />
-                )}
-              </div>
-            </ScrollArea>
-          </div>
-
-          {/* Footer de Ação */}
-          <div className="p-4 border-t shrink-0">
-            <Button 
-              onClick={handleContabilize} 
-              disabled={loading || transactionsToReview.length === 0}
-              className="w-full gap-2"
-            >
+            {/* Coluna Principal (Tabela de Revisão) */}
+            <div className="flex-1 overflow-y-auto px-4 pt-2 pb-2">
+              <h3 className="text-sm font-semibold text-foreground mb-3">
+                Transações Pendentes no Período ({format(reviewRange.from || new Date(), 'dd/MM/yy')} - {format(reviewRange.to || new Date(), 'dd/MM/yy')})
+              </h3>
+              
               {loading ? (
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                <div className="flex flex-col items-center justify-center h-64 text-muted-foreground">
+                  <Loader2 className="w-8 h-8 animate-spin mb-3" />
+                  Carregando transações...
+                </div>
+              ) : transactionsToReview.length === 0 ? (
+                <div className="flex flex-col items-center justify-center h-64 text-muted-foreground">
+                  <Check className="w-8 h-8 text-success mb-3" />
+                  <p className="text-lg font-medium">Nenhuma transação pendente neste período.</p>
+                  <p className="text-sm">Importe mais extratos ou ajuste o filtro de datas.</p>
+                </div>
               ) : (
-                <Check className="w-4 h-4 mr-2" />
+                <TransactionReviewTable
+                  transactions={transactionsToReview}
+                  accounts={accounts}
+                  categories={categories}
+                  investments={investments}
+                  loans={loans}
+                  onUpdateTransaction={handleUpdateTransaction}
+                  onCreateRule={handleCreateRule}
+                />
               )}
-              Contabilizar {transactionsToReview.length} Transação(ões)
-            </Button>
+            </div>
           </div>
         </DialogContent>
       </Dialog>
@@ -451,6 +457,15 @@ export function ConsolidatedReviewDialog({
         initialTransaction={txForRule}
         categories={categories}
         onSave={handleSaveRule}
+      />
+      
+      {/* Modal de Gerenciamento de Regras */}
+      <StandardizationRuleManagerModal
+        open={showRuleManagerModal}
+        onOpenChange={setShowRuleManagerModal}
+        rules={standardizationRules}
+        onDeleteRule={deleteStandardizationRule}
+        categories={categories}
       />
     </>
   );

@@ -96,7 +96,7 @@ export function TransactionReviewTable({
           value={tx.destinationAccountId || ''}
           onValueChange={(v) => onUpdateTransaction(tx.id, { destinationAccountId: v })}
         >
-          <SelectTrigger className="h-8 text-sm">
+          <SelectTrigger className="h-7 text-xs">
             <SelectValue placeholder="Conta Destino..." />
           </SelectTrigger>
           <SelectContent className="max-h-60">
@@ -117,14 +117,14 @@ export function TransactionReviewTable({
           value={tx.tempInvestmentId || ''}
           onValueChange={(v) => onUpdateTransaction(tx.id, { tempInvestmentId: v })}
         >
-          <SelectTrigger className="h-8 text-sm">
+          <SelectTrigger className="h-7 text-xs">
             <SelectValue placeholder="Conta Investimento..." />
           </SelectTrigger>
           <SelectContent className="max-h-60">
             {investmentAccounts.map(i => (
               <SelectItem key={i.id} value={i.id}>
                 <span className="flex items-center gap-2">
-                    <PiggyBank className="w-4 h-4 text-purple-500" />
+                    <PiggyBank className="w-3 h-3 text-purple-500" />
                     {i.name}
                 </span>
               </SelectItem>
@@ -141,14 +141,14 @@ export function TransactionReviewTable({
           value={tx.tempLoanId || ''}
           onValueChange={(v) => onUpdateTransaction(tx.id, { tempLoanId: v })}
         >
-          <SelectTrigger className="h-8 text-sm">
+          <SelectTrigger className="h-7 text-xs">
             <SelectValue placeholder="Contrato..." />
           </SelectTrigger>
           <SelectContent className="max-h-60">
             {activeLoans.map(l => (
               <SelectItem key={l.id} value={l.id}>
                 <span className="flex items-center gap-2">
-                    <CreditCard className="w-4 h-4 text-orange-500" />
+                    <CreditCard className="w-3 h-3 text-orange-500" />
                     {l.institution}
                 </span>
               </SelectItem>
@@ -165,18 +165,18 @@ export function TransactionReviewTable({
           value={tx.tempVehicleOperation || ''}
           onValueChange={(v) => onUpdateTransaction(tx.id, { tempVehicleOperation: v as 'compra' | 'venda' })}
         >
-          <SelectTrigger className="h-8 text-sm">
+          <SelectTrigger className="h-7 text-xs">
             <SelectValue placeholder="Operação..." />
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="compra">
                 <span className="flex items-center gap-2 text-destructive">
-                    <Car className="w-4 h-4" /> Compra (Saída)
+                    <Car className="w-3 h-3" /> Compra (Saída)
                 </span>
             </SelectItem>
             <SelectItem value="venda">
                 <span className="flex items-center gap-2 text-success">
-                    <Car className="w-4 h-4" /> Venda (Entrada)
+                    <Car className="w-3 h-3" /> Venda (Entrada)
                 </span>
             </SelectItem>
           </SelectContent>
@@ -187,7 +187,7 @@ export function TransactionReviewTable({
     // 5. Liberação Empréstimo (Apenas indicador)
     if (opType === 'liberacao_emprestimo') {
         return (
-            <Badge variant="outline" className="text-xs border-emerald-500 text-emerald-500">
+            <Badge variant="outline" className="text-[10px] px-1 py-0 border-emerald-500 text-emerald-500">
                 <Info className="w-3 h-3 mr-1" /> Config. Posterior
             </Badge>
         );
@@ -212,17 +212,17 @@ export function TransactionReviewTable({
 
   return (
     <div className="overflow-x-auto">
-      <Table className="min-w-[1400px]"> {/* Aumentado min-width */}
+      <Table className="min-w-[1400px]">
         <TableHeader className="sticky top-0 bg-card z-10">
-          <TableRow className="border-border hover:bg-transparent">
-            <TableHead className="text-muted-foreground w-[80px]">Data</TableHead>
-            <TableHead className="text-muted-foreground w-[100px]">Valor</TableHead>
-            <TableHead className="text-muted-foreground w-[300px]">Descrição Original</TableHead>
-            <TableHead className="text-muted-foreground w-[180px]">Tipo Operação</TableHead>
-            <TableHead className="text-muted-foreground w-[250px]">Vínculo / Contraparte</TableHead> {/* RENOMEADO */}
-            <TableHead className="text-muted-foreground w-[200px]">Categoria</TableHead>
-            <TableHead className="text-muted-foreground w-[250px]">Descrição Final</TableHead>
-            <TableHead className="text-muted-foreground w-[80px] text-center">Regra</TableHead>
+          <TableRow className="border-border hover:bg-transparent h-9"> {/* Reduced height */}
+            <TableHead className="text-muted-foreground w-[80px] text-xs p-2">Data</TableHead>
+            <TableHead className="text-muted-foreground w-[100px] text-xs p-2">Valor</TableHead>
+            <TableHead className="text-muted-foreground w-[300px] text-xs p-2">Descrição Original</TableHead>
+            <TableHead className="text-muted-foreground w-[180px] text-xs p-2">Tipo Operação</TableHead>
+            <TableHead className="text-muted-foreground w-[250px] text-xs p-2">Vínculo / Contraparte</TableHead>
+            <TableHead className="text-muted-foreground w-[200px] text-xs p-2">Categoria</TableHead>
+            <TableHead className="text-muted-foreground w-[250px] text-xs p-2">Descrição Final</TableHead>
+            <TableHead className="text-muted-foreground w-[80px] text-center text-xs p-2">Regra</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -230,48 +230,44 @@ export function TransactionReviewTable({
             const isIncome = tx.operationType === 'receita' || tx.operationType === 'rendimento' || tx.operationType === 'liberacao_emprestimo' || (tx.operationType === 'veiculo' && tx.amount > 0);
             const currentCategory = tx.categoryId ? categoriesMap.get(tx.categoryId) : null;
             
-            // Verifica se o vínculo está completo (para transferência, investimento, empréstimo, veículo)
             const isVincularComplete = 
                 (tx.operationType === 'transferencia' && !!tx.destinationAccountId) ||
                 ((tx.operationType === 'aplicacao' || tx.operationType === 'resgate') && !!tx.tempInvestmentId) ||
                 (tx.operationType === 'pagamento_emprestimo' && !!tx.tempLoanId) ||
                 (tx.operationType === 'veiculo' && !!tx.tempVehicleOperation) ||
-                // Se não for operação de vínculo, a categorização é o que importa
                 (!isCategoryDisabled(tx) && !!tx.categoryId) ||
-                // Liberação de empréstimo é considerada completa se tiver o tipo
                 tx.operationType === 'liberacao_emprestimo';
             
-            const isCategorized = isVincularComplete; // Usamos isVincularComplete como proxy para isCategorized
+            const isCategorized = isVincularComplete;
             
             return (
               <TableRow 
                 key={tx.id} 
                 className={cn(
-                  "border-border hover:bg-muted/30 transition-colors",
+                  "border-border hover:bg-muted/30 transition-colors h-10", // Reduced row height
                   !isCategorized && "bg-warning/5 hover:bg-warning/10"
                 )}
               >
-                <TableCell className="text-muted-foreground text-sm whitespace-nowrap">
+                <TableCell className="text-muted-foreground text-xs whitespace-nowrap p-2"> {/* Reduced font and padding */}
                   {parseDateLocal(tx.date).toLocaleDateString("pt-BR")}
                 </TableCell>
                 <TableCell className={cn(
-                  "font-medium whitespace-nowrap text-sm",
+                  "font-medium whitespace-nowrap text-sm p-2", // Reduced padding
                   isIncome ? "text-success" : "text-destructive"
                 )}>
                   {isIncome ? '+' : '-'} {formatCurrency(tx.amount)}
                 </TableCell>
-                <TableCell className="text-sm max-w-[300px] truncate" title={tx.originalDescription}>
+                <TableCell className="text-xs max-w-[300px] truncate p-2" title={tx.originalDescription}>
                   {tx.originalDescription}
                 </TableCell>
                 
                 {/* Tipo Operação */}
-                <TableCell>
+                <TableCell className="p-2">
                   <Select
                     value={tx.operationType || ''}
                     onValueChange={(v) => onUpdateTransaction(tx.id, { 
                         operationType: v as OperationType, 
                         isTransfer: v === 'transferencia',
-                        // Limpa vínculos e categoria ao mudar o tipo
                         categoryId: null,
                         destinationAccountId: null,
                         tempInvestmentId: null,
@@ -279,13 +275,13 @@ export function TransactionReviewTable({
                         tempVehicleOperation: null,
                     })}
                   >
-                    <SelectTrigger className="h-8 text-sm">
+                    <SelectTrigger className="h-7 text-xs"> {/* Reduced height and font */}
                       <SelectValue placeholder="Selecione..." />
                     </SelectTrigger>
                     <SelectContent>
                       {OPERATION_OPTIONS.map(op => (
                         <SelectItem key={op.value} value={op.value}>
-                          <span className={cn("flex items-center gap-2", op.color)}>
+                          <span className={cn("flex items-center gap-2 text-sm", op.color)}>
                             {op.label}
                           </span>
                         </SelectItem>
@@ -295,24 +291,26 @@ export function TransactionReviewTable({
                 </TableCell>
                 
                 {/* Vínculo / Contraparte (Dinâmico) */}
-                <TableCell>
+                <TableCell className="p-2">
                   {renderVincularSelector(tx)}
                 </TableCell>
                 
                 {/* Categoria */}
-                <TableCell>
+                <TableCell className="p-2">
                   <Select
                     value={tx.categoryId || ''}
                     onValueChange={(v) => onUpdateTransaction(tx.id, { categoryId: v })}
                     disabled={isCategoryDisabled(tx)}
                   >
-                    <SelectTrigger className="h-8 text-sm">
+                    <SelectTrigger className="h-7 text-xs"> {/* Reduced height and font */}
                       <SelectValue placeholder="Selecione..." />
                     </SelectTrigger>
                     <SelectContent className="max-h-60">
                       {getCategoryOptions(tx.operationType).map(cat => (
                         <SelectItem key={cat.id} value={cat.id}>
-                          {cat.icon} {cat.label} ({CATEGORY_NATURE_LABELS[cat.nature]})
+                          <span className="text-sm">
+                            {cat.icon} {cat.label} ({CATEGORY_NATURE_LABELS[cat.nature]})
+                          </span>
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -320,26 +318,26 @@ export function TransactionReviewTable({
                 </TableCell>
                 
                 {/* Descrição Final */}
-                <TableCell>
+                <TableCell className="p-2">
                   <EditableCell
                     value={tx.description}
                     type="text"
                     onSave={(v) => onUpdateTransaction(tx.id, { description: String(v) })}
-                    className="text-sm"
+                    className="text-xs h-7" // Reduced height and font
                   />
                 </TableCell>
                 
                 {/* Ações / Regra */}
-                <TableCell className="text-center">
+                <TableCell className="text-center p-2">
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="h-8 w-8 text-muted-foreground hover:text-primary"
+                    className="h-7 w-7 text-muted-foreground hover:text-primary" // Reduced size
                     onClick={() => onCreateRule(tx)}
                     disabled={!isCategorized}
                     title="Criar regra de padronização"
                   >
-                    <Pin className="w-4 h-4" />
+                    <Pin className="w-3.5 h-3.5" />
                   </Button>
                 </TableCell>
               </TableRow>
