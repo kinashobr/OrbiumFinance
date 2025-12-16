@@ -5,7 +5,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Check, X, FileText, AlertCircle, Loader2, Pin } from "lucide-react";
 import { 
   ContaCorrente, ImportedTransaction, TransacaoCompleta, TransactionLinks, TransactionMeta,
-  generateTransactionId, generateTransferGroupId, getDomainFromOperation, TransferGroup, DateRange
+  generateTransactionId, generateTransferGroupId, getDomainFromOperation, TransferGroup, DateRange, StandardizationRule
 } from "@/types/finance";
 import { useFinance } from "@/contexts/FinanceContext";
 import { toast } from "sonner";
@@ -158,7 +158,7 @@ export function ReviewConsolidationModal({ open, onOpenChange, accountId }: Revi
     
     // Aplica a nova regra (e as existentes)
     const allRules = [...standardizationRules, newRule];
-    const reProcessedTransactions = applyRules(transactionsToReview, allRules);
+    const reProcessedTransactions = applyRules(rawTransactions, allRules); // Use rawTransactions to re-process all
     setTransactionsToReview(reProcessedTransactions);
   };
 
