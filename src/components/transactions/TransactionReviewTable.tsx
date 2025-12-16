@@ -88,6 +88,8 @@ export function TransactionReviewTable({
             // Uma transação é considerada 'categorizada' se tiver tipo de operação e, se não for transferência, uma categoria.
             const isCategorized = !!tx.operationType && (isTransfer || !!tx.categoryId);
             
+            const destinationOptions = availableDestinationAccounts.filter(a => a.id !== tx.accountId);
+            
             return (
               <TableRow 
                 key={tx.id} 
@@ -166,13 +168,16 @@ export function TransactionReviewTable({
                         <SelectValue placeholder="Conta Destino..." />
                       </SelectTrigger>
                       <SelectContent className="max-h-60">
-                        {availableDestinationAccounts
-                          .filter(a => a.id !== tx.accountId)
-                          .map(a => (
-                            <SelectItem key={a.id} value={a.id}>
-                              {a.name}
+                        {destinationOptions.map(a => (
+                          <SelectItem key={a.id} value={a.id}>
+                            {a.name}
+                          </SelectItem>
+                        ))}
+                        {destinationOptions.length === 0 && (
+                            <SelectItem value="no_options" disabled>
+                                Nenhuma outra conta disponível
                             </SelectItem>
-                          ))}
+                        )}
                       </SelectContent>
                     </Select>
                   ) : (
