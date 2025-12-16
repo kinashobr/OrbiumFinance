@@ -24,7 +24,8 @@ import { CategoryListModal } from "@/components/transactions/CategoryListModal";
 import { AccountStatementDialog } from "@/components/transactions/AccountStatementDialog";
 import { PeriodSelector } from "@/components/dashboard/PeriodSelector";
 import { BillsTrackerModal } from "@/components/bills/BillsTrackerModal";
-import { StatementManagerDialog } from "@/components/transactions/StatementManagerDialog"; // RENOMEADO
+import { StatementManagerDialog } from "@/components/transactions/StatementManagerDialog"; 
+import { ConsolidatedReviewDialog } from "@/components/transactions/ConsolidatedReviewDialog"; // NEW IMPORT
 
 // Context
 import { useFinance } from "@/contexts/FinanceContext";
@@ -734,6 +735,17 @@ const ReceitasDespesas = () => {
   const viewingAccount = viewingAccountId ? accounts.find(a => a.id === viewingAccountId) : null;
   const viewingSummary = viewingAccountId ? accountSummaries.find(s => s.accountId === viewingAccountId) : null;
   const viewingTransactions = viewingAccountId ? transactions.filter(t => t.accountId === viewingAccountId) : [];
+  
+  // Calculate transaction count by category for CategoryListModal
+  const transactionCountByCategory = useMemo(() => {
+    const counts: Record<string, number> = {};
+    transactions.forEach(t => {
+      if (t.categoryId) {
+        counts[t.categoryId] = (counts[t.categoryId] || 0) + 1;
+      }
+    });
+    return counts;
+  }, [transactions]);
 
   return (
     <MainLayout>
@@ -863,16 +875,17 @@ const ReceitasDespesas = () => {
         />
       )}
       
-      {/* Consolidated Review Dialog (Fase 2 - Placeholder) */}
-      {/* Será implementado na Fase 2 */}
-      {showConsolidatedReview && (
-        <div className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm flex items-center justify-center">
-            <div className="p-8 rounded-lg bg-card border">
-                <h2 className="text-xl font-bold">Aguardando Fase 2...</h2>
-                <p>Revisão Consolidada para {accountForConsolidatedReview}</p>
-                <Button onClick={() => setShowConsolidatedReview(false)} className="mt-4">Fechar</Button>
-            </div>
-        </div>
+      {/* Consolidated Review Dialog (Fase 2) */}
+      {accountForConsolidatedReview && (
+        <ConsolidatedReviewDialog
+          open={showConsolidatedReview}
+          onOpenChange={setShowConsolidatedReview}
+          accountId={accountForConsolidatedReview}
+          accounts={accounts}
+          categories={categories}
+          investments={investments}
+          loans={loans}
+        />
       )}
     </MainLayout>
   );
