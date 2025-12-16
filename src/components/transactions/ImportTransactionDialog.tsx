@@ -235,6 +235,7 @@ export function ImportTransactionDialog({ open, onOpenChange, account, investmen
   const [importedTransactions, setImportedTransactions] = useState<ImportedTransaction[]>([]);
   const [file, setFile] = useState<File | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [isDragging, setIsDragging] = useState(false); // NEW STATE: Dragging status
   
   // State for Rule Creation Modal
   const [showRuleModal, setShowRuleModal] = useState(false);
@@ -273,11 +274,43 @@ export function ImportTransactionDialog({ open, onOpenChange, account, investmen
     });
   }, []);
 
+  // Centralized file selection logic
+  const handleFileSelect = (selectedFile: File | null) => {
+    if (selectedFile) {
+        const fileName = selectedFile.name.toLowerCase();
+        if (!fileName.endsWith('.csv') && !fileName.endsWith('.ofx')) {
+            setError("Formato de arquivo inválido. Use .csv ou .ofx.");
+            setFile(null);
+            return;
+        }
+        setFile(selectedFile);
+        setError(null);
+    }
+  };
+
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0];
-    if (selectedFile) {
-      setFile(selectedFile);
-      setError(null);
+    handleFileSelect(selectedFile || null);
+  };
+  
+  // Drag and Drop Handlers
+  const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    setIsDragging(false);
+  };
+
+  const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    setIsDragging(false);
+    
+    const files = e.dataTransfer.files;
+    if (files && files.length > 0) {
+        handleFileSelect(files[0]);
     }
   };
 
@@ -522,8 +555,16 @@ export function ImportTransactionDialog({ open, onOpenChange, account, investmen
     if (step === 'upload') {
       return (
         <div className="space-y-6">
-          <div className="p-6 border-2 border-dashed border-border rounded-lg text-center space-y-3">
-            <Upload className="w-8 h-8 mx-auto text-primary" />
+          <div 
+            className={cn(
+                "p-6 border-2 border-dashed rounded-lg text-center space-y-3 transition-colors",
+                isDragging ? "border-primary bg-primary/5" : "border-border"
+            )}
+            onDragOver={handleDragOver}
+            onDragLeave={handleDragLeave}
+            onDrop={handleDrop}
+          >
+            <Upload className={cn("w-8 h-8 mx-auto", isDragging ? "text-primary" : "text-primary/70")} />
             <p className="text-sm font-medium">Arraste e solte ou clique para selecionar o arquivo</p>
             <Input 
               type="file" 
@@ -568,16 +609,18 @@ export function ImportTransactionDialog({ open, onOpenChange, account, investmen
         if (tx.operationType === 'transferencia') return !!tx.destinationAccountId;
         
         // Aplicação/Resgate: Requer investimento
-        if (tx.operationType === 'aplicacao' || tx.operationType === 'resgate') return !!tx.tempInvestmentId;
+        if ((tx.operationType === 'aplicacao' || tx.operationType === 'resgate') && !tx.tempInvestmentId) return true;
         
         // Pagamento Empréstimo: Requer empréstimo
-        if (tx.operationType === 'pagamento_emprestimo') return !!tx.tempLoanId;
+        if (tx.operationType === 'pagamento_emprestimo' && !tx.tempLoanId) return true;
         
         // Veículo: Requer tipo de operação
-        if (tx.operationType === 'veiculo') return !!tx.tempVehicleOperation;
+        if (tx.operationType === 'veiculo' && !tx.tempVehicleOperation) return true;
         
         // Outros: Requer categoria
-        return !!tx.categoryId;
+        if (['receita', 'despesa', 'rendimento', 'liberacao_emprestimo'].includes(tx.operationType) && !tx.categoryId) return true;
+        
+        return false;
       });
       
       const incompleteCount = importedTransactions.filter(tx => {
