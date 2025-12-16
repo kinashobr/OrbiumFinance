@@ -74,22 +74,6 @@ function parseDateRanges(storedRanges: any): ComparisonDateRanges {
     };
 }
 
-// Helper function to calculate the due date of an installment
-const getDueDate = (startDateStr: string, installmentNumber: number): Date => {
-  // Uses parseDateLocal to ensure the start date is interpreted locally
-  const startDate = parseDateLocal(startDateStr);
-  const dueDate = new Date(startDate);
-  
-  // Adjustment: If installmentNumber = 1, add 0 months.
-  dueDate.setMonth(dueDate.getMonth() + installmentNumber - 1);
-  
-  return dueDate;
-};
-
-// ============================================
-// FUNÇÕES DE PARSING (MOVIDAS DO DIALOG)
-// ============================================
-
 // Helper para normalizar valor (R$ 1.234,56 -> 1234.56)
 const normalizeAmount = (amountStr: string): number => {
     let cleaned = amountStr.trim();
@@ -1582,10 +1566,6 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     importData,
     
     // Removidos: Placeholders para V1
-    investimentosRF: [],
-    criptomoedas: [],
-    stablecoins: [],
-    movimentacoesInvestimento: [],
   };
 
   return (
