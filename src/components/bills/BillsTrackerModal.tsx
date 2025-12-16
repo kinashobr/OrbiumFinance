@@ -355,6 +355,7 @@ export function BillsTrackerModal({ open, onOpenChange }: BillsTrackerModalProps
               </Button>
             </div>
           </div>
+        </DialogHeader>
         
         {/* Conteúdo Principal (2 Colunas) */}
         <div className="flex flex-1 overflow-hidden">
