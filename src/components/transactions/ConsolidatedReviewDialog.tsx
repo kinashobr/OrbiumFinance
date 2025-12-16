@@ -6,7 +6,8 @@ import { FileText, Check, Loader2, AlertCircle, Calendar, ArrowRight, X } from "
 import { 
   ContaCorrente, Categoria, ImportedTransaction, StandardizationRule, 
   TransacaoCompleta, TransferGroup, generateTransactionId, generateTransferGroupId, 
-  getDomainFromOperation, getFlowTypeFromOperation, DateRange, ComparisonDateRanges
+  getDomainFromOperation, getFlowTypeFromOperation, DateRange, ComparisonDateRanges,
+  ImportedStatement
 } from "@/types/finance";
 import { useFinance } from "@/contexts/FinanceContext";
 import { toast } from "sonner";
@@ -228,7 +229,12 @@ export function ConsolidatedReviewDialog({
           id: generateTransactionId(),
           accountId: tx.destinationAccountId,
           flow: isToCreditCard ? 'in' : 'transfer_in', // CC payment is 'in'
+          operationType: 'transferencia' as const,
           description: isToCreditCard ? `Pagamento de fatura CC ${toAccount?.name}` : tx.description || `Transferência recebida de ${fromAccount?.name}`,
+          links: {
+            ...baseTx.links,
+            transferGroupId: groupId,
+          }
         };
         newTransactions.push(inTx);
         

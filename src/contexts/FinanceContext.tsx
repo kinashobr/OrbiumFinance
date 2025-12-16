@@ -12,9 +12,9 @@ import {
   DateRange, // Import new types
   ComparisonDateRanges, // Import new types
   generateAccountId,
+  generateTransactionId,
   BillTracker, // NEW
   generateBillId, // NEW
-  BillSourceType, // NEW
   StandardizationRule, // <-- NEW IMPORT
   generateRuleId, // <-- NEW IMPORT
   ImportedStatement, // <-- NEW IMPORT
@@ -22,7 +22,7 @@ import {
   generateStatementId, // <-- NEW IMPORT
   OperationType, // <-- NEW IMPORT
 } from "@/types/finance";
-import { parseISO, startOfMonth, endOfMonth, subDays, differenceInDays, differenceInMonths, addMonths, isBefore, isAfter, isSameDay, isSameMonth, isSameYear, startOfDay, endOfDay, subMonths, format } from "date-fns"; // Import date-fns helpers
+import { parseISO, startOfMonth, endOfMonth, subDays, differenceInDays, differenceInMonths, addMonths, isBefore, isAfter, isSameDay, isSameMonth, isSameYear, startOfDay, endOfDay, subMonths, format, isWithinInterval } from "date-fns"; // Import date-fns helpers
 import { parseDateLocal } from "@/lib/utils"; // Importando a nova função
 
 // ============================================
