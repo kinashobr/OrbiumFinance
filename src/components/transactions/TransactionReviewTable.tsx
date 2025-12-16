@@ -136,16 +136,19 @@ export function TransactionReviewTable({
       window.addEventListener('mousemove', handleMouseMove);
       window.addEventListener('mouseup', handleMouseUp);
       document.body.style.cursor = 'col-resize';
+      document.body.style.userSelect = 'none';
     } else {
       window.removeEventListener('mousemove', handleMouseMove);
       window.removeEventListener('mouseup', handleMouseUp);
       document.body.style.cursor = 'default';
+      document.body.style.userSelect = 'auto';
     }
 
     return () => {
       window.removeEventListener('mousemove', handleMouseMove);
       window.removeEventListener('mouseup', handleMouseUp);
       document.body.style.cursor = 'default';
+      document.body.style.userSelect = 'auto';
     };
   }, [resizingColumn, handleMouseMove, handleMouseUp]);
   
@@ -179,6 +182,7 @@ export function TransactionReviewTable({
   // Função para renderizar o seletor de Vínculo/Contraparte
   const renderVincularSelector = (tx: ImportedTransaction) => {
     const opType = tx.operationType;
+    const isDisabled = tx.isPotentialDuplicate; // Desabilitar se for duplicata
     
     // 1. Transferência (Conta Destino)
     if (opType === 'transferencia') {
@@ -187,6 +191,7 @@ export function TransactionReviewTable({
         <Select
           value={tx.destinationAccountId || ''}
           onValueChange={(v) => onUpdateTransaction(tx.id, { destinationAccountId: v })}
+          disabled={isDisabled}
         >
           <SelectTrigger className="h-7 text-xs">
             <SelectValue placeholder="Conta Destino..." />
@@ -208,6 +213,7 @@ export function TransactionReviewTable({
         <Select
           value={tx.tempInvestmentId || ''}
           onValueChange={(v) => onUpdateTransaction(tx.id, { tempInvestmentId: v })}
+          disabled={isDisabled}
         >
           <SelectTrigger className="h-7 text-xs">
             <SelectValue placeholder="Conta Investimento..." />
@@ -232,6 +238,7 @@ export function TransactionReviewTable({
         <Select
           value={tx.tempLoanId || ''}
           onValueChange={(v) => onUpdateTransaction(tx.id, { tempLoanId: v })}
+          disabled={isDisabled}
         >
           <SelectTrigger className="h-7 text-xs">
             <SelectValue placeholder="Contrato..." />
@@ -256,6 +263,7 @@ export function TransactionReviewTable({
         <Select
           value={tx.tempVehicleOperation || ''}
           onValueChange={(v) => onUpdateTransaction(tx.id, { tempVehicleOperation: v as 'compra' | 'venda' })}
+          disabled={isDisabled}
         >
           <SelectTrigger className="h-7 text-xs">
             <SelectValue placeholder="Operação..." />
@@ -293,8 +301,9 @@ export function TransactionReviewTable({
     const opType = tx.operationType;
     if (!opType) return true;
     
-    // Desabilita se for uma operação de vínculo
-    return opType === 'transferencia' || 
+    // Desabilita se for uma operação de vínculo OU se for duplicata
+    return tx.isPotentialDuplicate ||
+           opType === 'transferencia' || 
            opType === 'aplicacao' || 
            opType === 'resgate' || 
            opType === 'pagamento_emprestimo' ||
@@ -349,7 +358,8 @@ export function TransactionReviewTable({
                 key={tx.id} 
                 className={cn(
                   "border-border hover:bg-muted/30 transition-colors h-10",
-                  !isCategorized && "bg-warning/5 hover:bg-warning/10"
+                  !isCategorized && !tx.isPotentialDuplicate && "bg-warning/5 hover:bg-warning/10",
+                  tx.isPotentialDuplicate && "bg-success/5 hover:bg-success/10 border-l-4 border-success/50" // Highlight Duplicates
                 )}
               >
                 <TableCell className="text-muted-foreground text-xs whitespace-nowrap p-2" style={{ width: columnWidths.date }}>
@@ -363,6 +373,11 @@ export function TransactionReviewTable({
                 </TableCell>
                 <TableCell className="text-xs max-w-[250px] truncate p-2" title={tx.originalDescription} style={{ width: columnWidths.originalDescription }}>
                   {tx.originalDescription}
+                  {tx.isPotentialDuplicate && (
+                    <Badge variant="outline" className="ml-2 text-[10px] px-1 py-0 border-success text-success">
+                      <Check className="w-3 h-3 mr-1" /> Duplicata
+                    </Badge>
+                  )}
                 </TableCell>
                 
                 {/* Tipo Operação */}
@@ -378,6 +393,7 @@ export function TransactionReviewTable({
                         tempLoanId: null,
                         tempVehicleOperation: null,
                     })}
+                    disabled={tx.isPotentialDuplicate}
                   >
                     <SelectTrigger className="h-7 text-xs">
                       <SelectValue placeholder="Selecione..." />
@@ -428,6 +444,7 @@ export function TransactionReviewTable({
                     type="text"
                     onSave={(v) => onUpdateTransaction(tx.id, { description: String(v) })}
                     className="text-xs h-7"
+                    disabled={tx.isPotentialDuplicate}
                   />
                 </TableCell>
                 
@@ -438,7 +455,7 @@ export function TransactionReviewTable({
                     size="icon"
                     className="h-7 w-7 text-muted-foreground hover:text-primary"
                     onClick={() => onCreateRule(tx)}
-                    disabled={!isCategorized}
+                    disabled={!isCategorized || tx.isPotentialDuplicate}
                     title="Criar regra de padronização"
                   >
                     <Pin className="w-3.5 h-3.5" />

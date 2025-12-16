@@ -271,6 +271,10 @@ export interface ImportedTransaction {
   // NEW: Rastreamento de contabilização
   isContabilized?: boolean;
   contabilizedTransactionId?: string;
+  
+  // NOVO: Rastreamento de Duplicidade Potencial
+  isPotentialDuplicate?: boolean; // Se for uma duplicata potencial de uma transação manual
+  duplicateOfTxId?: string; // ID da transação manual correspondente
 }
 
 // NOVO: Metadados do Extrato Importado

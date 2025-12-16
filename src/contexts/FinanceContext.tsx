@@ -21,6 +21,7 @@ import {
   ImportedTransaction, // <-- NEW IMPORT
   generateStatementId, // <-- NEW IMPORT
   OperationType, // <-- NEW IMPORT
+  getFlowTypeFromOperation, // <-- NEW IMPORT
 } from "@/types/finance";
 import { parseISO, startOfMonth, endOfMonth, subDays, differenceInDays, differenceInMonths, addMonths, isBefore, isAfter, isSameDay, isSameMonth, isSameYear, startOfDay, endOfDay, subMonths, format, isWithinInterval } from "date-fns"; // Import date-fns helpers
 import { parseDateLocal } from "@/lib/utils"; // Importando a nova função
@@ -796,6 +797,7 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
           
           if (rule.operationType === 'transferencia') {
               updatedTx.isTransfer = true;
+              updatedTx.destinationAccountId = null;
               updatedTx.tempInvestmentId = null;
               updatedTx.tempLoanId = null;
               updatedTx.tempVehicleOperation = null;
@@ -884,11 +886,55 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     const rangeFrom = startOfDay(range.from);
     const rangeTo = endOfDay(range.to);
     
-    return allRawTransactions.filter(t => {
+    let filteredTxs = allRawTransactions.filter(t => {
         const transactionDate = parseDateLocal(t.date);
         return isWithinInterval(transactionDate, { start: rangeFrom, end: rangeTo });
     });
-  }, [importedStatements]);
+    
+    // 3. Aplicar regras de padronização (necessário caso novas regras tenham sido criadas)
+    filteredTxs = applyRules(filteredTxs, standardizationRules);
+    
+    // 4. Verificar duplicidade com transações já contabilizadas (transacoesV2)
+    const deduplicatedTxs = filteredTxs.map(importedTx => {
+        const isDuplicate = transacoesV2.find(manualTx => {
+            // Chave de correspondência: Conta, Valor, Fluxo, Data (tolerância de 1 dia)
+            const isSameAccount = manualTx.accountId === importedTx.accountId;
+            const isSameAmount = Math.abs(manualTx.amount - importedTx.amount) < 0.01; // Tolerância de 1 centavo
+            
+            // Determinar o fluxo da transação importada (baseado no operationType)
+            const importedFlow = getFlowTypeFromOperation(importedTx.operationType || 'despesa');
+            
+            // Comparar fluxos (simplificado: in/out)
+            const isSameFlow = (manualTx.flow === 'in' || manualTx.flow === 'transfer_in') === (importedFlow === 'in' || importedFlow === 'transfer_in');
+            
+            // Comparar datas (tolerância de 1 dia)
+            const importedDate = parseDateLocal(importedTx.date);
+            const manualDate = parseDateLocal(manualTx.date);
+            const isSameDayOrAdjacent = Math.abs(differenceInDays(importedDate, manualDate)) <= 1;
+            
+            // Excluir transações de Saldo Inicial da comparação
+            const isInitialBalance = manualTx.operationType === 'initial_balance';
+            
+            return isSameAccount && isSameAmount && isSameFlow && isSameDayOrAdjacent && !isInitialBalance;
+        });
+        
+        if (isDuplicate) {
+            return {
+                ...importedTx,
+                isPotentialDuplicate: true,
+                duplicateOfTxId: isDuplicate.id,
+                // Se for duplicata, forçamos a categorização para que o usuário possa ignorar facilmente
+                operationType: isDuplicate.operationType,
+                categoryId: isDuplicate.categoryId,
+                description: isDuplicate.description,
+            };
+        }
+        
+        return importedTx;
+    });
+    
+    return deduplicatedTxs;
+  }, [importedStatements, transacoesV2, standardizationRules, applyRules]);
 
   // ============================================
   // OPERAÇÕES DE BILL TRACKER

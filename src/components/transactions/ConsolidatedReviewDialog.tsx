@@ -144,13 +144,16 @@ export function ConsolidatedReviewDialog({
   // 4. Contabilização (Processamento final)
   const handleContabilize = () => {
     const txsToContabilize = transactionsToReview.filter(tx => {
+      // IGNORAR DUPLICATAS POTENCIAIS
+      if (tx.isPotentialDuplicate) return false; 
+      
       // Verifica se a transação está pronta para ser contabilizada
       const isCategorized = tx.categoryId || tx.isTransfer || tx.tempInvestmentId || tx.tempLoanId || tx.tempVehicleOperation;
       return !!isCategorized;
     });
     
     if (txsToContabilize.length === 0) {
-      toast.error("Nenhuma transação pronta para contabilização. Categorize ou vincule as pendentes.");
+      toast.error("Nenhuma transação pronta para contabilização. Categorize ou vincule as pendentes (Duplicatas Potenciais são ignoradas).");
       return;
     }
     
@@ -367,7 +370,7 @@ export function ConsolidatedReviewDialog({
   
   const pendingCount = transactionsToReview.filter(tx => {
     const isCategorized = tx.categoryId || tx.isTransfer || tx.tempInvestmentId || tx.tempLoanId || tx.tempVehicleOperation;
-    return !isCategorized;
+    return !isCategorized && !tx.isPotentialDuplicate; // Excluir duplicatas da contagem de pendentes
   }).length;
   
   const totalCount = transactionsToReview.length;
