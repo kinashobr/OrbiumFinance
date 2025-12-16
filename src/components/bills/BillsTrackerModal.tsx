@@ -10,6 +10,7 @@ import { cn } from "@/lib/utils";
 import { BillTracker, formatCurrency, TransacaoCompleta, getDomainFromOperation, generateTransactionId } from "@/types/finance";
 import { Drawer, DrawerContent, DrawerTrigger } from "@/components/ui/drawer";
 import { toast } from "sonner";
+import { ResizableSidebar } from "../transactions/ResizableSidebar"; // IMPORTADO
 
 interface BillsTrackerModalProps {
   open: boolean;
@@ -354,15 +355,19 @@ export function BillsTrackerModal({ open, onOpenChange }: BillsTrackerModalProps
               </Button>
             </div>
           </div>
-        </DialogHeader>
-
+        
         {/* Conteúdo Principal (2 Colunas) */}
         <div className="flex flex-1 overflow-hidden">
           
           {/* Coluna 1: Sidebar de Contexto (Fixo em telas grandes) */}
-          <div className="hidden lg:block w-[240px] shrink-0 overflow-y-auto scrollbar-thin">
+          <ResizableSidebar
+            initialWidth={240}
+            minWidth={200}
+            maxWidth={350}
+            storageKey="bills_sidebar_width"
+          >
             {SidebarContent}
-          </div>
+          </ResizableSidebar>
 
           {/* Coluna 2: Lista de Transações (Ocupa o espaço restante) */}
           <div className="flex-1 overflow-y-auto px-4 pt-2 pb-2">
