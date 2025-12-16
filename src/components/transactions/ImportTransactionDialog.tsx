@@ -28,7 +28,25 @@ interface ImportTransactionDialogProps {
 // Helper para normalizar valor (R$ 1.234,56 -> 1234.56)
 const normalizeAmount = (amountStr: string): number => {
     // Remove R$, pontos de milhar e substitui vírgula por ponto decimal
-    const cleaned = amountStr.replace(/[^\d,-]/g, '').replace(/\./g, '').replace(',', '.');
+    // Se o formato for 2407.27 (ponto como decimal), ele será mantido.
+    // Se o formato for 2.407,27 (vírgula como decimal), ele será convertido.
+    
+    let cleaned = amountStr.trim().replace(/[^\d,-]/g, '');
+    
+    // Se houver vírgula, assume-se que é o separador decimal
+    if (cleaned.includes(',')) {
+        // Remove pontos de milhar e substitui vírgula por ponto
+        cleaned = cleaned.replace(/\./g, '').replace(',', '.');
+    } else {
+        // Se não houver vírgula, mas houver ponto, assume-se que o ponto é o decimal (como no seu exemplo)
+        // Não faz nada, apenas garante que o sinal negativo esteja no início
+        if (cleaned.startsWith('-')) {
+            cleaned = '-' + cleaned.substring(1).replace(/-/g, '');
+        } else {
+            cleaned = cleaned.replace(/-/g, '');
+        }
+    }
+    
     const parsed = parseFloat(cleaned);
     return isNaN(parsed) ? 0 : parsed;
 };
@@ -41,42 +59,61 @@ const normalizeOfxDate = (dateStr: string): string => {
     return dateStr;
 };
 
-// Parsing CSV (Modelo Nubank: Data, Valor, Identificador, Descrição)
+// Parsing CSV (Ajustado para ser mais flexível com separadores e formatos de data DD/MM/YYYY)
 const parseCSV = (content: string, accountId: string): ImportedTransaction[] => {
     const lines = content.trim().split('\n');
     if (lines.length < 2) return [];
 
-    const header = lines[0].toLowerCase();
-    const cols = header.split('\t');
+    // Tenta detectar o separador: tabulação ou vírgula
+    const separator = lines[0].includes('\t') ? '\t' : ',';
     
-    // Tenta encontrar as colunas por nome
-    const dataIndex = cols.findIndex(h => h.includes('data'));
-    const valorIndex = cols.findIndex(h => h.includes('valor'));
-    const descIndex = cols.findIndex(h => h.includes('descri'));
+    const header = lines[0].toLowerCase();
+    const cols = header.split(separator);
+    
+    // Tenta encontrar as colunas por nome (tolerante a acentuação)
+    const normalizeHeader = (h: string) => h.normalize("NFD").replace(/[\u0300-\u036f]/g, '').trim();
+    
+    const dataIndex = cols.findIndex(h => normalizeHeader(h).includes('data'));
+    const valorIndex = cols.findIndex(h => normalizeHeader(h).includes('valor'));
+    const descIndex = cols.findIndex(h => normalizeHeader(h).includes('descri'));
 
     if (dataIndex === -1 || valorIndex === -1 || descIndex === -1) {
-        throw new Error("CSV inválido. Colunas 'Data', 'Valor' e 'Descrição' são obrigatórias.");
+        throw new Error(`CSV inválido. Colunas 'Data', 'Valor' e 'Descrição' são obrigatórias. Separador detectado: '${separator}'`);
     }
 
     const transactions: ImportedTransaction[] = [];
     for (let i = 1; i < lines.length; i++) {
-        const lineCols = lines[i].split('\t');
+        // Usa regex para dividir a linha, respeitando aspas se o separador for vírgula
+        const lineCols = lines[i].split(separator).map(c => c.trim().replace(/^"|"$/g, ''));
+        
         if (lineCols.length > Math.max(dataIndex, valorIndex, descIndex)) {
-            const dateStr = lineCols[dataIndex].trim();
-            const amountStr = lineCols[valorIndex].trim();
-            const originalDescription = lineCols[descIndex].trim();
+            const dateStr = lineCols[dataIndex];
+            const amountStr = lineCols[valorIndex];
+            const originalDescription = lineCols[descIndex];
             
             if (!dateStr || !amountStr || !originalDescription) continue;
 
             const amount = normalizeAmount(amountStr);
             
-            // Tenta converter a data (pode ser DD/MM/YYYY ou YYYY-MM-DD)
+            // Tenta converter a data (DD/MM/YYYY -> YYYY-MM-DD)
             let normalizedDate = dateStr;
             if (dateStr.includes('/')) {
                 const parts = dateStr.split('/');
                 if (parts.length === 3) {
+                    // Assume DD/MM/YYYY
                     normalizedDate = `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
                 }
+            } else if (dateStr.includes('-') && dateStr.split('-')[0].length === 4) {
+                // Assume YYYY-MM-DD (já ok)
+            } else {
+                // Tenta normalizar data OFX se for o caso (embora OFX deva ser tratado separadamente)
+                normalizedDate = normalizeOfxDate(dateStr);
+            }
+            
+            // Validação básica de data
+            if (normalizedDate.length < 10 || isNaN(parseDateLocal(normalizedDate).getTime())) {
+                console.warn(`Data inválida ignorada: ${dateStr}`);
+                continue;
             }
 
             transactions.push({
@@ -215,7 +252,7 @@ export function ImportTransactionDialog({ open, onOpenChange, account }: ImportT
       
       if (content.toLowerCase().includes('<ofx>')) {
         rawTransactions = parseOFX(content, account.id);
-      } else if (content.includes('\t') || content.includes(',')) {
+      } else if (file.name.toLowerCase().endsWith('.csv') || content.includes('\t') || content.includes(',')) {
         rawTransactions = parseCSV(content, account.id);
       } else {
         setError("Formato de arquivo não reconhecido. Use .csv ou .ofx.");
