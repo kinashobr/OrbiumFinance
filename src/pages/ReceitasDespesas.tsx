@@ -251,7 +251,31 @@ const ReceitasDespesas = () => {
     if (editingTransaction) {
       const linkedGroupId = editingTransaction.links?.transferGroupId;
       
-      // --- NEW: Handle Insurance Payment Update on Edit ---
+      // --- Lógica de Reversão de Vínculos Antigos (Edição) ---
+      
+      // 1. Reversão de Seguro Antigo
+      if (editingTransaction.links?.vehicleTransactionId && editingTransaction.links.vehicleTransactionId !== tx.links.vehicleTransactionId) {
+          const [oldSeguroIdStr, oldParcelaNumStr] = editingTransaction.links.vehicleTransactionId.split('_');
+          const oldSeguroId = parseInt(oldSeguroIdStr);
+          const oldParcelaNumero = parseInt(oldParcelaNumStr);
+          if (!isNaN(oldSeguroId) && !isNaN(oldParcelaNumero)) {
+              unmarkSeguroParcelPaid(oldSeguroId, oldParcelaNumero);
+          }
+      }
+      
+      // 2. Reversão de Empréstimo Antigo
+      if (editingTransaction.links?.loanId && editingTransaction.links.loanId !== tx.links.loanId) {
+          const oldLoanIdNum = parseInt(editingTransaction.links.loanId.replace('loan_', ''));
+          if (!isNaN(oldLoanIdNum)) {
+              unmarkLoanParcelPaid(oldLoanIdNum);
+          }
+      }
+      
+      // --- Fim da Reversão ---
+      
+      // --- Aplicação de Novos Vínculos (Edição) ---
+      
+      // 3. Marcação de Seguro Novo
       if (tx.links?.vehicleTransactionId && tx.flow === 'out') {
           const [seguroIdStr, parcelaNumeroStr] = tx.links.vehicleTransactionId.split('_');
           const seguroId = parseInt(seguroIdStr);
@@ -261,6 +285,17 @@ const ReceitasDespesas = () => {
               markSeguroParcelPaid(seguroId, parcelaNumero, tx.id);
           }
       }
+      
+      // 4. Marcação de Empréstimo Novo
+      if (tx.operationType === 'pagamento_emprestimo' && tx.links?.loanId) {
+          const loanIdNum = parseInt(tx.links.loanId.replace('loan_', ''));
+          const parcelaNum = tx.links.parcelaId ? parseInt(tx.links.parcelaId) : undefined;
+          if (!isNaN(loanIdNum)) {
+              markLoanParcelPaid(loanIdNum, tx.amount, tx.date, parcelaNum);
+          }
+      }
+      
+      // --- Fim da Aplicação ---
       
       if (linkedGroupId) {
         setTransacoesV2(prev => prev.map(t => {

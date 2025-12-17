@@ -1263,11 +1263,11 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
       if (e.id !== loanId) return e;
       
       // Simplificação: Apenas marca o status como ativo/quitado
-      const isQuitado = (e.parcelasPagas || 0) + 1 >= e.meses;
+      // A contagem de parcelas pagas é feita dinamicamente via calculatePaidInstallmentsUpToDate
       
       return {
         ...e,
-        status: isQuitado ? 'quitado' : 'ativo',
+        status: 'ativo', // Assume ativo, o status 'quitado' é determinado pelo saldo devedor
       };
     }));
   }, []);
@@ -1276,6 +1276,7 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     setEmprestimos(prev => prev.map(e => {
       if (e.id !== loanId) return e;
       
+      // Remove o status 'quitado' se estiver presente
       return {
         ...e,
         status: 'ativo',

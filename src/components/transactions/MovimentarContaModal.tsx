@@ -5,9 +5,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Building2, Wallet, PiggyBank, TrendingUp, Shield, Target, Bitcoin, CreditCard, ArrowLeftRight, Car, DollarSign, Plus, Minus, RefreshCw, Coins, TrendingDown } from "lucide-react";
-import { ContaCorrente, Categoria, AccountType, ACCOUNT_TYPE_LABELS, generateTransactionId, formatCurrency, OperationType, TransacaoCompleta, TransactionLinks, generateTransferGroupId, getFlowTypeFromOperation, getDomainFromOperation, InvestmentInfo, SeguroVeiculo, Veiculo } from "@/types/finance";
+import { ContaCorrente, Categoria, AccountType, ACCOUNT_TYPE_LABELS, generateTransactionId, formatCurrency, OperationType, TransacaoCompleta, TransactionLinks, generateTransferGroupId, getFlowTypeFromOperation, getDomainFromOperation, InvestmentInfo, SeguroVeiculo, Veiculo, OPERATION_TYPE_LABELS } from "@/types/finance";
 import { toast } from "sonner";
-import { parseDateLocal } from "@/lib/utils";
+import { parseDateLocal, cn } from "@/lib/utils";
 import { EditableCell } from "../EditableCell";
 
 // Interface simplificada para Empréstimo
@@ -40,16 +40,16 @@ interface MovimentarContaModalProps {
   editingTransaction?: TransacaoCompleta;
 }
 
-const OPERATION_OPTIONS: { value: OperationType; label: string; icon: React.ElementType }[] = [
-  { value: 'receita', label: 'Receita', icon: Plus },
-  { value: 'despesa', label: 'Despesa', icon: Minus },
-  { value: 'transferencia', label: 'Transferência', icon: ArrowLeftRight },
-  { value: 'aplicacao', label: 'Aplicação', icon: TrendingUp },
-  { value: 'resgate', label: 'Resgate', icon: TrendingDown },
-  { value: 'pagamento_emprestimo', label: 'Pag. Empréstimo', icon: CreditCard },
-  { value: 'liberacao_emprestimo', label: 'Liberação Empréstimo', icon: DollarSign },
-  { value: 'veiculo', label: 'Veículo', icon: Car },
-  { value: 'rendimento', label: 'Rendimento', icon: Coins },
+const OPERATION_OPTIONS: { value: OperationType; label: string; icon: React.ElementType; color: string }[] = [
+  { value: 'receita', label: 'Receita', icon: Plus, color: 'text-success' },
+  { value: 'despesa', label: 'Despesa', icon: Minus, color: 'text-destructive' },
+  { value: 'transferencia', label: 'Transferência', icon: ArrowLeftRight, color: 'text-primary' },
+  { value: 'aplicacao', label: 'Aplicação', icon: TrendingUp, color: 'text-purple-500' },
+  { value: 'resgate', label: 'Resgate', icon: TrendingDown, color: 'text-amber-500' },
+  { value: 'pagamento_emprestimo', label: 'Pag. Empréstimo', icon: CreditCard, color: 'text-orange-500' },
+  { value: 'liberacao_emprestimo', label: 'Liberação Empréstimo', icon: DollarSign, color: 'text-emerald-500' },
+  { value: 'veiculo', label: 'Veículo', icon: Car, color: 'text-blue-500' },
+  { value: 'rendimento', label: 'Rendimento', icon: Coins, color: 'text-teal-500' },
 ];
 
 const getAvailableOperationTypes = (accountType: AccountType): OperationType[] => {
@@ -145,7 +145,7 @@ export function MovimentarContaModal({
   // Available Parcels for selected Seguro
   const availableSeguroParcelas = useMemo(() => {
       if (!tempSeguroId) return [];
-      const seguro = segurosVeiculo.find(s => s.id === parseInt(tempSeguroId));
+      const seguro = segurosVeurosVeiculo.find(s => s.id === parseInt(tempSeguroId));
       if (!seguro) return [];
       
       return seguro.parcelas.filter(p => !p.paga);
@@ -338,7 +338,7 @@ export function MovimentarContaModal({
       amount: parsedAmount,
       // Use categoryId if categorizable OR if it's an insurance payment (where category is required)
       categoryId: isCategorizable || isInsurancePayment ? categoryId : null,
-      description: description.trim() || OPERATION_OPTIONS.find(op => op.value === operationType)?.label || 'Movimentação',
+      description: description.trim() || OPERATION_TYPE_LABELS[operationType] || 'Movimentação',
       links: {
         investmentId: tempInvestmentId,
         loanId: tempLoanId,
@@ -385,13 +385,17 @@ export function MovimentarContaModal({
   
   // Determine if Amount should be auto-filled
   const isAmountAutoFilled = (isLoanPayment && tempLoanId && tempParcelaId) || (isInsurancePayment && tempSeguroId && tempSeguroParcelaId);
+  
+  const selectedOperationConfig = OPERATION_OPTIONS.find(op => op.value === operationType);
+  const HeaderIcon = selectedOperationConfig?.icon || DollarSign;
+  const headerColor = selectedOperationConfig?.color || 'text-primary';
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-lg">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <DollarSign className="w-5 h-5 text-primary" />
+            <HeaderIcon className={cn("w-5 h-5", headerColor)} />
             {isEditing ? "Editar Transação" : "Nova Movimentação"}
           </DialogTitle>
           <DialogDescription>
@@ -399,320 +403,347 @@ export function MovimentarContaModal({
           </DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          {/* Row 1: Conta e Data */}
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="accountId">Conta *</Label>
-              <Select 
-                value={accountId} 
-                onValueChange={(v) => setAccountId(v)}
-                disabled={isEditing}
-              >
-                <SelectTrigger className="h-10">
-                  <SelectValue placeholder="Selecione a conta" />
-                </SelectTrigger>
-                <SelectContent>
-                  {accounts.map(a => (
-                    <SelectItem key={a.id} value={a.id}>
-                      <span className="flex items-center gap-2">
-                        {ACCOUNT_TYPE_LABELS[a.accountType]} - {a.name}
-                      </span>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="date">Data *</Label>
-              <Input
-                id="date"
-                type="date"
-                value={date}
-                onChange={(e) => setDate(e.target.value)}
-                className="h-10"
-              />
-            </div>
-          </div>
-
-          {/* Row 2: Tipo de Operação e Valor */}
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="operationType">Tipo de Operação *</Label>
-              <Select 
-                value={operationType || ''} 
-                onValueChange={(v) => {
-                  setOperationType(v as OperationType);
-                  setCategoryId(null); 
-                  setTempInvestmentId(null);
-                  setTempLoanId(null);
-                  setTempParcelaId(null);
-                  setDestinationAccountId(null);
-                  setTempVehicleOperation(null);
-                  setTempSeguroId(null); 
-                  setTempSeguroParcelaId(null); 
-                }}
-                disabled={isEditing}
-              >
-                <SelectTrigger className="h-10">
-                  <SelectValue placeholder="Selecione a operação" />
-                </SelectTrigger>
-                <SelectContent>
-                  {availableOperations.map(op => {
-                    const option = OPERATION_OPTIONS.find(o => o.value === op);
-                    if (!option) return null;
-                    const Icon = option.icon;
-                    return (
-                      <SelectItem key={op} value={op}>
+        <form onSubmit={handleSubmit} className="space-y-6">
+          
+          {/* Bloco 1: Informações Essenciais */}
+          <div className="space-y-4 p-4 rounded-lg border border-border/50 bg-muted/10">
+            <h4 className="font-semibold text-sm text-foreground flex items-center gap-2">
+                <Wallet className="w-4 h-4" /> Detalhes da Movimentação
+            </h4>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="accountId">Conta *</Label>
+                <Select 
+                  value={accountId} 
+                  onValueChange={(v) => setAccountId(v)}
+                  disabled={isEditing}
+                >
+                  <SelectTrigger className="h-10">
+                    <SelectValue placeholder="Selecione a conta" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {accounts.map(a => (
+                      <SelectItem key={a.id} value={a.id}>
                         <span className="flex items-center gap-2">
-                          <Icon className="w-4 h-4" />
-                          {option.label}
+                          {ACCOUNT_TYPE_LABELS[a.accountType]} - {a.name}
                         </span>
                       </SelectItem>
-                    );
-                  })}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="amount">Valor (R$) *</Label>
-              <Input
-                id="amount"
-                type="text"
-                inputMode="decimal"
-                placeholder="0,00"
-                value={amount}
-                onChange={(e) => handleAmountChange(e.target.value)}
-                disabled={!!isAmountAutoFilled}
-                className="h-10"
-              />
-            </div>
-          </div>
-          
-          {/* Row 3: Categoria e Vínculos (Condicionais) */}
-          <div className="grid grid-cols-2 gap-4">
-            
-            {/* Categoria Selector */}
-            {showCategorySelector && (
-              <div className="space-y-2">
-                <Label htmlFor="categoryId">Categoria {isCategorizable ? '*' : ''}</Label>
-                <Select 
-                  value={categoryId || ''} 
-                  onValueChange={(v) => {
-                    setCategoryId(v);
-                    // Reset insurance links if category changes away from Seguro
-                    if (v !== seguroCategory?.id) {
-                        setTempSeguroId(null);
-                        setTempSeguroParcelaId(null);
-                    }
-                  }}
-                  disabled={isCategoryDisabled}
-                >
-                  <SelectTrigger className="h-10">
-                    <SelectValue placeholder="Selecione a categoria" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {availableCategories.map(c => (
-                      <SelectItem key={c.id} value={c.id}>
-                        {c.icon} {c.label}
-                      </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
-            )}
-            
-            {/* Vínculo Principal (Transferência, Investimento, Liberação, Veículo) */}
-            {isTransfer && (
               <div className="space-y-2">
-                <Label htmlFor="destinationAccount">Conta Destino *</Label>
-                <Select 
-                  value={destinationAccountId || ''} 
-                  onValueChange={(v) => setDestinationAccountId(v)}
-                >
-                  <SelectTrigger className="h-10">
-                    <SelectValue placeholder="Selecione a conta destino" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {accounts.filter(a => a.id !== accountId).map(a => (
-                      <SelectItem key={a.id} value={a.id}>
-                        {ACCOUNT_TYPE_LABELS[a.accountType]} - {a.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
-            
-            {isInvestmentFlow && (
-              <div className="space-y-2">
-                <Label htmlFor="investmentAccount">Conta de Investimento *</Label>
-                <Select 
-                  value={tempInvestmentId || ''} 
-                  onValueChange={(v) => setTempInvestmentId(v)}
-                >
-                  <SelectTrigger className="h-10">
-                    <SelectValue placeholder="Selecione o investimento" />
-                    </SelectTrigger>
-                  <SelectContent>
-                    {investments.map(i => (
-                      <SelectItem key={i.id} value={i.id}>
-                        {i.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
-            
-            {isLoanLiberation && (
-              <div className="space-y-2">
-                <Label htmlFor="numeroContrato">Número do Contrato *</Label>
+                <Label htmlFor="date">Data *</Label>
                 <Input
-                  id="numeroContrato"
-                  placeholder="Ex: Contrato 12345"
-                  value={tempNumeroContrato}
-                  onChange={(e) => setTempNumeroContrato(e.target.value)}
+                  id="date"
+                  type="date"
+                  value={date}
+                  onChange={(e) => setDate(e.target.value)}
                   className="h-10"
                 />
               </div>
-            )}
-            
-            {isVehicle && (
-              <div className="grid grid-cols-2 gap-2">
-                <div className="space-y-2">
-                  <Label htmlFor="vehicleOperation">Operação *</Label>
-                  <Select 
-                    value={tempVehicleOperation || ''} 
-                    onValueChange={(v) => setTempVehicleOperation(v as 'compra' | 'venda')}
-                  >
-                    <SelectTrigger className="h-10">
-                      <SelectValue placeholder="Compra/Venda" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="compra">Compra (Saída)</SelectItem>
-                      <SelectItem value="venda">Venda (Entrada)</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="tipoVeiculo">Tipo</Label>
-                  <Select 
-                    value={tempTipoVeiculo} 
-                    onValueChange={(v) => setTempTipoVeiculo(v as 'carro' | 'moto' | 'caminhao')}
-                  >
-                    <SelectTrigger className="h-10">
-                      <SelectValue placeholder="Tipo" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="carro">Carro</SelectItem>
-                      <SelectItem value="moto">Moto</SelectItem>
-                      <SelectItem value="caminhao">Caminhão</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="operationType">Tipo de Operação *</Label>
+                <Select 
+                  value={operationType || ''} 
+                  onValueChange={(v) => {
+                    setOperationType(v as OperationType);
+                    setCategoryId(null); 
+                    setTempInvestmentId(null);
+                    setTempLoanId(null);
+                    setTempParcelaId(null);
+                    setDestinationAccountId(null);
+                    setTempVehicleOperation(null);
+                    setTempSeguroId(null); 
+                    setTempSeguroParcelaId(null); 
+                  }}
+                  disabled={isEditing}
+                >
+                  <SelectTrigger className={cn("h-10", selectedOperationConfig?.color)}>
+                    <SelectValue placeholder="Selecione a operação">
+                        {selectedOperationConfig && (
+                            <span className="flex items-center gap-2">
+                                <selectedOperationConfig.icon className="w-4 h-4" />
+                                {selectedOperationConfig.label}
+                            </span>
+                        )}
+                    </SelectValue>
+                  </SelectTrigger>
+                  <SelectContent>
+                    {availableOperations.map(op => {
+                      const option = OPERATION_OPTIONS.find(o => o.value === op);
+                      if (!option) return null;
+                      const Icon = option.icon;
+                      return (
+                        <SelectItem key={op} value={op}>
+                          <span className={cn("flex items-center gap-2", option.color)}>
+                            <Icon className="w-4 h-4" />
+                            {option.label}
+                          </span>
+                        </SelectItem>
+                      );
+                    })}
+                  </SelectContent>
+                </Select>
               </div>
-            )}
-            
-            {/* Pagamento Empréstimo (Ocupa 2 colunas) */}
-            {isLoanPayment && (
-              <>
-                <div className="space-y-2">
-                  <Label htmlFor="loanContract">Contrato de Empréstimo *</Label>
-                  <Select 
-                    value={tempLoanId || ''} 
-                    onValueChange={(v) => setTempLoanId(v)}
-                  >
-                    <SelectTrigger className="h-10">
-                      <SelectValue placeholder="Selecione o contrato" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {activeLoans.map(l => (
-                        <SelectItem key={l.id} value={l.id}>
-                          {l.institution}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="parcelaId">Parcela *</Label>
-                  <Select 
-                    value={tempParcelaId || ''} 
-                    onValueChange={(v) => setTempParcelaId(v)}
-                    disabled={!tempLoanId}
-                  >
-                    <SelectTrigger className="h-10">
-                      <SelectValue placeholder="Selecione a parcela" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {availableInstallments.map(p => (
-                        <SelectItem key={p.numero} value={String(p.numero)}>
-                          P{p.numero} - {formatCurrency(p.valor)} ({parseDateLocal(p.vencimento).toLocaleDateString("pt-BR")})
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </>
-            )}
-            
+              <div className="space-y-2">
+                <Label htmlFor="amount">Valor (R$) *</Label>
+                <Input
+                  id="amount"
+                  type="text"
+                  inputMode="decimal"
+                  placeholder="0,00"
+                  value={amount}
+                  onChange={(e) => handleAmountChange(e.target.value)}
+                  disabled={!!isAmountAutoFilled}
+                  className="h-10"
+                />
+              </div>
+            </div>
           </div>
           
-          {/* NEW: Insurance Payment Linking (If Despesa + Categoria Seguro) */}
-          {isInsurancePayment && (
-            <div className="grid grid-cols-2 gap-4 border-t pt-4 border-border/50">
+          {/* Bloco 2: Categoria e Descrição */}
+          <div className="space-y-4 p-4 rounded-lg border border-border/50 bg-muted/10">
+            <h4 className="font-semibold text-sm text-foreground flex items-center gap-2">
+                <Tags className="w-4 h-4" /> Classificação
+            </h4>
+            <div className="grid grid-cols-1 gap-4">
+                {/* Categoria Selector */}
+                {showCategorySelector && (
                 <div className="space-y-2">
-                    <Label htmlFor="seguroId">Seguro *</Label>
+                    <Label htmlFor="categoryId">Categoria {isCategorizable ? '*' : ''}</Label>
                     <Select 
-                        value={tempSeguroId || ''} 
-                        onValueChange={(v) => { setTempSeguroId(v); setTempSeguroParcelaId(null); }}
+                    value={categoryId || ''} 
+                    onValueChange={(v) => {
+                        setCategoryId(v);
+                        // Reset insurance links if category changes away from Seguro
+                        if (v !== seguroCategory?.id) {
+                            setTempSeguroId(null);
+                            setTempSeguroParcelaId(null);
+                        }
+                    }}
+                    disabled={isCategoryDisabled}
                     >
-                        <SelectTrigger className="h-10">
-                            <SelectValue placeholder="Selecione o seguro" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            {availableSeguros.map(s => (
-                                <SelectItem key={s.id} value={String(s.id)}>
-                                    {s.numeroApolice} ({s.seguradora})
-                                </SelectItem>
-                            ))}
-                        </SelectContent>
+                    <SelectTrigger className="h-10">
+                        <SelectValue placeholder="Selecione a categoria" />
+                    </SelectTrigger>
+                    <SelectContent>
+                        {availableCategories.map(c => (
+                        <SelectItem key={c.id} value={c.id}>
+                            {c.icon} {c.label}
+                        </SelectItem>
+                        ))}
+                    </SelectContent>
                     </Select>
                 </div>
+                )}
+                
+                {/* Descrição (Full Width) */}
                 <div className="space-y-2">
-                    <Label htmlFor="seguroParcelaId">Parcela *</Label>
-                    <Select 
-                        value={tempSeguroParcelaId || ''} 
-                        onValueChange={(v) => setTempSeguroParcelaId(v)}
-                        disabled={!tempSeguroId}
-                    >
-                        <SelectTrigger className="h-10">
-                            <SelectValue placeholder="Selecione a parcela" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            {availableSeguroParcelas.map(p => (
-                                <SelectItem key={p.numero} value={String(p.numero)}>
-                                    P{p.numero} - {formatCurrency(p.valor)} ({parseDateLocal(p.vencimento).toLocaleDateString("pt-BR")})
-                                </SelectItem>
-                            ))}
-                        </SelectContent>
-                    </Select>
+                    <Label htmlFor="description">Descrição</Label>
+                    <Input
+                    id="description"
+                    placeholder="Descrição da transação"
+                    value={description}
+                    onChange={(e) => setDescription(e.target.value)}
+                    className="h-10"
+                    />
                 </div>
             </div>
-          )}
-
-          {/* Descrição (Full Width) */}
-          <div className="space-y-2">
-            <Label htmlFor="description">Descrição</Label>
-            <Input
-              id="description"
-              placeholder="Descrição da transação"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              className="h-10"
-            />
           </div>
+
+          {/* Bloco 3: Vínculos (Condicionais) */}
+          {(isTransfer || isInvestmentFlow || isLoanPayment || isLoanLiberation || isVehicle || isInsurancePayment) && (
+            <div className="space-y-4 p-4 rounded-lg border border-border/50 bg-primary/10">
+                <h4 className="font-semibold text-sm text-primary flex items-center gap-2">
+                    <ArrowLeftRight className="w-4 h-4" /> Vínculo / Contraparte
+                </h4>
+                
+                {/* Transferência */}
+                {isTransfer && (
+                    <div className="space-y-2">
+                        <Label htmlFor="destinationAccount">Conta Destino *</Label>
+                        <Select 
+                        value={destinationAccountId || ''} 
+                        onValueChange={(v) => setDestinationAccountId(v)}
+                        >
+                        <SelectTrigger className="h-10">
+                            <SelectValue placeholder="Selecione a conta destino" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            {accounts.filter(a => a.id !== accountId).map(a => (
+                            <SelectItem key={a.id} value={a.id}>
+                                {ACCOUNT_TYPE_LABELS[a.accountType]} - {a.name}
+                            </SelectItem>
+                            ))}
+                        </SelectContent>
+                        </Select>
+                    </div>
+                )}
+                
+                {/* Fluxo de Investimento */}
+                {isInvestmentFlow && (
+                    <div className="space-y-2">
+                        <Label htmlFor="investmentAccount">Conta de Investimento *</Label>
+                        <Select 
+                        value={tempInvestmentId || ''} 
+                        onValueChange={(v) => setTempInvestmentId(v)}
+                        >
+                        <SelectTrigger className="h-10">
+                            <SelectValue placeholder="Selecione o investimento" />
+                            </SelectTrigger>
+                        <SelectContent>
+                            {investments.map(i => (
+                            <SelectItem key={i.id} value={i.id}>
+                                {i.name}
+                            </SelectItem>
+                            ))}
+                        </SelectContent>
+                        </Select>
+                    </div>
+                )}
+                
+                {/* Liberação Empréstimo */}
+                {isLoanLiberation && (
+                    <div className="space-y-2">
+                        <Label htmlFor="numeroContrato">Número do Contrato *</Label>
+                        <Input
+                        id="numeroContrato"
+                        placeholder="Ex: Contrato 12345"
+                        value={tempNumeroContrato}
+                        onChange={(e) => setTempNumeroContrato(e.target.value)}
+                        className="h-10"
+                        />
+                    </div>
+                )}
+                
+                {/* Veículo */}
+                {isVehicle && (
+                    <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                        <Label htmlFor="vehicleOperation">Operação *</Label>
+                        <Select 
+                            value={tempVehicleOperation || ''} 
+                            onValueChange={(v) => setTempVehicleOperation(v as 'compra' | 'venda')}
+                        >
+                            <SelectTrigger className="h-10">
+                            <SelectValue placeholder="Compra/Venda" />
+                            </SelectTrigger>
+                            <SelectContent>
+                            <SelectItem value="compra">Compra (Saída)</SelectItem>
+                            <SelectItem value="venda">Venda (Entrada)</SelectItem>
+                            </SelectContent>
+                        </Select>
+                        </div>
+                        <div className="space-y-2">
+                        <Label htmlFor="tipoVeiculo">Tipo</Label>
+                        <Select 
+                            value={tempTipoVeiculo} 
+                            onValueChange={(v) => setTempTipoVeiculo(v as 'carro' | 'moto' | 'caminhao')}
+                        >
+                            <SelectTrigger className="h-10">
+                            <SelectValue placeholder="Tipo" />
+                            </SelectTrigger>
+                            <SelectContent>
+                            <SelectItem value="carro">Carro</SelectItem>
+                            <SelectItem value="moto">Moto</SelectItem>
+                            <SelectItem value="caminhao">Caminhão</SelectItem>
+                            </SelectContent>
+                        </Select>
+                        </div>
+                    </div>
+                )}
+                
+                {/* Pagamento Empréstimo */}
+                {isLoanPayment && (
+                    <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                        <Label htmlFor="loanContract">Contrato de Empréstimo *</Label>
+                        <Select 
+                            value={tempLoanId || ''} 
+                            onValueChange={(v) => setTempLoanId(v)}
+                        >
+                            <SelectTrigger className="h-10">
+                            <SelectValue placeholder="Selecione o contrato" />
+                            </SelectTrigger>
+                            <SelectContent>
+                            {activeLoans.map(l => (
+                                <SelectItem key={l.id} value={l.id}>
+                                {l.institution}
+                                </SelectItem>
+                            ))}
+                            </SelectContent>
+                        </Select>
+                        </div>
+                        <div className="space-y-2">
+                        <Label htmlFor="parcelaId">Parcela *</Label>
+                        <Select 
+                            value={tempParcelaId || ''} 
+                            onValueChange={(v) => setTempParcelaId(v)}
+                            disabled={!tempLoanId}
+                        >
+                            <SelectTrigger className="h-10">
+                            <SelectValue placeholder="Selecione a parcela" />
+                            </SelectTrigger>
+                            <SelectContent>
+                            {availableInstallments.map(p => (
+                                <SelectItem key={p.numero} value={String(p.numero)}>
+                                P{p.numero} - {formatCurrency(p.valor)} ({parseDateLocal(p.vencimento).toLocaleDateString("pt-BR")})
+                                </SelectItem>
+                            ))}
+                            </SelectContent>
+                        </Select>
+                        </div>
+                    </div>
+                )}
+                
+                {/* Pagamento Seguro */}
+                {isInsurancePayment && (
+                    <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                            <Label htmlFor="seguroId">Seguro *</Label>
+                            <Select 
+                                value={tempSeguroId || ''} 
+                                onValueChange={(v) => { setTempSeguroId(v); setTempSeguroParcelaId(null); }}
+                            >
+                                <SelectTrigger className="h-10">
+                                    <SelectValue placeholder="Selecione o seguro" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {availableSeguros.map(s => (
+                                        <SelectItem key={s.id} value={String(s.id)}>
+                                            {s.numeroApolice} ({s.seguradora})
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="seguroParcelaId">Parcela *</Label>
+                            <Select 
+                                value={tempSeguroParcelaId || ''} 
+                                onValueChange={(v) => setTempSeguroParcelaId(v)}
+                                disabled={!tempSeguroId}
+                            >
+                                <SelectTrigger className="h-10">
+                                    <SelectValue placeholder="Selecione a parcela" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {availableSeguroParcelas.map(p => (
+                                        <SelectItem key={p.numero} value={String(p.numero)}>
+                                            P{p.numero} - {formatCurrency(p.valor)} ({parseDateLocal(p.vencimento).toLocaleDateString("pt-BR")})
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </div>
+                    </div>
+                )}
+            </div>
+          )}
 
           <DialogFooter className="pt-4">
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
