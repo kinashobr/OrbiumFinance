@@ -4,11 +4,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Building2, Wallet, PiggyBank, TrendingUp, Shield, Target, Bitcoin, CreditCard, ArrowLeftRight, Car, DollarSign, Plus, Minus, RefreshCw, Coins, TrendingDown, Tags } from "lucide-react";
+import { Building2, Wallet, PiggyBank, TrendingUp, Shield, Target, Bitcoin, CreditCard, ArrowLeftRight, Car, DollarSign, Plus, Minus, RefreshCw, Coins, TrendingDown, Tags, ChevronRight, ChevronLeft, CheckCircle2 } from "lucide-react";
 import { ContaCorrente, Categoria, AccountType, ACCOUNT_TYPE_LABELS, generateTransactionId, formatCurrency, OperationType, TransacaoCompleta, TransactionLinks, generateTransferGroupId, getFlowTypeFromOperation, getDomainFromOperation, InvestmentInfo, SeguroVeiculo, Veiculo, OPERATION_TYPE_LABELS } from "@/types/finance";
 import { toast } from "sonner";
 import { parseDateLocal, cn } from "@/lib/utils";
 import { EditableCell } from "../EditableCell";
+import { ResizableDialogContent } from "../ui/ResizableDialogContent"; // IMPORTADO
 
 // Interface simplificada para Empréstimo
 interface LoanInfo {
@@ -395,8 +396,15 @@ export function MovimentarContaModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg">
-        <DialogHeader>
+      <ResizableDialogContent 
+        storageKey="movimentar_conta_modal"
+        initialWidth={500}
+        initialHeight={isVinculoRequired ? 750 : 600}
+        minWidth={400}
+        minHeight={500}
+        className="max-w-lg bg-card border-border overflow-hidden flex flex-col"
+      >
+        <DialogHeader className="p-6 pb-0">
           <DialogTitle className="flex items-center gap-2">
             <HeaderIcon className={cn("w-5 h-5", headerColor)} />
             {isEditing ? "Editar Transação" : "Nova Movimentação"}
@@ -406,11 +414,11 @@ export function MovimentarContaModal({
           </DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-6">
+        <form onSubmit={handleSubmit} className="space-y-6 flex-1 flex flex-col overflow-y-auto p-6 pt-4">
           
-          {/* Painel 1: Detalhes Essenciais (2 Colunas) */}
-          <div className="space-y-4 p-4 rounded-lg border border-border/50 bg-muted/10">
-            <h4 className="font-semibold text-sm text-foreground flex items-center gap-2">
+          {/* Painel 1: Detalhes Essenciais */}
+          <div className="space-y-4">
+            <h4 className="font-semibold text-sm text-foreground flex items-center gap-2 border-b border-border/50 pb-2">
                 <Wallet className="w-4 h-4 text-primary" /> Detalhes Essenciais
             </h4>
             
@@ -509,9 +517,9 @@ export function MovimentarContaModal({
             </div>
           </div>
           
-          {/* Painel 2: Classificação e Descrição (1 Coluna) */}
-          <div className="space-y-4 p-4 rounded-lg border border-border/50 bg-muted/10">
-            <h4 className="font-semibold text-sm text-foreground flex items-center gap-2">
+          {/* Painel 2: Classificação e Descrição */}
+          <div className="space-y-4">
+            <h4 className="font-semibold text-sm text-foreground flex items-center gap-2 border-b border-border/50 pb-2">
                 <Tags className="w-4 h-4 text-accent" /> Classificação
             </h4>
             
@@ -561,8 +569,8 @@ export function MovimentarContaModal({
 
           {/* Painel 3: Vínculos (Condicional) */}
           {isVinculoRequired && (
-            <div className="space-y-4 p-4 rounded-lg border border-border/50 bg-primary/10">
-                <h4 className="font-semibold text-sm text-primary flex items-center gap-2">
+            <div className="space-y-4">
+                <h4 className="font-semibold text-sm text-primary flex items-center gap-2 border-b border-border/50 pb-2">
                     <ArrowLeftRight className="w-4 h-4" /> Vínculo / Contraparte
                 </h4>
                 
@@ -748,17 +756,17 @@ export function MovimentarContaModal({
                 )}
             </div>
           )}
-
-          <DialogFooter className="pt-4 flex justify-end gap-2">
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-              Cancelar
-            </Button>
-            <Button type="submit" onClick={handleSubmit}>
-              {isEditing ? "Salvar Alterações" : "Registrar"}
-            </Button>
-          </DialogFooter>
         </form>
-      </DialogContent>
+
+        <DialogFooter className="p-6 pt-0 flex justify-end gap-2">
+          <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+            Cancelar
+          </Button>
+          <Button type="submit" onClick={handleSubmit}>
+            {isEditing ? "Salvar Alterações" : "Registrar"}
+          </Button>
+        </DialogFooter>
+      </ResizableDialogContent>
     </Dialog>
   );
 }
