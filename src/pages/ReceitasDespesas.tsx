@@ -25,7 +25,8 @@ import { AccountStatementDialog } from "@/components/transactions/AccountStateme
 import { PeriodSelector } from "@/components/dashboard/PeriodSelector";
 import { BillsTrackerModal } from "@/components/bills/BillsTrackerModal";
 import { StatementManagerDialog } from "@/components/transactions/StatementManagerDialog"; 
-import { ConsolidatedReviewDialog } from "@/components/transactions/ConsolidatedReviewDialog"; // NEW IMPORT
+import { ConsolidatedReviewDialog } from "@/components/transactions/ConsolidatedReviewDialog"; 
+import { StandardizationRuleManagerModal } from "@/components/transactions/StandardizationRuleManagerModal";
 
 // Context
 import { useFinance } from "@/contexts/FinanceContext";
@@ -45,13 +46,15 @@ const ReceitasDespesas = () => {
     markLoanParcelPaid,
     unmarkLoanParcelPaid,
     veiculos,
-    addVeiculo, // <-- ADDED
-    deleteVeiculo, // <-- ADDED
-    calculateBalanceUpToDate, // Importado do contexto
-    dateRanges, // <-- Use context state
-    setDateRanges, // <-- Use context setter
+    addVeiculo, 
+    deleteVeiculo, 
+    calculateBalanceUpToDate, 
+    dateRanges, 
+    setDateRanges, 
     markSeguroParcelPaid,
-    unmarkSeguroParcelPaid, // CORRIGIDO: Nome da função
+    unmarkSeguroParcelPaid, 
+    standardizationRules, 
+    deleteStandardizationRule, 
   } = useFinance();
 
   // Local state for transfer groups
@@ -84,6 +87,9 @@ const ReceitasDespesas = () => {
   // NEW STATE: Consolidated Review (Fase 2)
   const [showConsolidatedReview, setShowConsolidatedReview] = useState(false);
   const [accountForConsolidatedReview, setAccountForConsolidatedReview] = useState<string | null>(null);
+  
+  // NEW STATE: Standardization Rule Manager
+  const [showRuleManagerModal, setShowRuleManagerModal] = useState(false);
 
   // Filter state (mantido para filtros internos da tabela, mas datas são controladas pelo PeriodSelector)
   const [searchTerm, setSearchTerm] = useState("");
@@ -223,6 +229,12 @@ const ReceitasDespesas = () => {
   const handleStartConsolidatedReview = (accountId: string) => {
     setAccountForConsolidatedReview(accountId);
     setShowConsolidatedReview(true);
+  };
+  
+  // NEW HANDLER: Manage Rules
+  const handleManageRules = () => {
+    setShowStatementManagerModal(false); // Close statement manager if open
+    setShowRuleManagerModal(true);
   };
 
   const handleTransactionSubmit = (transaction: TransacaoCompleta, transferGroup?: TransferGroup) => {
@@ -447,6 +459,16 @@ const ReceitasDespesas = () => {
       }
     }
     
+    if (finalTx.links?.vehicleTransactionId && finalTx.flow === 'out') {
+        const [seguroIdStr, parcelaNumeroStr] = finalTx.links.vehicleTransactionId.split('_');
+        const seguroId = parseInt(seguroIdStr);
+        const parcelaNumero = parseInt(parcelaNumeroStr);
+        
+        if (!isNaN(seguroId) && !isNaN(parcelaNumero)) {
+            markSeguroParcelPaid(seguroId, parcelaNumero, finalTx.id);
+        }
+    }
+    
     if (finalTx.operationType === 'veiculo' && finalTx.meta?.vehicleOperation === 'compra') {
         addVeiculo({
             modelo: finalTx.description,
@@ -462,16 +484,6 @@ const ReceitasDespesas = () => {
             compraTransactionId: finalTx.id,
             status: 'pendente_cadastro',
         });
-    }
-    
-    if (finalTx.links?.vehicleTransactionId && finalTx.flow === 'out') {
-        const [seguroIdStr, parcelaNumeroStr] = finalTx.links.vehicleTransactionId.split('_');
-        const seguroId = parseInt(seguroIdStr);
-        const parcelaNumero = parseInt(parcelaNumeroStr);
-        
-        if (!isNaN(seguroId) && !isNaN(parcelaNumero)) {
-            markSeguroParcelPaid(seguroId, parcelaNumero, finalTx.id);
-        }
     }
     
     newTransactions.forEach(t => addTransacaoV2(t));
@@ -871,7 +883,8 @@ const ReceitasDespesas = () => {
           account={accountToManage}
           investments={investments}
           loans={loans}
-          onStartConsolidatedReview={handleStartConsolidatedReview} // Passa o novo handler
+          onStartConsolidatedReview={handleStartConsolidatedReview}
+          onManageRules={handleManageRules}
         />
       )}
       
@@ -887,6 +900,15 @@ const ReceitasDespesas = () => {
           loans={loans}
         />
       )}
+      
+      {/* Standardization Rule Manager Modal (NEW) */}
+      <StandardizationRuleManagerModal
+        open={showRuleManagerModal}
+        onOpenChange={setShowRuleManagerModal}
+        rules={standardizationRules}
+        onDeleteRule={deleteStandardizationRule}
+        categories={categories}
+      />
     </MainLayout>
   );
 };

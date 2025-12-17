@@ -34,10 +34,11 @@ interface StatementManagerDialogProps {
   account: ContaCorrente;
   investments: InvestmentInfo[];
   loans: LoanInfo[];
-  onStartConsolidatedReview: (accountId: string) => void; // NEW PROP
+  onStartConsolidatedReview: (accountId: string) => void;
+  onManageRules: () => void;
 }
 
-export function StatementManagerDialog({ open, onOpenChange, account, investments, loans, onStartConsolidatedReview }: StatementManagerDialogProps) {
+export function StatementManagerDialog({ open, onOpenChange, account, investments, loans, onStartConsolidatedReview, onManageRules }: StatementManagerDialogProps) {
   const { 
     importedStatements, 
     processStatementFile, 
@@ -185,7 +186,18 @@ export function StatementManagerDialog({ open, onOpenChange, account, investment
         
         {/* Lista de Extratos Importados */}
         <div className="space-y-3">
-            <h3 className="text-lg font-semibold text-foreground">Extratos Importados ({statementsForAccount.length})</h3>
+            <div className="flex items-center justify-between">
+                <h3 className="text-lg font-semibold text-foreground">Extratos Importados ({statementsForAccount.length})</h3>
+                <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="gap-2"
+                    onClick={onManageRules}
+                >
+                    <Pin className="w-4 h-4" />
+                    Gerenciar Regras
+                </Button>
+            </div>
             
             <ScrollArea className="h-[30vh] max-h-[300px] border rounded-lg">
                 <Table>
