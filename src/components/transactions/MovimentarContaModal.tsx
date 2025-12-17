@@ -370,12 +370,7 @@ export function MovimentarContaModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent 
-        className={cn(
-          "max-w-xl p-0 overflow-hidden",
-          "fixed left-0 top-0 h-full w-full sm:w-auto sm:max-w-xl translate-x-0 rounded-none data-[state=open]:slide-in-from-left data-[state=closed]:slide-out-to-left"
-        )}
-      >
+      <DialogContent className="max-w-xl p-0 overflow-hidden">
         <DialogHeader className={cn("px-6 pt-6 pb-4", headerBgColor)}>
           <div className="flex items-start gap-3">
             <div className={cn("w-12 h-12 rounded-xl flex items-center justify-center", headerBgColor)}>
@@ -392,7 +387,7 @@ export function MovimentarContaModal({
           </div>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="px-6 pb-6 space-y-6 overflow-y-auto max-h-[calc(100vh-140px)]">
+        <form onSubmit={handleSubmit} className="px-6 pb-6 space-y-6">
           
           {/* Seção 1: Dados Principais */}
           <div className="space-y-4">
@@ -825,9 +820,8 @@ export function MovimentarContaModal({
               {/* Adicione aqui os outros tipos de vínculos seguindo o mesmo padrão */}
             </div>
           )}
-        </form>
-        
-        <DialogFooter className="px-6 py-4 border-t bg-background/95 backdrop-blur-sm">
+
+          <DialogFooter className="pt-4">
             <div className="flex w-full gap-3">
               <Button 
                 type="button" 
@@ -849,6 +843,7 @@ export function MovimentarContaModal({
               </Button>
             </div>
           </DialogFooter>
+        </form>
       </DialogContent>
     </Dialog>
   );
