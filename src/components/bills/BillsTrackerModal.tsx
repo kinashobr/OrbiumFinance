@@ -4,7 +4,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Plus, CalendarCheck, Repeat, Shield, Building2, DollarSign, Info, X } from "lucide-react";
 import { useFinance } from "@/contexts/FinanceContext";
-import { BillTracker, PotentialFixedBill, BillSourceType, formatCurrency, generateBillId, TransactionLinks } from "@/types/finance";
+import { BillTracker, PotentialFixedBill, BillSourceType, formatCurrency, generateBillId, TransactionLinks, OperationType } from "@/types/finance";
 import { BillsTrackerList } from "./BillsTrackerList";
 import { FixedBillsList } from "./FixedBillsList";
 import { format, startOfMonth, endOfMonth, subMonths, addMonths } from "date-fns";
@@ -96,6 +96,9 @@ export function BillsTrackerModal({ open, onOpenChange }: BillsTrackerModalProps
       const baseLinks: PartialTransactionLinks = {};
       let description = bill.description;
       
+      const operationType: OperationType = bill.sourceType === 'loan_installment' ? 'pagamento_emprestimo' : 'despesa';
+      const domain = bill.sourceType === 'loan_installment' ? 'financing' : 'operational';
+      
       if (bill.sourceType === 'loan_installment' && bill.sourceRef && bill.parcelaNumber) {
         const loanId = parseInt(bill.sourceRef);
         const scheduleItem = calculateLoanAmortizationAndInterest(loanId, bill.parcelaNumber);
@@ -124,8 +127,8 @@ export function BillsTrackerModal({ open, onOpenChange }: BillsTrackerModalProps
         date: format(new Date(), 'yyyy-MM-dd'), // Use today's date as payment date
         accountId: account.id,
         flow: 'out' as const,
-        operationType: bill.sourceType === 'loan_installment' ? 'pagamento_emprestimo' : 'despesa' as const,
-        domain: bill.sourceType === 'loan_installment' ? 'financing' as const : 'operational' as const,
+        operationType: operationType, // FIXED: Use typed variable
+        domain: domain as 'operational' | 'financing', // FIXED: Use typed variable
         amount: bill.expectedAmount,
         categoryId: category.id,
         description: description,
