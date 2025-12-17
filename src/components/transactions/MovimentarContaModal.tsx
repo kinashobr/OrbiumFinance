@@ -29,7 +29,7 @@ interface LoanInfo {
 
 interface MovimentarContaModalProps {
   open: boolean;
-  onOpenChange: (open: boolean) => void;
+  onOpenChange: (open: (open: boolean) => void) => void;
   accounts: ContaCorrente[];
   categories: Categoria[];
   investments: InvestmentInfo[];
@@ -154,11 +154,12 @@ const FormSelectGroup = ({ label, Icon, value, onValueChange, options, placehold
                     const OptIcon = opt.icon;
                     return (
                         <SelectItem key={opt.value} value={opt.value}>
-                            <span className={cn("flex items-center gap-2 text-sm", opt.color)}>
-                                {OptIcon && <OptIcon className="w-4 h-4" />}
-                                {opt.label}
-                                {opt.subLabel && <span className="text-xs text-muted-foreground ml-2">({opt.subLabel})</span>}
-                            </span>
+                            {/* FIX: Use div instead of span as root element inside SelectItem for RovingFocusGroup stability */}
+                            <div className={cn("flex items-center gap-2 text-sm", opt.color)}>
+                                {OptIcon && <OptIcon className="w-4 h-4 shrink-0" />}
+                                <span className="truncate">{opt.label}</span>
+                                {opt.subLabel && <span className="text-xs text-muted-foreground ml-2 shrink-0">({opt.subLabel})</span>}
+                            </div>
                         </SelectItem>
                     );
                 })}
@@ -779,7 +780,9 @@ export function MovimentarContaModal({
                         <SelectContent>
                             {categoryOptions.map(c => (
                                 <SelectItem key={c.value} value={c.value}>
-                                    {c.label} <span className="text-xs text-muted-foreground ml-2">({c.subLabel})</span>
+                                    <div className="flex items-center gap-2 text-sm">
+                                        {c.label} <span className="text-xs text-muted-foreground ml-2">({c.subLabel})</span>
+                                    </div>
                                 </SelectItem>
                             ))}
                         </SelectContent>
