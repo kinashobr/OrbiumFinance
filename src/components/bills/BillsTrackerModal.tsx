@@ -217,8 +217,7 @@ export function BillsTrackerModal({ open, onOpenChange }: BillsTrackerModalProps
     
     // 1. Se for para incluir (marcar)
     if (isChecked) {
-        // Lógica de adiantamento: Se for uma conta futura E não estiver paga,
-        // adicionamos ao billsTracker e marcamos como paga HOJE, mas mantendo o dueDate original.
+        // Lógica de adiantamento: Se for uma conta futura E não estiver paga
         const isFutureBill = parseDateLocal(dueDate) > endOfMonth(currentDate);
         
         const newBill: BillTracker = {
@@ -236,25 +235,75 @@ export function BillsTrackerModal({ open, onOpenChange }: BillsTrackerModalProps
             )?.id || null,
             isExcluded: false,
             
-            // Se for adiantamento (futura e não paga), marcamos como paga hoje
+            // *** LÓGICA DE ADIANTAMENTO APLICADA AQUI ***
             isPaid: isFutureBill && !isPaid,
-            paymentDate: isFutureBill && !isPaid ? format(new Date(), 'yyyy-MM-dd') : (isPaid ? format(parseDateLocal(dueDate), 'yyyy-MM-dd') : undefined),
+            paymentDate: isFutureBill && !isPaid ? format(new Date(), 'yyyy-MM-dd') : undefined,
             transactionId: isFutureBill && !isPaid ? `bill_tx_temp_${generateBillId()}` : undefined, // ID temporário para rastreamento
         };
         
         // Se for adiantamento, criamos a transação imediatamente
         if (newBill.isPaid && newBill.transactionId) {
-            // A lógica de criação de transação e atualização de entidades V2
-            // é complexa para replicar aqui. Vamos simplificar:
-            // Apenas adicionamos a conta ao BillsTracker e o usuário deve
-            // usar o botão "Pagar" na lista principal para gerar a transação real.
-            // Apenas marcamos como 'incluída' e 'pendente' para que apareça na lista do mês atual.
-            newBill.isPaid = false;
-            newBill.paymentDate = undefined;
-            newBill.transactionId = undefined;
+            // Se for adiantamento, criamos a transação real imediatamente
+            const account = contasMovimento.find(c => c.id === newBill.suggestedAccountId);
+            const category = categoriasV2.find(c => c.id === newBill.suggestedCategoryId);
             
+            if (!account || !category) {
+                toast.error("Erro ao adiantar: Conta ou Categoria sugerida não encontrada.");
+                return;
+            }
+            
+            const transactionId = newBill.transactionId;
+            const baseLinks: PartialTransactionLinks = {};
+            let txDescription = newBill.description;
+            
+            const operationType: OperationType = newBill.sourceType === 'loan_installment' ? 'pagamento_emprestimo' : 'despesa';
+            const domain = newBill.sourceType === 'loan_installment' ? 'financing' : 'operational';
+            
+            // Lógica de vinculação e atualização de entidades V2 (Empréstimo/Seguro)
+            if (newBill.sourceType === 'loan_installment' && newBill.sourceRef && newBill.parcelaNumber) {
+                const loanId = parseInt(newBill.sourceRef);
+                baseLinks.loanId = `loan_${loanId}`;
+                baseLinks.parcelaId = String(newBill.parcelaNumber);
+                markLoanParcelPaid(loanId, newBill.expectedAmount, newBill.paymentDate!, newBill.parcelaNumber);
+            }
+            
+            if (newBill.sourceType === 'insurance_installment' && newBill.sourceRef && newBill.parcelaNumber) {
+                baseLinks.vehicleTransactionId = `${newBill.sourceRef}_${newBill.parcelaNumber}`;
+                const seguroId = parseInt(newBill.sourceRef);
+                markSeguroParcelPaid(seguroId, newBill.parcelaNumber, transactionId);
+            }
+            
+            const newTransaction = {
+                id: transactionId,
+                date: newBill.paymentDate!,
+                accountId: account.id,
+                flow: 'out' as const,
+                operationType: operationType,
+                domain: domain as 'operational' | 'financing',
+                amount: newBill.expectedAmount,
+                categoryId: category.id,
+                description: txDescription,
+                links: {
+                    investmentId: baseLinks.investmentId || null,
+                    transferGroupId: baseLinks.transferGroupId || null,
+                    vehicleTransactionId: baseLinks.vehicleTransactionId || null,
+                    loanId: baseLinks.loanId || null,
+                    parcelaId: baseLinks.parcelaId || null,
+                },
+                conciliated: false,
+                attachments: [],
+                meta: {
+                    createdBy: 'bill_tracker',
+                    source: 'bill_tracker' as const,
+                    createdAt: new Date().toISOString(),
+                    notes: `Adiantamento gerado pelo Contas a Pagar. Bill ID: ${newBill.id}`,
+                }
+            };
+            
+            addTransacaoV2(newTransaction);
             setBillsTracker(prev => [...prev, newBill]);
-            toast.success(`Parcela ${isFutureBill ? 'adiantada' : 'incluída'} na lista do mês.`);
+            toast.success(`Adiantamento de parcela futura registrado e pago hoje!`);
+            
         } else {
             // Se for uma conta do mês atual ou já paga (apenas marcando a inclusão)
             setBillsTracker(prev => [...prev, newBill]);
@@ -271,9 +320,29 @@ export function BillsTrackerModal({ open, onOpenChange }: BillsTrackerModalProps
         
         if (billToRemove) {
             if (billToRemove.isPaid) {
-                toast.error("Não é possível remover contas fixas já pagas. Desmarque o pagamento primeiro.");
+                // Se a conta foi paga (adiantada ou não), precisamos reverter o pagamento
+                if (billToRemove.transactionId) {
+                    // Reverter Entidade V2 (Empréstimo/Seguro)
+                    if (billToRemove.sourceType === 'loan_installment' && billToRemove.sourceRef && billToRemove.parcelaNumber) {
+                        unmarkLoanParcelPaid(parseInt(billToRemove.sourceRef)); 
+                    }
+                    if (billToRemove.sourceType === 'insurance_installment' && billToRemove.sourceRef && billToRemove.parcelaNumber) {
+                        unmarkSeguroParcelPaid(parseInt(billToRemove.sourceRef), billToRemove.parcelaNumber);
+                    }
+                    
+                    // Remover a transação gerada pelo Bill Tracker
+                    setTransacoesV2(prev => prev.filter(t => t.id !== billToRemove.transactionId));
+                    
+                    // Remove a conta do Bills Tracker
+                    setBillsTracker(prev => prev.filter(b => b.id !== billToRemove.id));
+                    toast.info("Adiantamento estornado e parcela removida.");
+                    return;
+                }
+                
+                toast.error("Não é possível remover contas fixas já pagas sem Transaction ID.");
                 return;
             }
+            
             // Remove completamente se for uma conta futura (que não deveria estar no billsTracker)
             // Ou marca como excluída se for uma conta do mês atual (para não aparecer na lista)
             const isFutureBill = parseDateLocal(dueDate) > endOfMonth(currentDate);
@@ -287,7 +356,7 @@ export function BillsTrackerModal({ open, onOpenChange }: BillsTrackerModalProps
             }
         }
     }
-  }, [setBillsTracker, contasMovimento, categoriasV2, billsTracker, updateBill, currentDate]);
+  }, [setBillsTracker, contasMovimento, categoriasV2, billsTracker, updateBill, currentDate, addTransacaoV2, markLoanParcelPaid, markSeguroParcelPaid, unmarkLoanParcelPaid, unmarkSeguroParcelPaid, setTransacoesV2]);
 
   return (
     <>
