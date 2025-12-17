@@ -40,7 +40,6 @@ export function BillsTrackerModal({ open, onOpenChange }: BillsTrackerModalProps
     setTransacoesV2,
     contasMovimento, 
     categoriasV2, 
-    transacoesV2, // <-- ADDED: Need access to global transactions for deletion
   } = useFinance();
   
   const referenceDate = dateRanges.range1.to || new Date();
@@ -121,7 +120,6 @@ export function BillsTrackerModal({ open, onOpenChange }: BillsTrackerModalProps
                 isPaid: isChecked,
                 // Uses the current system date for payment
                 paymentDate: isChecked ? format(today, 'yyyy-MM-dd') : undefined,
-                // Preserve existing transactionId if available, otherwise generate a new one if paying
                 transactionId: isChecked ? b.transactionId || generateTransactionId() : undefined,
             };
         }
@@ -142,7 +140,8 @@ export function BillsTrackerModal({ open, onOpenChange }: BillsTrackerModalProps
     const newTransactions: TransacaoCompleta[] = [];
     const transactionsToRemove: string[] = [];
     
-    // Lista de bills que serão o novo billsTracker (apenas ad-hoc e templates modificados/excluídos)
+    // Lista de bills que serão o novo billsTracker
+    // Keep only bills from other months OR ad-hoc bills from any month
     let updatedBillsTracker: BillTracker[] = billsTracker.filter(b => {
         const isCurrentMonth = isSameMonth(parseDateLocal(b.dueDate), referenceDate);
         // Mantém bills de outros meses E bills ad-hoc do mês atual (para rastrear alterações)
@@ -269,8 +268,10 @@ export function BillsTrackerModal({ open, onOpenChange }: BillsTrackerModalProps
                 
             if (hasNonPaymentChanges) {
                 
-                // Se for um template gerado ou ad-hoc, salva a modificação no billsTracker
+                // Se for um template gerado OU ad-hoc, salva a modificação no billsTracker
                 if (localVersion.sourceType === 'ad_hoc' || isGeneratedTemplate) {
+                    // Se for um template gerado, precisamos garantir que ele seja salvo no billsTracker
+                    // para que o getBillsForMonth o encontre na próxima abertura e respeite a exclusão/alteração.
                     updatedBillsTracker = updatedBillsTracker.filter(b => b.id !== localVersion.id);
                     updatedBillsTracker.push(localVersion);
                 }
