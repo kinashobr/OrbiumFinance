@@ -156,6 +156,12 @@ export interface Emprestimo {
   observacoes?: string;
 }
 
+// NOVO: Interface simplificada para Investimento
+export interface InvestmentInfo {
+  id: string;
+  name: string;
+}
+
 // Veículo V2
 export interface Veiculo {
   id: number;
