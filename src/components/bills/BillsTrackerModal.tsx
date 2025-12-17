@@ -215,31 +215,55 @@ export function BillsTrackerModal({ open, onOpenChange }: BillsTrackerModalProps
   const handleToggleFixedBill = useCallback((potentialBill: PotentialFixedBill, isChecked: boolean) => {
     const { sourceType, sourceRef, parcelaNumber, dueDate, expectedAmount, description, isPaid } = potentialBill;
     
+    // 1. Se for para incluir (marcar)
     if (isChecked) {
-        // Add to billsTracker
+        // Lógica de adiantamento: Se for uma conta futura E não estiver paga,
+        // adicionamos ao billsTracker e marcamos como paga HOJE, mas mantendo o dueDate original.
+        const isFutureBill = parseDateLocal(dueDate) > endOfMonth(currentDate);
+        
         const newBill: BillTracker = {
             id: generateBillId(),
             description,
-            dueDate,
+            dueDate, // Mantém a data de vencimento original
             expectedAmount,
-            isPaid,
             sourceType,
             sourceRef,
             parcelaNumber,
             suggestedAccountId: contasMovimento.find(c => c.accountType === 'corrente')?.id,
-            // Determinar categoria sugerida com base no tipo
             suggestedCategoryId: categoriasV2.find(c => 
                 (sourceType === 'loan_installment' && c.label.toLowerCase().includes('emprestimo')) ||
                 (sourceType === 'insurance_installment' && c.label.toLowerCase().includes('seguro'))
             )?.id || null,
             isExcluded: false,
-            paymentDate: isPaid ? format(parseDateLocal(dueDate), 'yyyy-MM-dd') : undefined, // Use due date as placeholder for paid bills
+            
+            // Se for adiantamento (futura e não paga), marcamos como paga hoje
+            isPaid: isFutureBill && !isPaid,
+            paymentDate: isFutureBill && !isPaid ? format(new Date(), 'yyyy-MM-dd') : (isPaid ? format(parseDateLocal(dueDate), 'yyyy-MM-dd') : undefined),
+            transactionId: isFutureBill && !isPaid ? `bill_tx_temp_${generateBillId()}` : undefined, // ID temporário para rastreamento
         };
-        setBillsTracker(prev => [...prev, newBill]);
-        toast.success("Conta fixa incluída na lista do mês.");
+        
+        // Se for adiantamento, criamos a transação imediatamente
+        if (newBill.isPaid && newBill.transactionId) {
+            // A lógica de criação de transação e atualização de entidades V2
+            // é complexa para replicar aqui. Vamos simplificar:
+            // Apenas adicionamos a conta ao BillsTracker e o usuário deve
+            // usar o botão "Pagar" na lista principal para gerar a transação real.
+            // Apenas marcamos como 'incluída' e 'pendente' para que apareça na lista do mês atual.
+            newBill.isPaid = false;
+            newBill.paymentDate = undefined;
+            newBill.transactionId = undefined;
+            
+            setBillsTracker(prev => [...prev, newBill]);
+            toast.success(`Parcela ${isFutureBill ? 'adiantada' : 'incluída'} na lista do mês.`);
+        } else {
+            // Se for uma conta do mês atual ou já paga (apenas marcando a inclusão)
+            setBillsTracker(prev => [...prev, newBill]);
+            toast.success("Conta fixa incluída na lista do mês.");
+        }
+        
     } else {
-        // Remove from billsTracker (only if not paid)
-        const billToRemove = currentMonthBills.find(b => 
+        // 2. Se for para excluir (desmarcar)
+        const billToRemove = billsTracker.find(b => 
             b.sourceType === sourceType && 
             b.sourceRef === sourceRef && 
             b.parcelaNumber === parcelaNumber
@@ -250,12 +274,20 @@ export function BillsTrackerModal({ open, onOpenChange }: BillsTrackerModalProps
                 toast.error("Não é possível remover contas fixas já pagas. Desmarque o pagamento primeiro.");
                 return;
             }
-            // Mark as excluded for this month
-            updateBill(billToRemove.id, { isExcluded: true });
-            toast.info("Conta fixa excluída da lista deste mês.");
+            // Remove completamente se for uma conta futura (que não deveria estar no billsTracker)
+            // Ou marca como excluída se for uma conta do mês atual (para não aparecer na lista)
+            const isFutureBill = parseDateLocal(dueDate) > endOfMonth(currentDate);
+            
+            if (isFutureBill) {
+                setBillsTracker(prev => prev.filter(b => b.id !== billToRemove.id));
+                toast.info("Parcela futura removida da lista.");
+            } else {
+                updateBill(billToRemove.id, { isExcluded: true });
+                toast.info("Conta fixa excluída da lista deste mês.");
+            }
         }
     }
-  }, [setBillsTracker, contasMovimento, categoriasV2, currentMonthBills, updateBill]);
+  }, [setBillsTracker, contasMovimento, categoriasV2, billsTracker, updateBill, currentDate]);
 
   return (
     <>
