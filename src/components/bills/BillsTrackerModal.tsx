@@ -13,6 +13,7 @@ import { format, startOfMonth, endOfMonth, subMonths, addMonths } from "date-fns
 import { ptBR } from "date-fns/locale";
 import { toast } from "sonner";
 import { parseDateLocal } from "@/lib/utils";
+import { ResizableDialogContent } from "../ui/ResizableDialogContent"; // IMPORTANDO
 
 interface BillsTrackerModalProps {
   open: boolean;
@@ -259,9 +260,14 @@ export function BillsTrackerModal({ open, onOpenChange }: BillsTrackerModalProps
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent 
-          className="max-w-6xl h-[90vh] flex flex-col p-0 overflow-hidden"
+        <ResizableDialogContent 
+          storageKey="bills_tracker_modal"
+          initialWidth={1200}
+          initialHeight={800}
+          minWidth={800}
+          minHeight={600}
           hideCloseButton={true}
+          className="bg-card border-border overflow-hidden flex flex-col p-0"
         >
           <DialogHeader className="p-6 pb-0 shrink-0">
             <DialogTitle className="flex items-center justify-between">
@@ -331,7 +337,7 @@ export function BillsTrackerModal({ open, onOpenChange }: BillsTrackerModalProps
                 </div>
             </div>
           </div>
-        </DialogContent>
+        </ResizableDialogContent>
       </Dialog>
       
       {/* Fixed Bill Selector Modal */}
@@ -341,7 +347,7 @@ export function BillsTrackerModal({ open, onOpenChange }: BillsTrackerModalProps
             onOpenChange={setShowFixedBillSelector}
             mode={fixedBillSelectorMode}
             currentDate={currentDate}
-            potentialFixedBills={fixedBillSelectorMode === 'current' ? potentialFixedBills : futureFixedBills}
+            potentialFixedBills={fixedBillSelectorMode === 'current' ? potentialFixedFixedBills : futureFixedBills}
             onToggleFixedBill={handleToggleFixedBill}
         />
       )}
