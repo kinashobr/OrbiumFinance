@@ -61,14 +61,14 @@ export function BillsTrackerModal({ open, onOpenChange }: BillsTrackerModalProps
     const generatedBills = getBillsForMonth(referenceDate, true);
     setLocalBills(generatedBills);
     setLocalRevenueForecast(monthlyRevenueForecast || previousMonthRevenue); // Ensure forecast is also refreshed
+    toast.info("Lista de contas atualizada manualmente.");
   }, [getBillsForMonth, referenceDate, monthlyRevenueForecast, previousMonthRevenue]);
 
   // NEW: Handler for adding ad-hoc bills directly to context
   const handleAddBillAndRefresh = useCallback((bill: Omit<BillTracker, "id" | "isPaid">) => {
     addBill(bill);
-    // Refresh local list after context update
-    setTimeout(handleRefreshList, 50); 
-  }, [addBill, handleRefreshList]);
+    // REMOVIDO: Chamada automática de refresh. O usuário deve clicar em "Atualizar Lista".
+  }, [addBill]);
 
   // Totais baseados no estado local
   const totalExpectedExpense = useMemo(() => 
@@ -282,9 +282,12 @@ export function BillsTrackerModal({ open, onOpenChange }: BillsTrackerModalProps
   // Initial load when modal opens
   useEffect(() => {
     if (open) {
-      handleRefreshList();
+      // Inicializa o estado local chamando a função de geração de lista apenas uma vez
+      const generatedBills = getBillsForMonth(referenceDate, true);
+      setLocalBills(generatedBills);
+      setLocalRevenueForecast(monthlyRevenueForecast || previousMonthRevenue);
     }
-  }, [open, handleRefreshList]);
+  }, [open, getBillsForMonth, referenceDate, monthlyRevenueForecast, previousMonthRevenue]);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
