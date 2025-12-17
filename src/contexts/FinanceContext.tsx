@@ -1105,6 +1105,7 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
       if (e.id !== loanId) return e;
       
       return {
+        ...e,
         status: 'ativo',
       };
     }));
