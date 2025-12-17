@@ -44,7 +44,7 @@ export function BillsTrackerModal({ open, onOpenChange }: BillsTrackerModalProps
   
   const referenceDate = dateRanges.range1.to || new Date();
   
-  // Estado local para manipulação (inicializa com o estado do contexto)
+  // Estado local para manipulação (começa vazio)
   const [localBills, setLocalBills] = useState<BillTracker[]>([]);
   
   // Receita do mês anterior (para sugestão)
@@ -282,12 +282,11 @@ export function BillsTrackerModal({ open, onOpenChange }: BillsTrackerModalProps
   // Initial load when modal opens
   useEffect(() => {
     if (open) {
-      // Inicializa o estado local chamando a função de geração de lista apenas uma vez
-      const generatedBills = getBillsForMonth(referenceDate, true);
-      setLocalBills(generatedBills);
+      // Inicializa o estado local com uma lista vazia, forçando o usuário a clicar em "Atualizar Lista"
+      setLocalBills([]);
       setLocalRevenueForecast(monthlyRevenueForecast || previousMonthRevenue);
     }
-  }, [open, getBillsForMonth, referenceDate, monthlyRevenueForecast, previousMonthRevenue]);
+  }, [open, monthlyRevenueForecast, previousMonthRevenue]);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
