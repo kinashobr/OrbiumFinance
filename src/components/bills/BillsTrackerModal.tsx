@@ -36,7 +36,7 @@ export function BillsTrackerModal({ open, onOpenChange }: BillsTrackerModalProps
     markLoanParcelPaid,
     unmarkLoanParcelPaid,
     markSeguroParcelPaid,
-    unmarkSeguroParcelPaid,
+    unmarkSeguroParcelaPaid,
     setTransacoesV2,
     contasMovimento, 
     categoriasV2, 
@@ -63,13 +63,6 @@ export function BillsTrackerModal({ open, onOpenChange }: BillsTrackerModalProps
     setLocalRevenueForecast(monthlyRevenueForecast || previousMonthRevenue); // Ensure forecast is also refreshed
   }, [getBillsForMonth, referenceDate, monthlyRevenueForecast, previousMonthRevenue]);
 
-  // Sincroniza o estado local ao abrir o modal
-  useEffect(() => {
-    if (open) {
-        handleRefreshList();
-    }
-  }, [open, handleRefreshList]);
-  
   // NEW: Handler for adding ad-hoc bills directly to context
   const handleAddBillAndRefresh = useCallback((bill: Omit<BillTracker, "id" | "isPaid">) => {
     addBill(bill);
@@ -237,7 +230,7 @@ export function BillsTrackerModal({ open, onOpenChange }: BillsTrackerModalProps
                 } else if (bill.sourceType === 'insurance_installment' && bill.sourceRef && bill.parcelaNumber) {
                     const seguroId = parseInt(bill.sourceRef);
                     if (!isNaN(seguroId)) {
-                        unmarkSeguroParcelPaid(seguroId, bill.parcelaNumber);
+                        unmarkSeguroParcelaPaid(seguroId, bill.parcelaNumber);
                     }
                 }
                 
