@@ -15,14 +15,21 @@ import { ContaCorrente, Categoria, ImportedTransaction, OperationType, CATEGORY_
 import { cn, parseDateLocal } from "@/lib/utils";
 import { EditableCell } from "../EditableCell";
 
-// Interface simplificada para Empréstimo
 interface LoanInfo {
   id: string;
   institution: string;
   numeroContrato?: string;
+  parcelas: {
+    numero: number;
+    vencimento: string;
+    valor: number;
+    paga: boolean;
+    transactionId?: string;
+  }[];
+  valorParcela: number;
+  totalParcelas: number;
 }
 
-// Interface simplificada para Investimento
 interface InvestmentInfo {
   id: string;
   name: string;
@@ -32,8 +39,8 @@ interface TransactionReviewTableProps {
   transactions: ImportedTransaction[];
   accounts: ContaCorrente[];
   categories: Categoria[];
-  investments: InvestmentInfo[]; // NEW PROP
-  loans: LoanInfo[]; // NEW PROP
+  investments: InvestmentInfo[];
+  loans: LoanInfo[];
   onUpdateTransaction: (id: string, updates: Partial<ImportedTransaction>) => void;
   onCreateRule: (transaction: ImportedTransaction) => void;
 }
@@ -52,7 +59,6 @@ const OPERATION_OPTIONS: { value: OperationType; label: string; color: string }[
 
 const formatCurrency = (value: number) => `R$ ${value.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`;
 
-// Define column keys and initial widths (in pixels)
 const COLUMN_KEYS = ['date', 'amount', 'originalDescription', 'operationType', 'vinculo', 'category', 'description', 'rule'] as const;
 type ColumnKey = typeof COLUMN_KEYS[number];
 
@@ -84,13 +90,12 @@ export function TransactionReviewTable({
   transactions,
   accounts,
   categories,
-  investments, // USED
-  loans, // USED
+  investments,
+  loans,
   onUpdateTransaction,
   onCreateRule,
 }: TransactionReviewTableProps) {
   
-  // --- Column Resizing State and Logic ---
   const [columnWidths, setColumnWidths] = useState<Record<ColumnKey, number>>(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEY);
@@ -119,7 +124,7 @@ export function TransactionReviewTable({
     if (!resizingColumn) return;
 
     const deltaX = e.clientX - startX;
-    const newWidth = Math.max(30, startWidth + deltaX); // Minimum width of 30px
+    const newWidth = Math.max(30, startWidth + deltaX);
 
     setColumnWidths(prev => ({
       ...prev,
@@ -155,7 +160,6 @@ export function TransactionReviewTable({
   const totalWidth = useMemo(() => {
     return Object.values(columnWidths).reduce((sum, w) => sum + w, 0);
   }, [columnWidths]);
-  // ---------------------------------------------
   
   const categoriesMap = useMemo(() => new Map(categories.map(c => [c.id, c])), [categories]);
   const accountsMap = useMemo(() => new Map(accounts.map(a => [a.id, a])), [accounts]);
@@ -179,12 +183,10 @@ export function TransactionReviewTable({
   const investmentAccounts = useMemo(() => investments, [investments]);
   const activeLoans = useMemo(() => loans.filter(l => !l.id.includes('pending')), [loans]);
 
-  // Função para renderizar o seletor de Vínculo/Contraparte
   const renderVincularSelector = (tx: ImportedTransaction) => {
     const opType = tx.operationType;
-    const isDisabled = tx.isPotentialDuplicate; // Desabilitar se for duplicata
+    const isDisabled = tx.isPotentialDuplicate;
     
-    // 1. Transferência (Conta Destino)
     if (opType === 'transferencia') {
       const destinationOptions = availableDestinationAccounts.filter(a => a.id !== tx.accountId);
       return (
@@ -207,7 +209,6 @@ export function TransactionReviewTable({
       );
     }
     
-    // 2. Aplicação / Resgate (Conta de Investimento)
     if (opType === 'aplicacao' || opType === 'resgate') {
       return (
         <Select
@@ -232,32 +233,56 @@ export function TransactionReviewTable({
       );
     }
     
-    // 3. Pagamento Empréstimo (Contrato de Empréstimo)
     if (opType === 'pagamento_emprestimo') {
+      const selectedLoan = activeLoans.find(l => l.id === tx.tempLoanId);
+      const availableInstallments = selectedLoan 
+        ? selectedLoan.parcelas.filter(p => !p.paga) 
+        : [];
+
       return (
-        <Select
-          value={tx.tempLoanId || ''}
-          onValueChange={(v) => onUpdateTransaction(tx.id, { tempLoanId: v })}
-          disabled={isDisabled}
-        >
-          <SelectTrigger className="h-7 text-xs">
-            <SelectValue placeholder="Contrato..." />
-          </SelectTrigger>
-          <SelectContent className="max-h-60">
-            {activeLoans.map(l => (
-              <SelectItem key={l.id} value={l.id}>
-                <span className="flex items-center gap-2">
-                    <CreditCard className="w-3 h-3 text-orange-500" />
-                    {l.institution}
-                </span>
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <div className="flex gap-2">
+          {/* Seletor 1: Contrato (tempLoanId) */}
+          <Select
+            value={tx.tempLoanId || ''}
+            onValueChange={(v) => onUpdateTransaction(tx.id, { tempLoanId: v, tempParcelaId: null })}
+            disabled={isDisabled}
+          >
+            <SelectTrigger className="h-7 text-xs flex-1 min-w-[100px]">
+              <SelectValue placeholder="Contrato..." />
+            </SelectTrigger>
+            <SelectContent className="max-h-60">
+              {activeLoans.map(l => (
+                <SelectItem key={l.id} value={l.id}>
+                  <span className="flex items-center gap-2">
+                      <CreditCard className="w-3 h-3 text-orange-500" />
+                      {l.institution}
+                  </span>
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          
+          {/* Seletor 2: Parcela (tempParcelaId) */}
+          <Select
+            value={tx.tempParcelaId || ''}
+            onValueChange={(v) => onUpdateTransaction(tx.id, { tempParcelaId: v })}
+            disabled={isDisabled || !tx.tempLoanId}
+          >
+            <SelectTrigger className="h-7 text-xs w-[100px]">
+              <SelectValue placeholder="Parcela..." />
+            </SelectTrigger>
+            <SelectContent className="max-h-60">
+              {availableInstallments.map(p => (
+                <SelectItem key={p.numero} value={String(p.numero)}>
+                  {`P. ${p.numero} (${formatCurrency(p.valor)})`}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
       );
     }
     
-    // 4. Veículo (Compra/Venda)
     if (opType === 'veiculo') {
       return (
         <Select
@@ -284,7 +309,6 @@ export function TransactionReviewTable({
       );
     }
     
-    // 5. Liberação Empréstimo (Apenas indicador)
     if (opType === 'liberacao_emprestimo') {
         return (
             <Badge variant="outline" className="text-[10px] px-1 py-0 border-emerald-500 text-emerald-500">
@@ -296,12 +320,10 @@ export function TransactionReviewTable({
     return <span className="text-muted-foreground text-xs">—</span>;
   };
   
-  // Função para determinar se a categoria deve ser desabilitada
   const isCategoryDisabled = (tx: ImportedTransaction): boolean => {
     const opType = tx.operationType;
     if (!opType) return true;
     
-    // Desabilita se for uma operação de vínculo OU se for duplicata
     return tx.isPotentialDuplicate ||
            opType === 'transferencia' || 
            opType === 'aplicacao' || 
@@ -327,7 +349,6 @@ export function TransactionReviewTable({
                 style={{ width: columnWidths[header.key] }}
               >
                 {header.label}
-                {/* Resizer Handle */}
                 {header.key !== 'rule' && (
                   <div
                     className="absolute right-0 top-0 h-full w-2 cursor-col-resize"
@@ -346,7 +367,7 @@ export function TransactionReviewTable({
             const isVincularComplete = 
                 (tx.operationType === 'transferencia' && !!tx.destinationAccountId) ||
                 ((tx.operationType === 'aplicacao' || tx.operationType === 'resgate') && !!tx.tempInvestmentId) ||
-                (tx.operationType === 'pagamento_emprestimo' && !!tx.tempLoanId) ||
+                (tx.operationType === 'pagamento_emprestimo' && !!tx.tempLoanId && !!tx.tempParcelaId) || // ADICIONADO: Requer tempParcelaId
                 (tx.operationType === 'veiculo' && !!tx.tempVehicleOperation) ||
                 (!isCategoryDisabled(tx) && !!tx.categoryId) ||
                 tx.operationType === 'liberacao_emprestimo';
@@ -359,7 +380,7 @@ export function TransactionReviewTable({
                 className={cn(
                   "border-border hover:bg-muted/30 transition-colors h-10",
                   !isCategorized && !tx.isPotentialDuplicate && "bg-warning/5 hover:bg-warning/10",
-                  tx.isPotentialDuplicate && "bg-success/5 hover:bg-success/10 border-l-4 border-success/50" // Highlight Duplicates
+                  tx.isPotentialDuplicate && "bg-success/5 hover:bg-success/10 border-l-4 border-success/50"
                 )}
               >
                 <TableCell className="text-muted-foreground text-xs whitespace-nowrap p-2" style={{ width: columnWidths.date }}>
@@ -380,7 +401,6 @@ export function TransactionReviewTable({
                   )}
                 </TableCell>
                 
-                {/* Tipo Operação */}
                 <TableCell className="p-2" style={{ width: columnWidths.operationType }}>
                   <Select
                     value={tx.operationType || ''}
@@ -392,6 +412,7 @@ export function TransactionReviewTable({
                         tempInvestmentId: null,
                         tempLoanId: null,
                         tempVehicleOperation: null,
+                        tempParcelaId: null, // Limpa a parcela ao mudar a operação
                     })}
                     disabled={tx.isPotentialDuplicate}
                   >
@@ -410,12 +431,10 @@ export function TransactionReviewTable({
                   </Select>
                 </TableCell>
                 
-                {/* Vínculo / Contraparte (Dinâmico) */}
                 <TableCell className="p-2" style={{ width: columnWidths.vinculo }}>
                   {renderVincularSelector(tx)}
                 </TableCell>
                 
-                {/* Categoria */}
                 <TableCell className="p-2" style={{ width: columnWidths.category }}>
                   <Select
                     value={tx.categoryId || ''}
@@ -437,7 +456,6 @@ export function TransactionReviewTable({
                   </Select>
                 </TableCell>
                 
-                {/* Descrição Final */}
                 <TableCell className="p-2" style={{ width: columnWidths.description }}>
                   <EditableCell
                     value={tx.description}
@@ -448,7 +466,6 @@ export function TransactionReviewTable({
                   />
                 </TableCell>
                 
-                {/* Ações / Regra */}
                 <TableCell className="text-center p-2" style={{ width: columnWidths.rule }}>
                   <Button
                     variant="ghost"
