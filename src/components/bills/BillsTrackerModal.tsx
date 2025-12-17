@@ -15,6 +15,7 @@ import { ResizableSidebar } from "../transactions/ResizableSidebar";
 import { ResizableDialogContent } from "../ui/ResizableDialogContent";
 import { parseDateLocal } from "@/lib/utils";
 import { isSameMonth } from "date-fns";
+import { FutureInstallmentSelectorModal } from "./FutureInstallmentSelectorModal"; // Import NEW component
 
 interface BillsTrackerModalProps {
   open: boolean;
@@ -188,6 +189,13 @@ export function BillsTrackerModal({ open, onOpenChange }: BillsTrackerModalProps
         }
     }
   }, [localBills, contasMovimento, categoriasV2]);
+
+  const handleIncludeFutureBills = useCallback((bills: PotentialFixedBill[]) => {
+    bills.forEach(bill => {
+        // Reutiliza a lógica de toggle para incluir a conta na lista principal (localBills)
+        handleToggleFixedBill(bill, true);
+    });
+  }, [handleToggleFixedBill]);
 
   const handleSaveAndClose = () => {
     setMonthlyRevenueForecast(localRevenueForecast);

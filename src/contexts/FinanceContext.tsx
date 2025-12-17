@@ -303,6 +303,7 @@ interface FinanceContextType {
   deleteBill: (id: string) => void;
   getBillsForMonth: (date: Date) => BillTracker[]; // RENOMEADO
   getPotentialFixedBillsForMonth: (date: Date, localBills: BillTracker[]) => PotentialFixedBill[]; // NEW
+  getFutureFixedBills: (localBills: BillTracker[]) => PotentialFixedBill[]; // NEW
   
   // Contas Movimento (new integrated system)
   contasMovimento: ContaCorrente[];
@@ -1055,6 +1056,87 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     
     return potentialBills.sort((a, b) => parseDateLocal(a.dueDate).getTime() - parseDateLocal(b.dueDate).getTime());
   }, [emprestimos, segurosVeiculo, transacoesV2, calculateLoanSchedule]);
+  
+  const getFutureFixedBills = useCallback((localBills: BillTracker[]): PotentialFixedBill[] => {
+    const futureBills: PotentialFixedBill[] = [];
+    const today = startOfDay(new Date());
+    
+    const isBillIncluded = (sourceType: BillSourceType, sourceRef: string, parcelaNumber: number) => {
+        return localBills.some(b => 
+            b.sourceType === sourceType && 
+            b.sourceRef === sourceRef && 
+            b.parcelaNumber === parcelaNumber &&
+            !b.isExcluded
+        );
+    };
+    
+    // --- 1. Empréstimos ---
+    emprestimos.filter(e => e.status === 'ativo').forEach(loan => {
+        if (!loan.dataInicio || loan.meses === 0) return;
+        
+        const schedule = calculateLoanSchedule(loan.id);
+        
+        schedule.forEach(item => {
+            const dueDate = getDueDate(loan.dataInicio!, item.parcela);
+            
+            // Inclui parcelas futuras (vencimento após hoje)
+            if (isAfter(dueDate, today)) {
+                const isPaid = transacoesV2.some(t => 
+                    t.operationType === 'pagamento_emprestimo' &&
+                    t.links?.loanId === `loan_${loan.id}` &&
+                    t.links?.parcelaId === String(item.parcela)
+                );
+                
+                // Se já foi paga, não é futura e não deve ser incluída
+                if (isPaid) return;
+                
+                const sourceRef = String(loan.id);
+                
+                futureBills.push({
+                    key: `loan_${sourceRef}_${item.parcela}`,
+                    sourceType: 'loan_installment',
+                    sourceRef,
+                    parcelaNumber: item.parcela,
+                    dueDate: format(dueDate, 'yyyy-MM-dd'),
+                    expectedAmount: loan.parcela,
+                    description: `Empréstimo ${loan.contrato} - Parcela ${item.parcela}/${loan.meses}`,
+                    isPaid: false,
+                    isIncluded: isBillIncluded('loan_installment', sourceRef, item.parcela),
+                });
+            }
+        });
+    });
+    
+    // --- 2. Seguros ---
+    segurosVeiculo.forEach(seguro => {
+        seguro.parcelas.forEach(parcela => {
+            const dueDate = parseDateLocal(parcela.vencimento);
+            
+            // Inclui parcelas futuras (vencimento após hoje)
+            if (isAfter(dueDate, today)) {
+                
+                // Se já foi paga, não é futura e não deve ser incluída
+                if (parcela.paga) return;
+                
+                const sourceRef = String(seguro.id);
+                
+                futureBills.push({
+                    key: `insurance_${sourceRef}_${parcela.numero}`,
+                    sourceType: 'insurance_installment',
+                    sourceRef,
+                    parcelaNumber: parcela.numero,
+                    dueDate: parcela.vencimento,
+                    expectedAmount: parcela.valor,
+                    description: `Seguro ${seguro.numeroApolice} - Parcela ${parcela.numero}/${seguro.numeroParcelas}`,
+                    isPaid: false,
+                    isIncluded: isBillIncluded('insurance_installment', sourceRef, parcela.numero),
+                });
+            }
+        });
+    });
+    
+    return futureBills.sort((a, b) => parseDateLocal(a.dueDate).getTime() - parseDateLocal(b.dueDate).getTime());
+  }, [emprestimos, segurosVeiculo, transacoesV2, calculateLoanSchedule]);
 
 
   // ============================================
@@ -1437,6 +1519,7 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     deleteBill,
     getBillsForMonth, // RENOMEADO
     getPotentialFixedBillsForMonth, // NEW
+    getFutureFixedBills, // NEW
     
     contasMovimento,
     setContasMovimento,
