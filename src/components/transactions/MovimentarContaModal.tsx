@@ -41,15 +41,15 @@ interface MovimentarContaModalProps {
 }
 
 const OPERATION_OPTIONS: { value: OperationType; label: string; icon: React.ElementType; color: string; bgColor: string }[] = [
-  { value: 'receita', label: 'Receita', icon: Plus, color: 'text-green-600', bgColor: 'bg-green-100' },
-  { value: 'despesa', label: 'Despesa', icon: Minus, color: 'text-red-600', bgColor: 'bg-red-100' },
-  { value: 'transferencia', label: 'Transferência', icon: ArrowLeftRight, color: 'text-blue-600', bgColor: 'bg-blue-100' },
-  { value: 'aplicacao', label: 'Aplicação', icon: TrendingUp, color: 'text-purple-600', bgColor: 'bg-purple-100' },
-  { value: 'resgate', label: 'Resgate', icon: TrendingDown, color: 'text-amber-600', bgColor: 'bg-amber-100' },
-  { value: 'pagamento_emprestimo', label: 'Pag. Empréstimo', icon: CreditCard, color: 'text-orange-600', bgColor: 'bg-orange-100' },
-  { value: 'liberacao_emprestimo', label: 'Liberação', icon: DollarSign, color: 'text-emerald-600', bgColor: 'bg-emerald-100' },
-  { value: 'veiculo', label: 'Veículo', icon: Car, color: 'text-indigo-600', bgColor: 'bg-indigo-100' },
-  { value: 'rendimento', label: 'Rendimento', icon: Coins, color: 'text-teal-600', bgColor: 'bg-teal-100' },
+  { value: 'receita', label: 'Receita', icon: Plus, color: 'text-success', bgColor: 'bg-success/10' },
+  { value: 'despesa', label: 'Despesa', icon: Minus, color: 'text-destructive', bgColor: 'bg-destructive/10' },
+  { value: 'transferencia', label: 'Transferência', icon: ArrowLeftRight, color: 'text-primary', bgColor: 'bg-primary/10' },
+  { value: 'aplicacao', label: 'Aplicação', icon: TrendingUp, color: 'text-accent', bgColor: 'bg-accent/10' },
+  { value: 'resgate', label: 'Resgate', icon: TrendingDown, color: 'text-warning', bgColor: 'bg-warning/10' },
+  { value: 'pagamento_emprestimo', label: 'Pag. Empréstimo', icon: CreditCard, color: 'text-warning', bgColor: 'bg-warning/10' },
+  { value: 'liberacao_emprestimo', label: 'Liberação', icon: DollarSign, color: 'text-success', bgColor: 'bg-success/10' },
+  { value: 'veiculo', label: 'Veículo', icon: Car, color: 'text-primary', bgColor: 'bg-primary/10' },
+  { value: 'rendimento', label: 'Rendimento', icon: Coins, color: 'text-success', bgColor: 'bg-success/10' },
 ];
 
 const getAvailableOperationTypes = (accountType: AccountType): OperationType[] => {
@@ -668,8 +668,8 @@ export function MovimentarContaModal({
                       <SelectTrigger className="h-12 border-2 border-primary/20 rounded-xl">
                         <SelectValue placeholder="Selecione a conta destino">
                           <div className="flex items-center gap-3">
-                            <div className="w-9 h-9 rounded-lg bg-blue-100 flex items-center justify-center">
-                              <ArrowLeftRight className="w-4.5 h-4.5 text-blue-600" />
+                            <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center">
+                              <ArrowLeftRight className="w-4.5 h-4.5 text-primary" />
                             </div>
                             <span className="text-muted-foreground">Para conta...</span>
                           </div>
@@ -699,23 +699,23 @@ export function MovimentarContaModal({
 
               {/* Pagamento Empréstimo */}
               {isLoanPayment && (
-                <div className="p-4 border border-orange-200 rounded-xl bg-orange-50">
+                <div className="p-4 border border-warning/50 rounded-xl bg-warning/10">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                     <div className="space-y-2">
-                      <Label className="text-sm font-medium text-orange-700">Contrato *</Label>
+                      <Label className="text-sm font-medium text-warning">Contrato *</Label>
                       <Select 
                         value={tempLoanId || ''} 
                         onValueChange={(v) => setTempLoanId(v)}
                       >
-                        <SelectTrigger className="h-12 border-2 border-orange-200 rounded-xl">
+                        <SelectTrigger className="h-12 border-2 border-warning/50 rounded-xl">
                           <SelectValue placeholder="Selecione o contrato" />
                         </SelectTrigger>
                         <SelectContent>
                           {activeLoans.map(l => (
                             <SelectItem key={l.id} value={l.id}>
                               <div className="flex items-center gap-3 py-1">
-                                <div className="w-8 h-8 rounded-lg bg-orange-100 flex items-center justify-center">
-                                  <CreditCard className="w-4 h-4 text-orange-600" />
+                                <div className="w-8 h-8 rounded-lg bg-warning/20 flex items-center justify-center">
+                                  <CreditCard className="w-4 h-4 text-warning" />
                                 </div>
                                 <div>
                                   <div className="font-medium">{l.institution}</div>
@@ -730,13 +730,13 @@ export function MovimentarContaModal({
                       </Select>
                     </div>
                     <div className="space-y-2">
-                      <Label className="text-sm font-medium text-orange-700">Parcela *</Label>
+                      <Label className="text-sm font-medium text-warning">Parcela *</Label>
                       <Select 
                         value={tempParcelaId || ''} 
                         onValueChange={(v) => setTempParcelaId(v)}
                         disabled={!tempLoanId}
                       >
-                        <SelectTrigger className="h-12 border-2 border-orange-200 rounded-xl">
+                        <SelectTrigger className="h-12 border-2 border-warning/50 rounded-xl">
                           <SelectValue placeholder="Selecione a parcela" />
                         </SelectTrigger>
                         <SelectContent>
@@ -744,7 +744,7 @@ export function MovimentarContaModal({
                             <SelectItem key={p.numero} value={String(p.numero)}>
                               <div className="flex items-center justify-between w-full">
                                 <span>Parcela {p.numero}</span>
-                                <span className="text-orange-600 font-medium">
+                                <span className="text-warning font-medium">
                                   {formatCurrency(p.valor)}
                                 </span>
                               </div>
@@ -759,23 +759,23 @@ export function MovimentarContaModal({
 
               {/* Pagamento Seguro */}
               {isInsurancePayment && (
-                <div className="p-4 border border-blue-200 rounded-xl bg-blue-50">
+                <div className="p-4 border border-primary/50 rounded-xl bg-primary/10">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                     <div className="space-y-2">
-                      <Label className="text-sm font-medium text-blue-700">Seguro *</Label>
+                      <Label className="text-sm font-medium text-primary">Seguro *</Label>
                       <Select 
                         value={tempSeguroId || ''} 
                         onValueChange={(v) => { setTempSeguroId(v); setTempSeguroParcelaId(null); }}
                       >
-                        <SelectTrigger className="h-12 border-2 border-blue-200 rounded-xl">
+                        <SelectTrigger className="h-12 border-2 border-primary/50 rounded-xl">
                           <SelectValue placeholder="Selecione o seguro" />
                         </SelectTrigger>
                         <SelectContent>
                           {availableSeguros.map(s => (
                             <SelectItem key={s.id} value={String(s.id)}>
                               <div className="flex items-center gap-3 py-1">
-                                <div className="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center">
-                                  <Shield className="w-4 h-4 text-blue-600" />
+                                <div className="w-8 h-8 rounded-lg bg-primary/20 flex items-center justify-center">
+                                  <Shield className="w-4 h-4 text-primary" />
                                 </div>
                                 <div>
                                   <div className="font-medium">{s.seguradora}</div>
@@ -790,13 +790,13 @@ export function MovimentarContaModal({
                       </Select>
                     </div>
                     <div className="space-y-2">
-                      <Label className="text-sm font-medium text-blue-700">Parcela *</Label>
+                      <Label className="text-sm font-medium text-primary">Parcela *</Label>
                       <Select 
                         value={tempSeguroParcelaId || ''} 
                         onValueChange={(v) => setTempSeguroParcelaId(v)}
                         disabled={!tempSeguroId}
                       >
-                        <SelectTrigger className="h-12 border-2 border-blue-200 rounded-xl">
+                        <SelectTrigger className="h-12 border-2 border-primary/50 rounded-xl">
                           <SelectValue placeholder="Selecione a parcela" />
                         </SelectTrigger>
                         <SelectContent>
@@ -804,7 +804,7 @@ export function MovimentarContaModal({
                             <SelectItem key={p.numero} value={String(p.numero)}>
                               <div className="flex items-center justify-between w-full">
                                 <span>Parcela {p.numero}</span>
-                                <span className="text-blue-600 font-medium">
+                                <span className="text-primary font-medium">
                                   {formatCurrency(p.valor)}
                                 </span>
                               </div>
