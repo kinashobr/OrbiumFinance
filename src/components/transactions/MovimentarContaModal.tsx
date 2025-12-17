@@ -4,12 +4,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Building2, Wallet, PiggyBank, TrendingUp, Shield, Target, Bitcoin, CreditCard, ArrowLeftRight, Car, DollarSign, Plus, Minus, RefreshCw, Coins, TrendingDown, Tags, ChevronRight, ChevronLeft, CheckCircle2, Calendar, StickyNote, Info } from "lucide-react";
+import { Building2, Wallet, PiggyBank, TrendingUp, Shield, Target, Bitcoin, CreditCard, ArrowLeftRight, Car, DollarSign, Plus, Minus, RefreshCw, Coins, TrendingDown, Tags, Calendar, CheckCircle2, Info } from "lucide-react";
 import { ContaCorrente, Categoria, AccountType, ACCOUNT_TYPE_LABELS, generateTransactionId, formatCurrency, OperationType, TransacaoCompleta, TransactionLinks, generateTransferGroupId, getFlowTypeFromOperation, getDomainFromOperation, InvestmentInfo, SeguroVeiculo, Veiculo, OPERATION_TYPE_LABELS } from "@/types/finance";
 import { toast } from "sonner";
 import { parseDateLocal, cn } from "@/lib/utils";
-import { ResizableDialogContent } from "../ui/ResizableDialogContent";
 
 // Interface simplificada para Empréstimo
 interface LoanInfo {
@@ -41,137 +39,60 @@ interface MovimentarContaModalProps {
   editingTransaction?: TransacaoCompleta;
 }
 
-// Define a configuração de cores e ícones para cada operação
-const OPERATION_CONFIG: Record<OperationType, { label: string; icon: React.ElementType; colorClass: string; baseColor: string; tailwindColor: string }> = {
-  receita: { label: 'Receita', icon: Plus, colorClass: 'text-success', baseColor: 'hsl(142, 76%, 36%)', tailwindColor: 'green-500' },
-  despesa: { label: 'Despesa', icon: Minus, colorClass: 'text-destructive', baseColor: 'hsl(0, 72%, 51%)', tailwindColor: 'red-500' },
-  transferencia: { label: 'Transferência', icon: ArrowLeftRight, colorClass: 'text-primary', baseColor: 'hsl(199, 89%, 48%)', tailwindColor: 'blue-500' },
-  aplicacao: { label: 'Aplicação', icon: TrendingUp, colorClass: 'text-purple-500', baseColor: 'hsl(270, 100%, 65%)', tailwindColor: 'purple-500' },
-  resgate: { label: 'Resgate', icon: TrendingDown, colorClass: 'text-warning', baseColor: 'hsl(38, 92%, 50%)', tailwindColor: 'amber-500' },
-  pagamento_emprestimo: { label: 'Pag. Empréstimo', icon: CreditCard, colorClass: 'text-orange-500', baseColor: 'hsl(25, 95%, 53%)', tailwindColor: 'orange-500' },
-  liberacao_emprestimo: { label: 'Liberação Empréstimo', icon: DollarSign, colorClass: 'text-emerald-500', baseColor: 'hsl(142, 76%, 36%)', tailwindColor: 'emerald-500' },
-  veiculo: { label: 'Veículo', icon: Car, colorClass: 'text-indigo-500', baseColor: 'hsl(240, 70%, 50%)', tailwindColor: 'indigo-500' },
-  rendimento: { label: 'Rendimento', icon: Coins, colorClass: 'text-teal-500', baseColor: 'hsl(170, 70%, 50%)', tailwindColor: 'teal-500' },
-  initial_balance: { label: 'Saldo Inicial', icon: CheckCircle2, colorClass: 'text-muted-foreground', baseColor: 'hsl(215, 20%, 55%)', tailwindColor: 'gray-500' },
+// --- Helper Functions for Styling and Formatting ---
+
+const OPERATION_COLOR_MAP = {
+  receita: { bg: 'bg-green-100', text: 'text-green-600', border: 'border-green-200', iconBg: 'bg-green-600' },
+  despesa: { bg: 'bg-red-100', text: 'text-red-600', border: 'border-red-200', iconBg: 'bg-red-600' },
+  transferencia: { bg: 'bg-blue-100', text: 'text-blue-600', border: 'border-blue-200', iconBg: 'bg-blue-600' },
+  aplicacao: { bg: 'bg-purple-100', text: 'text-purple-600', border: 'border-purple-200', iconBg: 'bg-purple-600' },
+  resgate: { bg: 'bg-amber-100', text: 'text-amber-600', border: 'border-amber-200', iconBg: 'bg-amber-600' },
+  pagamento_emprestimo: { bg: 'bg-orange-100', text: 'text-orange-600', border: 'border-orange-200', iconBg: 'bg-orange-600' },
+  liberacao_emprestimo: { bg: 'bg-emerald-100', text: 'text-emerald-600', border: 'border-emerald-200', iconBg: 'bg-emerald-600' },
+  veiculo: { bg: 'bg-indigo-100', text: 'text-indigo-600', border: 'border-indigo-200', iconBg: 'bg-indigo-600' },
+  rendimento: { bg: 'bg-teal-100', text: 'text-teal-600', border: 'border-teal-200', iconBg: 'bg-teal-600' },
+  initial_balance: { bg: 'bg-gray-100', text: 'text-gray-600', border: 'border-gray-200', iconBg: 'bg-gray-600' },
 };
 
-const getAvailableOperationTypes = (accountType: AccountType): OperationType[] => {
-  switch (accountType) {
-    case 'corrente':
-      return ['receita', 'despesa', 'transferencia', 'aplicacao', 'resgate', 'pagamento_emprestimo', 'liberacao_emprestimo', 'veiculo', 'rendimento'];
-    case 'cartao_credito':
-      return ['despesa', 'transferencia']; // Despesa (compra) e Transferência (pagamento de fatura)
-    case 'renda_fixa':
-    case 'poupanca':
-    case 'reserva':
-    case 'objetivo':
-    case 'cripto':
-      return ['aplicacao', 'resgate', 'rendimento'];
-    default:
-      return ['receita', 'despesa'];
+const getOperationColor = (operationType: OperationType | null, type: 'bg' | 'text' | 'border' | 'iconBg') => {
+  const defaultColor = { bg: 'bg-gray-100', text: 'text-gray-600', border: 'border-gray-200', iconBg: 'bg-gray-600' };
+  if (!operationType) return defaultColor[type];
+  return OPERATION_COLOR_MAP[operationType]?.[type] || defaultColor[type];
+};
+
+const getAccountColor = (accountType: AccountType | undefined, type: 'bg' | 'text') => {
+  const colors = {
+    corrente: { bg: 'bg-blue-600', text: 'text-blue-600' },
+    renda_fixa: { bg: 'bg-purple-600', text: 'text-purple-600' },
+    poupanca: { bg: 'bg-teal-600', text: 'text-teal-600' },
+    cripto: { bg: 'bg-yellow-600', text: 'text-yellow-600' },
+    reserva: { bg: 'bg-green-600', text: 'text-green-600' },
+    objetivo: { bg: 'bg-pink-600', text: 'text-pink-600' },
+    cartao_credito: { bg: 'bg-red-600', text: 'text-red-600' },
+  };
+  const defaultColor = { bg: 'bg-gray-600', text: 'text-gray-600' };
+  return accountType ? colors[accountType]?.[type] || defaultColor[type] : defaultColor[type];
+};
+
+const formatToBR = (value: number) => value.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+const parseFromBR = (value: string) => {
+  let cleaned = value.replace(/[^\d,.-]/g, '');
+  const isNegative = cleaned.startsWith('-');
+  
+  if (isNegative) {
+    cleaned = cleaned.substring(1);
   }
+  
+  cleaned = cleaned.replace(/\./g, '').replace(',', '.');
+  
+  let parsed = parseFloat(cleaned);
+  if (isNaN(parsed)) return 0;
+  
+  return isNegative ? -parsed : parsed;
 };
 
-const getCategoryOptions = (operationType: OperationType | null, categories: Categoria[]): Categoria[] => {
-  if (!operationType || operationType === 'transferencia' || operationType === 'initial_balance') return categories;
-  
-  const isIncome = operationType === 'receita' || operationType === 'rendimento' || operationType === 'liberacao_emprestimo' || (operationType === 'veiculo');
-  
-  return categories.filter(c => 
-    (isIncome && c.nature === 'receita') || 
-    (!isIncome && c.nature !== 'receita')
-  );
-};
-
-// Local component for Floating Input with Icon
-interface FloatingInputWithIconProps extends React.InputHTMLAttributes<HTMLInputElement> {
-    label: string;
-    Icon: React.ElementType;
-    colorClass: string;
-    error?: boolean;
-}
-
-const FloatingInputWithIcon = ({ label, Icon, colorClass, error, ...props }: FloatingInputWithIconProps) => (
-    <div className="relative pt-5">
-        <Icon className={cn("absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 transition-colors z-10", colorClass)} />
-        <Input
-            {...props}
-            placeholder=" "
-            className={cn(
-                "h-12 pl-10 pt-4 pb-2 bg-muted/50 border-border focus-visible:ring-offset-0 transition-all duration-200 peer text-base",
-                error && "border-destructive focus-visible:ring-destructive/50",
-                props.disabled && "opacity-70 cursor-not-allowed"
-            )}
-        />
-        <Label
-            htmlFor={props.id}
-            className={cn(
-                "absolute left-10 top-1/2 -translate-y-1/2 text-sm text-muted-foreground transition-all duration-200 pointer-events-none",
-                "peer-placeholder-shown:top-1/2 peer-placeholder-shown:text-base",
-                "peer-focus:top-2 peer-focus:text-xs peer-focus:left-3 peer-focus:text-primary",
-                (props.value || props.type === 'date') && props.value !== "" && "top-2 text-xs left-3 text-primary",
-                error && "peer-focus:text-destructive"
-            )}
-        >
-            {label}
-        </Label>
-    </div>
-);
-
-// Local component for Floating Select with Icon
-interface FloatingSelectWithIconProps {
-    label: string;
-    Icon: React.ElementType;
-    colorClass: string;
-    value: string;
-    onValueChange: (value: string) => void;
-    options: { value: string; label: string; icon?: React.ElementType; color?: string }[];
-    placeholder: string;
-    disabled?: boolean;
-    error?: boolean;
-}
-
-const FloatingSelectWithIcon = ({ label, Icon, colorClass, value, onValueChange, options, placeholder, disabled, error }: FloatingSelectWithIconProps) => (
-    <div className="relative pt-5">
-        <Icon className={cn("absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 transition-colors z-10", colorClass)} />
-        <Select value={value} onValueChange={onValueChange} disabled={disabled}>
-            <SelectTrigger 
-                className={cn(
-                    "h-12 pl-10 pt-4 pb-2 bg-muted/50 border-border focus-visible:ring-offset-0 transition-all duration-200 peer text-base",
-                    error && "border-destructive focus-visible:ring-destructive/50",
-                    disabled && "opacity-70 cursor-not-allowed"
-                )}
-            >
-                <SelectValue placeholder={placeholder} />
-            </SelectTrigger>
-            <SelectContent>
-                {options.map(opt => {
-                    const OptIcon = opt.icon;
-                    return (
-                        <SelectItem key={opt.value} value={opt.value}>
-                            <span className={cn("flex items-center gap-2 text-sm", opt.color)}>
-                                {OptIcon && <OptIcon className="w-4 h-4" />}
-                                {opt.label}
-                            </span>
-                        </SelectItem>
-                    );
-                })}
-            </SelectContent>
-        </Select>
-        <Label
-            className={cn(
-                "absolute left-10 top-1/2 -translate-y-1/2 text-sm text-muted-foreground transition-all duration-200 pointer-events-none",
-                "peer-placeholder-shown:top-1/2 peer-placeholder-shown:text-base",
-                "peer-focus:top-2 peer-focus:text-xs peer-focus:left-3 peer-focus:text-primary",
-                value && value !== "" && "top-2 text-xs left-3 text-primary",
-                error && "peer-focus:text-destructive"
-            )}
-        >
-            label
-        </Label>
-    </div>
-);
-
+// --- Component Definition ---
 
 export function MovimentarContaModal({
   open,
@@ -193,7 +114,6 @@ export function MovimentarContaModal({
   const [categoryId, setCategoryId] = useState<string | null>(null);
   const [description, setDescription] = useState("");
   
-  // Transfer/Link specific states
   const [destinationAccountId, setDestinationAccountId] = useState<string | null>(null);
   const [tempInvestmentId, setTempInvestmentId] = useState<string | null>(null);
   const [tempLoanId, setTempLoanId] = useState<string | null>(null);
@@ -202,13 +122,13 @@ export function MovimentarContaModal({
   const [tempNumeroContrato, setTempNumeroContrato] = useState<string>('');
   const [tempParcelaId, setTempParcelaId] = useState<string | null>(null);
   
-  // Insurance Linking
   const [tempSeguroId, setTempSeguroId] = useState<string | null>(null);
   const [tempSeguroParcelaId, setTempSeguroParcelaId] = useState<string | null>(null);
   
-  const [activeTab, setActiveTab] = useState("simples");
+  const [activeTab, setActiveTab] = useState<'simples' | 'vinculo'>('simples');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [searchCategory, setSearchCategory] = useState('');
   
-  // --- Dynamic Calculations ---
   const isEditing = !!editingTransaction;
   const selectedAccount = accounts.find(a => a.id === accountId);
   const availableOperations = selectedAccount ? getAvailableOperationTypes(selectedAccount.accountType) : [];
@@ -232,23 +152,11 @@ export function MovimentarContaModal({
   
   const selectedOperationConfig = OPERATION_CONFIG[operationType || 'despesa'];
   const HeaderIcon = selectedOperationConfig?.icon || DollarSign;
-  const headerColorClass = selectedOperationConfig?.colorClass || 'text-primary';
-  const headerBaseColor = selectedOperationConfig?.baseColor || 'hsl(var(--primary))';
-  const headerTailwindColor = selectedOperationConfig?.tailwindColor || 'blue-500';
   
   const isAmountAutoFilled = (isLoanPayment && tempLoanId && tempParcelaId) || (isInsurancePayment && tempSeguroId && tempSeguroParcelaId);
   
-  // --- Validation State ---
-  const [errors, setErrors] = useState({
-      accountId: false, date: false, amount: false, operationType: false, categoryId: false,
-      destinationAccountId: false, tempInvestmentId: false, tempLoanId: false, tempParcelaId: false,
-      tempVehicleOperation: false, tempNumeroContrato: false, tempSeguroId: false, tempSeguroParcelaId: false,
-  });
-  
-  // Filter loans to only show active ones for payment
   const activeLoans = useMemo(() => loans.filter(l => l.id.startsWith('loan_')), [loans]);
   
-  // Available Seguros (Active vehicles only)
   const availableSeguros = useMemo(() => {
       return segurosVeiculo.filter(s => {
           const vehicle = veiculos.find(v => v.id === s.veiculoId);
@@ -256,7 +164,6 @@ export function MovimentarContaModal({
       });
   }, [segurosVeiculo, veiculos]);
   
-  // Available Parcels for selected Seguro
   const availableSeguroParcelas = useMemo(() => {
       if (!tempSeguroId) return [];
       const seguro = segurosVeiculo.find(s => s.id === parseInt(tempSeguroId));
@@ -265,7 +172,6 @@ export function MovimentarContaModal({
       return seguro.parcelas.filter(p => !p.paga);
   }, [tempSeguroId, segurosVeiculo]);
   
-  // Filter available installments for the selected loan
   const availableInstallments = useMemo(() => {
     if (!tempLoanId) return [];
     const loan = loans.find(l => l.id === tempLoanId);
@@ -273,19 +179,52 @@ export function MovimentarContaModal({
     
     return loan.parcelas.filter(p => !p.paga);
   }, [tempLoanId, loans]);
+  
+  const filteredCategories = useMemo(() => {
+    if (!searchCategory) return availableCategories;
+    const lowerCaseSearch = searchCategory.toLowerCase();
+    return availableCategories.filter(c => c.label.toLowerCase().includes(lowerCaseSearch));
+  }, [availableCategories, searchCategory]);
+  
+  const currentBalance = useMemo(() => {
+    // Placeholder for current balance, assuming the account object has a 'balance' property
+    return selectedAccount?.initialBalance || 0; 
+  }, [selectedAccount]);
 
-  // Reset state when modal opens/changes
+  // --- Validation Logic ---
+  const validationErrors = useMemo(() => {
+    const parsedAmount = parseFromBR(amount);
+    
+    const errors = {
+      amount: parsedAmount <= 0,
+      account: !accountId,
+      operation: !operationType,
+      category: isCategorizable && !isInsurancePayment && !categoryId,
+      transfer: isTransfer && !destinationAccountId,
+      investment: isInvestmentFlow && !tempInvestmentId,
+      loanPayment: isLoanPayment && (!tempLoanId || !tempParcelaId),
+      loanLiberation: isLoanLiberation && !tempNumeroContrato,
+      vehicle: isVehicle && !tempVehicleOperation,
+      insurancePayment: isInsurancePayment && (!tempSeguroId || !tempSeguroParcelaId),
+    };
+    
+    return errors;
+  }, [amount, accountId, operationType, isCategorizable, isInsurancePayment, categoryId, isTransfer, destinationAccountId, isInvestmentFlow, tempInvestmentId, isLoanPayment, tempLoanId, tempParcelaId, isLoanLiberation, tempNumeroContrato, isVehicle, tempVehicleOperation, tempSeguroId, tempSeguroParcelaId]);
+
+  const isValid = useMemo(() => !Object.values(validationErrors).some(error => error), [validationErrors]);
+
+  // --- Effects ---
+  
   useEffect(() => {
     if (open) {
       if (editingTransaction) {
         setAccountId(editingTransaction.accountId);
         setDate(editingTransaction.date);
-        setAmount(editingTransaction.amount.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
+        setAmount(formatToBR(editingTransaction.amount));
         setOperationType(editingTransaction.operationType);
         setCategoryId(editingTransaction.categoryId);
         setDescription(editingTransaction.description);
         
-        // Links
         setDestinationAccountId(editingTransaction.links?.transferGroupId ? accounts.find(a => a.id !== editingTransaction.accountId && a.id === editingTransaction.links?.investmentId)?.id || null : null);
         setTempInvestmentId(editingTransaction.links?.investmentId || null);
         setTempLoanId(editingTransaction.links?.loanId || null);
@@ -294,7 +233,6 @@ export function MovimentarContaModal({
         setTempTipoVeiculo(editingTransaction.meta?.tipoVeiculo || 'carro');
         setTempNumeroContrato(editingTransaction.meta?.numeroContrato || '');
         
-        // NEW: Insurance links
         if (editingTransaction.links?.vehicleTransactionId) {
             const [seguroIdStr, parcelaNumStr] = editingTransaction.links.vehicleTransactionId.split('_');
             setTempSeguroId(seguroIdStr || null);
@@ -305,7 +243,6 @@ export function MovimentarContaModal({
         }
         
       } else {
-        // NEW TRANSACTION INITIALIZATION
         setAccountId(selectedAccountId || accounts[0]?.id || '');
         setDate(new Date().toISOString().split('T')[0]);
         setAmount("");
@@ -322,23 +259,11 @@ export function MovimentarContaModal({
         setTempNumeroContrato('');
         setTempSeguroId(null); 
         setTempSeguroParcelaId(null); 
-        setErrors({
-            accountId: false, date: false, amount: false, operationType: false, categoryId: false,
-            destinationAccountId: false, tempInvestmentId: false, tempLoanId: false, tempParcelaId: false,
-            tempVehicleOperation: false, tempNumeroContrato: false, tempSeguroId: false, tempSeguroParcelaId: false,
-        });
       }
+      setActiveTab(isVinculoRequired ? "vinculo" : "simples");
     }
   }, [open, editingTransaction, selectedAccountId, accounts]);
 
-  // Auto-select category if only one is available AND it's categorizable
-  useEffect(() => {
-    if (availableCategories.length === 1 && isCategorizable && !isInsurancePayment) {
-      setCategoryId(availableCategories[0].id);
-    }
-  }, [availableCategories, isCategorizable, isInsurancePayment]);
-
-  // Auto-select operation type if account changes (only for new transactions)
   useEffect(() => {
     if (selectedAccount && !isEditing) {
       if (!operationType || !availableOperations.includes(operationType)) {
@@ -347,34 +272,43 @@ export function MovimentarContaModal({
     }
   }, [selectedAccount, availableOperations, isEditing, operationType]);
   
-  // Auto-fill amount and description for loan payment
   useEffect(() => {
     if (isLoanPayment && tempLoanId && tempParcelaId) {
       const loan = loans.find(l => l.id === tempLoanId);
       const parcela = loan?.parcelas.find(p => p.numero === parseInt(tempParcelaId));
       
       if (parcela) {
-        setAmount(parcela.valor.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
+        setAmount(formatToBR(parcela.valor));
         setDescription(`Pagamento Empréstimo ${loan?.numeroContrato || 'N/A'} - Parcela ${parcela.numero}/${loan?.totalParcelas || 'N/A'}`);
       }
     }
   }, [isLoanPayment, tempLoanId, tempParcelaId, loans]);
   
-  // Auto-fill amount and description for insurance payment
   useEffect(() => {
     if (isInsurancePayment && tempSeguroId && tempSeguroParcelaId) {
       const seguro = segurosVeiculo.find(s => s.id === parseInt(tempSeguroId));
       const parcela = seguro?.parcelas.find(p => p.numero === parseInt(tempSeguroParcelaId));
       
       if (parcela) {
-        setAmount(parcela.valor.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
+        setAmount(formatToBR(parcela.valor));
         setDescription(`Pagamento Seguro ${seguro?.numeroApolice || 'N/A'} - Parcela ${parcela.numero}/${seguro?.numeroParcelas || 'N/A'}`);
       }
     }
   }, [isInsurancePayment, tempSeguroId, tempSeguroParcelaId, segurosVeiculo]);
+  
+  useEffect(() => {
+    if (categoryId && !description && isCategorizable) {
+      const category = categories.find(c => c.id === categoryId);
+      if (category?.label) {
+        setDescription(category.label);
+      }
+    }
+  }, [categoryId, categories, description, isCategorizable]);
 
   const handleAmountChange = (value: string) => {
-    let cleaned = value.replace(/[^\d,.]/g, '');
+    if (isAmountAutoFilled) return;
+    
+    let cleaned = value.replace(/[^\d,.-]/g, '');
     
     const parts = cleaned.split(/[,.]/);
     if (parts.length > 2) {
@@ -394,63 +328,27 @@ export function MovimentarContaModal({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    const parsedAmount = parseFloat(amount.replace(',', '.'));
-    
-    // Reset errors
-    setErrors({
-        accountId: false, date: false, amount: false, operationType: false, categoryId: false,
-        destinationAccountId: false, tempInvestmentId: false, tempLoanId: false, tempParcelaId: false,
-        tempVehicleOperation: false, tempNumeroContrato: false, tempSeguroId: false, tempSeguroParcelaId: false,
-    });
-
-    let hasError = false;
-    
-    if (!accountId) { setErrors(p => ({ ...p, accountId: true })); hasError = true; }
-    if (!date) { setErrors(p => ({ ...p, date: true })); hasError = true; }
-    if (parsedAmount <= 0 || isNaN(parsedAmount)) { setErrors(p => ({ ...p, amount: true })); hasError = true; }
-    if (!operationType) { setErrors(p => ({ ...p, operationType: true })); hasError = true; }
-    
-    // Validation for Categorizable flows
-    if (isCategorizable && !isInsurancePayment && !categoryId) { 
-        setErrors(p => ({ ...p, categoryId: true })); hasError = true; 
-    }
-    
-    // Validation for Insurance Payment
-    if (isInsurancePayment && (!tempSeguroId || !tempSeguroParcelaId)) {
-        if (!tempSeguroId) setErrors(p => ({ ...p, tempSeguroId: true }));
-        if (!tempSeguroParcelaId) setErrors(p => ({ ...p, tempSeguroParcelaId: true }));
-        hasError = true;
-    }
-    
-    // Validation for Vínculo flows
-    if (isTransfer && !destinationAccountId) { setErrors(p => ({ ...p, destinationAccountId: true })); hasError = true; }
-    if (isInvestmentFlow && !tempInvestmentId) { setErrors(p => ({ ...p, tempInvestmentId: true })); hasError = true; }
-    if (isLoanPayment && (!tempLoanId || !tempParcelaId)) { 
-        if (!tempLoanId) setErrors(p => ({ ...p, tempLoanId: true }));
-        if (!tempParcelaId) setErrors(p => ({ ...p, tempParcelaId: true }));
-        hasError = true;
-    }
-    if (isLoanLiberation && !tempNumeroContrato) { setErrors(p => ({ ...p, tempNumeroContrato: true })); hasError = true; }
-    if (isVehicle && !tempVehicleOperation) { setErrors(p => ({ ...p, tempVehicleOperation: true })); hasError = true; }
-    
-    if (hasError) {
+    if (!isValid) {
         toast.error("Preencha todos os campos obrigatórios ou revise os vínculos.");
         return;
     }
     
-    const flow = getFlowTypeFromOperation(operationType, isVehicle ? tempVehicleOperation || undefined : undefined);
-    const domain = getDomainFromOperation(operationType);
+    setIsSubmitting(true);
+    
+    const parsedAmount = parseFromBR(amount);
+    const flow = getFlowTypeFromOperation(operationType!, isVehicle ? tempVehicleOperation || undefined : undefined);
+    const domain = getDomainFromOperation(operationType!);
     
     const baseTx: TransacaoCompleta = {
       id: editingTransaction?.id || generateTransactionId(),
       date,
       accountId,
       flow,
-      operationType,
+      operationType: operationType!,
       domain,
       amount: parsedAmount,
       categoryId: isCategorizable || isInsurancePayment ? categoryId : null,
-      description: description.trim() || OPERATION_TYPE_LABELS[operationType] || 'Movimentação',
+      description: description.trim() || OPERATION_TYPE_LABELS[operationType!] || 'Movimentação',
       links: {
         investmentId: tempInvestmentId,
         loanId: tempLoanId,
@@ -484,17 +382,15 @@ export function MovimentarContaModal({
     }
     
     onSubmit(baseTx, transferGroup);
+    setIsSubmitting(false);
     onOpenChange(false);
-    toast.success(isEditing ? "Transação atualizada!" : "Transação registrada!");
   };
-  
-  // --- Component Rendering Data ---
   
   const accountOptions = accounts.map(a => ({
       value: a.id,
       label: `${ACCOUNT_TYPE_LABELS[a.accountType]} - ${a.name}`,
-      icon: Wallet,
-      color: headerColorClass,
+      accountType: a.accountType,
+      name: a.name,
   }));
   
   const operationOptions = availableOperations.map(op => {
@@ -510,8 +406,8 @@ export function MovimentarContaModal({
   const destinationAccountOptions = accounts.filter(a => a.id !== accountId).map(a => ({
       value: a.id,
       label: `${ACCOUNT_TYPE_LABELS[a.accountType]} - ${a.name}`,
-      icon: Building2,
-      color: 'text-primary',
+      accountType: a.accountType,
+      name: a.name,
   }));
   
   const investmentOptions = investments.map(i => ({
@@ -551,356 +447,551 @@ export function MovimentarContaModal({
   
   const categoryOptions = availableCategories.map(c => ({
       value: c.id,
-      label: `${c.icon} ${c.label}`,
+      label: c.label,
       icon: Tags,
-      color: c.nature === 'receita' ? 'text-success' : 'text-destructive',
+      nature: c.nature,
+      iconComponent: c.icon,
   }));
-  
-  // Set default tab based on requirement
-  useEffect(() => {
-      if (open) {
-          setActiveTab(isVinculoRequired ? "vinculado" : "simples");
-      }
-  }, [open, isVinculoRequired]);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <ResizableDialogContent 
-        storageKey="movimentar_conta_modal"
-        initialWidth={500}
-        initialHeight={isVinculoRequired ? 750 : 600}
-        minWidth={400}
-        minHeight={500}
-        className="max-w-lg bg-card border-border overflow-hidden flex flex-col p-0 shadow-lg animate-fade-in"
-      >
-        {/* SEÇÃO 1: HEADER DINÂMICO */}
-        <DialogHeader className="p-6 pb-0 shrink-0 border-b border-border/50">
-          <DialogTitle className="flex items-center gap-3">
-            <div className={cn("p-2 rounded-lg", headerColorClass.replace('text-', 'bg-') + '/10')}>
-              <HeaderIcon className={cn("w-6 h-6", headerColorClass)} />
+      <DialogContent className="max-w-md bg-card border-border overflow-hidden flex flex-col p-0 shadow-lg animate-fade-in">
+        
+        {/* CABEÇALHO DINÂMICO */}
+        <DialogHeader className="p-6 pb-4 border-b border-border/50 shrink-0">
+          <div className="flex items-center gap-3 mb-2">
+            <div className={cn(
+              "w-10 h-10 rounded-xl flex items-center justify-center shrink-0",
+              getOperationColor(operationType, 'iconBg')
+            )}>
+              <HeaderIcon className="w-5 h-5 text-white" />
             </div>
-            <span className="text-2xl font-bold">{isEditing ? "Editar Transação" : "Nova Movimentação"}</span>
-          </DialogTitle>
-          <DialogDescription className="text-sm">
-            {isEditing ? "Atualize os detalhes da transação." : "Registre uma nova entrada, saída ou transferência."}
-          </DialogDescription>
+            <div>
+              <DialogTitle className="text-xl font-bold text-foreground">
+                {isEditing ? "Editar Transação" : "Nova Movimentação"}
+              </DialogTitle>
+              <DialogDescription className="text-sm text-muted-foreground mt-1">
+                {isEditing ? "Atualize os detalhes da transação" : "Registre uma nova transação financeira"}
+              </DialogDescription>
+            </div>
+          </div>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="flex-1 flex flex-col overflow-y-auto p-6 space-y-6">
           
-          {/* SEÇÃO 2: DETALHES ESSENCIAIS (GRID 2x2) */}
-          <div className="space-y-4">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {/* 1. Conta */}
-                <FloatingSelectWithIcon
-                    label="Conta"
-                    Icon={Wallet}
-                    colorClass={errors.accountId ? 'text-destructive' : 'text-primary'}
-                    value={accountId}
-                    onValueChange={(v) => {
-                        setAccountId(v);
-                        setErrors(p => ({ ...p, accountId: false }));
-                    }}
-                    options={accountOptions}
-                    placeholder="Selecione a conta"
-                    disabled={isEditing}
-                    error={errors.accountId}
+          {/* GRID DE DETALHES ESSENCIAIS (2x2) */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            
+            {/* 1. Conta */}
+            <div className="space-y-2">
+              <Label className="text-xs font-medium text-muted-foreground flex items-center gap-1">
+                <Wallet className="w-3 h-3" /> Conta *
+              </Label>
+              <Select 
+                value={accountId} 
+                onValueChange={(v) => {
+                    setAccountId(v);
+                    const newAccount = accounts.find(a => a.id === v);
+                    const newOps = getAvailableOperationTypes(newAccount?.accountType || 'corrente');
+                    setOperationType(newOps[0] || null);
+                }}
+                disabled={isEditing}
+              >
+                <SelectTrigger className={cn("h-12 bg-background border-2 hover:border-primary/50 transition-colors rounded-xl", validationErrors.account && "border-destructive")}>
+                  <div className="flex items-center gap-3">
+                    <div className={cn(
+                      "w-8 h-8 rounded-lg flex items-center justify-center shrink-0",
+                      getAccountColor(selectedAccount?.accountType, 'bg')
+                    )}>
+                      <Wallet className="w-4 h-4 text-white" />
+                    </div>
+                    <div className="text-left truncate">
+                      <div className="font-medium text-sm truncate">{selectedAccount?.name}</div>
+                      <div className="text-xs text-muted-foreground">
+                        {ACCOUNT_TYPE_LABELS[selectedAccount?.accountType || 'corrente']}
+                      </div>
+                    </div>
+                  </div>
+                </SelectTrigger>
+                <SelectContent>
+                    {accountOptions.map(a => (
+                        <SelectItem key={a.value} value={a.value}>
+                            <div className="flex items-center gap-3">
+                                <div className={cn(
+                                    "w-8 h-8 rounded-lg flex items-center justify-center shrink-0",
+                                    getAccountColor(a.accountType, 'bg')
+                                )}>
+                                    <Wallet className="w-4 h-4 text-white" />
+                                </div>
+                                <div className="text-left">
+                                    <div className="font-medium">{a.name}</div>
+                                    <div className="text-xs text-muted-foreground">
+                                        {ACCOUNT_TYPE_LABELS[a.accountType]}
+                                    </div>
+                                </div>
+                            </div>
+                        </SelectItem>
+                    ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* 2. Tipo Operação */}
+            <div className="space-y-2">
+              <Label className="text-xs font-medium text-muted-foreground flex items-center gap-1">
+                <Tags className="w-3 h-3" /> Operação *
+              </Label>
+              <Select 
+                value={operationType || ''} 
+                onValueChange={(v) => {
+                    setOperationType(v as OperationType);
+                    setCategoryId(null); 
+                    setTempInvestmentId(null);
+                    setTempLoanId(null);
+                    setTempParcelaId(null);
+                    setDestinationAccountId(null);
+                    setTempVehicleOperation(null);
+                    setTempSeguroId(null); 
+                    setTempSeguroParcelaId(null); 
+                }}
+                disabled={isEditing}
+              >
+                <SelectTrigger className={cn("h-12 bg-background border-2 hover:border-primary/50 transition-colors rounded-xl", validationErrors.operation && "border-destructive")}>
+                    <div className="flex items-center gap-3">
+                        <HeaderIcon className={cn("w-5 h-5", getOperationColor(operationType, 'text'))} />
+                        <span className="font-medium text-sm">{operationType ? OPERATION_TYPE_LABELS[operationType] : 'Selecione...'}</span>
+                    </div>
+                </SelectTrigger>
+                <SelectContent>
+                    {operationOptions.map(op => (
+                        <SelectItem key={op.value} value={op.value}>
+                            <span className={cn("flex items-center gap-2 text-sm", op.color)}>
+                                <op.icon className="w-4 h-4" />
+                                {op.label}
+                            </span>
+                        </SelectItem>
+                    ))}
+                </SelectContent>
+              </Select>
+            </div>
+            
+            {/* 3. Data */}
+            <div className="space-y-2">
+              <Label className="text-xs font-medium text-muted-foreground flex items-center gap-1">
+                <Calendar className="w-3 h-3" /> Data *
+              </Label>
+              <Input
+                type="date"
+                value={date}
+                onChange={(e) => setDate(e.target.value)}
+                className="h-12 text-base border-2 rounded-xl"
+              />
+            </div>
+
+            {/* 4. Valor com botões rápidos */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <Label className="text-xs font-medium text-muted-foreground">Valor (R$) *</Label>
+                <span className="text-xs text-muted-foreground">
+                  Saldo: {formatCurrency(currentBalance)}
+                </span>
+              </div>
+              <div className="relative group">
+                <DollarSign className={cn("absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-muted-foreground group-focus-within:text-primary transition-colors", validationErrors.amount && "text-destructive")} />
+                <Input
+                  value={amount}
+                  onChange={(e) => handleAmountChange(e.target.value)}
+                  className={cn("h-12 pl-10 text-lg font-semibold border-2 rounded-xl hover:border-primary/50 focus:border-primary focus:ring-2 focus:ring-primary/20", validationErrors.amount && "border-destructive")}
+                  placeholder="0,00"
+                  disabled={isAmountAutoFilled}
                 />
-                
-                {/* 2. Data */}
-                <FloatingInputWithIcon
-                    id="date"
-                    label="Data"
-                    Icon={Calendar}
-                    colorClass={errors.date ? 'text-destructive' : 'text-primary'}
-                    type="date"
-                    value={date}
-                    onChange={(e) => {
-                        setDate(e.target.value);
-                        setErrors(p => ({ ...p, date: false }));
-                    }}
-                    error={errors.date}
-                />
-                
-                {/* 3. Tipo Operação */}
-                <FloatingSelectWithIcon
-                    label="Tipo de Operação"
-                    Icon={HeaderIcon}
-                    colorClass={errors.operationType ? 'text-destructive' : headerColorClass}
-                    value={operationType || ''}
-                    onValueChange={(v) => {
-                        setOperationType(v as OperationType);
-                        setCategoryId(null); 
-                        setTempInvestmentId(null);
-                        setTempLoanId(null);
-                        setTempParcelaId(null);
-                        setDestinationAccountId(null);
-                        setTempVehicleOperation(null);
-                        setTempSeguroId(null); 
-                        setTempSeguroParcelaId(null); 
-                        setErrors(p => ({ ...p, operationType: false }));
-                    }}
-                    options={operationOptions}
-                    placeholder="Selecione a operação"
-                    disabled={isEditing}
-                    error={errors.operationType}
-                />
-                
-                {/* 4. Valor */}
-                <FloatingInputWithIcon
-                    id="amount"
-                    label="Valor (R$)"
-                    Icon={DollarSign}
-                    colorClass={errors.amount ? 'text-destructive' : headerColorClass}
-                    type="text"
-                    inputMode="decimal"
-                    value={amount}
-                    onChange={(e) => {
-                        handleAmountChange(e.target.value);
-                        setErrors(p => ({ ...p, amount: false }));
-                    }}
-                    disabled={!!isAmountAutoFilled}
-                    error={errors.amount}
-                />
+                {!isAmountAutoFilled && (
+                    <div className="absolute right-2 top-1/2 transform -translate-y-1/2 flex gap-1">
+                      {[100, 500, 1000].map(value => (
+                        <Button
+                          key={value}
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="h-6 px-2 text-xs rounded-lg"
+                          onClick={() => setAmount(formatToBR(parseFromBR(amount) + value))}
+                        >
+                          +{value}
+                        </Button>
+                      ))}
+                    </div>
+                )}
+              </div>
             </div>
           </div>
           
-          {/* SEÇÃO 3: SISTEMA DE ABAS */}
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col min-h-0">
-            <TabsList className="bg-muted/50 w-full grid grid-cols-2 shrink-0">
-              <TabsTrigger value="simples" className="text-sm data-[state=active]:bg-primary data-[state=active]:text-primary-foreground transition-colors duration-300">
-                <Tags className="w-4 h-4 mr-2" /> Classificação Simples
-              </TabsTrigger>
-              <TabsTrigger 
-                value="vinculado" 
+          {/* SISTEMA DE ABAS ELEGANTE */}
+          <div className="space-y-4">
+            <div className="flex gap-1 p-1 bg-muted/30 rounded-xl">
+              <button
+                type="button"
+                onClick={() => setActiveTab('simples')}
                 className={cn(
-                    "text-sm data-[state=active]:bg-primary data-[state=active]:text-primary-foreground transition-colors duration-300",
-                    !isVinculoRequired && "opacity-50 cursor-not-allowed"
+                  "flex-1 py-2.5 px-4 rounded-xl font-medium transition-all",
+                  activeTab === 'simples'
+                    ? "bg-background shadow-sm text-foreground"
+                    : "text-muted-foreground hover:text-foreground hover:bg-background/50"
+                )}
+              >
+                <div className="flex items-center justify-center gap-2">
+                  <Tags className="w-4 h-4" />
+                  Classificação Simples
+                </div>
+              </button>
+              
+              <button
+                type="button"
+                onClick={() => setActiveTab('vinculo')}
+                className={cn(
+                  "flex-1 py-2.5 px-4 rounded-xl font-medium transition-all",
+                  activeTab === 'vinculo'
+                    ? "bg-background shadow-sm text-foreground"
+                    : "text-muted-foreground hover:text-foreground hover:bg-background/50",
+                  !isVinculoRequired && "opacity-50 cursor-not-allowed"
                 )}
                 disabled={!isVinculoRequired}
               >
-                <ArrowLeftRight className="w-4 h-4 mr-2" /> Vínculo / Contraparte
-              </TabsTrigger>
-            </TabsList>
+                <div className="flex items-center justify-center gap-2">
+                  <ArrowLeftRight className="w-4 h-4" />
+                  Vínculo / Contraparte
+                </div>
+              </button>
+            </div>
 
             {/* CONTEÚDO ABA "SIMPLES" */}
-            <TabsContent value="simples" className="mt-4 flex-1 overflow-y-auto pr-1 space-y-4 animate-slide-in-left">
-                {/* Categoria Selector */}
+            {activeTab === 'simples' && (
+              <div className="space-y-5 pt-2">
+                {/* Categoria com search */}
                 <div className="space-y-2">
-                    <Label htmlFor="categoryId" className="text-sm">Categoria {isCategorizable || isInsurancePayment ? '*' : ''}</Label>
-                    <Select 
-                        value={categoryId || ''} 
-                        onValueChange={(v) => {
-                            setCategoryId(v);
-                            if (v !== seguroCategory?.id) {
-                                setTempSeguroId(null);
-                                setTempSeguroParcelaId(null);
-                            }
-                            setErrors(p => ({ ...p, categoryId: false }));
-                        }}
-                        disabled={isCategoryDisabled}
-                    >
-                        <SelectTrigger className={cn("h-10 text-base", errors.categoryId && "border-destructive")}>
-                            <SelectValue placeholder="Selecione a categoria" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            {categoryOptions.map(c => (
-                                <SelectItem key={c.value} value={c.value}>
-                                    {c.label}
-                                </SelectItem>
-                            ))}
-                        </SelectContent>
-                    </Select>
-                    {errors.categoryId && <p className="text-xs text-destructive">Categoria é obrigatória.</p>}
+                  <Label className="text-sm font-medium text-foreground">
+                    Categoria {isCategorizable || isInsurancePayment ? '*' : ''}
+                  </Label>
+                  <Select 
+                    value={categoryId || ''} 
+                    onValueChange={(v) => {
+                        setCategoryId(v);
+                        if (v !== seguroCategory?.id) {
+                            setTempSeguroId(null);
+                            setTempSeguroParcelaId(null);
+                        }
+                    }}
+                    disabled={isCategoryDisabled}
+                  >
+                    <SelectTrigger className={cn("h-12 rounded-xl border-2", validationErrors.category && "border-destructive")}>
+                      {categoryId ? (
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+                            {categoryOptions.find(c => c.value === categoryId)?.iconComponent || <Tags className="w-4 h-4" />}
+                          </div>
+                          <span>{categoryOptions.find(c => c.value === categoryId)?.label}</span>
+                        </div>
+                      ) : (
+                        <span className="text-muted-foreground">Selecione uma categoria</span>
+                      )}
+                    </SelectTrigger>
+                    <SelectContent className="max-h-[300px]">
+                      <div className="p-2 border-b border-border sticky top-0 bg-card z-10">
+                        <Input 
+                            placeholder="Buscar categoria..." 
+                            className="h-9" 
+                            value={searchCategory}
+                            onChange={(e) => setSearchCategory(e.target.value)}
+                        />
+                      </div>
+                      {filteredCategories.map(category => (
+                        <SelectItem key={category.value} value={category.value}>
+                          <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+                              {category.iconComponent || <Tags className="w-4 h-4" />}
+                            </div>
+                            <div className="text-left">
+                              <div className="font-medium">{category.label}</div>
+                              <div className="text-xs text-muted-foreground">
+                                {category.nature === 'receita' ? 'Receita' : 'Despesa'}
+                              </div>
+                            </div>
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {validationErrors.category && <p className="text-xs text-destructive mt-1">Categoria é obrigatória.</p>}
                 </div>
-                
-                {/* Descrição */}
+
+                {/* Descrição com contador */}
                 <div className="space-y-2">
-                    <Label htmlFor="description" className="text-sm">Descrição</Label>
-                    <Input
-                        id="description"
-                        placeholder="Descrição da transação"
-                        value={description}
-                        onChange={(e) => setDescription(e.target.value)}
-                        className="h-10 text-base"
-                        maxLength={150}
-                    />
-                    <p className="text-xs text-muted-foreground text-right">{description.length}/150</p>
+                  <div className="flex items-center justify-between">
+                    <Label className="text-sm font-medium text-foreground">
+                      Descrição
+                    </Label>
+                    <span className={cn(
+                      "text-xs",
+                      description.length > 140 ? "text-destructive" : "text-muted-foreground"
+                    )}>
+                      {description.length}/150
+                    </span>
+                  </div>
+                  <textarea
+                    value={description}
+                    onChange={(e) => setDescription(e.target.value.slice(0, 150))}
+                    className="w-full min-h-[80px] p-3 border-2 border-input rounded-xl resize-none focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
+                    placeholder="Descreva esta transação..."
+                    maxLength={150}
+                  />
                 </div>
-            </TabsContent>
+              </div>
+            )}
 
             {/* CONTEÚDO ABA "VINCULADO" */}
-            <TabsContent value="vinculado" className="mt-4 flex-1 overflow-y-auto pr-1 space-y-4 animate-slide-in-right">
+            {activeTab === 'vinculo' && (
+              <div className="space-y-5 pt-2">
                 
                 {/* Transferência */}
                 {isTransfer && (
-                    <div className={cn("glass-card p-4 space-y-3 border-l-4 shadow-md", `border-${OPERATION_CONFIG.transferencia.tailwindColor}`)}>
-                        <h5 className={cn("font-semibold text-base flex items-center gap-2", OPERATION_CONFIG.transferencia.colorClass)}><ArrowLeftRight className="w-4 h-4" /> Transferência</h5>
-                        <FloatingSelectWithIcon
-                            label="Conta Destino"
-                            Icon={Building2}
-                            colorClass={errors.destinationAccountId ? 'text-destructive' : OPERATION_CONFIG.transferencia.colorClass}
-                            value={destinationAccountId || ''}
-                            onValueChange={(v) => {
-                                setDestinationAccountId(v);
-                                setErrors(p => ({ ...p, destinationAccountId: false }));
-                            }}
-                            options={destinationAccountOptions}
-                            placeholder="Selecione a conta destino"
-                            error={errors.destinationAccountId}
-                        />
+                  <div className={cn("p-4 border border-border rounded-xl shadow-sm", getOperationColor('transferencia', 'bg'))}>
+                    <div className="flex items-center gap-3 mb-3">
+                      <div className={cn("w-10 h-10 rounded-lg flex items-center justify-center shrink-0", getOperationColor('transferencia', 'iconBg'))}>
+                        <ArrowLeftRight className="w-5 h-5 text-white" />
+                      </div>
+                      <div>
+                        <h4 className="font-semibold text-foreground">Transferência entre contas</h4>
+                        <p className="text-sm text-muted-foreground">Envie dinheiro para outra conta</p>
+                      </div>
                     </div>
+                    <Select 
+                        value={destinationAccountId || ''} 
+                        onValueChange={setDestinationAccountId}
+                    >
+                      <SelectTrigger className={cn("h-12 rounded-xl border-2", validationErrors.transfer && "border-destructive")}>
+                        <div className="flex items-center gap-3">
+                          <Wallet className="w-5 h-5 text-muted-foreground" />
+                          <span>{destinationAccountId ? destinationAccountOptions.find(a => a.value === destinationAccountId)?.name : 'Selecione a conta destino'}</span>
+                        </div>
+                      </SelectTrigger>
+                      <SelectContent>
+                        {destinationAccountOptions.map(a => (
+                            <SelectItem key={a.value} value={a.value}>
+                                <div className="flex items-center gap-3">
+                                    <div className={cn(
+                                        "w-8 h-8 rounded-lg flex items-center justify-center shrink-0",
+                                        getAccountColor(a.accountType, 'bg')
+                                    )}>
+                                        <Wallet className="w-4 h-4 text-white" />
+                                    </div>
+                                    <div className="text-left">
+                                        <div className="font-medium">{a.name}</div>
+                                        <div className="text-xs text-muted-foreground">
+                                            {ACCOUNT_TYPE_LABELS[a.accountType]}
+                                        </div>
+                                    </div>
+                                </div>
+                            </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    {validationErrors.transfer && <p className="text-xs text-destructive mt-1">Conta destino é obrigatória.</p>}
+                  </div>
                 )}
-                
-                {/* Fluxo de Investimento */}
-                {isInvestmentFlow && (
-                    <div className={cn("glass-card p-4 space-y-3 border-l-4 shadow-md", `border-${OPERATION_CONFIG.aplicacao.tailwindColor}`)}>
-                        <h5 className={cn("font-semibold text-base flex items-center gap-2", OPERATION_CONFIG.aplicacao.colorClass)}><TrendingUp className="w-4 h-4" /> {operationType === 'aplicacao' ? 'Aplicação' : 'Resgate'}</h5>
-                        <FloatingSelectWithIcon
-                            label="Conta de Investimento"
-                            Icon={PiggyBank}
-                            colorClass={errors.tempInvestmentId ? 'text-destructive' : OPERATION_CONFIG.aplicacao.colorClass}
-                            value={tempInvestmentId || ''}
-                            onValueChange={(v) => {
-                                setTempInvestmentId(v);
-                                setErrors(p => ({ ...p, tempInvestmentId: false }));
-                            }}
-                            options={investmentOptions}
-                            placeholder="Selecione o investimento"
-                            error={errors.tempInvestmentId}
-                        />
-                    </div>
-                )}
-                
+
                 {/* Pagamento Empréstimo */}
                 {isLoanPayment && (
-                    <div className={cn("glass-card p-4 space-y-3 border-l-4 shadow-md", `border-${OPERATION_CONFIG.pagamento_emprestimo.tailwindColor}`)}>
-                        <h5 className={cn("font-semibold text-base flex items-center gap-2", OPERATION_CONFIG.pagamento_emprestimo.colorClass)}><CreditCard className="w-4 h-4" /> Pagamento de Empréstimo</h5>
-                        <div className="grid grid-cols-2 gap-4">
-                            <FloatingSelectWithIcon
-                                label="Contrato de Empréstimo"
-                                Icon={Building2}
-                                colorClass={errors.tempLoanId ? 'text-destructive' : OPERATION_CONFIG.pagamento_emprestimo.colorClass}
-                                value={tempLoanId || ''}
-                                onValueChange={(v) => {
-                                    setTempLoanId(v);
-                                    setTempParcelaId(null);
-                                    setErrors(p => ({ ...p, tempLoanId: false, tempParcelaId: false }));
-                                }}
-                                options={loanOptions}
-                                placeholder="Selecione o contrato"
-                                error={errors.tempLoanId}
-                            />
-                            <FloatingSelectWithIcon
-                                label="Parcela"
-                                Icon={Calendar}
-                                colorClass={errors.tempParcelaId ? 'text-destructive' : OPERATION_CONFIG.pagamento_emprestimo.colorClass}
-                                value={tempParcelaId || ''}
-                                onValueChange={(v) => {
-                                    setTempParcelaId(v);
-                                    setErrors(p => ({ ...p, tempParcelaId: false }));
-                                }}
-                                options={installmentOptions}
-                                placeholder="Selecione a parcela"
-                                disabled={!tempLoanId}
-                                error={errors.tempParcelaId}
-                            />
-                        </div>
+                  <div className={cn("p-4 border border-border rounded-xl shadow-sm", getOperationColor('pagamento_emprestimo', 'bg'))}>
+                    <div className="flex items-center gap-3 mb-3">
+                      <div className={cn("w-10 h-10 rounded-lg flex items-center justify-center shrink-0", getOperationColor('pagamento_emprestimo', 'iconBg'))}>
+                        <CreditCard className="w-5 h-5 text-white" />
+                      </div>
+                      <div>
+                        <h4 className="font-semibold text-foreground">Pagamento de Empréstimo</h4>
+                        <p className="text-sm text-muted-foreground">Quitar parcela do contrato</p>
+                      </div>
                     </div>
+                    <div className="grid grid-cols-2 gap-3">
+                      <Select 
+                        value={tempLoanId || ''} 
+                        onValueChange={(v) => { setTempLoanId(v); setTempParcelaId(null); }}
+                      >
+                        <SelectTrigger className={cn("h-11 rounded-xl border-2", validationErrors.loanPayment && !tempLoanId && "border-destructive")}>
+                          {tempLoanId ? activeLoans.find(l => l.id === tempLoanId)?.institution : 'Contrato *'}
+                        </SelectTrigger>
+                        <SelectContent>
+                            {loanOptions.map(l => (
+                                <SelectItem key={l.value} value={l.value}>
+                                    {l.label}
+                                </SelectItem>
+                            ))}
+                        </SelectContent>
+                      </Select>
+                      <Select 
+                        value={tempParcelaId || ''} 
+                        onValueChange={setTempParcelaId} 
+                        disabled={!tempLoanId}
+                      >
+                        <SelectTrigger className={cn("h-11 rounded-xl border-2", validationErrors.loanPayment && tempLoanId && !tempParcelaId && "border-destructive")}>
+                          {tempParcelaId ? `P${tempParcelaId}` : 'Parcela *'}
+                        </SelectTrigger>
+                        <SelectContent>
+                            {installmentOptions.map(p => (
+                                <SelectItem key={p.value} value={p.value}>
+                                    {p.label}
+                                </SelectItem>
+                            ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    {validationErrors.loanPayment && <p className="text-xs text-destructive mt-1">Contrato e Parcela são obrigatórios.</p>}
+                  </div>
                 )}
                 
                 {/* Pagamento Seguro */}
                 {isInsurancePayment && (
-                    <div className="glass-card p-4 space-y-3 border-l-4 border-blue-500 shadow-md">
-                        <h5 className="font-semibold text-base text-blue-500 flex items-center gap-2"><Shield className="w-4 h-4" /> Pagamento de Seguro</h5>
-                        <div className="grid grid-cols-2 gap-4">
-                            <FloatingSelectWithIcon
-                                label="Seguro"
-                                Icon={Shield}
-                                colorClass={errors.tempSeguroId ? 'text-destructive' : 'text-blue-500'}
-                                value={tempSeguroId || ''}
-                                onValueChange={(v) => {
-                                    setTempSeguroId(v);
-                                    setTempSeguroParcelaId(null);
-                                    setErrors(p => ({ ...p, tempSeguroId: false, tempSeguroParcelaId: false }));
-                                }}
-                                options={seguroOptions}
-                                placeholder="Selecione o seguro"
-                                error={errors.tempSeguroId}
-                            />
-                            <FloatingSelectWithIcon
-                                label="Parcela"
-                                Icon={Calendar}
-                                colorClass={errors.tempSeguroParcelaId ? 'text-destructive' : 'text-blue-500'}
-                                value={tempSeguroParcelaId || ''}
-                                onValueChange={(v) => {
-                                    setTempSeguroParcelaId(v);
-                                    setErrors(p => ({ ...p, tempSeguroParcelaId: false }));
-                                }}
-                                options={seguroParcelaOptions}
-                                placeholder="Selecione a parcela"
-                                disabled={!tempSeguroId}
-                                error={errors.tempSeguroParcelaId}
-                            />
+                  <div className={cn("p-4 border border-border rounded-xl shadow-sm", getOperationColor('veiculo', 'bg'))}>
+                    <div className="flex items-center gap-3 mb-3">
+                      <div className={cn("w-10 h-10 rounded-lg flex items-center justify-center shrink-0", getOperationColor('veiculo', 'iconBg'))}>
+                        <Shield className="w-5 h-5 text-white" />
+                      </div>
+                      <div>
+                        <h4 className="font-semibold text-foreground">Pagamento de Seguro</h4>
+                        <p className="text-sm text-muted-foreground">Quitar parcela do seguro</p>
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-3">
+                      <Select 
+                        value={tempSeguroId || ''} 
+                        onValueChange={(v) => { setTempSeguroId(v); setTempSeguroParcelaId(null); }}
+                      >
+                        <SelectTrigger className={cn("h-11 rounded-xl border-2", validationErrors.insurancePayment && !tempSeguroId && "border-destructive")}>
+                          {tempSeguroId ? availableSeguros.find(s => String(s.id) === tempSeguroId)?.numeroApolice : 'Seguro *'}
+                        </SelectTrigger>
+                        <SelectContent>
+                            {seguroOptions.map(s => (
+                                <SelectItem key={s.value} value={s.value}>
+                                    {s.label}
+                                </SelectItem>
+                            ))}
+                        </SelectContent>
+                      </Select>
+                      <Select 
+                        value={tempSeguroParcelaId || ''} 
+                        onValueChange={setTempSeguroParcelaId} 
+                        disabled={!tempSeguroId}
+                      >
+                        <SelectTrigger className={cn("h-11 rounded-xl border-2", validationErrors.insurancePayment && tempSeguroId && !tempSeguroParcelaId && "border-destructive")}>
+                          {tempSeguroParcelaId ? `P${tempSeguroParcelaId}` : 'Parcela *'}
+                        </SelectTrigger>
+                        <SelectContent>
+                            {seguroParcelaOptions.map(p => (
+                                <SelectItem key={p.value} value={p.value}>
+                                    {p.label}
+                                </SelectItem>
+                            ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    {validationErrors.insurancePayment && <p className="text-xs text-destructive mt-1">Seguro e Parcela são obrigatórios.</p>}
+                  </div>
+                )}
+                
+                {/* Fluxo de Investimento */}
+                {isInvestmentFlow && (
+                    <div className={cn("p-4 border border-border rounded-xl shadow-sm", getOperationColor('aplicacao', 'bg'))}>
+                        <div className="flex items-center gap-3 mb-3">
+                            <div className={cn("w-10 h-10 rounded-lg flex items-center justify-center shrink-0", getOperationColor('aplicacao', 'iconBg'))}>
+                                <TrendingUp className="w-5 h-5 text-white" />
+                            </div>
+                            <div>
+                                <h4 className="font-semibold text-foreground">{operationType === 'aplicacao' ? 'Aplicação' : 'Resgate'}</h4>
+                                <p className="text-sm text-muted-foreground">Movimentação para conta de investimento</p>
+                            </div>
                         </div>
+                        <Select 
+                            value={tempInvestmentId || ''} 
+                            onValueChange={setTempInvestmentId}
+                        >
+                            <SelectTrigger className={cn("h-12 rounded-xl border-2", validationErrors.investment && "border-destructive")}>
+                                <div className="flex items-center gap-3">
+                                    <PiggyBank className="w-5 h-5 text-muted-foreground" />
+                                    <span>{tempInvestmentId ? investmentOptions.find(i => i.value === tempInvestmentId)?.label : 'Selecione o investimento *'}</span>
+                                </div>
+                            </SelectTrigger>
+                            <SelectContent>
+                                {investmentOptions.map(i => (
+                                    <SelectItem key={i.value} value={i.value}>
+                                        {i.label}
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                        {validationErrors.investment && <p className="text-xs text-destructive mt-1">Conta de investimento é obrigatória.</p>}
                     </div>
                 )}
                 
                 {/* Liberação Empréstimo */}
                 {isLoanLiberation && (
-                    <div className={cn("glass-card p-4 space-y-3 border-l-4 shadow-md", `border-${OPERATION_CONFIG.liberacao_emprestimo.tailwindColor}`)}>
-                        <h5 className={cn("font-semibold text-base flex items-center gap-2", OPERATION_CONFIG.liberacao_emprestimo.colorClass)}><DollarSign className="w-4 h-4" /> Liberação de Empréstimo</h5>
-                        <FloatingInputWithIcon
-                            id="numeroContrato"
-                            label="Número do Contrato"
-                            Icon={StickyNote}
-                            colorClass={errors.tempNumeroContrato ? 'text-destructive' : OPERATION_CONFIG.liberacao_emprestimo.colorClass}
-                            placeholder="Ex: Contrato 12345"
+                    <div className={cn("p-4 border border-border rounded-xl shadow-sm", getOperationColor('liberacao_emprestimo', 'bg'))}>
+                        <div className="flex items-center gap-3 mb-3">
+                            <div className={cn("w-10 h-10 rounded-lg flex items-center justify-center shrink-0", getOperationColor('liberacao_emprestimo', 'iconBg'))}>
+                                <DollarSign className="w-5 h-5 text-white" />
+                            </div>
+                            <div>
+                                <h4 className="font-semibold text-foreground">Liberação de Empréstimo</h4>
+                                <p className="text-sm text-muted-foreground">Registro de entrada de capital de empréstimo</p>
+                            </div>
+                        </div>
+                        <Input
+                            placeholder="Número do Contrato *"
                             value={tempNumeroContrato}
-                            onChange={(e) => {
-                                setTempNumeroContrato(e.target.value);
-                                setErrors(p => ({ ...p, tempNumeroContrato: false }));
-                            }}
-                            error={errors.tempNumeroContrato}
+                            onChange={(e) => setTempNumeroContrato(e.target.value)}
+                            className={cn("h-12 text-base border-2 rounded-xl", validationErrors.loanLiberation && "border-destructive")}
                         />
+                        {validationErrors.loanLiberation && <p className="text-xs text-destructive mt-1">Número do contrato é obrigatório.</p>}
                     </div>
                 )}
                 
                 {/* Veículo */}
                 {isVehicle && (
-                    <div className={cn("glass-card p-4 space-y-3 border-l-4 shadow-md", `border-${OPERATION_CONFIG.veiculo.tailwindColor}`)}>
-                        <h5 className={cn("font-semibold text-base flex items-center gap-2", OPERATION_CONFIG.veiculo.colorClass)}><Car className="w-4 h-4" /> Operação de Veículo</h5>
-                        <div className="grid grid-cols-2 gap-4">
-                            <FloatingSelectWithIcon
-                                label="Operação"
-                                Icon={RefreshCw}
-                                colorClass={errors.tempVehicleOperation ? 'text-destructive' : OPERATION_CONFIG.veiculo.colorClass}
-                                value={tempVehicleOperation || ''}
-                                onValueChange={(v) => {
-                                    setTempVehicleOperation(v as 'compra' | 'venda');
-                                    setErrors(p => ({ ...p, tempVehicleOperation: false }));
-                                }}
-                                options={[
-                                    { value: 'compra', label: 'Compra (Saída)', icon: ChevronLeft, color: 'text-destructive' },
-                                    { value: 'venda', label: 'Venda (Entrada)', icon: ChevronRight, color: 'text-success' },
-                                ]}
-                                placeholder="Compra/Venda"
-                                error={errors.tempVehicleOperation}
-                            />
-                            <FloatingSelectWithIcon
-                                label="Tipo de Veículo"
-                                Icon={Car}
-                                colorClass={OPERATION_CONFIG.veiculo.colorClass}
-                                value={tempTipoVeiculo}
-                                onValueChange={(v) => setTempTipoVeiculo(v as 'carro' | 'moto' | 'caminhao')}
-                                options={[
-                                    { value: 'carro', label: 'Carro' },
-                                    { value: 'moto', label: 'Moto' },
-                                    { value: 'caminhao', label: 'Caminhão' },
-                                ]}
-                                placeholder="Tipo"
-                            />
+                    <div className={cn("p-4 border border-border rounded-xl shadow-sm", getOperationColor('veiculo', 'bg'))}>
+                        <div className="flex items-center gap-3 mb-3">
+                            <div className={cn("w-10 h-10 rounded-lg flex items-center justify-center shrink-0", getOperationColor('veiculo', 'iconBg'))}>
+                                <Car className="w-5 h-5 text-white" />
+                            </div>
+                            <div>
+                                <h4 className="font-semibold text-foreground">Operação de Veículo</h4>
+                                <p className="text-sm text-muted-foreground">Compra ou Venda de Ativo</p>
+                            </div>
                         </div>
+                        <div className="grid grid-cols-2 gap-3">
+                            <Select 
+                                value={tempVehicleOperation || ''} 
+                                onValueChange={(v) => setTempVehicleOperation(v as 'compra' | 'venda')}
+                            >
+                                <SelectTrigger className={cn("h-11 rounded-xl border-2", validationErrors.vehicle && !tempVehicleOperation && "border-destructive")}>
+                                    {tempVehicleOperation ? (tempVehicleOperation === 'compra' ? 'Compra (Saída)' : 'Venda (Entrada)') : 'Operação *'}
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="compra">Compra (Saída)</SelectItem>
+                                    <SelectItem value="venda">Venda (Entrada)</SelectItem>
+                                </SelectContent>
+                            </Select>
+                            <Select 
+                                value={tempTipoVeiculo} 
+                                onValueChange={(v) => setTempTipoVeiculo(v as 'carro' | 'moto' | 'caminhao')}
+                            >
+                                <SelectTrigger className="h-11 rounded-xl border-2">
+                                    {tempTipoVeiculo}
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="carro">Carro</SelectItem>
+                                    <SelectItem value="moto">Moto</SelectItem>
+                                    <SelectItem value="caminhao">Caminhão</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </div>
+                        {validationErrors.vehicle && <p className="text-xs text-destructive mt-1">Operação é obrigatória.</p>}
                     </div>
                 )}
                 
@@ -908,28 +999,77 @@ export function MovimentarContaModal({
                 {!isTransfer && !isInvestmentFlow && !isFinancingFlow && !isVehicle && !isInsurancePayment && (
                     <div className="text-center p-8 text-muted-foreground">
                         <Info className="w-6 h-6 mx-auto mb-2" />
-                        <p className="text-sm">Selecione um tipo de operação que requer vínculo (Transferência, Investimento, Empréstimo, Veículo ou Pagamento de Seguro) para preencher esta seção.</p>
+                        <p className="text-sm">Esta operação não requer vínculo. Use a aba "Classificação Simples".</p>
                     </div>
                 )}
-            </TabsContent>
-          </Tabs>
+              </div>
+            )}
+            
+            {/* Preview da Transação */}
+            {isValid && operationType && (
+              <div className="mt-4 p-4 rounded-xl border shadow-sm"
+                style={{ 
+                    backgroundColor: getOperationColor(operationType, 'bg'),
+                    borderColor: getOperationColor(operationType, 'border'),
+                }}
+              >
+                <div className="flex items-center justify-between">
+                  <div>
+                    <div className="font-semibold text-foreground">Resumo da Transação</div>
+                    <div className="text-sm text-muted-foreground">
+                      {new Date(date).toLocaleDateString('pt-BR')} • {OPERATION_TYPE_LABELS[operationType]}
+                    </div>
+                  </div>
+                  <div className={cn(
+                    "text-xl font-bold",
+                    (operationType === 'receita' || operationType === 'liberacao_emprestimo' || operationType === 'rendimento' || (operationType === 'veiculo' && tempVehicleOperation === 'venda')) ? "text-success" : "text-destructive"
+                  )}>
+                    {(operationType === 'receita' || operationType === 'liberacao_emprestimo' || operationType === 'rendimento' || (operationType === 'veiculo' && tempVehicleOperation === 'venda')) ? '+' : '-'} {formatCurrency(parseFromBR(amount))}
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
         </form>
 
-        {/* SEÇÃO 4: FOOTER COM AÇÕES */}
-        <DialogFooter className="p-6 pt-0 flex justify-end gap-2 shrink-0 border-t border-border/50">
-          <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>
-            Cancelar
-          </Button>
-          <Button 
-            type="submit" 
-            onClick={handleSubmit}
-            style={{ backgroundColor: headerBaseColor }}
-            className="hover:opacity-90 transition-all duration-300"
-          >
-            {isEditing ? "Salvar Alterações" : "Registrar"}
-          </Button>
+        {/* BOTÕES COM DESIGN PREMIUM */}
+        <DialogFooter className="p-6 pt-6 border-t border-border/50 shrink-0">
+          <div className="flex w-full gap-3">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => onOpenChange(false)}
+              className="flex-1 h-12 rounded-xl border-2 hover:bg-muted/50"
+              disabled={isSubmitting}
+            >
+              Cancelar
+            </Button>
+            <Button
+              type="submit"
+              onClick={handleSubmit}
+              className={cn(
+                "flex-1 h-12 rounded-xl font-semibold transition-all",
+                "bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary",
+                "shadow-lg hover:shadow-xl transform hover:-translate-y-0.5",
+                !isValid || isSubmitting ? "opacity-60 cursor-not-allowed" : ""
+              )}
+              disabled={!isValid || isSubmitting}
+            >
+              {isSubmitting ? (
+                <>
+                  <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                  Processando...
+                </>
+              ) : (
+                <>
+                  <CheckCircle2 className="w-5 h-5 mr-2" />
+                  {isEditing ? "Salvar Alterações" : "Registrar Transação"}
+                </>
+              )}
+            </Button>
+          </div>
         </DialogFooter>
-      </ResizableDialogContent>
+      </DialogContent>
     </Dialog>
   );
 }
