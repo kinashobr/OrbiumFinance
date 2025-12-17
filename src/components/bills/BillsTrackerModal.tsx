@@ -7,7 +7,7 @@ import { BillsTrackerList } from "./BillsTrackerList";
 import { BillsContextSidebar } from "./BillsContextSidebar";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
-import { BillTracker, formatCurrency, TransacaoCompleta, getDomainFromOperation, generateTransactionId } from "@/types/finance";
+import { BillTracker, formatCurrency, TransacaoCompleta, getDomainFromOperation, generateTransactionId, generateBillId } from "@/types/finance";
 import { Drawer, DrawerContent, DrawerTrigger } from "@/components/ui/drawer";
 import { toast } from "sonner";
 import { ResizableSidebar } from "../transactions/ResizableSidebar";
@@ -22,6 +22,7 @@ interface BillsTrackerModalProps {
 export function BillsTrackerModal({ open, onOpenChange }: BillsTrackerModalProps) {
   const { 
     billsTracker, 
+    setBillsTracker, // <-- ADDED
     addBill, 
     updateBill, 
     deleteBill, 

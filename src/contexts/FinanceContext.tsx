@@ -292,6 +292,7 @@ interface FinanceContextType {
 
   // NEW: Bill Tracker
   billsTracker: BillTracker[];
+  setBillsTracker: Dispatch<SetStateAction<BillTracker[]>>; // <--- EXPOSED FOR ERROR 3
   addBill: (bill: Omit<BillTracker, "id" | "isPaid">) => void;
   updateBill: (id: string, updates: Partial<BillTracker>) => void;
   deleteBill: (id: string) => void;
@@ -597,7 +598,7 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     });
 
     return balance;
-  }, [contasMovimento, transacoesV2, calculateBalanceUpToDate]);
+  }, [contasMovimento, transacoesV2]); // <-- FIX: Removed self-reference (Error 1)
 
   const calculateTotalInvestmentBalanceAtDate = useCallback((date: Date | undefined): number => {
     const targetDate = date || new Date(9999, 11, 31);
@@ -1543,6 +1544,7 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     deleteObjetivo,
     
     billsTracker,
+    setBillsTracker, // <--- EXPOSED FOR ERROR 3
     addBill,
     updateBill,
     deleteBill,
