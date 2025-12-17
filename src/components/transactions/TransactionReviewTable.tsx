@@ -367,7 +367,7 @@ export function TransactionReviewTable({
             const isVincularComplete = 
                 (tx.operationType === 'transferencia' && !!tx.destinationAccountId) ||
                 ((tx.operationType === 'aplicacao' || tx.operationType === 'resgate') && !!tx.tempInvestmentId) ||
-                (tx.operationType === 'pagamento_emprestimo' && !!tx.tempLoanId && !!tx.tempParcelaId) || // ADICIONADO: Requer tempParcelaId
+                (tx.operationType === 'pagamento_emprestimo' && !!tx.tempLoanId && !!tx.tempParcelaId) ||
                 (tx.operationType === 'veiculo' && !!tx.tempVehicleOperation) ||
                 (!isCategoryDisabled(tx) && !!tx.categoryId) ||
                 tx.operationType === 'liberacao_emprestimo';
@@ -412,7 +412,7 @@ export function TransactionReviewTable({
                         tempInvestmentId: null,
                         tempLoanId: null,
                         tempVehicleOperation: null,
-                        tempParcelaId: null, // Limpa a parcela ao mudar a operação
+                        tempParcelaId: null,
                     })}
                     disabled={tx.isPotentialDuplicate}
                   >

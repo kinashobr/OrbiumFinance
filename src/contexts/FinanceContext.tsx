@@ -191,6 +191,7 @@ const parseCSV = (content: string, accountId: string): ImportedTransaction[] => 
                 tempInvestmentId: null,
                 tempLoanId: null,
                 tempVehicleOperation: null,
+                tempParcelaId: null, // ADDED
                 sourceType: 'csv',
                 isContabilized: false,
                 contabilizedTransactionId: undefined,
@@ -239,6 +240,7 @@ const parseOFX = (content: string, accountId: string): ImportedTransaction[] => 
                 destinationAccountId: null,
                 tempInvestmentId: null,
                 tempLoanId: null,
+                tempParcelaId: null, // ADDED
                 tempVehicleOperation: null,
                 sourceType: 'ofx',
                 isContabilized: false,
@@ -863,6 +865,7 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
               updatedTx.tempInvestmentId = null;
               updatedTx.tempLoanId = null;
               updatedTx.tempVehicleOperation = null;
+              updatedTx.tempParcelaId = null; // ADDED
           } else {
               updatedTx.isTransfer = false;
               updatedTx.destinationAccountId = null;
@@ -948,6 +951,7 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
                     destinationAccountId: null,
                     tempInvestmentId: null,
                     tempLoanId: null,
+                    tempParcelaId: null, // ADDED
                     tempVehicleOperation: null,
                 };
             }

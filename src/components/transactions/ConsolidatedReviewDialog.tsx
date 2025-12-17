@@ -21,11 +21,20 @@ import { ResizableSidebar } from "./ResizableSidebar"; // NEW IMPORT
 import { startOfMonth, endOfMonth, format, subDays, startOfDay, endOfDay } from "date-fns";
 import { ResizableDialogContent } from "../ui/ResizableDialogContent"; // NEW IMPORT
 
-// Interface simplificada para Empréstimo
+// Interface simplificada para Empréstimo (COMPLETA)
 interface LoanInfo {
   id: string;
   institution: string;
   numeroContrato?: string;
+  parcelas: {
+    numero: number;
+    vencimento: string;
+    valor: number;
+    paga: boolean;
+    transactionId?: string;
+  }[];
+  valorParcela: number;
+  totalParcelas: number;
 }
 
 // Interface simplificada para Investimento
@@ -120,6 +129,7 @@ export function ConsolidatedReviewDialog({
             updatedTx.tempInvestmentId = null;
             updatedTx.tempLoanId = null;
             updatedTx.tempVehicleOperation = null;
+            updatedTx.tempParcelaId = null; // Limpa a parcela
             updatedTx.isTransfer = updates.operationType === 'transferencia';
         }
         
@@ -203,9 +213,9 @@ export function ConsolidatedReviewDialog({
           investmentId: tx.tempInvestmentId || null,
           loanId: tx.tempLoanId || null,
           transferGroupId: null,
-          parcelaId: null,
+          parcelaId: tx.tempParcelaId || null, // USANDO tempParcelaId
           vehicleTransactionId: null,
-        },
+        } as TransactionLinks,
         conciliated: true, // Transações importadas e contabilizadas são consideradas conciliadas
         attachments: [],
         meta: {
@@ -299,9 +309,10 @@ export function ConsolidatedReviewDialog({
       else if (tx.operationType === 'pagamento_emprestimo' && tx.tempLoanId) {
         newTransactions.push(baseTx);
         const loanIdNum = parseInt(tx.tempLoanId.replace('loan_', ''));
-        // Nota: Não temos o parcelaId aqui, então a marcação de pagamento é simplificada.
+        // Nota: Usamos tx.tempParcelaId para marcar a parcela paga
+        const parcelaNum = tx.tempParcelaId ? parseInt(tx.tempParcelaId) : undefined;
         if (!isNaN(loanIdNum)) {
-            markLoanParcelPaid(loanIdNum, tx.amount, tx.date);
+            markLoanParcelPaid(loanIdNum, tx.amount, tx.date, parcelaNum);
         }
       }
       // 5. Compra de Veículo
@@ -409,8 +420,8 @@ export function ConsolidatedReviewDialog({
           initialHeight={850}
           minWidth={900}
           minHeight={600}
-          maxWidth={1800} // AUMENTADO de 1600
-          maxHeight={1200} // AUMENTADO de 1000
+          maxWidth={1800}
+          maxHeight={1200}
           hideCloseButton={true} 
         >
           <DialogHeader className="px-4 pt-3 pb-2 border-b shrink-0">
