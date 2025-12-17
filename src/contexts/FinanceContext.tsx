@@ -256,10 +256,10 @@ const parseOFX = (content: string, accountId: string): ImportedTransaction[] => 
 // ============================================
 
 export interface AmortizationItem {
-    parcela: number;
-    juros: number;
-    amortizacao: number;
-    saldoDevedor: number;
+  parcela: number;
+  juros: number;
+  amortizacao: number;
+  saldoDevedor: number;
 }
 
 interface FinanceContextType {
@@ -658,11 +658,11 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     
     const investmentAccountIds = contasMovimento
       .filter(c => 
-        c.accountType === 'aplicacao_renda_fixa' || 
+        c.accountType === 'renda_fixa' || 
         c.accountType === 'poupanca' ||
-        c.accountType === 'criptoativos' ||
-        c.accountType === 'reserva_emergencia' ||
-        c.accountType === 'objetivos_financeiros'
+        c.accountType === 'cripto' ||
+        c.accountType === 'reserva' ||
+        c.accountType === 'objetivo'
       )
       .map(c => c.id);
 
@@ -1385,7 +1385,7 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
   // ============================================
 
   const getContasCorrentesTipo = useCallback(() => {
-    return contasMovimento.filter(c => c.accountType === 'conta_corrente');
+    return contasMovimento.filter(c => c.accountType === 'corrente');
   }, [contasMovimento]);
   
   // ============================================
