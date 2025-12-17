@@ -4,22 +4,22 @@
 
 // Tipos de Conta Movimento
 export type AccountType = 
-  | 'conta_corrente' 
-  | 'aplicacao_renda_fixa' 
+  | 'corrente' // antes conta_corrente
+  | 'renda_fixa' // antes aplicacao_renda_fixa
   | 'poupanca' 
-  | 'criptoativos' 
-  | 'reserva_emergencia' 
-  | 'objetivos_financeiros'
-  | 'cartao_credito'; // NOVO TIPO
+  | 'cripto' // antes criptoativos
+  | 'reserva' // antes reserva_emergencia
+  | 'objetivo' // antes objetivos_financeiros
+  | 'cartao_credito'; // mantido
 
 export const ACCOUNT_TYPE_LABELS: Record<AccountType, string> = {
-  conta_corrente: 'Conta Corrente',
-  aplicacao_renda_fixa: 'Aplicação Renda Fixa',
+  corrente: 'Conta Corrente',
+  renda_fixa: 'Aplicação Renda Fixa',
   poupanca: 'Poupança',
-  criptoativos: 'Criptoativos',
-  reserva_emergencia: 'Reserva de Emergência',
-  objetivos_financeiros: 'Objetivos Financeiros',
-  cartao_credito: 'Cartão de Crédito', // NOVO LABEL
+  cripto: 'Criptoativos',
+  reserva: 'Reserva de Emergência',
+  objetivo: 'Objetivos Financeiros',
+  cartao_credito: 'Cartão de Crédito',
 };
 
 // Tipos de Categoria

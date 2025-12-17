@@ -98,35 +98,35 @@ const Investimentos = () => {
   // Separate accounts by type for tab filtering
   const investmentAccounts = useMemo(() => {
     return contasMovimento.filter(c => 
-      c.accountType === 'aplicacao_renda_fixa' || 
+      c.accountType === 'renda_fixa' || 
       c.accountType === 'poupanca' ||
-      c.accountType === 'criptoativos' ||
-      c.accountType === 'reserva_emergencia' ||
-      c.accountType === 'objetivos_financeiros'
+      c.accountType === 'cripto' ||
+      c.accountType === 'reserva' ||
+      c.accountType === 'objetivo'
     );
   }, [contasMovimento]);
 
   const rfAccounts = useMemo(() => {
     return investmentAccounts.filter(c => 
-      c.accountType === 'aplicacao_renda_fixa' || c.accountType === 'poupanca'
+      c.accountType === 'renda_fixa' || c.accountType === 'poupanca'
     );
   }, [investmentAccounts]);
 
   const cryptoAccounts = useMemo(() => {
     return investmentAccounts.filter(c => 
-      c.accountType === 'criptoativos' && !isStablecoin(c.name)
+      c.accountType === 'cripto' && !isStablecoin(c.name)
     );
   }, [investmentAccounts]);
 
   const stablecoinAccounts = useMemo(() => {
     return investmentAccounts.filter(c => 
-      c.accountType === 'criptoativos' && isStablecoin(c.name)
+      c.accountType === 'cripto' && isStablecoin(c.name)
     );
   }, [investmentAccounts]);
 
   const objetivosAccounts = useMemo(() => {
     return investmentAccounts.filter(c => 
-      c.accountType === 'objetivos_financeiros' || c.accountType === 'reserva_emergencia'
+      c.accountType === 'objetivo' || c.accountType === 'reserva'
     );
   }, [investmentAccounts]);
 
@@ -580,7 +580,7 @@ const Investimentos = () => {
                         <TableRow key={account.id}>
                           <TableCell className="font-medium">{account.name}</TableCell>
                           <TableCell>
-                            <Badge variant="outline">{account.accountType === 'reserva_emergencia' ? 'Reserva' : 'Objetivo'}</Badge>
+                            <Badge variant="outline">{account.accountType === 'reserva' ? 'Reserva' : 'Objetivo'}</Badge>
                           </TableCell>
                           <TableCell className="text-right font-semibold text-success">
                             {formatCurrency(saldo)}

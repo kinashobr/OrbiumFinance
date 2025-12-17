@@ -175,7 +175,7 @@ export function BillsTrackerList({
       dueDate: newBillData.dueDate,
       expectedAmount: amount,
       sourceType: adHocType,
-      suggestedAccountId: contasMovimento.find(c => c.accountType === 'conta_corrente')?.id,
+      suggestedAccountId: contasMovimento.find(c => c.accountType === 'corrente')?.id,
       suggestedCategoryId: suggestedCategoryId,
     });
 
@@ -253,7 +253,7 @@ export function BillsTrackerList({
   };
   
   const availableAccounts = useMemo(() => 
-    contasMovimento.filter(c => c.accountType === 'conta_corrente' || c.accountType === 'cartao_credito'),
+    contasMovimento.filter(c => c.accountType === 'corrente' || c.accountType === 'cartao_credito'),
     [contasMovimento]
   );
   

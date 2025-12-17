@@ -142,7 +142,7 @@ export function TransactionReviewTable({
       window.removeEventListener('mouseup', handleMouseUp);
       document.body.style.cursor = 'default';
       document.body.style.userSelect = 'auto';
-    }
+    };
 
     return () => {
       window.removeEventListener('mousemove', handleMouseMove);

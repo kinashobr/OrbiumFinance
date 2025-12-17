@@ -18,12 +18,12 @@ interface AccountFormModalProps {
 }
 
 const ACCOUNT_TYPE_ICONS: Record<AccountType, typeof Building2> = {
-  conta_corrente: Building2,
-  aplicacao_renda_fixa: TrendingUp,
+  corrente: Building2,
+  renda_fixa: TrendingUp,
   poupanca: PiggyBank,
-  criptoativos: Bitcoin,
-  reserva_emergencia: Shield,
-  objetivos_financeiros: Target,
+  cripto: Bitcoin,
+  reserva: Shield,
+  objetivo: Target,
   cartao_credito: CreditCard,
 };
 
@@ -53,7 +53,7 @@ export function AccountFormModal({
   hasTransactions = false
 }: AccountFormModalProps) {
   const [name, setName] = useState("");
-  const [accountType, setAccountType] = useState<AccountType>("conta_corrente");
+  const [accountType, setAccountType] = useState<AccountType>("corrente");
   const [institution, setInstitution] = useState("");
   const [initialBalanceInput, setInitialBalanceInput] = useState(""); // Valor do input
   const [currency, setCurrency] = useState("BRL");
@@ -64,7 +64,7 @@ export function AccountFormModal({
   useEffect(() => {
     if (open && account) {
       setName(account.name);
-      setAccountType(account.accountType || 'conta_corrente');
+      setAccountType(account.accountType || 'corrente');
       setInstitution(account.institution || "");
       // Usa o valor real passado via prop (initialBalanceValue)
       setInitialBalanceInput(formatToBR(account.initialBalanceValue ?? 0)); 
@@ -72,7 +72,7 @@ export function AccountFormModal({
       setStartDate(account.startDate || new Date().toISOString().split('T')[0]);
     } else if (open) {
       setName("");
-      setAccountType("conta_corrente");
+      setAccountType("corrente");
       setInstitution("");
       setInitialBalanceInput(formatToBR(0));
       setCurrency("BRL");

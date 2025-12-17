@@ -214,7 +214,7 @@ const ReceitasDespesas = () => {
   // UPDATED HANDLER: Import Extrato
   const handleImportExtrato = (accountId: string) => {
     const account = accounts.find(a => a.id === accountId);
-    if (account && account.accountType === 'conta_corrente') {
+    if (account && account.accountType === 'corrente') {
       setAccountToManage(account);
       setShowStatementManagerModal(true);
     } else {
@@ -701,11 +701,11 @@ const ReceitasDespesas = () => {
   const investments = useMemo(() => {
     return accounts
       .filter(c => 
-        c.accountType === 'aplicacao_renda_fixa' || 
+        c.accountType === 'renda_fixa' || 
         c.accountType === 'poupanca' ||
-        c.accountType === 'criptoativos' ||
-        c.accountType === 'reserva_emergencia' ||
-        c.accountType === 'objetivos_financeiros'
+        c.accountType === 'cripto' ||
+        c.accountType === 'reserva' ||
+        c.accountType === 'objetivo'
       )
       .map(i => ({ id: i.id, name: i.name }));
   }, [accounts]);
