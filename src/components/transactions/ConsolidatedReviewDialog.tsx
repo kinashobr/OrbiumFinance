@@ -16,7 +16,7 @@ import { TransactionReviewTable } from "./TransactionReviewTable";
 import { StandardizationRuleFormModal } from "./StandardizationRuleFormModal";
 import { ReviewContextSidebar } from "./ReviewContextSidebar";
 import { StandardizationRuleManagerModal } from "./StandardizationRuleManagerModal";
-import { ResizableSidebar } from "./ResizableSidebar";
+import { ResizableSidebar } from "../transactions/ResizableSidebar";
 import { startOfMonth, endOfMonth, format, subDays, startOfDay, endOfDay } from "date-fns";
 import { ResizableDialogContent } from "../ui/ResizableDialogContent";
 
@@ -25,6 +25,7 @@ interface LoanInfo {
   id: string;
   institution: string;
   numeroContrato?: string;
+  totalParcelas?: number; // ADDED: Need total installments for calculation
 }
 
 // Interface simplificada para Investimento
@@ -64,6 +65,7 @@ export function ConsolidatedReviewDialog({
     markSeguroParcelPaid,
     addEmprestimo,
     addVeiculo,
+    calculatePaidInstallmentsUpToDate, // ADDED
   } = useFinance();
   
   const account = accounts.find(a => a.id === accountId);
@@ -207,7 +209,7 @@ export function ConsolidatedReviewDialog({
           source: 'import',
           createdAt: now,
           originalDescription: tx.originalDescription,
-          vehicleOperation: tx.operationType === 'veiculo' ? tx.tempVehicleOperation || undefined : undefined,
+          vehicleOperation: tx.operationType === 'veiculo' ? tx.tempVehicleOperation : undefined,
         }
       };
       
@@ -289,8 +291,20 @@ export function ConsolidatedReviewDialog({
       else if (tx.operationType === 'pagamento_emprestimo' && tx.tempLoanId) {
         newTransactions.push(baseTx);
         const loanIdNum = parseInt(tx.tempLoanId.replace('loan_', ''));
+        
         if (!isNaN(loanIdNum)) {
-            markLoanParcelPaid(loanIdNum, tx.amount, tx.date);
+            // Calculate the next pending installment number
+            const nextPaidCount = calculatePaidInstallmentsUpToDate(loanIdNum, parseDateLocal(tx.date));
+            const loan = loans.find(l => l.id === tx.tempLoanId);
+            const parcelaNumero = nextPaidCount + 1;
+            
+            if (loan && parcelaNumero <= (loan.totalParcelas || 0)) {
+                baseTx.links.parcelaId = parcelaNumero.toString();
+                markLoanParcelPaid(loanIdNum, tx.amount, tx.date, parcelaNumero);
+            } else {
+                // If we can't determine the installment number, mark it as paid without a specific number
+                markLoanParcelPaid(loanIdNum, tx.amount, tx.date);
+            }
         }
       }
       // 5. Compra de Veículo
@@ -422,7 +436,7 @@ export function ConsolidatedReviewDialog({
                     pendingCount={pendingCount}
                     totalCount={totalCount}
                     reviewRange={reviewRange}
-                    onPeriodChange={handlePeriodChange}
+                    onPeriodChange={onPeriodChange}
                     onApplyFilter={handleApplyFilter}
                     onContabilize={handleContabilize}
                     onClose={() => onOpenChange(false)}

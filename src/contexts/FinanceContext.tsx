@@ -603,10 +603,12 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
         }
     });
     
+    // Se houver parcelas explicitamente linkadas, use a contagem de links únicos.
     if (paidParcelas.size > 0) {
         return paidParcelas.size;
     }
 
+    // Fallback: Se não houver links de parcela, conte o número de transações.
     return paymentsUpToDate.length;
 
   }, [emprestimos, transacoesV2]);
@@ -1159,11 +1161,14 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     setEmprestimos(prev => prev.map(e => {
       if (e.id !== loanId) return e;
       
-      const isQuitado = (e.parcelasPagas || 0) + 1 >= e.meses;
+      // Check if this is the final installment
+      const isQuitado = parcelaNumero && parcelaNumero >= e.meses;
       
       return {
         ...e,
         status: isQuitado ? 'quitado' : 'ativo',
+        // Note: We rely on calculatePaidInstallmentsUpToDate for the count, 
+        // but we ensure status is 'ativo' if it was 'pendente_config'
       };
     }));
   }, []);
@@ -1172,10 +1177,14 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     setEmprestimos(prev => prev.map(e => {
       if (e.id !== loanId) return e;
       
-      return {
-        ...e,
-        status: 'ativo',
-      };
+      // If the loan was quitado, revert it to active
+      if (e.status === 'quitado') {
+          return {
+              ...e,
+              status: 'ativo',
+          };
+      }
+      return e;
     }));
   }, []);
 
