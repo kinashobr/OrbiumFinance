@@ -1062,7 +1062,7 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     });
     
     return potentialBills.sort((a, b) => parseDateLocal(a.dueDate).getTime() - parseDateLocal(b.dueDate).getTime());
-  }, [emprestimos, segurosVeiculo, transacoesV2, calculateLoanSchedule, localBills]);
+  }, [emprestimos, segurosVeiculo, transacoesV2, calculateLoanSchedule]);
 
 
   // ============================================
@@ -1105,7 +1105,6 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
       if (e.id !== loanId) return e;
       
       return {
-        ...e,
         status: 'ativo',
       };
     }));
