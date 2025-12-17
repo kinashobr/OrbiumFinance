@@ -13,7 +13,8 @@ import { FutureInstallmentSelectorModal } from "./FutureInstallmentSelectorModal
 interface FixedInstallmentSelectorProps {
   potentialBills: PotentialFixedBill[];
   onToggleInstallment: (bill: PotentialFixedBill, isChecked: boolean) => void;
-  localBills: BillTracker[]; // Adicionando a prop localBills
+  localBills: BillTracker[];
+  referenceDate: Date; // Adicionando referenceDate
 }
 
 const SOURCE_CONFIG: Record<BillSourceType, { icon: React.ElementType; color: string; label: string }> = {
@@ -27,7 +28,8 @@ const SOURCE_CONFIG: Record<BillSourceType, { icon: React.ElementType; color: st
 export function FixedInstallmentSelector({
   potentialBills,
   onToggleInstallment,
-  localBills, // Recebendo a prop
+  localBills,
+  referenceDate, // Recebendo referenceDate
 }: FixedInstallmentSelectorProps) {
   
   const [showFutureModal, setShowFutureModal] = useState(false);
@@ -123,8 +125,9 @@ export function FixedInstallmentSelector({
       <FutureInstallmentSelectorModal
         open={showFutureModal}
         onOpenChange={setShowFutureModal}
-        localBills={localBills} // Passando BillTracker[]
+        localBills={localBills}
         onIncludeBills={handleIncludeFutureBills}
+        referenceDate={referenceDate} // PASSANDO referenceDate
       />
     </Card>
   );

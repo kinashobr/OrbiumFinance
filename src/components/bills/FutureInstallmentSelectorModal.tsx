@@ -8,14 +8,15 @@ import { ArrowRight, Calendar, Check, X } from "lucide-react";
 import { PotentialFixedBill, formatCurrency, BillTracker } from "@/types/finance";
 import { useFinance } from "@/contexts/FinanceContext";
 import { format } from "date-fns";
-import { cn, parseDateLocal } from "@/lib/utils"; // Importando parseDateLocal
+import { cn, parseDateLocal } from "@/lib/utils";
 import { toast } from "sonner";
 
 interface FutureInstallmentSelectorModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  localBills: BillTracker[]; // Corrigido para BillTracker[]
+  localBills: BillTracker[];
   onIncludeBills: (bills: PotentialFixedBill[]) => void;
+  referenceDate: Date; // NOVO: Data de referência do Bills Tracker
 }
 
 export function FutureInstallmentSelectorModal({
@@ -23,13 +24,14 @@ export function FutureInstallmentSelectorModal({
   onOpenChange,
   localBills,
   onIncludeBills,
+  referenceDate,
 }: FutureInstallmentSelectorModalProps) {
   const { getFutureFixedBills } = useFinance();
   
-  // Obtém todas as parcelas futuras não pagas
+  // Obtém todas as parcelas futuras não pagas, usando a data de referência
   const allFutureBills = useMemo(() => {
-    return getFutureFixedBills(localBills); // Agora localBills é BillTracker[]
-  }, [getFutureFixedBills, localBills]);
+    return getFutureFixedBills(referenceDate, localBills);
+  }, [getFutureFixedBills, referenceDate, localBills]);
 
   const [selectedKeys, setSelectedKeys] = useState<Set<string>>(new Set());
   
@@ -80,7 +82,7 @@ export function FutureInstallmentSelectorModal({
             Adiantar Parcelas Futuras
           </DialogTitle>
           <p className="text-sm text-muted-foreground">
-            Selecione parcelas de empréstimos ou seguros com vencimento futuro para incluir no planejamento deste mês.
+            Selecione parcelas de empréstimos ou seguros com vencimento futuro (após {format(referenceDate, 'MMMM/yyyy')}) para incluir no planejamento deste mês.
           </p>
         </DialogHeader>
 

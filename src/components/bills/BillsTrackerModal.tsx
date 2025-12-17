@@ -9,7 +9,7 @@ import { FixedInstallmentSelector } from "./FixedInstallmentSelector";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { BillTracker, formatCurrency, TransacaoCompleta, getDomainFromOperation, generateTransactionId, generateBillId, PotentialFixedBill } from "@/types/finance";
-import { Drawer, DrawerContent, DrawerTrigger } from "@/components/ui/drawer";
+import { Drawer, DrawerContent, DrawerTrigger } => "@/components/ui/drawer";
 import { toast } from "sonner";
 import { ResizableSidebar } from "../transactions/ResizableSidebar";
 import { ResizableDialogContent } from "../ui/ResizableDialogContent";
@@ -421,7 +421,8 @@ export function BillsTrackerModal({ open, onOpenChange }: BillsTrackerModalProps
             <FixedInstallmentSelector
                 potentialBills={potentialFixedBills}
                 onToggleInstallment={handleToggleFixedBill}
-                localBills={localBills} // Passando localBills
+                localBills={localBills}
+                referenceDate={referenceDate} // PASSANDO referenceDate
             />
             
             <BillsTrackerList
