@@ -19,17 +19,11 @@ interface LoanInfo {
     numero: number;
     vencimento: string;
     valor: number;
-    pago: boolean;
+    paga: boolean; // Alterado de 'pago' para 'paga'
     transactionId?: string;
   }[];
   valorParcela: number;
   totalParcelas: number;
-}
-
-// Interface simplificada para Investimento
-interface InvestmentInfo {
-  id: string;
-  name: string;
 }
 
 interface MovimentarContaModalProps {
@@ -187,6 +181,12 @@ export function MovimentarContaModal({
       cleaned = parts.slice(0, -1).join('') + '.' + parts.slice(-1);
     } else if (cleaned.includes(',')) {
       cleaned = cleaned.replace(',', '.');
+    } else if (cleaned.includes('.')) {
+      const parts = cleaned.split('.');
+      if (parts.length > 2) {
+        const lastPart = parts.pop();
+        cleaned = parts.join('') + '.' + lastPart;
+      }
     }
     
     setAmount(cleaned);
@@ -290,7 +290,7 @@ export function MovimentarContaModal({
     const loan = loans.find(l => l.id === tempLoanId);
     if (!loan) return [];
     
-    return loan.parcelas.filter(p => !p.pago);
+    return loan.parcelas.filter(p => !p.paga); // Alterado de p.pago para p.paga
   }, [tempLoanId, loans]);
   
   // Auto-fill amount and description for loan payment

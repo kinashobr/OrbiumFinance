@@ -729,7 +729,7 @@ const ReceitasDespesas = () => {
             numero: i + 1,
             vencimento: format(vencimento, 'yyyy-MM-dd'),
             valor: e.parcela,
-            pago: !!paymentTx,
+            paga: !!paymentTx, // Alterado de 'pago' para 'paga'
             transactionId: paymentTx?.id,
           };
         }) : [];
