@@ -49,8 +49,11 @@ export function BillsTrackerModal({ open, onOpenChange }: BillsTrackerModalProps
   
   const referenceDate = dateRanges.range1.to || new Date();
   
-  // Estado local para manipulação (começa vazio)
+  // Estado local para manipulação
   const [localBills, setLocalBills] = useState<BillTracker[]>([]);
+  
+  // NOVO ESTADO: Snapshot imutável das contas do mês na abertura
+  const [originalMonthBills, setOriginalMonthBills] = useState<BillTracker[]>([]);
   
   // Receita do mês anterior (para sugestão)
   const previousMonthRevenue = useMemo(() => {
@@ -65,6 +68,7 @@ export function BillsTrackerModal({ open, onOpenChange }: BillsTrackerModalProps
     // Generate the full list including templates
     const generatedBills = getBillsForMonth(referenceDate, true);
     setLocalBills(generatedBills);
+    setOriginalMonthBills(generatedBills.map(b => ({ ...b }))); // CAPTURA O SNAPSHOT
     setLocalRevenueForecast(monthlyRevenueForecast || previousMonthRevenue); // Ensure forecast is also refreshed
     toast.info("Lista de contas atualizada manualmente.");
   }, [getBillsForMonth, referenceDate, monthlyRevenueForecast, previousMonthRevenue]);
@@ -75,6 +79,10 @@ export function BillsTrackerModal({ open, onOpenChange }: BillsTrackerModalProps
       // Inicializa o estado local com a lista gerada automaticamente
       const generatedBills = getBillsForMonth(referenceDate, true);
       setLocalBills(generatedBills);
+      
+      // 🔒 CAPTURA O SNAPSHOT IMUTÁVEL NA ABERTURA
+      setOriginalMonthBills(generatedBills.map(b => ({ ...b })));
+      
       setLocalRevenueForecast(monthlyRevenueForecast || previousMonthRevenue);
     }
   }, [open, monthlyRevenueForecast, previousMonthRevenue, getBillsForMonth, referenceDate]);
@@ -140,8 +148,8 @@ export function BillsTrackerModal({ open, onOpenChange }: BillsTrackerModalProps
     
     // 2. Sincroniza o estado local com o estado global (BillsTracker)
     
-    // Mapeia o estado global atual do billsTracker
-    const originalBillsMap = new Map(billsTracker.map(b => [b.id, b]));
+    // ⚠️ CORREÇÃO: Usa o snapshot imutável para comparação
+    const originalBillsMap = new Map(originalMonthBills.map(b => [b.id, b]));
     
     const newTransactions: TransacaoCompleta[] = [];
     const transactionsToRemove: string[] = [];
@@ -149,7 +157,9 @@ export function BillsTrackerModal({ open, onOpenChange }: BillsTrackerModalProps
     // Filtra o billsTracker global para manter apenas contas de outros meses
     // e contas ad-hoc (que são sempre persistidas)
     let finalBillsTracker: BillTracker[] = billsTracker.filter(b => {
-        const isCurrentMonth = isSameMonth(parseDateLocal(b.dueDate), referenceDate);
+        const billDate = parseDateLocal(b.dueDate);
+        const isCurrentMonth = isSameMonth(billDate, referenceDate);
+        // Mantém contas de outros meses E contas ad-hoc (que são gerenciadas separadamente)
         return !isCurrentMonth || b.sourceType === 'ad_hoc';
     });
     
