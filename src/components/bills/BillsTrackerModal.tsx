@@ -347,7 +347,7 @@ export function BillsTrackerModal({ open, onOpenChange }: BillsTrackerModalProps
             onOpenChange={setShowFixedBillSelector}
             mode={fixedBillSelectorMode}
             currentDate={currentDate}
-            potentialFixedBills={fixedBillSelectorMode === 'current' ? potentialFixedFixedBills : futureFixedBills}
+            potentialFixedBills={fixedBillSelectorMode === 'current' ? potentialFixedBills : futureFixedBills}
             onToggleFixedBill={handleToggleFixedBill}
         />
       )}
