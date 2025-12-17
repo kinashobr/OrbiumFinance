@@ -45,7 +45,6 @@ export function BillsTrackerModal({ open, onOpenChange }: BillsTrackerModalProps
   
   // Estado local para manipulação (inicializa com o estado do contexto)
   const [localBills, setLocalBills] = useState<BillTracker[]>([]);
-  const [isListGenerated, setIsListGenerated] = useState(false); // NEW STATE
   
   // Receita do mês anterior (para sugestão)
   const previousMonthRevenue = useMemo(() => {
@@ -55,42 +54,23 @@ export function BillsTrackerModal({ open, onOpenChange }: BillsTrackerModalProps
   // Estado local para a previsão de receita
   const [localRevenueForecast, setLocalRevenueForecast] = useState(monthlyRevenueForecast || previousMonthRevenue);
   
-  // --- Initialization Logic ---
-  const initializeLocalBills = useCallback(() => {
-    // Load only user-modified bills (ad-hoc, paid, excluded) on open.
-    const initialBills = getBillsForMonth(referenceDate, false); 
-    setLocalBills(initialBills);
-    
-    // Check if any templates were previously generated and saved (i.e., if any generated bill exists in billsTracker)
-    const monthYear = format(referenceDate, 'yyyy-MM');
-    const hasGeneratedBillsSaved = billsTracker.some(b => 
-        b.sourceType !== 'ad_hoc' && 
-        b.sourceRef && // Must have a sourceRef if generated
-        format(parseDateLocal(b.dueDate), 'yyyy-MM') === monthYear
-    );
-    
-    // If there are saved templates for this month, assume the list is generated.
-    setIsListGenerated(hasGeneratedBillsSaved);
-    
-  }, [getBillsForMonth, referenceDate, billsTracker, monthlyRevenueForecast, previousMonthRevenue]);
+  // --- Refresh Logic (Always generates the full list) ---
+  const handleRefreshList = useCallback(() => {
+    // Generate the full list including templates
+    const generatedBills = getBillsForMonth(referenceDate, true);
+    setLocalBills(generatedBills);
+    toast.info("Lista de contas atualizada com base nos templates.");
+  }, [getBillsForMonth, referenceDate]);
 
   // Sincroniza o estado local ao abrir o modal
   useEffect(() => {
     if (open) {
-        initializeLocalBills();
+        // Sempre carrega a lista completa na abertura para garantir persistência
+        handleRefreshList();
         setLocalRevenueForecast(monthlyRevenueForecast || previousMonthRevenue);
     }
-  }, [open, initializeLocalBills, monthlyRevenueForecast, previousMonthRevenue]);
+  }, [open, monthlyRevenueForecast, previousMonthRevenue, handleRefreshList]);
 
-  // --- Manual Generation Handler ---
-  const handleGenerateList = useCallback(() => {
-    // Generate the full list including templates
-    const generatedBills = getBillsForMonth(referenceDate, true);
-    setLocalBills(generatedBills);
-    setIsListGenerated(true);
-    toast.info("Lista de contas gerada com base nos templates e mês anterior.");
-  }, [getBillsForMonth, referenceDate]);
-  
   // Totais baseados no estado local
   const totalExpectedExpense = useMemo(() => 
     localBills.filter(b => !b.isExcluded).reduce((acc, b) => acc + b.expectedAmount, 0),
@@ -302,7 +282,7 @@ export function BillsTrackerModal({ open, onOpenChange }: BillsTrackerModalProps
                 if (localVersion.sourceType === 'ad_hoc') {
                     // Se for ad-hoc e excluído, deleta permanentemente
                     if (localVersion.isExcluded) {
-                        deleteBill(localVersion.id); // Use context delete to remove from billsTracker
+                        // Não deletamos aqui, apenas filtramos no final.
                     } else {
                         // Se for ad-hoc e modificado/novo, atualiza/adiciona
                         updatedBillsTracker = updatedBillsTracker.filter(b => b.id !== localVersion.id);
@@ -317,10 +297,15 @@ export function BillsTrackerModal({ open, onOpenChange }: BillsTrackerModalProps
         }
     });
     
-    // 3. Persiste o billsTracker atualizado
-    setBillsTracker(updatedBillsTracker);
+    // 3. Filtra bills excluídas permanentemente (apenas ad-hoc)
+    const finalBillsTracker = updatedBillsTracker.filter(b => 
+        !(b.sourceType === 'ad_hoc' && b.isExcluded)
+    );
     
-    // 4. Adiciona novas transações ao contexto
+    // 4. Persiste o billsTracker atualizado
+    setBillsTracker(finalBillsTracker);
+    
+    // 5. Adiciona novas transações ao contexto
     newTransactions.forEach(t => addTransacaoV2(t));
     
     onOpenChange(false);
@@ -339,8 +324,8 @@ export function BillsTrackerModal({ open, onOpenChange }: BillsTrackerModalProps
       netForecast={netForecast}
       onSaveAndClose={handleSaveAndClose}
       // NEW PROP: Manual Generation Button
-      onGenerateList={handleGenerateList} 
-      isListGenerated={isListGenerated}
+      onGenerateList={handleRefreshList} 
+      isListGenerated={true} // Sempre true, pois a lista é gerada na abertura
     />
   );
 
@@ -384,8 +369,8 @@ export function BillsTrackerModal({ open, onOpenChange }: BillsTrackerModalProps
                       netForecast={netForecast}
                       isMobile={true}
                       onSaveAndClose={handleSaveAndClose}
-                      onGenerateList={handleGenerateList} // NEW PROP
-                      isListGenerated={isListGenerated} // NEW PROP
+                      onGenerateList={handleRefreshList} 
+                      isListGenerated={true} 
                     />
                   </div>
                 </DrawerContent>
@@ -431,24 +416,14 @@ export function BillsTrackerModal({ open, onOpenChange }: BillsTrackerModalProps
 
           {/* Coluna 2: Lista de Transações (Ocupa o espaço restante) */}
           <div className="flex-1 overflow-y-auto px-4 pt-2 pb-2">
-            {isListGenerated ? (
-                <BillsTrackerList
-                  bills={localBills} // Usa o estado local
-                  onUpdateBill={handleUpdateBillLocal}
-                  onDeleteBill={handleDeleteBillLocal}
-                  onAddBill={handleAddBillLocal}
-                  onTogglePaid={handleTogglePaidLocal} // Novo handler
-                  currentDate={referenceDate}
-                />
-            ) : (
-                <div className="flex flex-col items-center justify-center h-full text-muted-foreground p-8">
-                    <Calendar className="w-12 h-12 mb-4" />
-                    <p className="text-lg font-semibold">Lista de Contas Pendente</p>
-                    <p className="text-sm text-center mt-2">
-                        Clique em "Gerar Lista do Mês" na barra lateral para carregar as contas recorrentes e estimativas para o mês.
-                    </p>
-                </div>
-            )}
+            <BillsTrackerList
+              bills={localBills} // Usa o estado local
+              onUpdateBill={handleUpdateBillLocal}
+              onDeleteBill={handleDeleteBillLocal}
+              onAddBill={handleAddBillLocal}
+              onTogglePaid={handleTogglePaidLocal} // Novo handler
+              currentDate={referenceDate}
+            />
           </div>
         </div>
       </ResizableDialogContent>

@@ -18,8 +18,7 @@ interface BillsContextSidebarProps {
   netForecast: number; // Saldo Previsto (Receita - Total PENDENTE)
   isMobile?: boolean;
   onSaveAndClose: () => void;
-  onGenerateList: () => void; // NEW PROP
-  isListGenerated: boolean; // NEW PROP
+  onRefreshList: () => void; // RENOMEADO
 }
 
 export function BillsContextSidebar({
@@ -32,8 +31,7 @@ export function BillsContextSidebar({
   netForecast,
   isMobile = false,
   onSaveAndClose,
-  onGenerateList, // USED
-  isListGenerated, // USED
+  onRefreshList, // USADO
 }: BillsContextSidebarProps) {
   
   const formatValue = (value: number) => {
@@ -113,19 +111,15 @@ export function BillsContextSidebar({
             Lista de Contas
           </Label>
           <Button 
-            onClick={onGenerateList} 
+            onClick={onRefreshList} 
             className="w-full gap-2"
-            variant={isListGenerated ? "outline" : "default"}
-            disabled={isListGenerated}
+            variant="outline"
           >
             <RefreshCw className="w-4 h-4" />
-            {isListGenerated ? "Lista Gerada" : "Gerar Lista do Mês"}
+            Atualizar Lista
           </Button>
           <p className="text-xs text-muted-foreground">
-            {isListGenerated 
-              ? "Lista gerada. Faça ajustes e salve."
-              : "Gere a lista com base nos templates e mês anterior."
-            }
+            Gere ou atualize a lista com base nos templates e pagamentos.
           </p>
         </div>
 
