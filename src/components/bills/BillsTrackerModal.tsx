@@ -324,8 +324,7 @@ export function BillsTrackerModal({ open, onOpenChange }: BillsTrackerModalProps
       netForecast={netForecast}
       onSaveAndClose={handleSaveAndClose}
       // NEW PROP: Manual Generation Button
-      onGenerateList={handleRefreshList} 
-      isListGenerated={true} // Sempre true, pois a lista é gerada na abertura
+      onRefreshList={handleRefreshList} 
     />
   );
 
@@ -369,8 +368,7 @@ export function BillsTrackerModal({ open, onOpenChange }: BillsTrackerModalProps
                       netForecast={netForecast}
                       isMobile={true}
                       onSaveAndClose={handleSaveAndClose}
-                      onGenerateList={handleRefreshList} 
-                      isListGenerated={true} 
+                      onRefreshList={handleRefreshList} 
                     />
                   </div>
                 </DrawerContent>
