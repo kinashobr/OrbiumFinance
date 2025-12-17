@@ -258,7 +258,8 @@ export function MovimentarContaModal({
   // Available Parcels for selected Seguro
   const availableSeguroParcelas = useMemo(() => {
       if (!tempSeguroId) return [];
-      const seguro = segurosVeurosVeiculo.find(s => s.id === parseInt(tempSeguroId));
+      // CORREÇÃO: Usar 'segurosVeiculo' em vez de 'segurosVeurosVeiculo'
+      const seguro = segurosVeiculo.find(s => s.id === parseInt(tempSeguroId));
       if (!seguro) return [];
       
       return seguro.parcelas.filter(p => !p.paga);
