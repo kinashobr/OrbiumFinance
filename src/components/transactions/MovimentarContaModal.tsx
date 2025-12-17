@@ -4,8 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { Building2, Wallet, PiggyBank, TrendingUp, Shield, Target, Bitcoin, CreditCard, ArrowLeftRight, Car, DollarSign, Plus, Minus, RefreshCw, Coins, TrendingDown, Tags, ChevronRight, ChevronLeft, CheckCircle2 } from "lucide-react";
+import { Building2, Wallet, PiggyBank, TrendingUp, Shield, Target, Bitcoin, CreditCard, ArrowLeftRight, Car, DollarSign, Plus, Minus, RefreshCw, Coins, TrendingDown, Tags } from "lucide-react";
 import { ContaCorrente, Categoria, AccountType, ACCOUNT_TYPE_LABELS, generateTransactionId, formatCurrency, OperationType, TransacaoCompleta, TransactionLinks, generateTransferGroupId, getFlowTypeFromOperation, getDomainFromOperation, InvestmentInfo, SeguroVeiculo, Veiculo, OPERATION_TYPE_LABELS } from "@/types/finance";
 import { toast } from "sonner";
 import { parseDateLocal, cn } from "@/lib/utils";
@@ -114,9 +113,6 @@ export function MovimentarContaModal({
   const [tempSeguroId, setTempSeguroId] = useState<string | null>(null);
   const [tempSeguroParcelaId, setTempSeguroParcelaId] = useState<string | null>(null);
 
-  // UI State for Tabs
-  const [activeTab, setActiveTab] = useState("passo1");
-
   const isEditing = !!editingTransaction;
   const selectedAccount = accounts.find(a => a.id === accountId);
   const availableOperations = selectedAccount ? getAvailableOperationTypes(selectedAccount.accountType) : [];
@@ -171,7 +167,6 @@ export function MovimentarContaModal({
   // Reset state when modal opens/changes
   useEffect(() => {
     if (open) {
-      setActiveTab("passo1"); // Always start at step 1
       if (editingTransaction) {
         setAccountId(editingTransaction.accountId);
         setDate(editingTransaction.date);
@@ -398,50 +393,6 @@ export function MovimentarContaModal({
   const HeaderIcon = selectedOperationConfig?.icon || DollarSign;
   const headerColor = selectedOperationConfig?.color || 'text-primary';
 
-  // --- Navigation Logic ---
-  const handleNext = () => {
-    if (activeTab === 'passo1') {
-      const parsedAmount = parseFloat(amount.replace(',', '.'));
-      if (!accountId || !date || parsedAmount <= 0 || !operationType) {
-        toast.error("Preencha Conta, Data, Valor e Tipo de Operação.");
-        return;
-      }
-      
-      if (isVinculoRequired) {
-        setActiveTab('passo3'); // Skip passo 2 if Vínculo is required
-      } else {
-        setActiveTab('passo2');
-      }
-    } else if (activeTab === 'passo2') {
-      // Validation for Passo 2 (Category)
-      if (showCategorySelector && !isInsurancePayment && !categoryId) {
-        toast.error("Selecione uma categoria.");
-        return;
-      }
-      // If Vínculo is required, we should have skipped Passo 2. If we are here, we submit.
-      handleSubmit({} as any); // Submit placeholder, actual submit logic handles validation
-    } else if (activeTab === 'passo3') {
-      // Validation for Passo 3 (Vínculos) is handled in handleSubmit
-      handleSubmit({} as any);
-    }
-  };
-
-  const handleBack = () => {
-    if (activeTab === 'passo2') {
-      setActiveTab('passo1');
-    } else if (activeTab === 'passo3') {
-      if (isCategorizable || isInsurancePayment) {
-        setActiveTab('passo2');
-      } else {
-        setActiveTab('passo1');
-      }
-    }
-  };
-  
-  const currentStepIndex = activeTab === 'passo1' ? 1 : activeTab === 'passo2' ? 2 : 3;
-  const totalSteps = isVinculoRequired ? 3 : 2;
-  const isLastStep = (activeTab === 'passo2' && !isVinculoRequired) || activeTab === 'passo3';
-
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-lg">
@@ -451,178 +402,166 @@ export function MovimentarContaModal({
             {isEditing ? "Editar Transação" : "Nova Movimentação"}
           </DialogTitle>
           <DialogDescription>
-              {isEditing ? "Atualize os detalhes da transação." : `Passo ${currentStepIndex} de ${totalSteps}: ${activeTab === 'passo1' ? 'Detalhes Essenciais' : activeTab === 'passo2' ? 'Classificação' : 'Vínculos'}`}
+            {isEditing ? "Atualize os detalhes da transação." : "Registre uma nova entrada, saída ou transferência."}
           </DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-6 flex flex-col h-full">
+        <form onSubmit={handleSubmit} className="space-y-6">
           
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col">
+          {/* Painel 1: Detalhes Essenciais (2 Colunas) */}
+          <div className="space-y-4 p-4 rounded-lg border border-border/50 bg-muted/10">
+            <h4 className="font-semibold text-sm text-foreground flex items-center gap-2">
+                <Wallet className="w-4 h-4 text-primary" /> Detalhes Essenciais
+            </h4>
             
-            {/* Tab List (Visual Indicator) */}
-            <TabsList className="grid w-full grid-cols-3 h-10 mb-4 bg-muted/50">
-              <TabsTrigger value="passo1" className="text-xs" disabled={activeTab !== 'passo1'}>
-                1. Essenciais
-              </TabsTrigger>
-              <TabsTrigger value="passo2" className="text-xs" disabled={activeTab !== 'passo2'}>
-                2. Classificação
-              </TabsTrigger>
-              <TabsTrigger value="passo3" className="text-xs" disabled={activeTab !== 'passo3'}>
-                3. Vínculos
-              </TabsTrigger>
-            </TabsList>
+            <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                    <Label htmlFor="accountId">Conta *</Label>
+                    <Select 
+                    value={accountId} 
+                    onValueChange={(v) => setAccountId(v)}
+                    disabled={isEditing}
+                    >
+                    <SelectTrigger className="h-10">
+                        <SelectValue placeholder="Selecione a conta" />
+                    </SelectTrigger>
+                    <SelectContent>
+                        {accounts.map(a => (
+                        <SelectItem key={a.id} value={a.id}>
+                            <span className="flex items-center gap-2">
+                            {ACCOUNT_TYPE_LABELS[a.accountType]} - {a.name}
+                            </span>
+                        </SelectItem>
+                        ))}
+                    </SelectContent>
+                    </Select>
+                </div>
+                <div className="space-y-2">
+                    <Label htmlFor="date">Data *</Label>
+                    <Input
+                    id="date"
+                    type="date"
+                    value={date}
+                    onChange={(e) => setDate(e.target.value)}
+                    className="h-10"
+                    />
+                </div>
+            </div>
 
-            {/* Passo 1: Detalhes Essenciais */}
-            <TabsContent value="passo1" className="mt-0 space-y-4 p-4 rounded-lg border border-border/50 bg-muted/10">
-                <h4 className="font-semibold text-sm text-foreground flex items-center gap-2">
-                    <Wallet className="w-4 h-4" /> Detalhes da Movimentação
-                </h4>
-                <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                        <Label htmlFor="accountId">Conta *</Label>
-                        <Select 
-                        value={accountId} 
-                        onValueChange={(v) => setAccountId(v)}
-                        disabled={isEditing}
-                        >
-                        <SelectTrigger className="h-10">
-                            <SelectValue placeholder="Selecione a conta" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            {accounts.map(a => (
-                            <SelectItem key={a.id} value={a.id}>
+            <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                    <Label htmlFor="operationType">Tipo de Operação *</Label>
+                    <Select 
+                    value={operationType || ''} 
+                    onValueChange={(v) => {
+                        setOperationType(v as OperationType);
+                        setCategoryId(null); 
+                        setTempInvestmentId(null);
+                        setTempLoanId(null);
+                        setTempParcelaId(null);
+                        setDestinationAccountId(null);
+                        setTempVehicleOperation(null);
+                        setTempSeguroId(null); 
+                        setTempSeguroParcelaId(null); 
+                    }}
+                    disabled={isEditing}
+                    >
+                    <SelectTrigger className={cn("h-10", selectedOperationConfig?.color)}>
+                        <SelectValue placeholder="Selecione a operação">
+                            {selectedOperationConfig && (
                                 <span className="flex items-center gap-2">
-                                {ACCOUNT_TYPE_LABELS[a.accountType]} - {a.name}
+                                    <selectedOperationConfig.icon className="w-4 h-4" />
+                                    {selectedOperationConfig.label}
                                 </span>
+                            )}
+                        </SelectValue>
+                    </SelectTrigger>
+                    <SelectContent>
+                        {availableOperations.map(op => {
+                        const option = OPERATION_OPTIONS.find(o => o.value === op);
+                        if (!option) return null;
+                        const Icon = option.icon;
+                        return (
+                            <SelectItem key={op} value={op}>
+                            <span className={cn("flex items-center gap-2", option.color)}>
+                                <Icon className="w-4 h-4" />
+                                {option.label}
+                            </span>
                             </SelectItem>
-                            ))}
-                        </SelectContent>
-                        </Select>
-                    </div>
-                    <div className="space-y-2">
-                        <Label htmlFor="date">Data *</Label>
-                        <Input
-                        id="date"
-                        type="date"
-                        value={date}
-                        onChange={(e) => setDate(e.target.value)}
-                        className="h-10"
-                        />
-                    </div>
+                        );
+                        })}
+                    </SelectContent>
+                    </Select>
                 </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                        <Label htmlFor="operationType">Tipo de Operação *</Label>
-                        <Select 
-                        value={operationType || ''} 
-                        onValueChange={(v) => {
-                            setOperationType(v as OperationType);
-                            setCategoryId(null); 
-                            setTempInvestmentId(null);
-                            setTempLoanId(null);
-                            setTempParcelaId(null);
-                            setDestinationAccountId(null);
-                            setTempVehicleOperation(null);
-                            setTempSeguroId(null); 
-                            setTempSeguroParcelaId(null); 
-                        }}
-                        disabled={isEditing}
-                        >
-                        <SelectTrigger className={cn("h-10", selectedOperationConfig?.color)}>
-                            <SelectValue placeholder="Selecione a operação">
-                                {selectedOperationConfig && (
-                                    <span className="flex items-center gap-2">
-                                        <selectedOperationConfig.icon className="w-4 h-4" />
-                                        {selectedOperationConfig.label}
-                                    </span>
-                                )}
-                            </SelectValue>
-                        </SelectTrigger>
-                        <SelectContent>
-                            {availableOperations.map(op => {
-                            const option = OPERATION_OPTIONS.find(o => o.value === op);
-                            if (!option) return null;
-                            const Icon = option.icon;
-                            return (
-                                <SelectItem key={op} value={op}>
-                                <span className={cn("flex items-center gap-2", option.color)}>
-                                    <Icon className="w-4 h-4" />
-                                    {option.label}
-                                </span>
-                                </SelectItem>
-                            );
-                            })}
-                        </SelectContent>
-                        </Select>
-                    </div>
-                    <div className="space-y-2">
-                        <Label htmlFor="amount">Valor (R$) *</Label>
-                        <Input
-                        id="amount"
-                        type="text"
-                        inputMode="decimal"
-                        placeholder="0,00"
-                        value={amount}
-                        onChange={(e) => handleAmountChange(e.target.value)}
-                        disabled={!!isAmountAutoFilled}
-                        className="h-10"
-                        />
-                    </div>
+                <div className="space-y-2">
+                    <Label htmlFor="amount">Valor (R$) *</Label>
+                    <Input
+                    id="amount"
+                    type="text"
+                    inputMode="decimal"
+                    placeholder="0,00"
+                    value={amount}
+                    onChange={(e) => handleAmountChange(e.target.value)}
+                    disabled={!!isAmountAutoFilled}
+                    className="h-10"
+                    />
                 </div>
-            </TabsContent>
+            </div>
+          </div>
+          
+          {/* Painel 2: Classificação e Descrição (1 Coluna) */}
+          <div className="space-y-4 p-4 rounded-lg border border-border/50 bg-muted/10">
+            <h4 className="font-semibold text-sm text-foreground flex items-center gap-2">
+                <Tags className="w-4 h-4 text-accent" /> Classificação
+            </h4>
             
-            {/* Passo 2: Classificação e Descrição */}
-            <TabsContent value="passo2" className="mt-0 space-y-4 p-4 rounded-lg border border-border/50 bg-muted/10">
-                <h4 className="font-semibold text-sm text-foreground flex items-center gap-2">
-                    <Tags className="w-4 h-4" /> Classificação
-                </h4>
-                <div className="grid grid-cols-1 gap-4">
-                    {/* Categoria Selector */}
-                    {showCategorySelector && (
-                    <div className="space-y-2">
-                        <Label htmlFor="categoryId">Categoria {isCategorizable ? '*' : ''}</Label>
-                        <Select 
-                        value={categoryId || ''} 
-                        onValueChange={(v) => {
-                            setCategoryId(v);
-                            if (v !== seguroCategory?.id) {
-                                setTempSeguroId(null);
-                                setTempSeguroParcelaId(null);
-                            }
-                        }}
-                        disabled={isCategoryDisabled}
-                        >
-                        <SelectTrigger className="h-10">
-                            <SelectValue placeholder="Selecione a categoria" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            {availableCategories.map(c => (
-                            <SelectItem key={c.id} value={c.id}>
-                                {c.icon} {c.label}
-                            </SelectItem>
-                            ))}
-                        </SelectContent>
-                        </Select>
-                    </div>
-                    )}
-                    
-                    {/* Descrição (Full Width) */}
-                    <div className="space-y-2">
-                        <Label htmlFor="description">Descrição</Label>
-                        <Input
-                        id="description"
-                        placeholder="Descrição da transação"
-                        value={description}
-                        onChange={(e) => setDescription(e.target.value)}
-                        className="h-10"
-                        />
-                    </div>
+            <div className="grid grid-cols-1 gap-4">
+                {/* Categoria Selector */}
+                {showCategorySelector && (
+                <div className="space-y-2">
+                    <Label htmlFor="categoryId">Categoria {isCategorizable ? '*' : ''}</Label>
+                    <Select 
+                    value={categoryId || ''} 
+                    onValueChange={(v) => {
+                        setCategoryId(v);
+                        if (v !== seguroCategory?.id) {
+                            setTempSeguroId(null);
+                            setTempSeguroParcelaId(null);
+                        }
+                    }}
+                    disabled={isCategoryDisabled}
+                    >
+                    <SelectTrigger className="h-10">
+                        <SelectValue placeholder="Selecione a categoria" />
+                    </SelectTrigger>
+                    <SelectContent>
+                        {availableCategories.map(c => (
+                        <SelectItem key={c.id} value={c.id}>
+                            {c.icon} {c.label}
+                        </SelectItem>
+                        ))}
+                    </SelectContent>
+                    </Select>
                 </div>
-            </TabsContent>
+                )}
+                
+                {/* Descrição (Full Width) */}
+                <div className="space-y-2">
+                    <Label htmlFor="description">Descrição</Label>
+                    <Input
+                    id="description"
+                    placeholder="Descrição da transação"
+                    value={description}
+                    onChange={(e) => setDescription(e.target.value)}
+                    className="h-10"
+                    />
+                </div>
+            </div>
+          </div>
 
-            {/* Passo 3: Vínculos (Condicionais) */}
-            <TabsContent value="passo3" className="mt-0 space-y-4 p-4 rounded-lg border border-border/50 bg-primary/10">
+          {/* Painel 3: Vínculos (Condicional) */}
+          {isVinculoRequired && (
+            <div className="space-y-4 p-4 rounded-lg border border-border/50 bg-primary/10">
                 <h4 className="font-semibold text-sm text-primary flex items-center gap-2">
                     <ArrowLeftRight className="w-4 h-4" /> Vínculo / Contraparte
                 </h4>
@@ -807,31 +746,16 @@ export function MovimentarContaModal({
                         </div>
                     </div>
                 )}
-            </TabsContent>
-          </Tabs>
+            </div>
+          )}
 
-          <DialogFooter className="pt-4 flex justify-between items-center">
+          <DialogFooter className="pt-4 flex justify-end gap-2">
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               Cancelar
             </Button>
-            
-            <div className="flex gap-2">
-                {activeTab !== 'passo1' && (
-                    <Button type="button" variant="secondary" onClick={handleBack}>
-                        <ChevronLeft className="w-4 h-4 mr-2" /> Voltar
-                    </Button>
-                )}
-                
-                {isLastStep ? (
-                    <Button type="submit" onClick={handleSubmit}>
-                        <CheckCircle2 className="w-4 h-4 mr-2" /> {isEditing ? "Salvar Alterações" : "Registrar"}
-                    </Button>
-                ) : (
-                    <Button type="button" onClick={handleNext}>
-                        Próximo <ChevronRight className="w-4 h-4 ml-2" />
-                    </Button>
-                )}
-            </div>
+            <Button type="submit" onClick={handleSubmit}>
+              {isEditing ? "Salvar Alterações" : "Registrar"}
+            </Button>
           </DialogFooter>
         </form>
       </DialogContent>
