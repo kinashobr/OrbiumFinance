@@ -504,7 +504,7 @@ export function MovimentarContaModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md bg-card border-border overflow-hidden flex flex-col p-0 shadow-lg animate-fade-in">
+      <DialogContent className="max-w-md bg-card border-border overflow-hidden flex flex-col p-0 shadow-lg animate-fade-in max-h-[90vh]">
         
         {/* CABEÇALHO DINÂMICO */}
         <DialogHeader className="p-6 pb-4 border-b border-border/50 shrink-0">
