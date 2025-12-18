@@ -374,9 +374,6 @@ interface FinanceContextType {
   calculateTotalInvestmentBalanceAtDate: (date: Date | undefined) => number;
   calculatePaidInstallmentsUpToDate: (loanId: number, targetDate: Date) => number; 
 
-  // NEW: Função para obter despesas pagas externas
-  getOtherPaidExpensesForMonth: (date: Date) => TransacaoCompleta[];
-
   // Exportação e Importação
   exportData: () => void;
   importData: (file: File) => Promise<{ success: boolean; message: string }>;
@@ -1289,7 +1286,7 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
         status: 'ativo',
       };
     }));
-  });
+  }, []);
 
   const addVeiculo = (veiculo: Omit<Veiculo, "id">) => {
     const newId = Math.max(0, ...veiculos.map(v => v.id)) + 1;
@@ -1527,35 +1524,6 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
   }, [getAtivosTotal, getPassivosTotal]);
 
   // ============================================
-  // NEW: Função para obter despesas pagas externas
-  // ============================================
-  
-  const getOtherPaidExpensesForMonth = useCallback((date: Date): TransacaoCompleta[] => {
-    const monthStart = startOfMonth(date);
-    const monthEnd = endOfMonth(date);
-    
-    // Filtra transações de saída no mês
-    const expensesInMonth = transacoesV2.filter(t => {
-      const isOutFlow = t.flow === 'out' || t.flow === 'transfer_out';
-      const isDespesa = t.operationType === 'despesa' || t.operationType === 'pagamento_emprestimo';
-      const isWithinMonth = isWithinInterval(parseDateLocal(t.date), { start: monthStart, end: monthEnd });
-      
-      return isOutFlow && isDespesa && isWithinMonth;
-    });
-    
-    // Identifica transações que foram criadas pelo billsTracker
-    const trackerTransactionIds = new Set<string>();
-    billsTracker.forEach(bill => {
-      if (bill.transactionId) {
-        trackerTransactionIds.add(bill.transactionId);
-      }
-    });
-    
-    // Retorna apenas transações que não foram criadas pelo tracker
-    return expensesInMonth.filter(t => !trackerTransactionIds.has(t.id));
-  }, [transacoesV2, billsTracker]);
-
-  // ============================================
   // EXPORTAÇÃO E IMPORTAÇÃO
   // ============================================
 
@@ -1716,7 +1684,6 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     calculateBalanceUpToDate, 
     calculateTotalInvestmentBalanceAtDate,
     calculatePaidInstallmentsUpToDate,
-    getOtherPaidExpensesForMonth, // NEW FUNCTION
     exportData,
     importData,
   };

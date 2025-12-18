@@ -23,7 +23,6 @@ import { EditableCell } from "../EditableCell";
 
 interface BillsTrackerListProps {
   bills: BillTracker[];
-  externalExpenses: any[]; // NEW PROP
   onUpdateBill: (id: string, updates: Partial<BillTracker>) => void;
   onDeleteBill: (id: string) => void;
   onAddBill: (bill: Omit<BillTracker, "id" | "isPaid">) => void;
@@ -70,7 +69,6 @@ const columnHeaders: { key: ColumnKey, label: string, align?: 'center' | 'right'
 
 export function BillsTrackerList({
   bills,
-  externalExpenses, // NEW PROP
   onUpdateBill,
   onDeleteBill,
   onAddBill,
@@ -541,77 +539,7 @@ export function BillsTrackerList({
                   </TableRow>
                 );
               })}
-              
-              {/* Linha de separação visual */}
-              {(sortedBills.length > 0 && externalExpenses.length > 0) && (
-                <TableRow>
-                  <TableCell colSpan={9} className="py-2">
-                    <div className="h-px bg-border"></div>
-                  </TableCell>
-                </TableRow>
-              )}
-              
-              {/* Despesas Externas (Pagas) */}
-              {externalExpenses.map((expense) => {
-                const category = categoriasV2.find(c => c.id === expense.categoryId);
-                const account = contasMovimento.find(c => c.id === expense.accountId);
-                
-                return (
-                  <TableRow 
-                    key={`external-${expense.id}`} 
-                    className="hover:bg-muted/30 transition-colors h-12 bg-muted/30"
-                  >
-                    <TableCell className="text-center p-2 text-base" style={{ width: columnWidths.pay }}>
-                      <Check className="w-5 h-5 text-success" />
-                    </TableCell>
-                    
-                    <TableCell className="font-medium whitespace-nowrap text-base p-2 text-success" style={{ width: columnWidths.due }}>
-                      <span className="text-base">
-                        {format(parseDateLocal(expense.date), 'dd/MM/yyyy')}
-                      </span>
-                    </TableCell>
-                    
-                    <TableCell className="font-medium whitespace-nowrap text-base p-2 text-success" style={{ width: columnWidths.paymentDate }}>
-                      <span className="text-base">
-                        {format(parseDateLocal(expense.date), 'dd/MM/yyyy')}
-                      </span>
-                    </TableCell>
-                    
-                    <TableCell className="text-base max-w-[200px] truncate p-2" style={{ width: columnWidths.description }}>
-                      {expense.description}
-                    </TableCell>
-                    
-                    <TableCell className="text-base p-2" style={{ width: columnWidths.account }}>
-                      <Badge variant="outline" className="text-base">
-                        {account?.name || 'Conta'}
-                      </Badge>
-                    </TableCell>
-                    
-                    <TableCell className="p-2 text-base" style={{ width: columnWidths.type }}>
-                      <Badge variant="outline" className="text-base text-success border-success/20">
-                        <DollarSign className="w-4 h-4 mr-1" />
-                        Externa
-                      </Badge>
-                    </TableCell>
-                    
-                    <TableCell className="p-2 text-base" style={{ width: columnWidths.category }}>
-                      <Badge variant="outline" className="text-base">
-                        {category?.label || 'Sem Categoria'}
-                      </Badge>
-                    </TableCell>
-                    
-                    <TableCell className="text-right font-semibold whitespace-nowrap p-2 text-success text-base" style={{ width: columnWidths.amount }}>
-                      {formatCurrency(expense.amount)}
-                    </TableCell>
-                    
-                    <TableCell className="text-center p-2 text-base" style={{ width: columnWidths.actions }}>
-                      <Badge variant="outline" className="text-xs">Somente Leitura</Badge>
-                    </TableCell>
-                  </TableRow>
-                );
-              })}
-              
-              {sortedBills.length === 0 && externalExpenses.length === 0 && (
+              {sortedBills.length === 0 && (
                 <TableRow>
                   <TableCell colSpan={9} className="text-center text-muted-foreground py-8">
                     <Check className="w-6 h-6 mx-auto mb-2 text-success" />
