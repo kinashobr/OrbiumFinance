@@ -91,9 +91,16 @@ export function BillsTrackerModal({ open, onOpenChange }: BillsTrackerModalProps
     getFutureFixedBills(currentDate, trackerManagedBills)
   , [getFutureFixedBills, currentDate, trackerManagedBills]);
   
-  const totalPendingBills = useMemo(() => 
-    trackerManagedBills.filter(b => !b.isPaid).reduce((acc, b) => acc + b.expectedAmount, 0)
-  , [trackerManagedBills]);
+  // CÁLCULOS AJUSTADOS PARA O SIDEBAR
+  const totalUnpaidBills = useMemo(() => 
+    combinedBills.filter(b => !b.isPaid).reduce((acc, b) => acc + b.expectedAmount, 0)
+  , [combinedBills]);
+  
+  const totalPaidBills = useMemo(() => 
+    combinedBills.filter(b => b.isPaid).reduce((acc, b) => acc + b.expectedAmount, 0)
+  , [combinedBills]);
+  
+  const totalExpectedExpense = totalUnpaidBills + totalPaidBills; // Total de despesas do mês (pendentes + pagas)
 
   // --- Handlers ---
   
@@ -440,7 +447,8 @@ export function BillsTrackerModal({ open, onOpenChange }: BillsTrackerModalProps
             <div className="w-1/4 shrink-0 overflow-y-auto">
                 <BillsSidebarKPIs 
                     currentDate={currentDate}
-                    totalPendingBills={totalPendingBills}
+                    totalPendingBills={totalUnpaidBills} // <-- USANDO APENAS O QUE FALTA PAGAR
+                    totalPaidBills={totalPaidBills} // <-- NOVO PROP
                 />
             </div>
             

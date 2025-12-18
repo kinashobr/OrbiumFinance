@@ -12,10 +12,11 @@ import { format, subDays, startOfMonth } from "date-fns";
 
 interface BillsSidebarKPIsProps {
   currentDate: Date;
-  totalPendingBills: number;
+  totalPendingBills: number; // Valor que AINDA falta pagar
+  totalPaidBills?: number; // NOVO: Valor que JÁ foi pago no mês
 }
 
-export function BillsSidebarKPIs({ currentDate, totalPendingBills }: BillsSidebarKPIsProps) {
+export function BillsSidebarKPIs({ currentDate, totalPendingBills, totalPaidBills = 0 }: BillsSidebarKPIsProps) {
   const { 
     monthlyRevenueForecast, 
     setMonthlyRevenueForecast, 
@@ -48,7 +49,17 @@ export function BillsSidebarKPIs({ currentDate, totalPendingBills }: BillsSideba
     const revenuePrevMonth = getRevenueForPreviousMonth(currentDate);
     
     // 3. Saldo Projetado
-    const projectedBalance = initialBalance + monthlyRevenueForecast - totalPendingBills;
+    // Saldo Projetado = Saldo Inicial + Receita Prevista - (Contas Pendentes + Contas Já Pagas)
+    // CORREÇÃO: O saldo inicial já reflete o impacto das contas já pagas (totalPaidBills) se elas foram pagas antes do início do mês.
+    // Se as contas pagas (totalPaidBills) foram pagas DENTRO do mês, elas já reduziram o saldo inicial.
+    // No entanto, o cálculo do Saldo Projetado deve ser: Saldo Inicial + Receita Prevista - Total de Despesas do Mês (Pendentes + Pagas).
+    // Mas, como o Saldo Inicial é calculado no dia 1 do mês, ele não inclui as transações do mês.
+    // Portanto, a fórmula correta é: Saldo Inicial + Receita Prevista - Total de Despesas do Mês.
+    
+    // Total de Despesas do Mês (Planejadas + Externas)
+    const totalExpensesForMonth = totalPendingBills + totalPaidBills;
+    
+    const projectedBalance = initialBalance + monthlyRevenueForecast - totalExpensesForMonth;
     
     const status: 'success' | 'warning' | 'danger' = 
       projectedBalance >= 0 ? (projectedBalance > initialBalance ? 'success' : 'warning') : 'danger';
@@ -57,9 +68,10 @@ export function BillsSidebarKPIs({ currentDate, totalPendingBills }: BillsSideba
       initialBalance,
       revenuePrevMonth,
       projectedBalance,
+      totalExpensesForMonth, // Novo campo para exibir o total de despesas
       status,
     };
-  }, [currentDate, highLiquidityAccountIds, calculateBalanceUpToDate, transacoesV2, contasMovimento, getRevenueForPreviousMonth, monthlyRevenueForecast, totalPendingBills]);
+  }, [currentDate, highLiquidityAccountIds, calculateBalanceUpToDate, transacoesV2, contasMovimento, getRevenueForPreviousMonth, monthlyRevenueForecast, totalPendingBills, totalPaidBills]);
   
   const handleUpdateForecast = () => {
     const parsed = parseFloat(forecastInput.replace(',', '.'));
@@ -122,9 +134,21 @@ export function BillsSidebarKPIs({ currentDate, totalPendingBills }: BillsSideba
           <div className="flex justify-between items-center text-sm p-2 rounded-lg bg-destructive/10">
             <span className="text-destructive font-medium flex items-center gap-2">
                 <TrendingDown className="w-4 h-4" />
-                Contas Pendentes
+                Despesas Totais (Mês)
             </span>
-            <span className="font-bold text-destructive">{formatCurrency(totalPendingBills)}</span>
+            <span className="font-bold text-destructive">{formatCurrency(calculos.totalExpensesForMonth)}</span>
+          </div>
+          
+          {/* Detalhe Pendente */}
+          <div className="flex justify-between items-center text-xs px-2 text-muted-foreground">
+            <span>A pagar (Pendentes)</span>
+            <span className="font-medium">{formatCurrency(totalPendingBills)}</span>
+          </div>
+          
+          {/* Detalhe Pago */}
+          <div className="flex justify-between items-center text-xs px-2 text-muted-foreground">
+            <span>Já pago (Extrato/Tracker)</span>
+            <span className="font-medium">{formatCurrency(totalPaidBills)}</span>
           </div>
           
           {/* Saldo Projetado */}
