@@ -1,17 +1,18 @@
 import { useState, useMemo, useCallback } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { CalendarCheck, RefreshCw, X, ListChecks } from "lucide-react";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
+import { CalendarCheck, Clock, CheckCircle2, AlertTriangle, ArrowRight, Plus, X, RefreshCw, DollarSign } from "lucide-react";
 import { useFinance } from "@/contexts/FinanceContext";
-import { BillTracker, PotentialFixedBill, formatCurrency, generateBillId, TransacaoCompleta } from "@/types/finance";
+import { BillTracker, PotentialFixedBill, formatCurrency, BillSourceType, generateBillId } from "@/types/finance";
 import { cn, parseDateLocal } from "@/lib/utils";
 import { format, isPast, isSameMonth, startOfMonth, endOfMonth, subMonths, addMonths } from "date-fns";
 import { toast } from "sonner";
-import { BillsContextSidebar } from "./BillsContextSidebar";
-import { BillsTrackerList } from "./BillsTrackerList";
-import { AllInstallmentsReviewModal } from "./AllInstallmentsReviewModal";
-import { MonthlyTransactionSummary } from "./MonthlyTransactionSummary"; // Mantendo o import
+import { MonthlyTransactionSummary } from "./MonthlyTransactionSummary";
 
 interface BillsTrackerModalProps {
   open: boolean;
@@ -34,16 +35,11 @@ export function BillsTrackerModal({ open, onOpenChange }: BillsTrackerModalProps
     unmarkLoanParcelPaid,
     unmarkSeguroParcelPaid,
     transacoesV2,
-    setTransacoesV2, // <-- CORRIGIDO: Adicionado setTransacoesV2
     categoriasV2,
-    monthlyRevenueForecast,
-    setMonthlyRevenueForecast,
-    getRevenueForPreviousMonth,
-    getTransactionsForMonth,
   } = useFinance();
   
   const [referenceDate, setReferenceDate] = useState(startOfMonth(new Date()));
-  const [showInstallmentsModal, setShowInstallmentsModal] = useState(false);
+  const [activeTab, setActiveTab] = useState("contas");
   
   const contasCorrentes = getContasCorrentesTipo();
   const categoriesMap = useMemo(() => new Map(categoriasV2.map(c => [c.id, c])), [categoriasV2]);
@@ -51,24 +47,45 @@ export function BillsTrackerModal({ open, onOpenChange }: BillsTrackerModalProps
   // 1. Contas Fixas/Recorrentes (BillsTracker)
   const localBills = useMemo(() => getBillsForMonth(referenceDate), [getBillsForMonth, referenceDate]);
   
-  // 2. Contas Potenciais (Empréstimos/Seguros) - Usado para o modal de revisão
-  const potentialBills = useMemo(() => getPotentialFixedBillsForMonth(referenceDate, billsTracker), [getPotentialFixedBillsForMonth, referenceDate, billsTracker]);
+  // 2. Contas Potenciais (Empréstimos/Seguros)
+  const potentialBills = useMemo(() => getPotentialFixedBillsForMonth(referenceDate, localBills), [getPotentialFixedBillsForMonth, referenceDate, localBills]);
   
-  // 3. Transações Reais do Mês (para o resumo)
+  // 3. Transações Reais do Mês (NOVO)
   const monthlyTransactions = useMemo(() => getTransactionsForMonth(referenceDate), [getTransactionsForMonth, referenceDate]);
 
   const handleMonthChange = (direction: 'prev' | 'next') => {
     setReferenceDate(prev => direction === 'prev' ? subMonths(prev, 1) : addMonths(prev, 1));
   };
   
-  const handleTogglePaid = useCallback((bill: BillTracker, isChecked: boolean) => {
-    if (isChecked) {
-      handleMarkPaid(bill);
+  const handleToggleInclusion = (potentialBill: PotentialFixedBill) => {
+    const existingBill = localBills.find(b => b.sourceType === potentialBill.sourceType && b.sourceRef === potentialBill.sourceRef && b.parcelaNumber === potentialBill.parcelaNumber);
+    
+    if (existingBill) {
+      // Excluir (marcar como isExcluded)
+      updateBill(existingBill.id, { isExcluded: true });
+      toast.info(`Conta ${potentialBill.description} excluída da lista.`);
     } else {
-      handleUnmarkPaid(bill);
+      // Incluir (adicionar como nova BillTracker)
+      const newBill: BillTracker = {
+        id: generateBillId(),
+        description: potentialBill.description,
+        dueDate: potentialBill.dueDate,
+        expectedAmount: potentialBill.expectedAmount,
+        isPaid: potentialBill.isPaid,
+        paymentDate: potentialBill.isPaid ? format(new Date(), 'yyyy-MM-dd') : undefined,
+        transactionId: undefined, // Será preenchido no pagamento
+        sourceType: potentialBill.sourceType,
+        sourceRef: potentialBill.sourceRef,
+        parcelaNumber: potentialBill.parcelaNumber,
+        suggestedAccountId: contasCorrentes[0]?.id,
+        suggestedCategoryId: categoriesMap.get('cat_seguro')?.id || categoriesMap.get('cat_alimentacao')?.id,
+        isExcluded: false,
+      };
+      setBillsTracker(prev => [...prev, newBill]);
+      toast.success(`Conta ${potentialBill.description} adicionada à lista.`);
     }
-  }, [updateBill, addTransacaoV2, markLoanParcelPaid, markSeguroParcelPaid, unmarkLoanParcelPaid, unmarkSeguroParcelPaid, setTransacoesV2]);
-
+  };
+  
   const handleMarkPaid = (bill: BillTracker) => {
     if (!bill.suggestedAccountId) {
       toast.error("Selecione uma conta de débito antes de marcar como pago.");
@@ -76,8 +93,9 @@ export function BillsTrackerModal({ open, onOpenChange }: BillsTrackerModalProps
     }
     
     const paymentDate = format(new Date(), 'yyyy-MM-dd');
-    const transactionId = generateBillId();
+    const transactionId = generateBillId(); // Usando o mesmo gerador para ID de transação temporário
     
+    // 1. Criar a transação
     const newTx: TransacaoCompleta = {
       id: transactionId,
       date: paymentDate,
@@ -106,12 +124,14 @@ export function BillsTrackerModal({ open, onOpenChange }: BillsTrackerModalProps
     
     addTransacaoV2(newTx);
     
+    // 2. Marcar a conta como paga no tracker
     updateBill(bill.id, {
       isPaid: true,
       paymentDate,
       transactionId,
     });
     
+    // 3. Atualizar status nas entidades (Empréstimo/Seguro)
     if (bill.sourceType === 'loan_installment' && bill.sourceRef && bill.parcelaNumber) {
       const loanId = parseInt(bill.sourceRef);
       if (!isNaN(loanId)) {
@@ -131,14 +151,17 @@ export function BillsTrackerModal({ open, onOpenChange }: BillsTrackerModalProps
   const handleUnmarkPaid = (bill: BillTracker) => {
     if (!bill.transactionId) return;
     
+    // 1. Remover a transação
     setTransacoesV2(prev => prev.filter(t => t.id !== bill.transactionId));
     
+    // 2. Desmarcar a conta no tracker
     updateBill(bill.id, {
       isPaid: false,
       paymentDate: undefined,
       transactionId: undefined,
     });
     
+    // 3. Reverter status nas entidades (Empréstimo/Seguro)
     if (bill.sourceType === 'loan_installment' && bill.sourceRef) {
       const loanId = parseInt(bill.sourceRef);
       if (!isNaN(loanId)) {
@@ -155,153 +178,238 @@ export function BillsTrackerModal({ open, onOpenChange }: BillsTrackerModalProps
     toast.info(`Pagamento de ${bill.description} estornado.`);
   };
   
-  const handleAddBill = (bill: Omit<BillTracker, "id" | "isPaid">) => {
-    const newBill: BillTracker = {
-      ...bill,
-      id: generateBillId(),
-      isPaid: false,
-      isExcluded: false,
-    };
-    setBillsTracker(prev => [...prev, newBill]);
-  };
-  
-  const handleSaveAndClose = () => {
-    onOpenChange(false);
-  };
-  
-  const handleToggleInstallment = useCallback((potentialBill: PotentialFixedBill, isChecked: boolean) => {
-    const existingBill = billsTracker.find(b => 
-        b.sourceType === potentialBill.sourceType && 
-        b.sourceRef === potentialBill.sourceRef && 
-        b.parcelaNumber === potentialBill.parcelaNumber
-    );
-    
-    if (isChecked) {
-        if (!existingBill) {
-            const newBill: BillTracker = {
-                id: generateBillId(),
-                description: potentialBill.description,
-                dueDate: potentialBill.dueDate,
-                expectedAmount: potentialBill.expectedAmount,
-                isPaid: potentialBill.isPaid,
-                paymentDate: potentialBill.isPaid ? format(new Date(), 'yyyy-MM-dd') : undefined,
-                transactionId: undefined,
-                sourceType: potentialBill.sourceType,
-                sourceRef: potentialBill.sourceRef,
-                parcelaNumber: potentialBill.parcelaNumber,
-                suggestedAccountId: contasCorrentes[0]?.id,
-                suggestedCategoryId: categoriesMap.get('cat_seguro')?.id || categoriesMap.get('cat_alimentacao')?.id,
-                isExcluded: false,
-            };
-            setBillsTracker(prev => [...prev, newBill]);
-            toast.success(`Parcela ${potentialBill.description} incluída.`);
-        } else if (existingBill.isExcluded) {
-            updateBill(existingBill.id, { isExcluded: false });
-            toast.success(`Parcela ${potentialBill.description} reativada.`);
-        }
-    } else {
-        if (existingBill && !existingBill.isPaid) {
-            updateBill(existingBill.id, { isExcluded: true });
-            toast.info(`Parcela ${potentialBill.description} excluída da lista deste mês.`);
-        } else if (existingBill && existingBill.isPaid) {
-            toast.error("Não é possível excluir parcelas já pagas. Estorne o pagamento primeiro.");
-        }
-    }
-  }, [billsTracker, setBillsTracker, updateBill, contasCorrentes, categoriesMap]);
-
-  // Cálculos para o Sidebar
-  const totalExpectedExpense = localBills.filter(b => !b.isPaid).reduce((acc, b) => acc + b.expectedAmount, 0);
+  const totalExpected = localBills.reduce((acc, b) => acc + b.expectedAmount, 0);
   const totalPaid = localBills.filter(b => b.isPaid).reduce((acc, b) => acc + b.expectedAmount, 0);
-  const pendingCount = localBills.filter(b => !b.isPaid).length;
-  
-  const totalMonthlyOut = monthlyTransactions
-    .filter(t => t.flow === 'out' && t.operationType !== 'initial_balance')
-    .reduce((acc, t) => acc + t.amount, 0);
-    
-  const totalMonthlyIn = monthlyTransactions
-    .filter(t => t.flow === 'in' && t.operationType !== 'initial_balance')
-    .reduce((acc, t) => acc + t.amount, 0);
-    
-  const netForecast = monthlyRevenueForecast - totalExpectedExpense;
-  const previousMonthRevenue = getRevenueForPreviousMonth(referenceDate);
+  const totalPending = totalExpected - totalPaid;
 
   return (
-    <>
-      <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-6xl h-[90vh] p-0 overflow-hidden flex flex-col">
-          <DialogHeader className="shrink-0 px-6 pt-6 pb-4 border-b">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <CalendarCheck className="w-5 h-5 text-primary" />
-                <div>
-                  <DialogTitle className="text-xl">Controle de Contas a Pagar</DialogTitle>
-                  <DialogDescription className="text-sm">
-                    Planejamento e acompanhamento de despesas do mês
-                  </DialogDescription>
-                </div>
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
+        <DialogHeader className="shrink-0">
+          <DialogTitle className="flex items-center gap-2">
+            <CalendarCheck className="w-5 h-5 text-primary" />
+            Contas a Pagar & Fluxo de Caixa
+          </DialogTitle>
+          <DialogDescription>
+            Gerencie contas fixas e acompanhe o fluxo de caixa real do mês.
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="flex items-center justify-between p-2 rounded-lg bg-muted/50 border border-border/50 shrink-0">
+          <Button variant="ghost" size="icon" onClick={() => handleMonthChange('prev')}>
+            <ArrowRight className="w-4 h-4 rotate-180" />
+          </Button>
+          <h4 className="font-semibold text-lg">
+            {format(referenceDate, 'MMMM yyyy')}
+          </h4>
+          <Button variant="ghost" size="icon" onClick={() => handleMonthChange('next')}>
+            <ArrowRight className="w-4 h-4" />
+          </Button>
+        </div>
+
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col overflow-hidden">
+          <TabsList className="bg-muted/50 shrink-0">
+            <TabsTrigger value="contas">Contas a Pagar ({localBills.length})</TabsTrigger>
+            <TabsTrigger value="potenciais">Vínculos Potenciais ({potentialBills.length})</TabsTrigger>
+            <TabsTrigger value="fluxo">Fluxo de Caixa Real ({monthlyTransactions.length})</TabsTrigger>
+          </TabsList>
+
+          {/* Tab 1: Contas a Pagar */}
+          <TabsContent value="contas" className="flex-1 overflow-hidden pt-4">
+            <div className="grid grid-cols-3 gap-4 mb-4">
+              <div className="p-3 rounded-lg bg-primary/10 border border-primary/20">
+                <p className="text-xs text-muted-foreground">Total Previsto</p>
+                <p className="text-lg font-bold text-primary">{formatCurrency(totalExpected)}</p>
               </div>
-              <div className="flex items-center gap-2">
-                <Button variant="outline" size="sm" onClick={() => handleMonthChange('prev')}>
-                  <RefreshCw className="w-4 h-4 rotate-180" />
-                </Button>
-                <h4 className="font-semibold text-lg w-32 text-center">
-                  {format(referenceDate, 'MMMM/yy')}
-                </h4>
-                <Button variant="outline" size="sm" onClick={() => handleMonthChange('next')}>
-                  <RefreshCw className="w-4 h-4" />
-                </Button>
+              <div className="p-3 rounded-lg bg-success/10 border border-success/20">
+                <p className="text-xs text-muted-foreground">Total Pago</p>
+                <p className="text-lg font-bold text-success">{formatCurrency(totalPaid)}</p>
+              </div>
+              <div className="p-3 rounded-lg bg-warning/10 border border-warning/20">
+                <p className="text-xs text-muted-foreground">Total Pendente</p>
+                <p className="text-lg font-bold text-warning">{formatCurrency(totalPending)}</p>
               </div>
             </div>
-          </DialogHeader>
-
-          <div className="flex flex-1 overflow-hidden">
             
-            {/* Coluna 1: Sidebar de Contexto */}
-            <div className="w-[300px] shrink-0 h-full overflow-y-auto">
-              <BillsContextSidebar
-                localRevenueForecast={monthlyRevenueForecast}
-                setLocalRevenueForecast={setMonthlyRevenueForecast}
-                previousMonthRevenue={previousMonthRevenue}
-                totalExpectedExpense={totalExpectedExpense}
-                totalPaid={totalPaid}
-                pendingCount={pendingCount}
-                netForecast={netForecast}
-                onSaveAndClose={handleSaveAndClose}
-                onOpenAllInstallments={() => setShowInstallmentsModal(true)}
-              />
-              
-              {/* Adicionando o resumo de transações reais aqui, abaixo do sidebar de contexto */}
-              <div className="p-4 pt-0">
-                <MonthlyTransactionSummary 
-                  transactions={monthlyTransactions} 
-                  referenceDate={referenceDate} 
-                />
-              </div>
-            </div>
+            <ScrollArea className="h-[45vh] border rounded-lg">
+              <Table>
+                <TableHeader className="sticky top-0 bg-card z-10">
+                  <TableRow>
+                    <TableHead className="w-[100px]">Vencimento</TableHead>
+                    <TableHead>Descrição</TableHead>
+                    <TableHead className="w-[120px] text-right">Valor</TableHead>
+                    <TableHead className="w-[120px]">Conta Débito</TableHead>
+                    <TableHead className="w-[100px] text-center">Status</TableHead>
+                    <TableHead className="w-[100px]">Ações</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {localBills.map((bill) => {
+                    const isOverdue = isPast(parseDateLocal(bill.dueDate)) && !bill.isPaid;
+                    const account = contasCorrentes.find(c => c.id === bill.suggestedAccountId);
+                    
+                    return (
+                      <TableRow key={bill.id} className={cn(
+                        bill.isPaid && "bg-success/5 hover:bg-success/10",
+                        isOverdue && "bg-destructive/5 hover:bg-destructive/10"
+                      )}>
+                        <TableCell className={cn("text-sm font-medium", isOverdue && "text-destructive")}>
+                          {parseDateLocal(bill.dueDate).toLocaleDateString("pt-BR")}
+                        </TableCell>
+                        <TableCell className="text-sm max-w-[200px] truncate">{bill.description}</TableCell>
+                        <TableCell className="text-right font-medium text-destructive">
+                          {formatCurrency(bill.expectedAmount)}
+                        </TableCell>
+                        <TableCell>
+                          <Select 
+                            value={bill.suggestedAccountId || ''} 
+                            onValueChange={(v) => updateBill(bill.id, { suggestedAccountId: v })}
+                            disabled={bill.isPaid}
+                          >
+                            <SelectTrigger className="h-8 text-xs">
+                              <SelectValue placeholder="Conta..." />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {contasCorrentes.map(a => (
+                                <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </TableCell>
+                        <TableCell className="text-center">
+                          <Badge 
+                            variant="outline" 
+                            className={cn(
+                              "text-xs",
+                              bill.isPaid ? "border-success text-success" : "border-warning text-warning"
+                            )}
+                          >
+                            {bill.isPaid ? <CheckCircle2 className="w-3 h-3 mr-1" /> : <Clock className="w-3 h-3 mr-1" />}
+                            {bill.isPaid ? 'Paga' : 'Pendente'}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          {bill.isPaid ? (
+                            <Button 
+                              variant="ghost" 
+                              size="icon" 
+                              className="h-8 w-8 text-muted-foreground"
+                              onClick={() => handleUnmarkPaid(bill)}
+                              title="Estornar Pagamento"
+                            >
+                              <RefreshCw className="w-4 h-4" />
+                            </Button>
+                          ) : (
+                            <Button 
+                              variant="outline" 
+                              size="sm" 
+                              className="h-8 px-2 gap-1"
+                              onClick={() => handleMarkPaid(bill)}
+                              disabled={!bill.suggestedAccountId}
+                            >
+                              Pagar
+                            </Button>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                  {localBills.length === 0 && (
+                    <TableRow>
+                      <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
+                        Nenhuma conta fixa neste mês.
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </ScrollArea>
+          </TabsContent>
 
-            {/* Coluna 2: Lista de Contas */}
-            <div className="flex-1 min-w-0 h-full overflow-y-auto">
-              <BillsTrackerList
-                bills={localBills}
-                onUpdateBill={updateBill}
-                onDeleteBill={deleteBill}
-                onAddBill={handleAddBill}
-                onTogglePaid={handleTogglePaid}
-                currentDate={referenceDate}
-              />
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
-      
-      {/* Modal de Revisão de Parcelas Fixas */}
-      <AllInstallmentsReviewModal
-        open={showInstallmentsModal}
-        onOpenChange={setShowInstallmentsModal}
-        referenceDate={referenceDate}
-        localBills={billsTracker}
-        onToggleInstallment={handleToggleInstallment}
-      />
-    </>
+          {/* Tab 2: Vínculos Potenciais */}
+          <TabsContent value="potenciais" className="flex-1 overflow-hidden pt-4">
+            <p className="text-sm text-muted-foreground mb-3">
+              Contas geradas automaticamente a partir de empréstimos e seguros. Inclua-as na sua lista de contas a pagar.
+            </p>
+            <ScrollArea className="h-[45vh] border rounded-lg">
+              <Table>
+                <TableHeader className="sticky top-0 bg-card z-10">
+                  <TableRow>
+                    <TableHead className="w-[100px]">Vencimento</TableHead>
+                    <TableHead>Descrição</TableHead>
+                    <TableHead className="w-[120px] text-right">Valor</TableHead>
+                    <TableHead className="w-[100px]">Fonte</TableHead>
+                    <TableHead className="w-[100px] text-center">Status</TableHead>
+                    <TableHead className="w-[100px]">Ação</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {potentialBills.map((bill) => {
+                    const isOverdue = isPast(parseDateLocal(bill.dueDate)) && !bill.isPaid;
+                    
+                    return (
+                      <TableRow key={bill.key} className={cn(
+                        bill.isPaid && "bg-success/5",
+                        isOverdue && "bg-destructive/5"
+                      )}>
+                        <TableCell className="text-sm font-medium">
+                          {parseDateLocal(bill.dueDate).toLocaleDateString("pt-BR")}
+                        </TableCell>
+                        <TableCell className="text-sm max-w-[200px] truncate">{bill.description}</TableCell>
+                        <TableCell className="text-right font-medium text-destructive">
+                          {formatCurrency(bill.expectedAmount)}
+                        </TableCell>
+                        <TableCell className="text-xs">
+                          <Badge variant="outline">
+                            {bill.sourceType === 'loan_installment' ? 'Empréstimo' : 'Seguro'}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-center">
+                          <Badge 
+                            variant="outline" 
+                            className={cn(
+                              "text-xs",
+                              bill.isPaid ? "border-success text-success" : "border-warning text-warning"
+                            )}
+                          >
+                            {bill.isPaid ? 'Paga' : 'Pendente'}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <Button 
+                            variant={bill.isIncluded ? "destructive" : "default"} 
+                            size="sm" 
+                            className="h-8 px-2 gap-1 text-xs"
+                            onClick={() => handleToggleInclusion(bill)}
+                            disabled={bill.isPaid}
+                          >
+                            {bill.isIncluded ? 'Excluir' : 'Incluir'}
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                  {potentialBills.length === 0 && (
+                    <TableRow>
+                      <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
+                        Nenhuma conta potencial neste mês.
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </ScrollArea>
+          </TabsContent>
+          
+          {/* Tab 3: Fluxo de Caixa Real (NOVO) */}
+          <TabsContent value="fluxo" className="flex-1 overflow-hidden pt-4">
+            <MonthlyTransactionSummary 
+              transactions={monthlyTransactions} 
+              referenceDate={referenceDate} 
+            />
+          </TabsContent>
+        </Tabs>
+      </DialogContent>
+    </Dialog>
   );
 }

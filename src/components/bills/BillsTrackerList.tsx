@@ -38,6 +38,8 @@ const SOURCE_CONFIG: Record<BillSourceType, { icon: React.ElementType; color: st
   ad_hoc: { icon: Info, color: 'text-primary', label: 'Avulsa' },
 };
 
+// Define column keys and initial widths (in pixels)
+// ADICIONANDO 'category'
 const COLUMN_KEYS = ['pay', 'due', 'paymentDate', 'description', 'account', 'type', 'category', 'amount', 'actions'] as const;
 type ColumnKey = typeof COLUMN_KEYS[number];
 
@@ -45,10 +47,10 @@ const INITIAL_WIDTHS: Record<ColumnKey, number> = {
   pay: 40,
   due: 80,
   paymentDate: 80,
-  description: 180,
+  description: 180, // Reduzido para dar espaço à categoria
   account: 112,
   type: 64,
-  category: 150,
+  category: 150, // NOVO
   amount: 80,
   actions: 40,
 };
@@ -60,7 +62,7 @@ const columnHeaders: { key: ColumnKey, label: string, align?: 'center' | 'right'
   { key: 'description', label: 'Descrição' },
   { key: 'account', label: 'Conta Pgto' },
   { key: 'type', label: 'Tipo' },
-  { key: 'category', label: 'Categoria' },
+  { key: 'category', label: 'Categoria' }, // NOVO
   { key: 'amount', label: 'Valor', align: 'right' },
   { key: 'actions', label: 'Ações', align: 'center' },
 ];
@@ -83,6 +85,7 @@ export function BillsTrackerList({
   
   const [adHocType, setAdHocType] = useState<'fixed_expense' | 'variable_expense'>('variable_expense');
 
+  // --- Column Resizing State and Logic ---
   const [columnWidths, setColumnWidths] = useState<Record<ColumnKey, number>>(() => {
     try {
       const saved = localStorage.getItem('bills_column_widths');
@@ -111,7 +114,7 @@ export function BillsTrackerList({
     if (!resizingColumn) return;
 
     const deltaX = e.clientX - startX;
-    const newWidth = Math.max(30, startWidth + deltaX);
+    const newWidth = Math.max(30, startWidth + deltaX); // Minimum width of 30px
 
     setColumnWidths(prev => ({
       ...prev,
@@ -144,6 +147,7 @@ export function BillsTrackerList({
   const totalWidth = useMemo(() => {
     return Object.values(columnWidths).reduce((sum, w) => sum + w, 0);
   }, [columnWidths]);
+  // ---------------------------------------------
 
   const formatAmount = (value: string) => {
     const cleaned = value.replace(/[^\d,]/g, '');
@@ -213,6 +217,7 @@ export function BillsTrackerList({
   };
   
   const handleUpdateSuggestedCategory = (bill: BillTracker, newCategoryId: string) => {
+    // Apenas permite alteração se for uma conta avulsa ou fixa genérica
     if (bill.sourceType === 'ad_hoc' || bill.sourceType === 'fixed_expense' || bill.sourceType === 'variable_expense') {
         onUpdateBill(bill.id, { suggestedCategoryId: newCategoryId });
         toast.success("Categoria atualizada!");
@@ -277,6 +282,7 @@ export function BillsTrackerList({
 
   return (
     <div className="space-y-4 h-full flex flex-col">
+      {/* Adição Rápida (Ad-Hoc) - SEMPRE VISÍVEL E MINIMALISTA */}
       <div className="glass-card p-3 shrink-0">
         <div className="grid grid-cols-[1fr_100px_100px_40px] gap-2 items-end mb-2">
           <div className="space-y-1">
@@ -318,6 +324,7 @@ export function BillsTrackerList({
           </Button>
         </div>
         
+        {/* Seleção de Tipo para Ad-Hoc */}
         <div className="flex items-center gap-2">
             <Label className="text-xs text-muted-foreground">Tipo de Despesa:</Label>
             <Button
@@ -339,6 +346,7 @@ export function BillsTrackerList({
         </div>
       </div>
 
+      {/* Tabela de Contas (Consolidada) */}
       <div className="glass-card p-3 flex-1 flex flex-col min-h-0">
         <div className="flex items-center justify-between mb-2 shrink-0">
           <h3 className="text-sm font-semibold text-foreground">Contas do Mês ({sortedBills.length})</h3>
@@ -362,6 +370,7 @@ export function BillsTrackerList({
                     style={{ width: columnWidths[header.key] }}
                   >
                     {header.label}
+                    {/* Resizer Handle - Ocupa toda a altura do cabeçalho */}
                     {header.key !== 'actions' && (
                       <div
                         className="absolute right-0 top-0 h-full w-2 cursor-col-resize"
@@ -380,10 +389,13 @@ export function BillsTrackerList({
                 const isOverdue = dueDate < currentDate && !bill.isPaid;
                 const isPaid = bill.isPaid;
                 
+                // Apenas contas ad-hoc, fixed_expense ou variable_expense podem ter valor alterado
                 const isAmountEditable = bill.sourceType !== 'loan_installment' && bill.sourceType !== 'insurance_installment';
                 
+                // A data de vencimento pode ser alterada se não estiver paga (para qualquer tipo de conta)
                 const isDateEditable = !isPaid;
                 
+                // A categoria é editável apenas para contas avulsas/fixas genéricas e se não estiver paga
                 const isCategoryEditable = isAmountEditable && !isPaid;
                 
                 const currentCategory = expenseCategories.find(c => c.id === bill.suggestedCategoryId);
@@ -424,6 +436,7 @@ export function BillsTrackerList({
                       </div>
                     </TableCell>
                     
+                    {/* Payment Date Cell */}
                     <TableCell className="font-medium whitespace-nowrap text-base p-2" style={{ width: columnWidths.paymentDate }}>
                         {isPaid && bill.paymentDate ? (
                             <EditableCell
@@ -467,6 +480,7 @@ export function BillsTrackerList({
                       </Badge>
                     </TableCell>
                     
+                    {/* NOVO: Categoria Cell */}
                     <TableCell className="p-2 text-base" style={{ width: columnWidths.category }}>
                         <Select 
                             value={bill.suggestedCategoryId || ''} 
