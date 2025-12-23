@@ -230,13 +230,11 @@ export function BillsTrackerModal({ open, onOpenChange }: BillsTrackerModalProps
         
         // ** AÇÃO CRÍTICA: Reverter Entidade V2 (Seguro/Empréstimo) **
         if (trackerBill.sourceType === 'loan_installment' && trackerBill.sourceRef && trackerBill.parcelaNumber) {
-            const loanId = parseInt(trackerBill.sourceRef);
-            unmarkLoanParcelPaid(loanId); 
+            unmarkLoanParcelPaid(parseInt(trackerBill.sourceRef)); 
         }
         
         if (trackerBill.sourceType === 'insurance_installment' && trackerBill.sourceRef && trackerBill.parcelaNumber) {
-            const seguroId = parseInt(trackerBill.sourceRef);
-            unmarkSeguroParcelPaid(seguroId, trackerBill.parcelaNumber);
+            unmarkSeguroParcelPaid(parseInt(trackerBill.sourceRef), trackerBill.parcelaNumber);
         }
         
         // Remove transaction ID from bill tracker

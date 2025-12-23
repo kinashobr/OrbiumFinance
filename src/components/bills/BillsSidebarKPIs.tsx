@@ -49,14 +49,8 @@ export function BillsSidebarKPIs({ currentDate, totalPendingBills, totalPaidBill
     const revenuePrevMonth = getRevenueForPreviousMonth(currentDate);
     
     // 3. Saldo Projetado
-    // Saldo Projetado = Saldo Inicial + Receita Prevista - (Contas Pendentes + Contas Já Pagas)
-    // CORREÇÃO: O saldo inicial já reflete o impacto das contas já pagas (totalPaidBills) se elas foram pagas antes do início do mês.
-    // Se as contas pagas (totalPaidBills) foram pagas DENTRO do mês, elas já reduziram o saldo inicial.
-    // No entanto, o cálculo do Saldo Projetado deve ser: Saldo Inicial + Receita Prevista - Total de Despesas do Mês (Pendentes + Pagas).
-    // Mas, como o Saldo Inicial é calculado no dia 1 do mês, ele não inclui as transações do mês.
-    // Portanto, a fórmula correta é: Saldo Inicial + Receita Prevista - Total de Despesas do Mês.
-    
-    // Total de Despesas do Mês (Planejadas + Externas)
+    // Saldo Projetado = Saldo Inicial + Receita Prevista - Total de Despesas do Mês.
+    // O total de despesas do mês é a soma das contas pendentes e das contas já pagas.
     const totalExpensesForMonth = totalPendingBills + totalPaidBills;
     
     const projectedBalance = initialBalance + monthlyRevenueForecast - totalExpensesForMonth;
