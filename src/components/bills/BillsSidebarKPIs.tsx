@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { TrendingUp, TrendingDown, DollarSign, Wallet, Target, RefreshCw } from "lucide-react";
+import { TrendingUp, TrendingDown, DollarSign, Wallet, Target, RefreshCw, Calculator } from "lucide-react";
 import { useFinance } from "@/contexts/FinanceContext";
 import { formatCurrency } from "@/types/finance";
 import { cn } from "@/lib/utils";
@@ -12,8 +12,8 @@ import { format, subDays, startOfMonth } from "date-fns";
 
 interface BillsSidebarKPIsProps {
   currentDate: Date;
-  totalPendingBills: number; // Valor que AINDA falta pagar
-  totalPaidBills?: number; // NOVO: Valor que JÁ foi pago no mês
+  totalPendingBills: number; // Valor que AINDA falta pagar (não marcados como pagos)
+  totalPaidBills?: number; // Valor que JÁ foi pago no mês
 }
 
 export function BillsSidebarKPIs({ currentDate, totalPendingBills, totalPaidBills = 0 }: BillsSidebarKPIsProps) {
@@ -48,12 +48,14 @@ export function BillsSidebarKPIs({ currentDate, totalPendingBills, totalPaidBill
     // 2. Receita do Mês Anterior (para sugestão)
     const revenuePrevMonth = getRevenueForPreviousMonth(currentDate);
     
-    // 3. Saldo Projetado
-    // Saldo Projetado = Saldo Inicial + Receita Prevista - Total de Despesas do Mês.
-    // O total de despesas do mês é a soma das contas pendentes e das contas já pagas.
+    // 3. Totais de Despesa
     const totalExpensesForMonth = totalPendingBills + totalPaidBills;
     
-    const projectedBalance = initialBalance + monthlyRevenueForecast - totalExpensesForMonth;
+    // 4. Fluxo Líquido Projetado (Receita Prevista - Despesas Totais)
+    const netFlowProjected = monthlyRevenueForecast - totalExpensesForMonth;
+    
+    // 5. Saldo Final Projetado (Saldo Inicial + Fluxo Líquido)
+    const projectedBalance = initialBalance + netFlowProjected;
     
     const status: 'success' | 'warning' | 'danger' = 
       projectedBalance >= 0 ? (projectedBalance > initialBalance ? 'success' : 'warning') : 'danger';
@@ -62,7 +64,8 @@ export function BillsSidebarKPIs({ currentDate, totalPendingBills, totalPaidBill
       initialBalance,
       revenuePrevMonth,
       projectedBalance,
-      totalExpensesForMonth, // Novo campo para exibir o total de despesas
+      netFlowProjected,
+      totalExpensesForMonth,
       status,
     };
   }, [currentDate, highLiquidityAccountIds, calculateBalanceUpToDate, transacoesV2, contasMovimento, getRevenueForPreviousMonth, monthlyRevenueForecast, totalPendingBills, totalPaidBills]);
@@ -124,7 +127,7 @@ export function BillsSidebarKPIs({ currentDate, totalPendingBills, totalPaidBill
             </div>
           </div>
           
-          {/* Contas Pendentes */}
+          {/* Despesas Totais */}
           <div className="flex justify-between items-center text-sm p-2 rounded-lg bg-destructive/10">
             <span className="text-destructive font-medium flex items-center gap-2">
                 <TrendingDown className="w-4 h-4" />
@@ -136,24 +139,39 @@ export function BillsSidebarKPIs({ currentDate, totalPendingBills, totalPaidBill
           {/* Detalhe Pendente */}
           <div className="flex justify-between items-center text-xs px-2 text-muted-foreground">
             <span>A pagar (Pendentes)</span>
-            <span className="font-medium">{formatCurrency(totalPendingBills)}</span>
+            <span className="font-medium text-destructive">{formatCurrency(totalPendingBills)}</span>
           </div>
           
           {/* Detalhe Pago */}
           <div className="flex justify-between items-center text-xs px-2 text-muted-foreground">
             <span>Já pago (Extrato/Tracker)</span>
-            <span className="font-medium">{formatCurrency(totalPaidBills)}</span>
+            <span className="font-medium text-success">{formatCurrency(totalPaidBills)}</span>
+          </div>
+
+          <Separator className="my-2" />
+
+          {/* NOVO: Fluxo Líquido Projetado */}
+          <div className="flex justify-between items-center text-sm px-2">
+            <span className="text-muted-foreground flex items-center gap-1">
+              <Calculator className="w-3.5 h-3.5" /> Fluxo Líquido Projetado
+            </span>
+            <span className={cn(
+              "font-bold",
+              calculos.netFlowProjected >= 0 ? "text-success" : "text-destructive"
+            )}>
+              {formatCurrency(calculos.netFlowProjected)}
+            </span>
           </div>
           
-          {/* Saldo Projetado */}
+          {/* Saldo Final Projetado */}
           <div className={cn(
-            "flex justify-between items-center p-3 rounded-lg border-2",
+            "flex justify-between items-center p-3 rounded-lg border-2 mt-2",
             calculos.status === 'success' && "bg-success/10 border-success/50 text-success",
             calculos.status === 'warning' && "bg-warning/10 border-warning/50 text-warning",
             calculos.status === 'danger' && "bg-destructive/10 border-destructive/50 text-destructive"
           )}>
-            <span className="font-bold text-base">SALDO PROJETADO</span>
-            <span className="font-extrabold text-xl">{formatCurrency(calculos.projectedBalance)}</span>
+            <span className="font-bold text-xs uppercase tracking-wider">Saldo Projetado (Com Caixa)</span>
+            <span className="font-extrabold text-lg">{formatCurrency(calculos.projectedBalance)}</span>
           </div>
           
         </CardContent>
