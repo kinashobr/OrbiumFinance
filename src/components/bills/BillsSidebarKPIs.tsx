@@ -12,20 +12,12 @@ import { format, subDays, startOfMonth } from "date-fns";
 
 interface BillsSidebarKPIsProps {
   currentDate: Date;
-  totalPendingBills: number; // Valor que AINDA falta pagar
-  totalPaidBills?: number; // NOVO: Valor que JÁ foi pago no mês
+  totalPendingBills: number;  // Valor que AINDA falta pagar
+  totalPaidBills?: number;    // NOVO: Valor que JÁ foi pago no mês
 }
 
 export function BillsSidebarKPIs({ currentDate, totalPendingBills, totalPaidBills = 0 }: BillsSidebarKPIsProps) {
-  const { 
-    monthlyRevenueForecast, 
-    setMonthlyRevenueForecast, 
-    getRevenueForPreviousMonth,
-    calculateBalanceUpToDate,
-    contasMovimento,
-    transacoesV2,
-  } = useFinance();
-  
+  const { monthlyRevenueForecast, setMonthlyRevenueForecast, getRevenueForPreviousMonth, calculateBalanceUpToDate, contasMovimento, transacoesV2 } = useFinance();
   const [forecastInput, setForecastInput] = useState(monthlyRevenueForecast.toFixed(2));
 
   // Contas de alta liquidez para cálculo de saldo inicial
@@ -38,41 +30,44 @@ export function BillsSidebarKPIs({ currentDate, totalPendingBills, totalPaidBill
   const calculos = useMemo(() => {
     const startOfCurrentMonth = startOfMonth(currentDate);
     const dayBeforeStart = subDays(startOfCurrentMonth, 1);
-    
+
     // 1. Saldo Inicial (Caixa e Equivalentes)
     const initialBalance = highLiquidityAccountIds.reduce((acc, accountId) => {
       const balance = calculateBalanceUpToDate(accountId, dayBeforeStart, transacoesV2, contasMovimento);
       return acc + balance;
     }, 0);
-    
+
     // 2. Receita do Mês Anterior (para sugestão)
     const revenuePrevMonth = getRevenueForPreviousMonth(currentDate);
-    
+
     // 3. Saldo Projetado
     // Saldo Projetado = Saldo Inicial + Receita Prevista - (Contas Pendentes + Contas Já Pagas)
-    // CORREÇÃO: O saldo inicial já reflete o impacto das contas já pagas (totalPaidBills) se elas foram pagas antes do início do mês.
-    // Se as contas pagas (totalPaidBills) foram pagas DENTRO do mês, elas já reduziram o saldo inicial.
-    // No entanto, o cálculo do Saldo Projetado deve ser: Saldo Inicial + Receita Prevista - Total de Despesas do Mês (Pendentes + Pagas).
-    // Mas, como o Saldo Inicial é calculado no dia 1 do mês, ele não inclui as transações do mês.
-    // Portanto, a fórmula correta é: Saldo Inicial + Receita Prevista - Total de Despesas do Mês.
-    
-    // Total de Despesas do Mês (Planejadas + Externas)
     const totalExpensesForMonth = totalPendingBills + totalPaidBills;
-    
     const projectedBalance = initialBalance + monthlyRevenueForecast - totalExpensesForMonth;
     
-    const status: 'success' | 'warning' | 'danger' = 
-      projectedBalance >= 0 ? (projectedBalance > initialBalance ? 'success' : 'warning') : 'danger';
+    const status: 'success' | 'warning' | 'danger' = projectedBalance >= 0 
+      ? (projectedBalance > initialBalance ? 'success' : 'warning') 
+      : 'danger';
 
     return {
       initialBalance,
       revenuePrevMonth,
       projectedBalance,
-      totalExpensesForMonth, // Novo campo para exibir o total de despesas
+      totalExpensesForMonth,
       status,
     };
-  }, [currentDate, highLiquidityAccountIds, calculateBalanceUpToDate, transacoesV2, contasMovimento, getRevenueForPreviousMonth, monthlyRevenueForecast, totalPendingBills, totalPaidBills]);
-  
+  }, [
+    currentDate, 
+    highLiquidityAccountIds, 
+    calculateBalanceUpToDate, 
+    transacoesV2, 
+    contasMovimento, 
+    getRevenueForPreviousMonth, 
+    monthlyRevenueForecast, 
+    totalPendingBills, 
+    totalPaidBills
+  ]);
+
   const handleUpdateForecast = () => {
     const parsed = parseFloat(forecastInput.replace(',', '.'));
     if (isNaN(parsed) || parsed < 0) {
@@ -82,7 +77,7 @@ export function BillsSidebarKPIs({ currentDate, totalPendingBills, totalPaidBill
     setMonthlyRevenueForecast(parsed);
     toast.success("Previsão de receita atualizada!");
   };
-  
+
   const handleSuggestForecast = () => {
     setForecastInput(calculos.revenuePrevMonth.toFixed(2));
     setMonthlyRevenueForecast(calculos.revenuePrevMonth);
@@ -99,7 +94,6 @@ export function BillsSidebarKPIs({ currentDate, totalPendingBills, totalPaidBill
           </CardTitle>
         </CardHeader>
         <CardContent className="p-4 pt-2 space-y-3">
-          
           {/* Saldo Inicial */}
           <div className="flex justify-between items-center text-sm p-2 rounded-lg bg-muted/30">
             <span className="text-muted-foreground">Saldo Inicial (Caixa)</span>
@@ -109,32 +103,38 @@ export function BillsSidebarKPIs({ currentDate, totalPendingBills, totalPaidBill
           {/* Previsão de Receita */}
           <div className="space-y-1 border-b border-border/50 pb-3">
             <Label className="text-xs text-muted-foreground flex items-center justify-between">
-                Previsão de Receita ({format(currentDate, 'MMM')})
-                <Button variant="ghost" size="sm" className="h-6 text-xs p-1 gap-1" onClick={handleSuggestForecast}>
-                    <RefreshCw className="w-3 h-3" /> Sugerir ({formatCurrency(calculos.revenuePrevMonth)})
-                </Button>
+              Previsão de Receita ({format(currentDate, 'MMM')})
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                className="h-6 text-xs p-1 gap-1" 
+                onClick={handleSuggestForecast}
+              >
+                <RefreshCw className="w-3 h-3" />
+                Sugerir ({formatCurrency(calculos.revenuePrevMonth)})
+              </Button>
             </Label>
             <div className="flex gap-2">
-                <Input
-                    type="text"
-                    inputMode="decimal"
-                    value={forecastInput}
-                    onChange={(e) => setForecastInput(e.target.value)}
-                    onBlur={handleUpdateForecast}
-                    placeholder="0,00"
-                    className="h-8 text-sm"
-                />
-                <Button onClick={handleUpdateForecast} className="h-8 w-16 shrink-0">
-                    Salvar
-                </Button>
+              <Input 
+                type="text" 
+                inputMode="decimal"
+                value={forecastInput} 
+                onChange={(e) => setForecastInput(e.target.value)}
+                onBlur={handleUpdateForecast}
+                placeholder="0,00"
+                className="h-8 text-sm"
+              />
+              <Button onClick={handleUpdateForecast} className="h-8 w-16 shrink-0">
+                Salvar
+              </Button>
             </div>
           </div>
           
           {/* Contas Pendentes */}
           <div className="flex justify-between items-center text-sm p-2 rounded-lg bg-destructive/10">
             <span className="text-destructive font-medium flex items-center gap-2">
-                <TrendingDown className="w-4 h-4" />
-                Despesas Totais (Mês)
+              <TrendingDown className="w-4 h-4" />
+              Despesas Totais (Mês)
             </span>
             <span className="font-bold text-destructive">{formatCurrency(calculos.totalExpensesForMonth)}</span>
           </div>
@@ -161,7 +161,6 @@ export function BillsSidebarKPIs({ currentDate, totalPendingBills, totalPaidBill
             <span className="font-bold text-base">SALDO PROJETADO</span>
             <span className="font-extrabold text-xl">{formatCurrency(calculos.projectedBalance)}</span>
           </div>
-          
         </CardContent>
       </Card>
     </div>

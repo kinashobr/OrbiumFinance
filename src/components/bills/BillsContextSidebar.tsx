@@ -12,13 +12,13 @@ interface BillsContextSidebarProps {
   localRevenueForecast: number;
   setLocalRevenueForecast: (value: number) => void;
   previousMonthRevenue: number;
-  totalExpectedExpense: number; // Total PENDENTE
+  totalExpectedExpense: number;
   totalPaid: number;
   pendingCount: number;
-  netForecast: number; // Saldo Previsto (Receita - Total PENDENTE)
+  netForecast: number;
   isMobile?: boolean;
   onSaveAndClose: () => void;
-  onOpenAllInstallments?: () => void; // NEW PROP
+  onOpenAllInstallments?: () => void;
 }
 
 export function BillsContextSidebar({
@@ -33,7 +33,6 @@ export function BillsContextSidebar({
   onSaveAndClose,
   onOpenAllInstallments,
 }: BillsContextSidebarProps) {
-  
   const formatValue = (value: number) => {
     if (value >= 1000000) return `${(value / 1000000).toFixed(1)}M`;
     if (value >= 1000) return `${(value / 1000).toFixed(1)}K`;
@@ -101,9 +100,9 @@ export function BillsContextSidebar({
             {formatCurrency(netForecast)}
           </p>
         </Card>
-
+        
         <Separator />
-
+        
         {/* Itens de Apoio */}
         <div className="space-y-3">
           {items.map(item => (
@@ -115,8 +114,8 @@ export function BillsContextSidebar({
               {item.editable ? (
                 <>
                   <EditableCell 
-                    value={item.value} 
-                    type="currency" 
+                    value={item.value}
+                    type="currency"
                     onSave={setLocalRevenueForecast}
                     className={cn("text-base font-bold", item.color)}
                   />
@@ -137,14 +136,14 @@ export function BillsContextSidebar({
       {/* Botão de Ação para Parcelas Fixas */}
       {onOpenAllInstallments && (
         <div className="pt-3">
-            <Button 
-                variant="outline" 
-                onClick={onOpenAllInstallments} 
-                className="w-full gap-2 h-9 text-sm"
-            >
-                <ListChecks className="w-4 h-4" />
-                Todas Parcelas Fixas
-            </Button>
+          <Button 
+            variant="outline" 
+            onClick={onOpenAllInstallments} 
+            className="w-full gap-2 h-9 text-sm"
+          >
+            <ListChecks className="w-4 h-4" />
+            Todas Parcelas Fixas
+          </Button>
         </div>
       )}
       
