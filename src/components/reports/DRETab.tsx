@@ -1,17 +1,25 @@
-import { useMemo, useCallback } from "react";
+import { useMemo, useState, useCallback } from "react";
 import {
   TrendingUp,
   TrendingDown,
   DollarSign,
   Receipt,
-  Plus,
+  Calculator,
+  BarChart3,
+  PieChart,
   Minus,
+  Plus,
+  Equal,
   Percent,
+  ArrowUpRight,
+  ArrowDownRight,
+  Wallet,
   CreditCard,
-  ArrowRight,
-  ChevronRight,
+  Target,
 } from "lucide-react";
 import {
+  AreaChart,
+  Area,
   BarChart,
   Bar,
   XAxis,
@@ -20,13 +28,23 @@ import {
   Tooltip,
   ResponsiveContainer,
   Legend,
+  PieChart as RechartsPie,
+  Pie,
+  Cell,
+  ComposedChart,
+  Line,
 } from "recharts";
 import { useFinance } from "@/contexts/FinanceContext";
 import { ReportCard } from "./ReportCard";
 import { ExpandablePanel } from "./ExpandablePanel";
+import { IndicatorBadge } from "./IndicatorBadge";
+import { DetailedIndicatorBadge } from "./DetailedIndicatorBadge";
 import { cn, parseDateLocal } from "@/lib/utils";
-import { startOfDay, endOfDay, isWithinInterval, differenceInDays } from "date-fns";
+import { format, subMonths, startOfMonth, endOfMonth, isWithinInterval, startOfDay, endOfDay, differenceInMonths } from "date-fns";
+import { ptBR } from "date-fns/locale";
 import { ComparisonDateRanges, DateRange } from "@/types/finance";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { TransacaoCompleta } from "@/types/finance";
 
 const COLORS = {
   success: "hsl(142, 76%, 36%)",
@@ -34,23 +52,41 @@ const COLORS = {
   danger: "hsl(0, 72%, 51%)",
   primary: "hsl(199, 89%, 48%)",
   accent: "hsl(270, 80% 60%)",
+  muted: "hsl(215, 20% 55%)",
+  gold: "hsl(45, 93%, 47%)",
+  cyan: "hsl(180, 70%, 50%)",
 };
 
+const PIE_COLORS = [
+  COLORS.primary,
+  COLORS.accent,
+  COLORS.success,
+  COLORS.warning,
+  COLORS.gold,
+  COLORS.cyan,
+  COLORS.danger,
+];
+
+// Define o tipo de status esperado pelos componentes ReportCard e IndicatorBadge
+type KPIStatus = "success" | "warning" | "danger" | "neutral";
+
+interface DRETabProps {
+  dateRanges: ComparisonDateRanges;
+}
+
+// Define formatCurrency outside DRETab so DREItem can use it
 const formatCurrency = (value: number) => `R$ ${value.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
 interface DREItemProps {
   label: string;
-  value1: number;
-  value2?: number;
+  value: number;
   type: 'receita' | 'despesa' | 'subtotal' | 'resultado';
   icon?: React.ReactNode;
   level?: number;
-  isHeader?: boolean;
 }
 
-function DREItem({ label, value1, value2, type, icon, level = 0, isHeader = false }: DREItemProps) {
-  const diff = value2 !== undefined ? value1 - value2 : 0;
-  const percent = value2 && value2 !== 0 ? (diff / Math.abs(value2)) * 100 : 0;
+function DREItem({ label, value, type, icon, level = 0 }: DREItemProps) {
+  const baseClasses = "flex items-center justify-between py-2 px-4 border-b border-border/50";
   
   const typeClasses = {
     receita: "text-success",
@@ -59,176 +95,477 @@ function DREItem({ label, value1, value2, type, icon, level = 0, isHeader = fals
     resultado: "font-bold text-lg bg-primary/10 border-t-2 border-b-2 border-primary/50",
   };
   
+  // Calculate padding based on level (e.g., level 1 -> pl-8, level 0 -> pl-4)
+  const paddingClass = `pl-${4 + level * 4}`;
+
   return (
-    <div className={cn(
-      "flex items-center justify-between py-2 px-4 border-b border-border/50 transition-colors hover:bg-muted/10", 
-      typeClasses[type], 
-      level > 0 && "pl-8",
-      isHeader && "bg-muted/20 font-bold uppercase text-[10px] tracking-wider text-muted-foreground"
-    )}>
+    <div className={cn(baseClasses, typeClasses[type], paddingClass)}>
       <div className="flex items-center gap-2">
         {icon}
-        <span className={cn("text-sm", isHeader && "text-muted-foreground")}>{label}</span>
+        <span className={cn("text-sm", type === 'resultado' && "text-base")}>{label}</span>
       </div>
-      <div className="flex items-center gap-6">
-        {value2 !== undefined && (
-          <div className="text-right w-24 opacity-40">
-            <span className="text-xs block">{formatCurrency(value2)}</span>
-          </div>
-        )}
-        <div className="text-right w-32">
-          <span className="font-medium block">{formatCurrency(value1)}</span>
-          {value2 !== undefined && value2 !== 0 && (
-            <span className={cn(
-              "text-[10px] font-bold", 
-              percent > 0 
-                ? (type === 'receita' ? "text-success" : "text-destructive") 
-                : (type === 'receita' ? "text-destructive" : "text-success")
-            )}>
-              {percent > 0 ? '▲' : '▼'} {Math.abs(percent).toFixed(1)}%
-            </span>
-          )}
-        </div>
-      </div>
+      <span className={cn(
+        "font-medium whitespace-nowrap",
+        type === 'resultado' && "text-xl"
+      )}>
+        {formatCurrency(value)}
+      </span>
     </div>
   );
 }
 
-export function DRETab({ dateRanges }: { dateRanges: ComparisonDateRanges }) {
-  const { transacoesV2, categoriasV2, segurosVeiculo, calculateLoanSchedule } = useFinance();
+// Custom label component for PieChart to prevent truncation
+const CustomPieLabel = ({ cx, cy, midAngle, outerRadius, percent, name }: any) => {
+  const RADIAN = Math.PI / 180;
+  const radius = outerRadius * 1.1; // Position label slightly outside
+  const x = cx + radius * Math.cos(-midAngle * RADIAN);
+  const y = cy + radius * Math.sin(-midAngle * RADIAN);
+  
+  return (
+    <text 
+      x={x} 
+      y={y} 
+      fill="hsl(var(--foreground))" 
+      textAnchor={x > cx ? 'start' : 'end'} 
+      dominantBaseline="central"
+      fontSize={12}
+    >
+      {`${name} (${(percent * 100).toFixed(0)}%)`}
+    </text>
+  );
+};
+
+
+export function DRETab({ dateRanges }: DRETabProps) {
+  const {
+    transacoesV2,
+    categoriasV2,
+    emprestimos,
+    segurosVeiculo,
+    getJurosTotais,
+    calculateLoanSchedule, // <-- NEW
+  } = useFinance();
+
   const { range1, range2 } = dateRanges;
+  
+  const formatPercent = (value: number) => `${value.toFixed(1)}%`;
+  const now = new Date();
 
-  const calculateDRE = useCallback((range: DateRange) => {
-    if (!range.from || !range.to) return null;
-    const start = startOfDay(range.from);
-    const end = endOfDay(range.to);
-    const days = Math.max(1, differenceInDays(end, start) + 1);
+  // Helper para filtrar transações por um range específico
+  const filterTransactionsByRange = useCallback((range: DateRange) => {
+    if (!range.from || !range.to) return transacoesV2;
+    
+    const rangeFrom = startOfDay(range.from);
+    const rangeTo = endOfDay(range.to);
+    
+    return transacoesV2.filter(t => {
+      try {
+        const dataT = parseDateLocal(t.date);
+        return isWithinInterval(dataT, { start: rangeFrom, end: rangeTo });
+      } catch {
+        return false;
+      }
+    });
+  }, [transacoesV2]);
 
-    const transactions = transacoesV2.filter(t => isWithinInterval(parseDateLocal(t.date), { start, end }));
+  const transacoesPeriodo1 = useMemo(() => filterTransactionsByRange(range1), [filterTransactionsByRange, range1]);
+  const transacoesPeriodo2 = useMemo(() => filterTransactionsByRange(range2), [filterTransactionsByRange, range2]);
+
+  // Função para calcular a DRE de um conjunto de transações
+  const calculateDRE = useCallback((transactions: TransacaoCompleta[], range: DateRange) => {
     const categoriasMap = new Map(categoriasV2.map(c => [c.id, c]));
     const seguroCategory = categoriasV2.find(c => c.label.toLowerCase() === 'seguro');
 
-    // Apropriação de Seguros
-    let accruedInsurance = 0;
-    segurosVeiculo.forEach(s => {
-      const vStart = parseDateLocal(s.vigenciaInicio);
-      const vEnd = parseDateLocal(s.vigenciaFim);
-      const totalDays = differenceInDays(vEnd, vStart) + 1;
-      if (totalDays <= 0) return;
-      const dailyRate = s.valorTotal / totalDays;
-      const overlapStart = vStart > start ? vStart : start;
-      const overlapEnd = vEnd < end ? vEnd : end;
-      if (overlapStart <= overlapEnd) accruedInsurance += dailyRate * (differenceInDays(overlapEnd, overlapStart) + 1);
+    // 1. RECEITAS: Apenas operações de 'receita' e 'rendimento', EXCLUINDO 'initial_balance'
+    const transacoesReceita = transactions.filter(t => 
+      t.operationType !== 'initial_balance' && (t.operationType === 'receita' || t.operationType === 'rendimento')
+    );
+
+    const receitasAgrupadas = new Map<string, number>();
+    transacoesReceita.forEach(t => {
+      const cat = categoriasMap.get(t.categoryId || '') || { label: 'Outras Receitas', nature: 'receita' };
+      const key = cat.label;
+      receitasAgrupadas.set(key, (receitasAgrupadas.get(key) || 0) + t.amount);
     });
 
-    const receitas = transactions.filter(t => t.operationType === 'receita' || t.operationType === 'rendimento');
-    const totalReceitas = receitas.reduce((acc, t) => acc + t.amount, 0);
+    const receitasPorCategoria: { categoria: string; valor: number; natureza: string }[] = [];
+    receitasAgrupadas.forEach((valor, categoria) => {
+      receitasPorCategoria.push({ categoria, valor, natureza: 'receita' });
+    });
+    receitasPorCategoria.sort((a, b) => b.valor - a.valor);
+
+    // 2. DESPESAS OPERACIONAIS:
+    const despesasFixas: { categoria: string; valor: number }[] = [];
+    const despesasVariaveis: { categoria: string; valor: number }[] = [];
+    
+    // --- 2a. Calculate Accrued Insurance Expense (Accrual Basis) ---
+    let accruedInsuranceExpense = 0;
+    
+    if (seguroCategory && range.from && range.to) {
+        segurosVeiculo.forEach(seguro => {
+            try {
+                const vigenciaInicio = parseDateLocal(seguro.vigenciaInicio);
+                const vigenciaFim = parseDateLocal(seguro.vigenciaFim);
+                
+                const totalMonths = differenceInMonths(vigenciaFim, vigenciaInicio) + 1;
+                if (totalMonths <= 0) return;
+                
+                const monthlyAccrual = seguro.valorTotal / totalMonths;
+                
+                // Determine the intersection of the insurance vigency and the reporting period (range)
+                const accrualStart = vigenciaInicio > range.from ? vigenciaInicio : range.from;
+                const accrualEnd = vigenciaFim < range.to ? vigenciaFim : range.to;
+                
+                if (accrualStart <= accrualEnd) {
+                    // Calculate months to accrue based on the intersection
+                    const monthsToAccrue = differenceInMonths(accrualEnd, accrualStart) + 1;
+                    accruedInsuranceExpense += monthlyAccrual * monthsToAccrue;
+                }
+            } catch (e) {
+                // Ignore calculation errors
+            }
+        });
+    }
+    
+    // --- 2b. Filter transactions (Exclude cash insurance payments, asset purchases, and initial_balance) ---
+    const transacoesDespesaOperacional = transactions.filter(t => 
+      t.operationType !== 'initial_balance' && // EXCLUIR SALDO INICIAL
+      t.operationType === 'despesa' && // FIXED: Exclude 'veiculo' operation type
+      t.flow === 'out' &&
+      // EXCLUDE cash payments for insurance if they are linked to the 'Seguro' category
+      (t.categoryId !== seguroCategory?.id)
+    );
 
     const despesasFixasMap = new Map<string, number>();
     const despesasVariaveisMap = new Map<string, number>();
 
-    transactions.filter(t => t.operationType === 'despesa' && t.categoryId !== seguroCategory?.id).forEach(t => {
+    transacoesDespesaOperacional.forEach(t => {
       const cat = categoriasMap.get(t.categoryId || '');
-      const label = cat?.label || 'Outros';
-      const targetMap = cat?.nature === 'despesa_fixa' ? despesasFixasMap : despesasVariaveisMap;
-      targetMap.set(label, (targetMap.get(label) || 0) + t.amount);
-    });
+      const catLabel = cat?.label || 'Outras Despesas';
+      const nature = cat?.nature || 'despesa_variavel';
 
-    if (accruedInsurance > 0) despesasFixasMap.set('Seguros (Apropriação)', (despesasFixasMap.get('Seguros (Apropriação)') || 0) + accruedInsurance);
-
-    let jurosEmprestimos = 0;
-    transactions.filter(t => t.operationType === 'pagamento_emprestimo').forEach(t => {
-      const loanId = parseInt(t.links?.loanId?.replace('loan_', '') || '');
-      const parcela = parseInt(t.links?.parcelaId || '');
-      if (!isNaN(loanId) && !isNaN(parcela)) {
-        const item = calculateLoanSchedule(loanId).find(i => i.parcela === parcela);
-        if (item) jurosEmprestimos += item.juros;
+      if (nature === 'despesa_fixa') {
+        despesasFixasMap.set(catLabel, (despesasFixasMap.get(catLabel) || 0) + t.amount);
+      } else {
+        despesasVariaveisMap.set(catLabel, (despesasVariaveisMap.get(catLabel) || 0) + t.amount);
       }
     });
-
-    const totalFixas = Array.from(despesasFixasMap.values()).reduce((a, b) => a + b, 0);
-    const totalVariaveis = Array.from(despesasVariaveisMap.values()).reduce((a, b) => a + b, 0);
-    const resultadoLiquido = totalReceitas - totalFixas - totalVariaveis - jurosEmprestimos;
-
-    return {
-      totalReceitas, totalFixas, totalVariaveis, jurosEmprestimos, resultadoLiquido, days,
-      receitasMap: receitas.reduce((acc, t) => {
-        const label = categoriasMap.get(t.categoryId || '')?.label || 'Outros';
-        acc.set(label, (acc.get(label) || 0) + t.amount);
-        return acc;
-      }, new Map<string, number>()),
-      fixasMap: despesasFixasMap,
-      variaveisMap: despesasVariaveisMap
-    };
-  }, [transacoesV2, categoriasV2, segurosVeiculo, calculateLoanSchedule]);
-
-  const dre1 = useMemo(() => calculateDRE(range1), [calculateDRE, range1]);
-  const dre2 = useMemo(() => calculateDRE(range2), [calculateDRE, range2]);
-
-  const comparison = useMemo(() => {
-    if (!dre1 || !dre2) return null;
-    const factor = dre1.days / dre2.days;
-    const norm = (val: number) => val * factor;
     
-    return {
-      receita: norm(dre2.totalReceitas),
-      fixas: norm(dre2.totalFixas),
-      variaveis: norm(dre2.totalVariaveis),
-      juros: norm(dre2.jurosEmprestimos),
-      resultado: norm(dre2.resultadoLiquido),
-      receitasMap: new Map(Array.from(dre2.receitasMap.entries()).map(([k, v]) => [k, norm(v)])),
-      fixasMap: new Map(Array.from(dre2.fixasMap.entries()).map(([k, v]) => [k, norm(v)])),
-      variaveisMap: new Map(Array.from(dre2.variaveisMap.entries()).map(([k, v]) => [k, norm(v)]))
-    };
-  }, [dre1, dre2]);
+    // --- 2c. Inject Accrued Insurance Expense into Fixed Expenses ---
+    if (accruedInsuranceExpense > 0) {
+        const seguroLabel = seguroCategory?.label || 'Despesas com Seguros (Apropriação)';
+        despesasFixasMap.set(seguroLabel, (despesasFixasMap.get(seguroLabel) || 0) + accruedInsuranceExpense);
+    }
 
-  if (!dre1) return null;
+    despesasFixasMap.forEach((valor, categoria) => {
+      despesasFixas.push({ categoria, valor });
+    });
+    despesasVariaveisMap.forEach((valor, categoria) => {
+      despesasVariaveis.push({ categoria, valor });
+    });
+    despesasFixas.sort((a, b) => b.valor - a.valor);
+    despesasVariaveis.sort((a, b) => b.valor - a.valor);
+
+    const totalReceitas = receitasPorCategoria.reduce((acc, r) => acc + r.valor, 0);
+    const despesasOperacionaisFixas = despesasFixas.reduce((acc, d) => acc + d.valor, 0);
+    const despesasOperacionaisVariaveis = despesasVariaveis.reduce((acc, d) => acc + d.valor, 0);
+    
+    // 3. Juros e Encargos (Apenas a componente de JUROS dos pagamentos de Empréstimo)
+    let jurosEmprestimos = 0;
+    const pagamentosEmprestimo = transactions.filter(t => t.operationType === 'pagamento_emprestimo');
+    
+    pagamentosEmprestimo.forEach(t => {
+        const loanIdStr = t.links?.loanId?.replace('loan_', '');
+        const parcelaIdStr = t.links?.parcelaId;
+        
+        if (loanIdStr && parcelaIdStr) {
+            const loanId = parseInt(loanIdStr);
+            const parcelaNumber = parseInt(parcelaIdStr);
+            
+            if (!isNaN(loanId) && !isNaN(parcelaNumber)) {
+                // NEW LOGIC: Use calculateLoanSchedule to find the exact interest component
+                const loan = emprestimos.find(e => e.id === loanId);
+                if (loan) {
+                    const schedule = calculateLoanSchedule(loanId);
+                    const item = schedule.find(i => i.parcela === parcelaNumber);
+                    
+                    if (item) {
+                        jurosEmprestimos += item.juros;
+                    } else {
+                        // Fallback: If schedule item not found, use the difference (less accurate)
+                        const amortization = loan.parcela - (loan.valorTotal * (loan.taxaMensal / 100)); // Very rough estimate
+                        jurosEmprestimos += Math.max(0, t.amount - amortization);
+                    }
+                }
+            }
+        }
+    });
+      
+    const totalDespesasOperacionais = despesasOperacionaisFixas + despesasOperacionaisVariaveis;
+
+    const resultadoBruto = totalReceitas - despesasOperacionaisFixas;
+    const resultadoOperacional = resultadoBruto - despesasOperacionaisVariaveis;
+    const resultadoLiquido = resultadoOperacional - jurosEmprestimos; // Juros e Encargos
+
+    const composicaoDespesas = [
+      { name: "Despesas Fixas", value: despesasOperacionaisFixas, color: COLORS.danger },
+      { name: "Despesas Variáveis", value: despesasOperacionaisVariaveis, color: COLORS.warning },
+      { name: "Juros e Encargos", value: jurosEmprestimos, color: COLORS.accent },
+    ].filter(item => item.value > 0);
+
+    const margemBruta = totalReceitas > 0 ? (resultadoBruto / totalReceitas) * 100 : 0;
+    const margemOperacional = totalReceitas > 0 ? (resultadoOperacional / totalReceitas) * 100 : 0;
+    const margemLiquida = totalReceitas > 0 ? (resultadoLiquido / totalReceitas) * 100 : 0;
+
+    return {
+      totalReceitas,
+      totalDespesas: totalDespesasOperacionais + jurosEmprestimos, // Total de saídas operacionais + juros
+      resultadoLiquido,
+      resultadoBruto,
+      resultadoOperacional,
+      jurosEmprestimos,
+      receitasPorCategoria,
+      despesasFixas,
+      despesasVariaveis,
+      composicaoDespesas,
+      margemBruta,
+      margemOperacional,
+      margemLiquida,
+      totalDespesasFixas: despesasOperacionaisFixas,
+      totalDespesasVariaveis: despesasOperacionaisVariaveis,
+    };
+  }, [categoriasV2, segurosVeiculo, emprestimos, calculateLoanSchedule]);
+
+  // DRE para o Período 1 (Principal)
+  const dre1 = useMemo(() => calculateDRE(transacoesPeriodo1, range1), [calculateDRE, transacoesPeriodo1, range1]);
+
+  // DRE para o Período 2 (Comparação)
+  const dre2 = useMemo(() => calculateDRE(transacoesPeriodo2, range2), [calculateDRE, transacoesPeriodo2, range2]);
+
+  // Variação do Resultado Líquido (RL) entre P1 e P2
+  const variacaoRL = useMemo(() => {
+    if (!range2.from) return { diff: 0, percent: 0 };
+    
+    const rl1 = dre1.resultadoLiquido;
+    const rl2 = dre2.resultadoLiquido;
+    
+    const diff = rl1 - rl2;
+    const percent = rl2 !== 0 ? (diff / Math.abs(rl2)) * 100 : 0;
+    
+    return { diff, percent };
+  }, [dre1, dre2, range2.from]);
+
+  // Evolução mensal (últimos 12 meses) - Usa todas as transações para histórico
+  const evolucaoMensal = useMemo(() => {
+    const resultado: { mes: string; receitas: number; despesas: number; resultado: number }[] = [];
+    for (let i = 11; i >= 0; i--) {
+      const data = subMonths(now, i);
+      const inicio = startOfMonth(data);
+      const fim = endOfMonth(data);
+      const mesLabel = format(data, 'MMM', { locale: ptBR });
+
+      const transacoesMes = transacoesV2.filter(t => {
+        try {
+          const dataT = parseDateLocal(t.date);
+          return isWithinInterval(dataT, { start: inicio, end: fim });
+        } catch {
+          return false;
+        }
+      });
+
+      const receitasMes = transacoesMes
+        .filter(t => t.operationType !== 'initial_balance' && (t.operationType === 'receita' || t.operationType === 'rendimento'))
+        .reduce((acc, t) => acc + t.amount, 0);
+      
+      // Despesas aqui incluem despesas operacionais e pagamentos de empréstimo (valor total da parcela)
+      // NOTE: This evolution chart uses CASH basis for simplicity (total outflow)
+      const despesasMes = transacoesMes
+        .filter(t => t.operationType !== 'initial_balance' && (t.operationType === 'despesa' || t.operationType === 'pagamento_emprestimo' || t.operationType === 'veiculo'))
+        .reduce((acc, t) => acc + t.amount, 0);
+
+      resultado.push({
+        mes: mesLabel.charAt(0).toUpperCase() + mesLabel.slice(1),
+        receitas: receitasMes,
+        despesas: despesasMes,
+        resultado: receitasMes - despesasMes,
+      });
+    }
+    return resultado;
+  }, [transacoesV2, now]);
+
+  const getStatus = (value: number): KPIStatus => {
+    if (value > 0) return "success";
+    if (value < 0) return "danger";
+    return "neutral";
+  };
 
   return (
     <div className="space-y-6">
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        <ReportCard title="Receita Bruta" value={formatCurrency(dre1.totalReceitas)} trend={comparison ? ((dre1.totalReceitas - comparison.receita) / Math.abs(comparison.receita)) * 100 : undefined} trendLabel="vs P2" status="success" icon={<TrendingUp className="w-5 h-5" />} />
-        <ReportCard title="Despesa Total" value={formatCurrency(dre1.totalFixas + dre1.totalVariaveis + dre1.jurosEmprestimos)} trend={comparison ? (((dre1.totalFixas + dre1.totalVariaveis + dre1.jurosEmprestimos) - (comparison.fixas + comparison.variaveis + comparison.juros)) / Math.abs(comparison.fixas + comparison.variaveis + comparison.juros)) * 100 : undefined} trendLabel="vs P2" status="danger" icon={<TrendingDown className="w-5 h-5" />} />
-        <ReportCard title="Resultado Líquido" value={formatCurrency(dre1.resultadoLiquido)} trend={comparison ? ((dre1.resultadoLiquido - comparison.resultado) / Math.abs(comparison.resultado)) * 100 : undefined} trendLabel="vs P2" status={dre1.resultadoLiquido >= 0 ? "success" : "danger"} icon={<DollarSign className="w-5 h-5" />} />
+      {/* Cards Superiores */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <ReportCard
+          title="Receita Total"
+          value={formatCurrency(dre1.totalReceitas)}
+          status="success"
+          icon={<TrendingUp className="w-5 h-5" />}
+          tooltip="Soma de todas as entradas (exceto transferências, resgates e empréstimos)"
+          delay={0}
+        />
+        <ReportCard
+          title="Despesa Total"
+          value={formatCurrency(dre1.totalDespesas)}
+          status="danger"
+          icon={<TrendingDown className="w-5 h-5" />}
+          tooltip="Soma de todas as saídas operacionais e Juros/Encargos"
+          delay={50}
+        />
+        <ReportCard
+          title="Resultado Líquido"
+          value={formatCurrency(dre1.resultadoLiquido)}
+          status={getStatus(dre1.resultadoLiquido)}
+          icon={<DollarSign className="w-5 h-5" />}
+          tooltip="Receita Total - Despesa Operacional - Juros/Encargos"
+          delay={100}
+        />
+        <ReportCard
+          title="Variação do RL"
+          value={formatPercent(variacaoRL.percent)}
+          trend={variacaoRL.percent}
+          trendLabel="Período 2"
+          status={variacaoRL.percent >= 0 ? "success" : "danger"}
+          icon={<Percent className="w-5 h-5" />}
+          tooltip={`Variação do Resultado Líquido comparado ao Período 2. Diferença: ${formatCurrency(variacaoRL.diff)}`}
+          delay={150}
+        />
       </div>
 
-      <ExpandablePanel title="Demonstrativo de Resultado Detalhado" subtitle="Comparação de categorias (P2 normalizado)" icon={<Receipt className="w-4 h-4" />}>
-        <div className="glass-card p-0 overflow-hidden">
-          {/* Cabeçalho da Tabela */}
-          <div className="flex items-center justify-between py-2 px-4 bg-muted/50 border-b border-border font-bold text-[10px] uppercase tracking-widest text-muted-foreground">
-            <span>Descrição da Conta</span>
-            <div className="flex gap-6">
-              <span className="w-24 text-right">P2 (Norm.)</span>
-              <span className="w-32 text-right">Período 1</span>
-            </div>
+      {/* DRE Estruturada */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* DRE Detalhada */}
+        <ExpandablePanel
+          title="Demonstração do Resultado"
+          subtitle={`Período 1: ${format(range1.from || now, 'dd/MM/yyyy')} a ${format(range1.to || now, 'dd/MM/yyyy')}`}
+          icon={<Receipt className="w-4 h-4" />}
+          badge={formatCurrency(dre1.resultadoLiquido)}
+          badgeStatus={getStatus(dre1.resultadoLiquido)}
+          defaultExpanded={true}
+        >
+          <div className="glass-card p-0">
+            {/* Receitas */}
+            <DREItem label="RECEITA BRUTA" value={dre1.totalReceitas} type="receita" icon={<Plus className="w-4 h-4" />} />
+            {dre1.receitasPorCategoria.map((r, index) => (
+              <DREItem key={index} label={r.categoria} value={r.valor} type="receita" level={1} />
+            ))}
+
+            {/* Despesas Fixas */}
+            <DREItem label="(-) DESPESAS FIXAS" value={dre1.totalDespesasFixas} type="despesa" icon={<Minus className="w-4 h-4" />} />
+            {dre1.despesasFixas.map((d, index) => (
+              <DREItem key={index} label={d.categoria} value={d.valor} type="despesa" level={1} />
+            ))}
+
+            {/* Resultado Bruto */}
+            <DREItem label="RESULTADO BRUTO" value={dre1.resultadoBruto} type="subtotal" icon={<Equal className="w-4 h-4" />} />
+
+            {/* Despesas Variáveis */}
+            <DREItem label="(-) DESPESAS VARIÁVEIS" value={dre1.totalDespesasVariaveis} type="despesa" icon={<Minus className="w-4 h-4" />} />
+            {dre1.despesasVariaveis.map((d, index) => (
+              <DREItem key={index} label={d.categoria} value={d.valor} type="despesa" level={1} />
+            ))}
+
+            {/* Resultado Operacional */}
+            <DREItem label="RESULTADO OPERACIONAL" value={dre1.resultadoOperacional} type="subtotal" icon={<Equal className="w-4 h-4" />} />
+
+            {/* Juros e Encargos */}
+            <DREItem label="(-) JUROS E ENCARGOS (Custo Financeiro)" value={dre1.jurosEmprestimos} type="despesa" icon={<CreditCard className="w-4 h-4" />} />
+
+            {/* Resultado Líquido */}
+            <DREItem label="RESULTADO LÍQUIDO" value={dre1.resultadoLiquido} type="resultado" icon={<DollarSign className="w-4 h-4" />} />
           </div>
+        </ExpandablePanel>
 
-          {/* RECEITAS */}
-          <DREItem label="RECEITAS OPERACIONAIS" value1={dre1.totalReceitas} value2={comparison?.receita} type="subtotal" icon={<Plus className="w-4 h-4 text-success" />} />
-          {Array.from(dre1.receitasMap.entries()).map(([label, val]) => (
-            <DREItem key={label} label={label} value1={val} value2={comparison?.receitasMap.get(label)} type="receita" level={1} />
-          ))}
+        {/* Gráficos */}
+        <div className="space-y-6">
+          {/* Evolução Mensal */}
+          <ExpandablePanel
+            title="Evolução do Resultado"
+            subtitle="Últimos 12 meses"
+            icon={<BarChart3 className="w-4 h-4" />}
+          >
+            <div className="h-[300px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <ComposedChart data={evolucaoMensal}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(220, 20%, 18%)" vertical={false} />
+                  <XAxis dataKey="mes" axisLine={false} tickLine={false} tick={{ fill: COLORS.muted, fontSize: 11 }} />
+                  <YAxis
+                    yAxisId="left"
+                    axisLine={false}
+                    tickLine={false}
+                    tick={{ fill: COLORS.muted, fontSize: 11 }}
+                    tickFormatter={(value) => `${(value / 1000).toFixed(0)}k`}
+                  />
+                  <YAxis
+                    yAxisId="right"
+                    orientation="right"
+                    axisLine={false}
+                    tickLine={false}
+                    tick={{ fill: COLORS.primary, fontSize: 11 }}
+                    tickFormatter={(value) => `${(value / 1000).toFixed(0)}k`}
+                  />
+                  <Tooltip
+                    contentStyle={{
+                      backgroundColor: "hsl(var(--card))",
+                      border: "1px solid hsl(var(--border))",
+                      borderRadius: "12px",
+                    }}
+                    formatter={(value: number, name: string) => [formatCurrency(value), name]}
+                  />
+                  <Legend />
+                  <Bar yAxisId="left" dataKey="receitas" name="Receitas" fill={COLORS.success} opacity={0.7} radius={[4, 4, 0, 0]} />
+                  <Bar yAxisId="left" dataKey="despesas" name="Despesas" fill={COLORS.danger} opacity={0.7} radius={[4, 4, 0, 0]} />
+                  <Line yAxisId="right" type="monotone" dataKey="resultado" name="Resultado" stroke={COLORS.primary} strokeWidth={3} dot={false} />
+                </ComposedChart>
+              </ResponsiveContainer>
+            </div>
+          </ExpandablePanel>
 
-          {/* DESPESAS FIXAS */}
-          <DREItem label="DESPESAS FIXAS (ESTRUTURA)" value1={dre1.totalFixas} value2={comparison?.fixas} type="subtotal" icon={<Minus className="w-4 h-4 text-destructive" />} />
-          {Array.from(dre1.fixasMap.entries()).map(([label, val]) => (
-            <DREItem key={label} label={label} value1={val} value2={comparison?.fixasMap.get(label)} type="despesa" level={1} />
-          ))}
-
-          {/* DESPESAS VARIÁVEIS */}
-          <DREItem label="DESPESAS VARIÁVEIS (CONSUMO)" value1={dre1.totalVariaveis} value2={comparison?.variaveis} type="subtotal" icon={<Minus className="w-4 h-4 text-destructive" />} />
-          {Array.from(dre1.variaveisMap.entries()).map(([label, val]) => (
-            <DREItem key={label} label={label} value1={val} value2={comparison?.variaveisMap.get(label)} type="despesa" level={1} />
-          ))}
-
-          {/* FINANCEIRO */}
-          <DREItem label="RESULTADO FINANCEIRO (JUROS)" value1={dre1.jurosEmprestimos} value2={comparison?.juros} type="subtotal" icon={<CreditCard className="w-4 h-4 text-orange-500" />} />
-          <DREItem label="Juros de Empréstimos/Financ." value1={dre1.jurosEmprestimos} value2={comparison?.juros} type="despesa" level={1} />
-
-          {/* RESULTADO FINAL */}
-          <DREItem label="LUCRO / PREJUÍZO LÍQUIDO" value1={dre1.resultadoLiquido} value2={comparison?.resultado} type="resultado" icon={<ArrowRight className="w-5 h-5" />} />
+          {/* Composição das Despesas */}
+          <ExpandablePanel
+            title="Composição das Despesas"
+            subtitle="Distribuição por tipo"
+            icon={<PieChart className="w-4 h-4" />}
+          >
+            <div className="h-[300px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <RechartsPie>
+                  <Pie
+                    data={dre1.composicaoDespesas}
+                    dataKey="value"
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={60}
+                    outerRadius={100}
+                    paddingAngle={2}
+                    label={CustomPieLabel}
+                    labelLine
+                  >
+                    {dre1.composicaoDespesas.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={PIE_COLORS[index % PIE_COLORS.length]} />
+                    ))}
+                  </Pie>
+                  <Tooltip
+                    contentStyle={{
+                      backgroundColor: "hsl(var(--card))",
+                      border: "1px solid hsl(var(--border))",
+                      borderRadius: "12px",
+                    }}
+                    formatter={(value: number) => [formatCurrency(value), "Valor"]}
+                  />
+                </RechartsPie>
+              </ResponsiveContainer>
+            </div>
+          </ExpandablePanel>
         </div>
-      </ExpandablePanel>
+      </div>
     </div>
   );
 }

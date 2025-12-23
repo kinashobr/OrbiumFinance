@@ -15,11 +15,6 @@ import { toast } from "sonner";
 import { parseDateLocal } from "@/lib/utils";
 import { ResizableDialogContent } from "../ui/ResizableDialogContent";
 
-interface BillsTrackerModalProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-}
-
 // Tipo auxiliar para links parciais
 type PartialTransactionLinks = Partial<TransactionLinks>;
 
