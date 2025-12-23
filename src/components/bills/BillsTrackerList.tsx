@@ -1,4 +1,4 @@
-import { useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, useEffect } from "react";
 import {
   Table,
   TableBody,
@@ -8,17 +8,21 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
-import { Check, Clock, AlertTriangle, Plus, Edit, Trash2, CalendarCheck, TrendingUp, TrendingDown, DollarSign, Wallet, Target, Info, Save, LogOut, RefreshCw, ListChecks } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Plus, Trash2, Check, Clock, AlertTriangle, DollarSign, Building2, Shield, Repeat, Info, X, TrendingDown, CheckCircle2 } from "lucide-react";
 import { useFinance } from "@/contexts/FinanceContext";
-import { BillDisplayItem, BillTracker, ExternalPaidBill, formatCurrency, BillSourceType } from "@/types/finance";
+import { BillTracker, BillSourceType, formatCurrency, CATEGORY_NATURE_LABELS, BillDisplayItem, ExternalPaidBill } from "@/types/finance";
 import { cn, parseDateLocal } from "@/lib/utils";
-import { format } from "date-fns";
 import { toast } from "sonner";
+import { format } from "date-fns";
 import { EditableCell } from "../EditableCell";
 
 interface BillsTrackerListProps {
-  bills: BillDisplayItem[];
+  bills: BillDisplayItem[]; // <-- ALTERADO PARA BillDisplayItem[]
   onUpdateBill: (id: string, updates: Partial<BillTracker>) => void;
   onDeleteBill: (id: string) => void;
   onAddBill: (bill: Omit<BillTracker, "id" | "isPaid" | "type">) => void;
@@ -26,15 +30,46 @@ interface BillsTrackerListProps {
   currentDate: Date;
 }
 
-// Predicado de tipo para BillTracker
-const isBillTracker = (bill: BillDisplayItem): bill is BillTracker => {
-  return bill.type === 'tracker';
+const SOURCE_CONFIG: Record<BillSourceType | 'external_expense', { icon: React.ElementType; color: string; label: string }> = {
+  loan_installment: { icon: Building2, color: 'text-orange-500', label: 'Empréstimo' },
+  insurance_installment: { icon: Shield, color: 'text-blue-500', label: 'Seguro' },
+  fixed_expense: { icon: Repeat, color: 'text-purple-500', label: 'Fixa' },
+  variable_expense: { icon: DollarSign, color: 'text-warning', label: 'Variável' },
+  ad_hoc: { icon: Info, color: 'text-primary', label: 'Avulsa' },
+  external_expense: { icon: CheckCircle2, color: 'text-success', label: 'Extrato' }, // NOVO
 };
 
-// Predicado de tipo para ExternalPaidBill
-const isExternalPaidBill = (bill: BillDisplayItem): bill is ExternalPaidBill => {
-  return bill.type === 'external_paid';
+// Define column keys and initial widths (in pixels)
+const COLUMN_KEYS = ['pay', 'due', 'paymentDate', 'description', 'account', 'type', 'category', 'amount', 'actions'] as const;
+type ColumnKey = typeof COLUMN_KEYS[number];
+
+const INITIAL_WIDTHS: Record<ColumnKey, number> = {
+  pay: 40,
+  due: 80,
+  paymentDate: 80,
+  description: 180,
+  account: 112,
+  type: 64,
+  category: 150,
+  amount: 80,
+  actions: 40,
 };
+
+const columnHeaders: { key: ColumnKey, label: string, align?: 'center' | 'right' }[] = [
+  { key: 'pay', label: 'Pagar', align: 'center' },
+  { key: 'due', label: 'Vencimento' },
+  { key: 'paymentDate', label: 'Data Pgto' },
+  { key: 'description', label: 'Descrição' },
+  { key: 'account', label: 'Conta Pgto' },
+  { key: 'type', label: 'Tipo' },
+  { key: 'category', label: 'Categoria' },
+  { key: 'amount', label: 'Valor', align: 'right' },
+  { key: 'actions', label: 'Ações', align: 'center' },
+];
+
+// Predicados de tipo
+const isBillTracker = (bill: BillDisplayItem): bill is BillTracker => bill.type === 'tracker';
+const isExternalPaidBill = (bill: BillDisplayItem): bill is ExternalPaidBill => bill.type === 'external_paid';
 
 export function BillsTrackerList({
   bills,
@@ -44,253 +79,521 @@ export function BillsTrackerList({
   onTogglePaid,
   currentDate,
 }: BillsTrackerListProps) {
-  const { contasMovimento, categoriasV2 } = useFinance();
+  const { categoriasV2, contasMovimento } = useFinance();
+  
+  const [newBillData, setNewBillData] = useState({
+    description: '',
+    amount: '',
+    dueDate: format(currentDate, 'yyyy-MM-dd'),
+  });
+  
+  const [adHocType, setAdHocType] = useState<'fixed_expense' | 'variable_expense'>('variable_expense');
 
-  // Agrupar por fonte
-  const groupedBills = useMemo(() => {
-    const groups: Record<string, BillDisplayItem[]> = {
-      'loan_installment': [],
-      'insurance_installment': [],
-      'fixed_expense': [],
-      'variable_expense': [],
-      'ad_hoc': [],
-      'external_paid': [],
+  // --- Column Resizing State and Logic ---
+  const [columnWidths, setColumnWidths] = useState<Record<ColumnKey, number>>(() => {
+    try {
+      const saved = localStorage.getItem('bills_column_widths');
+      return saved ? JSON.parse(saved) : INITIAL_WIDTHS;
+    } catch {
+      return INITIAL_WIDTHS;
+    }
+  });
+  
+  useEffect(() => {
+    localStorage.setItem('bills_column_widths', JSON.stringify(columnWidths));
+  }, [columnWidths]);
+
+  const [resizingColumn, setResizingColumn] = useState<ColumnKey | null>(null);
+  const [startX, setStartX] = useState(0);
+  const [startWidth, setStartWidth] = useState(0);
+
+  const handleMouseDown = (e: React.MouseEvent, key: ColumnKey) => {
+    e.preventDefault();
+    setResizingColumn(key);
+    setStartX(e.clientX);
+    setStartWidth(columnWidths[key]);
+  };
+
+  const handleMouseMove = useCallback((e: MouseEvent) => {
+    if (!resizingColumn) return;
+
+    const deltaX = e.clientX - startX;
+    const newWidth = Math.max(30, startWidth + deltaX); // Minimum width of 30px
+
+    setColumnWidths(prev => ({
+      ...prev,
+      [resizingColumn]: newWidth,
+    }));
+  }, [resizingColumn, startX, startWidth]);
+
+  const handleMouseUp = useCallback(() => {
+    setResizingColumn(null);
+  }, []);
+
+  useEffect(() => {
+    if (resizingColumn) {
+      window.addEventListener('mousemove', handleMouseMove);
+      window.addEventListener('mouseup', handleMouseUp);
+      document.body.style.cursor = 'col-resize';
+    } else {
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', handleMouseUp);
+      document.body.style.cursor = 'default';
     };
 
-    bills.forEach(bill => {
-      if (isBillTracker(bill)) {
-        groups[bill.sourceType].push(bill);
-      } else if (isExternalPaidBill(bill)) {
-        groups['external_paid'].push(bill);
-      }
-    });
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', handleMouseUp);
+      document.body.style.cursor = 'default';
+    };
+  }, [resizingColumn, handleMouseMove, handleMouseUp]);
+  
+  const totalWidth = useMemo(() => {
+    return Object.values(columnWidths).reduce((sum, w) => sum + w, 0);
+  }, [columnWidths]);
+  // ---------------------------------------------
 
-    return groups;
-  }, [bills]);
+  const formatAmount = (value: string) => {
+    const cleaned = value.replace(/[^\d,]/g, '');
+    const parts = cleaned.split(',');
+    if (parts.length > 2) return value;
+    return cleaned;
+  };
 
-  // Contas de alta liquidez para sugestão de conta de pagamento
-  const highLiquidityAccounts = useMemo(() => 
-    contasMovimento.filter(c => ['corrente', 'poupanca', 'reserva', 'renda_fixa'].includes(c.accountType)),
-  [contasMovimento]);
+  const parseAmount = (value: string): number => {
+    const parsed = parseFloat(value.replace('.', '').replace(',', '.'));
+    return isNaN(parsed) ? 0 : parsed;
+  };
 
-  // Categorias de despesa para sugestão
-  const expenseCategories = useMemo(() => 
-    categoriasV2.filter(c => c.nature === 'despesa_variavel' || c.nature === 'despesa_fixa'),
-  [categoriasV2]);
-
-  // Cálculo de totais
-  const totals = useMemo(() => {
-    const totalUnpaid = bills.filter(b => !b.isPaid).reduce((acc, b) => acc + b.expectedAmount, 0);
-    const totalPaid = bills.filter(b => b.isPaid).reduce((acc, b) => acc + b.expectedAmount, 0);
+  const handleAddAdHocBill = () => {
+    const amount = parseAmount(newBillData.amount);
+    if (!newBillData.description || amount <= 0 || !newBillData.dueDate) {
+      toast.error("Preencha a descrição, valor e data de vencimento.");
+      return;
+    }
     
-    console.log('DEBUG - BillsTrackerList - totals calculation:', {
-      totalBills: bills.length,
-      unpaidBills: bills.filter(b => !b.isPaid).map(b => ({ type: b.type, description: b.description, amount: b.expectedAmount, isPaid: b.isPaid })),
-      paidBills: bills.filter(b => b.isPaid).map(b => ({ type: b.type, description: b.description, amount: b.expectedAmount, isPaid: b.isPaid })),
-      totalUnpaid,
-      totalPaid
+    const suggestedCategoryId = categoriasV2.find(c => 
+        (adHocType === 'fixed_expense' && c.nature === 'despesa_fixa') ||
+        (adHocType === 'variable_expense' && c.nature === 'despesa_variavel')
+    )?.id;
+
+    onAddBill({
+      description: newBillData.description,
+      dueDate: newBillData.dueDate,
+      expectedAmount: amount,
+      sourceType: adHocType,
+      suggestedAccountId: contasMovimento.find(c => c.accountType === 'corrente')?.id,
+      suggestedCategoryId: suggestedCategoryId,
     });
 
-    return { totalUnpaid, totalPaid };
+    setNewBillData({ description: '', amount: '', dueDate: format(currentDate, 'yyyy-MM-dd') });
+    toast.success("Conta avulsa adicionada!");
+  };
+  
+  const handleExcludeBill = (bill: BillTracker) => {
+    if (bill.sourceType === 'loan_installment' || bill.sourceType === 'insurance_installment') {
+        toast.error("Não é possível excluir parcelas de empréstimo ou seguro.");
+        return;
+    }
+    
+    if (bill.isPaid) {
+        toast.error("Desmarque o pagamento antes de excluir.");
+        return;
+    }
+    
+    onUpdateBill(bill.id, { isExcluded: true });
+    toast.info(`Conta "${bill.description}" excluída da lista deste mês.`);
+  };
+  
+  const handleUpdateExpectedAmount = (bill: BillTracker, newAmount: number) => {
+    if (bill.sourceType === 'loan_installment' || bill.sourceType === 'insurance_installment') {
+        toast.error("Valor de parcelas fixas deve ser alterado no cadastro do Empréstimo/Seguro.");
+        return;
+    }
+    
+    onUpdateBill(bill.id, { expectedAmount: newAmount });
+    toast.success("Valor atualizado!");
+  };
+  
+  const handleUpdateSuggestedAccount = (bill: BillTracker, newAccountId: string) => {
+    onUpdateBill(bill.id, { suggestedAccountId: newAccountId });
+    toast.success("Conta de pagamento sugerida atualizada!");
+  };
+  
+  const handleUpdateSuggestedCategory = (bill: BillTracker, newCategoryId: string) => {
+    // Apenas permite alteração se for uma conta avulsa ou fixa genérica
+    if (bill.sourceType === 'ad_hoc' || bill.sourceType === 'fixed_expense' || bill.sourceType === 'variable_expense') {
+        onUpdateBill(bill.id, { suggestedCategoryId: newCategoryId });
+        toast.success("Categoria atualizada!");
+    } else {
+        toast.error("A categoria para parcelas fixas é definida automaticamente.");
+    }
+  };
+  
+  const handleUpdateDueDate = (bill: BillTracker, newDateStr: string) => {
+    if (bill.isPaid) {
+        toast.error("Não é possível alterar a data de vencimento de contas já pagas.");
+        return;
+    }
+    
+    onUpdateBill(bill.id, { dueDate: newDateStr });
+    toast.success("Data de vencimento atualizada!");
+  };
+  
+  const handleUpdatePaymentDate = (bill: BillTracker, newDateStr: string) => {
+    if (!bill.isPaid) {
+        toast.error("A conta deve estar paga para alterar a data de pagamento.");
+        return;
+    }
+    
+    onUpdateBill(bill.id, { paymentDate: newDateStr });
+    toast.success("Data de pagamento atualizada!");
+  };
+
+  const sortedBills = useMemo(() => {
+    // Filtra apenas BillTracker que não estão excluídos
+    const trackerBills = bills.filter(isBillTracker).filter(b => !b.isExcluded);
+    // Filtra apenas ExternalPaidBill
+    const externalBills = bills.filter(isExternalPaidBill);
+    
+    const pending = trackerBills.filter(b => !b.isPaid);
+    const paidTracker = trackerBills.filter(b => b.isPaid);
+    
+    // Combina pagas do tracker e externas
+    const allPaid: BillDisplayItem[] = [...paidTracker, ...externalBills];
+    
+    pending.sort((a, b) => parseDateLocal(a.dueDate).getTime() - parseDateLocal(b.dueDate).getTime());
+    allPaid.sort((a, b) => parseDateLocal(b.paymentDate || b.dueDate).getTime() - parseDateLocal(a.paymentDate || a.dueDate).getTime());
+    
+    return [...pending, ...allPaid];
   }, [bills]);
+  
+  const totalPending = sortedBills.filter(b => isBillTracker(b) && !b.isPaid).reduce((acc, b) => acc + b.expectedAmount, 0);
 
-  const handleUpdateBill = useCallback((id: string, updates: Partial<BillTracker>) => {
-    onUpdateBill(id, updates);
-  }, [onUpdateBill]);
-
-  const handleDeleteBill = useCallback((id: string) => {
-    onDeleteBill(id);
-  }, [onDeleteBill]);
-
-  const handleTogglePaid = useCallback((bill: BillTracker, isChecked: boolean) => {
-    onTogglePaid(bill, isChecked);
-  }, [onTogglePaid]);
-
-  const handleAddBill = useCallback(() => {
-    const newBill: Omit<BillTracker, "id" | "isPaid" | "type"> = {
-      description: "",
-      dueDate: format(currentDate, 'yyyy-MM-dd'),
-      expectedAmount: 0,
-      sourceType: 'ad_hoc',
-      suggestedAccountId: highLiquidityAccounts[0]?.id,
-      suggestedCategoryId: expenseCategories[0]?.id || null,
-      isExcluded: false,
-    };
-    onAddBill(newBill);
-  }, [onAddBill, currentDate, highLiquidityAccounts, expenseCategories]);
-
-  const renderBillRow = (bill: BillDisplayItem, index: number) => {
-    const isTracker = isBillTracker(bill);
-    const isExternal = isExternalPaidBill(bill);
-    const dueDate = parseDateLocal(bill.dueDate);
-    const isOverdue = !bill.isPaid && dueDate < currentDate;
-    const isFuture = !bill.isPaid && dueDate > currentDate;
-
-    return (
-      <TableRow 
-        key={bill.id} 
-        className={cn(
-          "hover:bg-muted/30 transition-colors h-12",
-          bill.isPaid && "bg-success/5 hover:bg-success/10",
-          isOverdue && "bg-destructive/5 hover:bg-destructive/10",
-          isFuture && "bg-muted/30"
-        )}
-      >
-        <TableCell className="text-center p-2 text-base">
-          {isTracker ? (
-            <input
-              type="checkbox"
-              checked={bill.isPaid}
-              onChange={(e) => handleTogglePaid(bill as BillTracker, e.target.checked)}
-              className="w-5 h-5"
-              disabled={isExternal}
-            />
-          ) : (
-            <Badge variant="outline" className="text-xs bg-muted/50">Pago</Badge>
-          )}
-        </TableCell>
-        
-        <TableCell className="font-medium whitespace-nowrap text-sm">
-          {format(dueDate, 'dd/MM/yyyy')}
-        </TableCell>
-        
-        <TableCell className="text-right font-semibold whitespace-nowrap text-sm">
-          {formatCurrency(bill.expectedAmount)}
-        </TableCell>
-        
-        <TableCell className="text-sm max-w-[300px] truncate">
-          {bill.description}
-        </TableCell>
-        
-        <TableCell className="text-sm">
-          {isTracker ? (
-            <Badge variant="outline" className="gap-1 text-xs px-2 py-0.5">
-              {getSourceIcon(bill.sourceType)}
-              {getSourceLabel(bill.sourceType)}
-            </Badge>
-          ) : (
-            <Badge variant="outline" className="text-xs bg-muted/50">Externa</Badge>
-          )}
-        </TableCell>
-        
-        <TableCell className="text-center text-sm">
-          {bill.isPaid ? (
-            <Badge variant="default" className="text-xs bg-success hover:bg-success/90">Pago</Badge>
-          ) : isOverdue ? (
-            <Badge variant="destructive" className="text-xs">Vencido</Badge>
-          ) : isFuture ? (
-            <Badge variant="outline" className="text-xs">Futuro</Badge>
-          ) : (
-            <Badge variant="outline" className="text-xs">Pendente</Badge>
-          )}
-        </TableCell>
-        
-        <TableCell className="text-center text-sm">
-          {isTracker ? (
-            <div className="flex gap-1">
-              <Button variant="ghost" size="sm" onClick={() => handleUpdateBill(bill.id, { description: prompt("Nova descrição:", bill.description) || bill.description })}>
-                <Edit className="w-3 h-3" />
-              </Button>
-              <Button variant="ghost" size="sm" onClick={() => handleDeleteBill(bill.id)}>
-                <Trash2 className="w-3 h-3" />
-              </Button>
-            </div>
-          ) : (
-            <span className="text-xs text-muted-foreground">-</span>
-          )}
-        </TableCell>
-      </TableRow>
-    );
+  const formatDate = (dateStr: string) => {
+    const date = parseDateLocal(dateStr);
+    return date.toLocaleDateString("pt-BR", { day: "2-digit", month: "short" });
   };
-
-  const getSourceIcon = (sourceType: BillSourceType) => {
-    switch (sourceType) {
-      case 'loan_installment': return <TrendingDown className="w-3 h-3" />;
-      case 'insurance_installment': return <Shield className="w-3 h-3" />;
-      case 'fixed_expense': return <DollarSign className="w-3 h-3" />;
-      case 'variable_expense': return <TrendingUp className="w-3 h-3" />;
-      case 'ad_hoc': return <Info className="w-3 h-3" />;
-      default: return <Info className="w-3 h-3" />;
-    }
-  };
-
-  const getSourceLabel = (sourceType: BillSourceType) => {
-    switch (sourceType) {
-      case 'loan_installment': return 'Empréstimo';
-      case 'insurance_installment': return 'Seguro';
-      case 'fixed_expense': return 'Fixa';
-      case 'variable_expense': return 'Variável';
-      case 'ad_hoc': return 'Avulsa';
-      default: return 'Outro';
-    }
-  };
+  
+  const availableAccounts = useMemo(() => 
+    contasMovimento.filter(c => c.accountType === 'corrente' || c.accountType === 'cartao_credito'),
+    [contasMovimento]
+  );
+  
+  const accountOptions = useMemo(() => 
+    availableAccounts.map(a => ({ value: a.id, label: a.name })),
+    [availableAccounts]
+  );
+  
+  const expenseCategories = useMemo(() => 
+    categoriasV2.filter(c => c.nature === 'despesa_fixa' || c.nature === 'despesa_variavel'),
+    [categoriasV2]
+  );
 
   return (
-    <div className="glass-card p-5 space-y-4">
-      <div className="flex items-center justify-between">
-        <h3 className="text-lg font-semibold text-foreground">Contas do Mês</h3>
-        <div className="flex items-center gap-4 text-sm text-muted-foreground">
-          <span className="flex items-center gap-1">
-            <Check className="w-4 h-4 text-success" />
-            {totals.totalPaid.toFixed(2)} pagos
-          </span>
-          <span className="flex items-center gap-1">
-            <Clock className="w-4 h-4 text-warning" />
-            {totals.totalUnpaid.toFixed(2)} pendentes
-          </span>
+    <div className="space-y-4 h-full flex flex-col">
+      {/* Adição Rápida (Ad-Hoc) - SEMPRE VISÍVEL E MINIMALISTA */}
+      <div className="glass-card p-3 shrink-0">
+        <div className="grid grid-cols-[1fr_100px_100px_40px] gap-2 items-end mb-2">
+          <div className="space-y-1">
+            <Label className="text-xs text-muted-foreground">Descrição</Label>
+            <Input
+              value={newBillData.description}
+              onChange={(e) => setNewBillData(prev => ({ ...prev, description: e.target.value }))}
+              placeholder="Conta avulsa"
+              className="h-7 text-xs"
+            />
+          </div>
+          <div className="space-y-1">
+            <Label className="text-xs text-muted-foreground">Valor (R$)</Label>
+            <Input
+              type="text"
+              inputMode="decimal"
+              value={newBillData.amount}
+              onChange={(e) => setNewBillData(prev => ({ ...prev, amount: formatAmount(e.target.value) }))}
+              placeholder="0,00"
+              className="h-7 text-xs"
+            />
+          </div>
+          <div className="space-y-1">
+            <Label className="text-xs text-muted-foreground">Vencimento</Label>
+            <Input
+              type="date"
+              value={newBillData.dueDate}
+              onChange={(e) => setNewBillData(prev => ({ ...prev, dueDate: e.target.value }))}
+              className="h-7 text-xs"
+            />
+          </div>
+          <Button 
+            onClick={handleAddAdHocBill} 
+            className="h-7 w-full text-xs p-0"
+            disabled={!newBillData.description || parseAmount(newBillData.amount) <= 0 || !newBillData.dueDate}
+            title="Adicionar conta avulsa"
+          >
+            <Plus className="w-4 h-4" />
+          </Button>
+        </div>
+        
+        {/* Seleção de Tipo para Ad-Hoc */}
+        <div className="flex items-center gap-2">
+            <Label className="text-xs text-muted-foreground">Tipo de Despesa:</Label>
+            <Button
+                variant={adHocType === 'fixed_expense' ? "default" : "outline"}
+                size="sm"
+                className="h-6 text-xs px-2 gap-1"
+                onClick={() => setAdHocType('fixed_expense')}
+            >
+                <Repeat className="w-3 h-3" /> Fixa
+            </Button>
+            <Button
+                variant={adHocType === 'variable_expense' ? "default" : "outline"}
+                size="sm"
+                className="h-6 text-xs px-2 gap-1"
+                onClick={() => setAdHocType('variable_expense')}
+            >
+                <TrendingDown className="w-3 h-3" /> Variável
+            </Button>
         </div>
       </div>
 
-      <div className="rounded-lg border border-border overflow-x-auto">
-        <div className="max-h-[50vh] overflow-y-auto scrollbar-thin">
-          <Table className="min-w-[1000px]">
+      {/* Tabela de Contas (Consolidada) */}
+      <div className="glass-card p-3 flex-1 flex flex-col min-h-0">
+        <div className="flex items-center justify-between mb-2 shrink-0">
+          <h3 className="text-sm font-semibold text-foreground">Contas do Mês ({sortedBills.length})</h3>
+          <Badge variant="destructive" className="text-xs">
+            Pendentes: {formatCurrency(totalPending)}
+          </Badge>
+        </div>
+        
+        <div className="rounded-lg border border-border overflow-y-auto flex-1 min-h-[100px]">
+          <Table style={{ minWidth: `${totalWidth}px` }}>
             <TableHeader className="sticky top-0 bg-card z-10">
-              <TableRow className="border-border hover:bg-transparent">
-                <TableHead className="text-muted-foreground w-12 text-center">Pago</TableHead>
-                <TableHead className="text-muted-foreground">Vencimento</TableHead>
-                <TableHead className="text-muted-foreground text-right">Valor</TableHead>
-                <TableHead className="text-muted-foreground">Descrição</TableHead>
-                <TableHead className="text-muted-foreground">Tipo</TableHead>
-                <TableHead className="text-muted-foreground text-center">Status</TableHead>
-                <TableHead className="text-muted-foreground text-center">Ações</TableHead>
+              <TableRow className="border-border hover:bg-transparent h-10">
+                {columnHeaders.map((header) => (
+                  <TableHead 
+                    key={header.key} 
+                    className={cn(
+                      "text-muted-foreground p-2 text-sm relative",
+                      header.align === 'center' && 'text-center',
+                      header.align === 'right' && 'text-right'
+                    )}
+                    style={{ width: columnWidths[header.key] }}
+                  >
+                    {header.label}
+                    {/* Resizer Handle - Ocupa toda a altura do cabeçalho */}
+                    {header.key !== 'actions' && (
+                      <div
+                        className="absolute right-0 top-0 h-full w-2 cursor-col-resize"
+                        onMouseDown={(e) => handleMouseDown(e, header.key)}
+                      />
+                    )}
+                  </TableHead>
+                ))}
               </TableRow>
             </TableHeader>
             <TableBody>
-              {bills.map((bill, index) => renderBillRow(bill, index))}
-              {bills.length === 0 && (
+              {sortedBills.map((bill) => {
+                const isExternalPaid = isExternalPaidBill(bill);
+                const config = SOURCE_CONFIG[bill.sourceType] || SOURCE_CONFIG.ad_hoc;
+                const Icon = config.icon;
+                const dueDate = parseDateLocal(bill.dueDate);
+                const isOverdue = dueDate < currentDate && !bill.isPaid;
+                const isPaid = bill.isPaid;
+                
+                // Apenas contas ad-hoc, fixed_expense ou variable_expense podem ter valor alterado
+                const isAmountEditable = isBillTracker(bill) && bill.sourceType !== 'loan_installment' && bill.sourceType !== 'insurance_installment';
+                
+                // A data de vencimento pode ser alterada se não estiver paga (para qualquer tipo de conta)
+                const isDateEditable = isBillTracker(bill) && !isPaid;
+                
+                // A categoria é editável apenas para contas avulsas/fixas genéricas e se não estiver paga
+                const isCategoryEditable = isBillTracker(bill) && (bill.sourceType === 'ad_hoc' || bill.sourceType === 'fixed_expense' || bill.sourceType === 'variable_expense') && !isPaid;
+                
+                const currentCategory = expenseCategories.find(c => c.id === bill.suggestedCategoryId);
+                
+                return (
+                  <TableRow 
+                    key={bill.id} 
+                    className={cn(
+                      "hover:bg-muted/30 transition-colors h-12",
+                      isExternalPaid && "bg-muted/10 text-muted-foreground/80", // Estilo para externo
+                      isOverdue && "bg-destructive/5 hover:bg-destructive/10",
+                      isPaid && !isExternalPaid && "bg-success/5 hover:bg-success/10 border-l-4 border-success/50"
+                    )}
+                  >
+                    <TableCell className="text-center p-2 text-base" style={{ width: columnWidths.pay }}>
+                      {isExternalPaid ? (
+                        <CheckCircle2 className="w-5 h-5 text-success mx-auto" />
+                      ) : (
+                        <Checkbox
+                          checked={isPaid}
+                          onCheckedChange={(checked) => onTogglePaid(bill as BillTracker, checked as boolean)}
+                          className={cn("w-5 h-5", isPaid && "border-success data-[state=checked]:bg-success")}
+                        />
+                      )}
+                    </TableCell>
+                    
+                    <TableCell className={cn("font-medium whitespace-nowrap text-base p-2", isOverdue && "text-destructive")} style={{ width: columnWidths.due }}>
+                      <div className="flex items-center gap-1">
+                        {isOverdue && <AlertTriangle className="w-4 h-4 text-destructive" />}
+                        
+                        {isDateEditable ? (
+                            <EditableCell
+                                value={bill.dueDate}
+                                type="date"
+                                onSave={(v) => handleUpdateDueDate(bill as BillTracker, String(v))}
+                                className={cn("text-base", isOverdue && "text-destructive")}
+                            />
+                        ) : (
+                            <span className={cn("text-base", isExternalPaid && "text-muted-foreground")}>
+                                {formatDate(bill.dueDate)}
+                            </span>
+                        )}
+                      </div>
+                    </TableCell>
+                    
+                    {/* Payment Date Cell */}
+                    <TableCell className="font-medium whitespace-nowrap text-base p-2" style={{ width: columnWidths.paymentDate }}>
+                        {isPaid && bill.paymentDate ? (
+                            isExternalPaid ? (
+                                <span className="text-base text-muted-foreground">{formatDate(bill.paymentDate)}</span>
+                            ) : (
+                                <EditableCell
+                                    value={bill.paymentDate}
+                                    type="date"
+                                    onSave={(v) => handleUpdatePaymentDate(bill as BillTracker, String(v))}
+                                    className="text-base text-success"
+                                />
+                            )
+                        ) : (
+                            <span className="text-muted-foreground">—</span>
+                        )}
+                    </TableCell>
+                    
+                    <TableCell className="text-base max-w-[200px] truncate p-2" style={{ width: columnWidths.description }}>
+                      {bill.description}
+                    </TableCell>
+                    
+                    <TableCell className="text-base p-2" style={{ width: columnWidths.account }}>
+                      {isExternalPaid ? (
+                        <span className="text-sm text-muted-foreground">
+                          {contasMovimento.find(a => a.id === bill.suggestedAccountId)?.name || 'N/A'}
+                        </span>
+                      ) : (
+                        <Select 
+                          value={bill.suggestedAccountId || ''} 
+                          onValueChange={(v) => handleUpdateSuggestedAccount(bill as BillTracker, v)}
+                          disabled={isPaid}
+                        >
+                          <SelectTrigger className="h-9 text-base p-2 w-full">
+                            <SelectValue placeholder="Conta..." />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {accountOptions.map(opt => (
+                              <SelectItem key={opt.value} value={opt.value} className="text-base">
+                                {opt.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      )}
+                    </TableCell>
+                    
+                    <TableCell className="p-2 text-base" style={{ width: columnWidths.type }}>
+                      <Badge variant="outline" className={cn("gap-1 text-sm px-2 py-0.5", config.color)}>
+                        <Icon className="w-4 h-4" />
+                        {config.label}
+                      </Badge>
+                    </TableCell>
+                    
+                    {/* Categoria Cell */}
+                    <TableCell className="p-2 text-base" style={{ width: columnWidths.category }}>
+                        {isExternalPaid ? (
+                            <span className="text-sm text-muted-foreground">
+                                {currentCategory?.icon} {currentCategory?.label || 'N/A'}
+                            </span>
+                        ) : (
+                            <Select 
+                                value={bill.suggestedCategoryId || ''} 
+                                onValueChange={(v) => handleUpdateSuggestedCategory(bill as BillTracker, v)}
+                                disabled={!isCategoryEditable}
+                            >
+                                <SelectTrigger className="h-9 text-base p-2 w-full">
+                                    <SelectValue placeholder={currentCategory?.label || "Selecione..."} />
+                                </SelectTrigger>
+                                <SelectContent className="max-h-60">
+                                    {expenseCategories.map(cat => (
+                                        <SelectItem key={cat.id} value={cat.id} className="text-base">
+                                            {cat.icon} {cat.label} ({CATEGORY_NATURE_LABELS[cat.nature]})
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        )}
+                    </TableCell>
+                    
+                    <TableCell className={cn("text-right font-semibold whitespace-nowrap p-2", isPaid ? "text-success" : "text-destructive")} style={{ width: columnWidths.amount }}>
+                      {isAmountEditable && !isPaid ? (
+                        <EditableCell 
+                          value={bill.expectedAmount} 
+                          type="currency" 
+                          onSave={(v) => handleUpdateExpectedAmount(bill as BillTracker, Number(v))}
+                          className={cn("text-right text-base", isPaid ? "text-success" : "text-destructive")}
+                        />
+                      ) : (
+                        <span className={cn("text-base", isExternalPaid && "text-muted-foreground")}>{formatCurrency(bill.expectedAmount)}</span>
+                      )}
+                    </TableCell>
+                    
+                    <TableCell className="text-center p-2 text-base" style={{ width: columnWidths.actions }}>
+                      {isExternalPaid ? (
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          className="h-8 w-8 text-muted-foreground"
+                          onClick={() => toast.info(`Transação ID: ${bill.id}`)}
+                          title="Transação do Extrato (Somente Leitura)"
+                        >
+                          <Info className="w-4 h-4" />
+                        </Button>
+                      ) : (
+                        isAmountEditable && !isPaid && (
+                          <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                            onClick={() => handleExcludeBill(bill as BillTracker)}
+                            title="Excluir da lista deste mês"
+                          >
+                            <X className="w-4 h-4" />
+                          </Button>
+                        )
+                      )}
+                      {isPaid && !isExternalPaid && (
+                          <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            className="h-8 w-8 text-muted-foreground"
+                            onClick={() => toast.info(`Transação ID: ${(bill as BillTracker).transactionId}`)}
+                          >
+                            <Info className="w-4 h-4" />
+                          </Button>
+                      )}
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
+              {sortedBills.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
-                    Nenhuma conta encontrada para este mês.
+                  <TableCell colSpan={9} className="text-center text-muted-foreground py-8">
+                    <Check className="w-6 h-6 mx-auto mb-2 text-success" />
+                    Nenhuma conta pendente ou paga neste mês.
                   </TableCell>
                 </TableRow>
               )}
             </TableBody>
           </Table>
         </div>
-      </div>
-
-      {/* Resumo */}
-      <div className="grid grid-cols-2 gap-4 mt-4 pt-4 border-t border-border">
-        <div className="text-center">
-          <p className="text-xs text-muted-foreground">Total Pendente</p>
-          <p className="text-lg font-bold text-warning">
-            {formatCurrency(totals.totalUnpaid)}
-          </p>
-        </div>
-        <div className="text-center">
-          <p className="text-xs text-muted-foreground">Total Pago</p>
-          <p className="text-lg font-bold text-success">
-            {formatCurrency(totals.totalPaid)}
-          </p>
-        </div>
-      </div>
-
-      {/* Botão de Adicionar Conta */}
-      <div className="mt-4 flex justify-end">
-        <Button variant="outline" onClick={handleAddBill} className="gap-2">
-          <Plus className="w-4 h-4" />
-          Adicionar Conta
-        </Button>
       </div>
     </div>
   );
