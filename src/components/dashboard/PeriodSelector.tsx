@@ -29,7 +29,6 @@ export function PeriodSelector({
   initialRanges,
   className,
 }: PeriodSelectorProps) {
-  // Ensure initialRanges.range1 is never undefined when initializing state
   const safeInitialRange1 = initialRanges.range1 || { from: undefined, to: undefined };
   
   const [isOpen, setIsOpen] = useState(false);
@@ -64,6 +63,17 @@ export function PeriodSelector({
       return { from: undefined, to: undefined };
     }
     
+    // Se o período principal for um mês fechado (ex: 01/02 a 28/02)
+    const isFullMonth = isSameDay(range1.from, startOfMonth(range1.from)) && 
+                        isSameDay(range1.to, endOfMonth(range1.to));
+
+    if (isFullMonth) {
+      // Retorna o mês fechado anterior (ex: 01/01 a 31/01)
+      const prevMonth = subMonths(range1.from, 1);
+      return { from: startOfMonth(prevMonth), to: endOfMonth(prevMonth) };
+    }
+    
+    // Caso contrário, mantém a lógica de subtrair o número exato de dias
     const diffInDays = differenceInDays(range1.to, range1.from) + 1;
     const prevTo = subDays(range1.from, 1);
     const prevFrom = subDays(prevTo, diffInDays - 1);
@@ -88,7 +98,6 @@ export function PeriodSelector({
   }, [calculateRangeFromPreset]);
 
   useEffect(() => {
-    // Use initialRanges passed via props (from context)
     setRange(initialRanges.range1);
     setSelectedPreset(getActivePresetId(initialRanges.range1));
   }, [initialRanges, getActivePresetId]);
@@ -143,24 +152,16 @@ export function PeriodSelector({
   });
 
   const formatDateRange = (r: DateRange | undefined) => {
-    if (!r) return "Todo o período";
-    
-    if (!r.from && !r.to) return "Todo o período";
-    
-    // Se uma das datas estiver faltando, mas a outra estiver presente,
-    // isso indica um estado incompleto (custom range não finalizado).
+    if (!r || (!r.from && !r.to)) return "Todo o período";
     if (!r.from || !r.to) return "Selecione um período";
     
-    // Se chegamos aqui, r.from e r.to são Date objects.
     const fromDate = r.from as Date;
     const toDate = r.to as Date;
 
     const fromStr = format(fromDate, "dd/MM/yyyy", { locale: ptBR });
     const toStr = format(toDate, "dd/MM/yyyy", { locale: ptBR });
 
-    if (isSameDay(fromDate, toDate)) {
-      return fromStr;
-    }
+    if (isSameDay(fromDate, toDate)) return fromStr;
     if (isSameMonth(fromDate, toDate) && isSameYear(fromDate, toDate)) {
       return `${format(fromDate, "dd", { locale: ptBR })} - ${toStr}`;
     }
@@ -168,7 +169,6 @@ export function PeriodSelector({
     return `${fromStr} - ${toStr}`;
   };
   
-  // Nova função para lidar com a seleção do calendário
   const handleCalendarSelect = (newSelection: DateRange | undefined) => {
     if (!newSelection) {
       setTempRange({ from: undefined, to: undefined });
@@ -176,8 +176,6 @@ export function PeriodSelector({
     }
 
     const { from, to } = newSelection;
-    
-    // Lógica para permitir desmarcar a data de início se for clicada novamente
     if (from && tempRange.from && isSameDay(from, tempRange.from) && !to) {
       setTempRange({ from: undefined, to: undefined });
     } else {
@@ -195,7 +193,7 @@ export function PeriodSelector({
           className={cn(
             "w-[260px] justify-start text-left font-normal h-9 border-border shadow-sm hover:bg-muted/50 transition-colors",
             (!range.from && !range.to) && "text-muted-foreground",
-            className // Aplica classes customizadas, permitindo sobrescrever w-[260px] e h-9
+            className
           )}
         >
           <CalendarIcon className="mr-2 h-4 w-4 shrink-0 text-primary" />
@@ -212,8 +210,6 @@ export function PeriodSelector({
         align="start"
       >
         <div className="flex gap-3">
-          
-          {/* Coluna Presets */}
           <div className="w-[140px] shrink-0 space-y-1">
             <Label className="text-xs font-medium text-muted-foreground px-1">Presets</Label>
             <div className="flex flex-col gap-1">
@@ -228,7 +224,6 @@ export function PeriodSelector({
                   {preset.label}
                 </Button>
               ))}
-
               <Button
                 variant={selectedPreset === "custom" ? "default" : "outline"}
                 size="sm"
@@ -240,7 +235,6 @@ export function PeriodSelector({
             </div>
           </div>
 
-          {/* Coluna Calendário Compacta */}
           <div className="space-y-2 min-w-[540px] max-w-[540px]">
             <Calendar
               mode="range"
@@ -250,7 +244,6 @@ export function PeriodSelector({
               locale={ptBR}
               initialFocus
             />
-
             <div className="flex items-center gap-2 pt-2 border-t border-border/40">
               <Button 
                 onClick={handleCalendarApply} 
@@ -260,7 +253,6 @@ export function PeriodSelector({
                 <Check className="w-3 h-3" />
                 Aplicar Datas
               </Button>
-
               <Button
                 variant="ghost"
                 size="sm"
