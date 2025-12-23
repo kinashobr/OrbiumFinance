@@ -183,9 +183,11 @@ export function DRETab({ dateRanges }: DRETabProps) {
 
     const receitasAgrupadas = new Map<string, number>();
     transacoesReceita.forEach(t => {
-      const cat = categoriasMap.get(t.categoryId || '') || { label: 'Outras Receitas', nature: 'receita' };
-      const key = cat.label;
-      receitasAgrupadas.set(key, (receitasAgrupadas.get(key) || 0) + t.amount);
+      const cat = categoriasMap.get(t.categoryId || '');
+      if (cat) { // Apenas categorias válidas
+        const key = cat.label;
+        receitasAgrupadas.set(key, (receitasAgrupadas.get(key) || 0) + t.amount);
+      }
     });
 
     const receitasPorCategoria: { categoria: string; valor: number; natureza: string }[] = [];
@@ -213,13 +215,15 @@ export function DRETab({ dateRanges }: DRETabProps) {
 
     transacoesDespesaOperacional.forEach(t => {
       const cat = categoriasMap.get(t.categoryId || '');
-      const catLabel = cat?.label || 'Outras Despesas';
-      const nature = cat?.nature || 'despesa_variavel';
+      if (cat) { // Apenas categorias válidas
+        const catLabel = cat.label;
+        const nature = cat.nature;
 
-      if (nature === 'despesa_fixa') {
-        despesasFixasMap.set(catLabel, (despesasFixasMap.get(catLabel) || 0) + t.amount);
-      } else {
-        despesasVariaveisMap.set(catLabel, (despesasVariaveisMap.get(catLabel) || 0) + t.amount);
+        if (nature === 'despesa_fixa') {
+          despesasFixasMap.set(catLabel, (despesasFixasMap.get(catLabel) || 0) + t.amount);
+        } else {
+          despesasVariaveisMap.set(catLabel, (despesasVariaveisMap.get(catLabel) || 0) + t.amount);
+        }
       }
     });
     
