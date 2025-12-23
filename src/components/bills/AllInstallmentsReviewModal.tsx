@@ -176,7 +176,7 @@ export function AllInstallmentsReviewModal({
         toast.info("Parcelas pagas não podem ser removidas ou adicionadas aqui. Use a lista principal para estornar.");
         return;
     }
-    // Toggle inclusion status
+
     onToggleInstallment(bill, !bill.isIncluded);
   }, [onToggleInstallment]);
 
