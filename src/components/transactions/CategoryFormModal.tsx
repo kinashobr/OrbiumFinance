@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Tags, TrendingUp, TrendingDown, Repeat } from "lucide-react";
-import { Categoria, CategoryNature, CATEGORY_NATURE_LABELS, generateCategoryId, getCategoryTypeFromNature } from "@/types/finance";
+import { Categoria, CategoryNature, generateCategoryId, getCategoryTypeFromNature } from "@/types/finance";
 import { toast } from "sonner";
 
 interface CategoryFormModalProps {
@@ -40,6 +40,11 @@ export function CategoryFormModal({
   const [label, setLabel] = useState("");
   const [icon, setIcon] = useState("📦");
   const [nature, setNature] = useState<CategoryNature>("despesa_variavel");
+  const [emojiSearch, setEmojiSearch] = useState("");
+
+  const filteredEmojis = EMOJI_OPTIONS.filter((emoji) =>
+    emoji.toLowerCase().includes(emojiSearch.toLowerCase())
+  );
 
   const isEditing = !!category;
 
@@ -76,7 +81,7 @@ export function CategoryFormModal({
 
   const handleDelete = () => {
     if (!category) return;
-    
+
     if (hasTransactions) {
       toast.error("Não é possível excluir uma categoria em uso por transações");
       return;
@@ -98,15 +103,15 @@ export function CategoryFormModal({
             {isEditing ? "Editar Categoria" : "Nova Categoria"}
           </DialogTitle>
           <DialogDescription>
-            {isEditing 
-              ? "Atualize os dados da categoria" 
+            {isEditing
+              ? "Atualize os dados da categoria"
               : "Crie uma nova categoria para classificar suas transações"}
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4 py-4">
           <div className="space-y-2">
-            <Label htmlFor="label">Nome da Categoria *</Label>
+            <Label htmlFor="label">Nome da Categoria</Label>
             <Input
               id="label"
               placeholder="Ex: Alimentação"
@@ -117,15 +122,22 @@ export function CategoryFormModal({
 
           <div className="space-y-2">
             <Label>Ícone</Label>
-            <div className="flex flex-wrap gap-2 p-2 border rounded-md">
-              {EMOJI_OPTIONS.map((emoji) => (
+
+            <Input
+              placeholder="Buscar ícone..."
+              value={emojiSearch}
+              onChange={(e) => setEmojiSearch(e.target.value)}
+            />
+
+            <div className="flex flex-wrap gap-2 p-2 border rounded-md max-h-40 overflow-y-auto">
+              {filteredEmojis.map((emoji) => (
                 <button
                   key={emoji}
                   type="button"
                   onClick={() => setIcon(emoji)}
-                  className={`w-8 h-8 flex items-center justify-center text-lg rounded-md transition-all ${
-                    icon === emoji 
-                      ? "bg-primary text-primary-foreground ring-2 ring-primary" 
+                  className={`w-8 h-8 flex items-center justify-center text-lg rounded-md ${
+                    icon === emoji
+                      ? "bg-primary text-primary-foreground ring-2 ring-primary"
                       : "hover:bg-muted"
                   }`}
                 >
@@ -136,38 +148,29 @@ export function CategoryFormModal({
           </div>
 
           <div className="space-y-3">
-            <Label>Essa categoria representa o quê? *</Label>
+            <Label>Essa categoria representa o quê?</Label>
             <RadioGroup value={nature} onValueChange={(v) => setNature(v as CategoryNature)}>
-              <div className="flex items-center space-x-3 p-3 rounded-lg border hover:bg-muted/50 cursor-pointer">
+              <div className="flex items-center space-x-3 p-3 rounded-lg border hover:bg-muted/50">
                 <RadioGroupItem value="receita" id="receita" />
-                <Label htmlFor="receita" className="flex items-center gap-2 cursor-pointer flex-1">
+                <Label htmlFor="receita" className="flex items-center gap-2">
                   <TrendingUp className="w-4 h-4 text-success" />
-                  <div>
-                    <p className="font-medium">Receita</p>
-                    <p className="text-xs text-muted-foreground">Entradas de dinheiro (salário, vendas, etc.)</p>
-                  </div>
+                  Receita
                 </Label>
               </div>
 
-              <div className="flex items-center space-x-3 p-3 rounded-lg border hover:bg-muted/50 cursor-pointer">
+              <div className="flex items-center space-x-3 p-3 rounded-lg border hover:bg-muted/50">
                 <RadioGroupItem value="despesa_fixa" id="despesa_fixa" />
-                <Label htmlFor="despesa_fixa" className="flex items-center gap-2 cursor-pointer flex-1">
+                <Label htmlFor="despesa_fixa" className="flex items-center gap-2">
                   <Repeat className="w-4 h-4 text-orange-500" />
-                  <div>
-                    <p className="font-medium">Despesa Fixa</p>
-                    <p className="text-xs text-muted-foreground">Gastos recorrentes (aluguel, assinaturas, etc.)</p>
-                  </div>
+                  Despesa Fixa
                 </Label>
               </div>
 
-              <div className="flex items-center space-x-3 p-3 rounded-lg border hover:bg-muted/50 cursor-pointer">
+              <div className="flex items-center space-x-3 p-3 rounded-lg border hover:bg-muted/50">
                 <RadioGroupItem value="despesa_variavel" id="despesa_variavel" />
-                <Label htmlFor="despesa_variavel" className="flex items-center gap-2 cursor-pointer flex-1">
+                <Label htmlFor="despesa_variavel" className="flex items-center gap-2">
                   <TrendingDown className="w-4 h-4 text-destructive" />
-                  <div>
-                    <p className="font-medium">Despesa Variável</p>
-                    <p className="text-xs text-muted-foreground">Gastos que variam (alimentação, lazer, etc.)</p>
-                  </div>
+                  Despesa Variável
                 </Label>
               </div>
             </RadioGroup>
@@ -176,12 +179,7 @@ export function CategoryFormModal({
 
         <DialogFooter className="flex gap-2">
           {isEditing && onDelete && (
-            <Button 
-              variant="destructive" 
-              onClick={handleDelete}
-              disabled={hasTransactions}
-              className="mr-auto"
-            >
+            <Button variant="destructive" onClick={handleDelete}>
               Excluir
             </Button>
           )}
