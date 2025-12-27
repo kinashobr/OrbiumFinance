@@ -197,17 +197,7 @@ export function CategoryFormModal({
           </div>
 
           <div className="space-y-2">
-            <Label>Ícone Selecionado</Label>
-            <div className="flex items-center gap-3 p-3 border rounded-lg">
-              <div className="text-3xl">{icon}</div>
-              <div>
-                <p className="font-medium">{label || "Nova Categoria"}</p>
-                <p className="text-sm text-muted-foreground">
-                  {CATEGORY_NATURE_LABELS[nature]}
-                </p>
-              </div>
-            </div>
-
+            <Label>Ícone</Label>
             <Tabs value={activeTab} onValueChange={setActiveTab}>
               <TabsList className="grid grid-cols-2">
                 <TabsTrigger value="sugeridos">
