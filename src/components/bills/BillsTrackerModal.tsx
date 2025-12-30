@@ -394,10 +394,7 @@ export function BillsTrackerModal({ open, onOpenChange }: BillsTrackerModalProps
               </div>
             </div>
             <div className="flex items-center gap-2">
-              <Button variant="outline" size="sm" onClick={() => { setFixedBillSelectorMode('current'); setShowFixedBillSelector(true); }} className="gap-2">
-                <Settings className="w-4 h-4" />
-                Gerenciar Fixas
-              </Button>
+              {/* Botão Gerenciar Fixas REMOVIDO daqui */}
               <Button variant="ghost" size="icon" onClick={() => onOpenChange(false)} className="rounded-full">
                 <X className="w-5 h-5" />
               </Button>
@@ -432,6 +429,11 @@ export function BillsTrackerModal({ open, onOpenChange }: BillsTrackerModalProps
                 </Button>
               </div>
               <div className="flex items-center gap-2">
+                {/* Botão Gerenciar Fixas ADICIONADO aqui */}
+                <Button variant="outline" size="sm" onClick={() => { setFixedBillSelectorMode('current'); setShowFixedBillSelector(true); }} className="gap-2">
+                  <Settings className="w-4 h-4" />
+                  Gerenciar Fixas
+                </Button>
                 <Button variant="outline" size="sm" onClick={() => { setFixedBillSelectorMode('future'); setShowFixedBillSelector(true); }} className="gap-2">
                   <Plus className="w-4 h-4" />
                   Adiantar Parcelas
