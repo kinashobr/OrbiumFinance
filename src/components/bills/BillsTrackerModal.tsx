@@ -24,6 +24,12 @@ const isBillTracker = (bill: BillDisplayItem): bill is BillTracker => {
     return bill.type === 'tracker';
 };
 
+// NEW: BillsTrackerModalProps interface
+interface BillsTrackerModalProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+}
+
 export function BillsTrackerModal({ open, onOpenChange }: BillsTrackerModalProps) {
   const { 
     billsTracker, 
@@ -231,7 +237,7 @@ export function BillsTrackerModal({ open, onOpenChange }: BillsTrackerModalProps
         updateBill(trackerBill.id, { isPaid: false, paymentDate: undefined });
       }
     }
-  }, [updateBill, addTransacaoV2, contasMovimento, categoriasV2, emprestimos, segurosVeiculo, calculateLoanAmortizationAndInterest, setBillsTracker, markSeguroParcelPaid, markLoanParcelPaid, unmarkSeguroParcelPaid, unmarkLoanParcelPaid, setTransacoesV2]);
+  }, [updateBill, addTransacaoV2, contasMovimento, categoriasV2, emprestimos, segurosVeiculo, calculateLoanAmortizationAndInterest, setBillsTracker, markSeguroParcelPaid, markLoanParcelPaid, unmarkSeguroParcelPaid, unmarkLoanParcelPaid, setTransacoesV2, transacoesV2]);
   
   const handleToggleFixedBill = useCallback((potentialBill: PotentialFixedBill, isChecked: boolean) => {
     const { sourceType, sourceRef, parcelaNumber, dueDate, expectedAmount, description, isPaid } = potentialBill;
@@ -402,7 +408,7 @@ export function BillsTrackerModal({ open, onOpenChange }: BillsTrackerModalProps
         <div className="flex flex-1 overflow-hidden">
           {/* Sidebar de KPIs */}
           <ResizableSidebar
-            initialWidth={350} {/* Aumentado para 350px */}
+            initialWidth={350} /* Aumentado para 350px */
             minWidth={200}
             maxWidth={400}
             storageKey="bills_kpis_sidebar_width"
