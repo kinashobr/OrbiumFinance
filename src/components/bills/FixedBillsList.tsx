@@ -110,7 +110,10 @@ export function FixedBillsList({ bills, onToggleFixedBill, mode }: FixedBillsLis
                 
                 <TableCell className="text-center text-sm">
                   {isAlreadyPaidViaTransaction ? (
-                    <Badge variant="default" className="text-xs bg-success hover:bg-success/90">Pago (Ext.)</Badge>
+                    // Ajuste aqui: Usar whitespace-nowrap para garantir que fique em uma linha
+                    <Badge variant="default" className="text-xs bg-success hover:bg-success/90 whitespace-nowrap">
+                      Pago (Ext.)
+                    </Badge>
                   ) : bill.isPaid ? (
                     <Badge variant="default" className="text-xs bg-success hover:bg-success/90">Pago</Badge>
                   ) : (
