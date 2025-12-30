@@ -1,3 +1,5 @@
+"use client";
+
 import { useMemo, useState, useCallback } from "react";
 import {
   Droplets,
@@ -13,6 +15,8 @@ import {
   Zap,
   Flame,
   Anchor,
+  Settings,
+  AlertCircle,
 } from "lucide-react";
 import { useFinance } from "@/contexts/FinanceContext";
 import { ExpandablePanel } from "./ExpandablePanel";
@@ -37,8 +41,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { cn, parseDateLocal } from "@/lib/utils";
-import { addMonths, isBefore, isAfter, isSameDay, differenceInMonths, differenceInDays, startOfDay, endOfDay, isWithinInterval } from "date-fns";
+import { addMonths, isBefore, isAfter, isSameDay, startOfDay, endOfDay, isWithinInterval } from "date-fns";
 import { toast } from "sonner";
 import { ComparisonDateRanges, DateRange } from "@/types/finance";
 
@@ -85,23 +95,35 @@ interface IndicadoresTabProps {
   dateRanges: ComparisonDateRanges;
 }
 
+// Variáveis disponíveis para fórmulas
+const FORMULA_VARIABLES = {
+  RECEITAS: "Total de receitas no período",
+  DESPESAS: "Total de despesas no período",
+  LUCRO: "Saldo operacional (Receitas - Despesas)",
+  ATIVOS: "Total de ativos na data final",
+  PASSIVOS: "Total de passivos na data final",
+  PL: "Patrimônio Líquido",
+  CAIXA: "Saldo disponível em contas líquidas",
+  DIVIDAS: "Saldo devedor total (Empréstimos + Cartões)",
+  INVESTIMENTOS: "Saldo total em investimentos",
+  RENDIMENTOS: "Rendimentos de investimentos no período",
+};
+
 export function IndicadoresTab({ dateRanges }: IndicadoresTabProps) {
   const {
     transacoesV2,
     contasMovimento,
-    emprestimos,
     veiculos,
     categoriasV2,
     segurosVeiculo,
     getAtivosTotal,
     getPassivosTotal,
-    getPatrimonioLiquido,
     getSaldoDevedor,
     calculateBalanceUpToDate,
     getValorFipeTotal,
     getSegurosAPagar,
     calculateLoanPrincipalDueInNextMonths,
-    calculateLoanSchedule,
+    calculateTotalInvestmentBalanceAtDate,
   } = useFinance();
 
   const { range1, range2 } = dateRanges;
@@ -126,27 +148,39 @@ export function IndicadoresTab({ dateRanges }: IndicadoresTabProps) {
     invertido: false,
   });
 
-  type LiquidezKey = 'corrente' | 'seca' | 'imediata' | 'geral' | 'solvenciaImediata';
-  type EndividamentoKey = 'total' | 'dividaPL' | 'composicao' | 'imobilizacao';
-  type RentabilidadeKey = 'margemLiquida' | 'retornoAtivos' | 'retornoPL' | 'liberdadeFinanceira';
-  type EficienciaKey = 'despesasFixas' | 'operacional' | 'burnRate';
-  type PessoaisKey = 'custoVida' | 'mesesSobrevivencia' | 'taxaPoupanca' | 'comprometimento' | 'margemSeguranca';
-  type OutrosKey = 'solvencia' | 'coberturaJuros' | 'diversificacao';
+  // Função segura para avaliar fórmulas
+  const evaluateFormula = useCallback((formula: string, variables: Record<string, number>): number => {
+    try {
+      // Limpeza básica e proteção contra caracteres maliciosos
+      const sanitizedFormula = formula.replace(/[^0-9a-zA-Z\s\+\-\*\/\(\)\.]/g, '');
+      
+      // Cria um array com as chaves e valores para a função
+      const keys = Object.keys(variables);
+      const values = Object.values(variables);
+      
+      // Cria a função dinâmica: (v1, v2, ..., vn) => eval(formula)
+      const dynamicFn = new Function(...keys, `return (${sanitizedFormula})`);
+      
+      const result = dynamicFn(...values);
+      return isFinite(result) ? result : 0;
+    } catch (e) {
+      return 0;
+    }
+  }, []);
 
-  type AllIndicatorKeys = LiquidezKey | EndividamentoKey | RentabilidadeKey | EficienciaKey | PessoaisKey | OutrosKey;
-  type ValidGroupKey = 'liquidez' | 'endividamento' | 'rentabilidade' | 'eficiencia' | 'pessoais' | 'outros';
-
-  type TrendResult = {
-    diff: number;
-    percent: number;
-    trend: "up" | "down" | "stable";
-  };
-
-  type DisplayTrendResult = {
-    percent: number;
-    trend: "up" | "down" | "stable";
-    status: IndicatorStatus;
-  };
+  const determineStatus = useCallback((value: number, config: CustomIndicator): IndicatorStatus => {
+    const { limiteVerde, limiteAmarelo, invertido } = config;
+    
+    if (invertido) {
+      if (value <= limiteVerde) return "success";
+      if (value <= limiteAmarelo) return "warning";
+      return "danger";
+    } else {
+      if (value >= limiteVerde) return "success";
+      if (value >= limiteAmarelo) return "warning";
+      return "danger";
+    }
+  }, []);
 
   const generateSparkline = useCallback((current: number, trend: "up" | "down" | "stable" = "stable") => {
     const base = Math.abs(current) * 0.7;
@@ -175,23 +209,14 @@ export function IndicadoresTab({ dateRanges }: IndicadoresTabProps) {
       nome: newIndicator.nome || '',
       descricao: newIndicator.descricao || '',
       formula: newIndicator.formula || '',
-      formato: newIndicator.formato || 'percent',
-      limiteVerde: newIndicator.limiteVerde || 0,
-      limiteAmarelo: newIndicator.limiteAmarelo || 0,
-      invertido: newIndicator.invertido || false,
+      formato: (newIndicator.formato as any) || 'percent',
+      limiteVerde: Number(newIndicator.limiteVerde) || 0,
+      limiteAmarelo: Number(newIndicator.limiteAmarelo) || 0,
+      invertido: !!newIndicator.invertido,
     };
 
     saveCustomIndicators([...customIndicators, indicator]);
-    setNewIndicator({
-      nome: '',
-      descricao: '',
-      formula: '',
-      formato: 'percent',
-      limiteVerde: 0,
-      limiteAmarelo: 0,
-      invertido: false,
-    });
-    setDialogOpen(false);
+    handleReset();
     toast.success("Indicador personalizado criado!");
   };
 
@@ -212,11 +237,6 @@ export function IndicadoresTab({ dateRanges }: IndicadoresTabProps) {
     });
     setDialogOpen(false);
   };
-
-  const calculatePercentChange = useCallback((value1: number, value2: number) => {
-    if (value2 === 0) return 0;
-    return ((value1 - value2) / Math.abs(value2)) * 100;
-  }, []);
 
   const calculateIndicatorsForRange = useCallback((range: DateRange) => {
     const finalDate = range.to || new Date(9999, 11, 31);
@@ -247,10 +267,9 @@ export function IndicadoresTab({ dateRanges }: IndicadoresTabProps) {
     const patrimonioLiquido = totalAtivos - totalPassivos;
     const valorVeiculos = getValorFipeTotal(finalDate);
     const saldoDevedor = getSaldoDevedor(finalDate);
+    const totalInvestimentos = calculateTotalInvestmentBalanceAtDate(finalDate);
     
     const loanPrincipalShortTerm = calculateLoanPrincipalDueInNextMonths(finalDate, 12);
-    const segurosAPagarTotal = getSegurosAPagar(finalDate);
-    
     let segurosAPagarShortTerm = 0;
     const lookaheadDate = addMonths(finalDate, 12);
     segurosVeiculo.forEach(seguro => {
@@ -272,10 +291,23 @@ export function IndicadoresTab({ dateRanges }: IndicadoresTabProps) {
       .filter(t => t.operationType === 'rendimento')
       .reduce((acc, t) => acc + t.amount, 0);
     
-    const categoriasMap = new Map(categoriasV2.map(c => [c.id, c]));
     const despesasMesAtualCash = transacoesPeriodo
       .filter(t => t.operationType !== 'initial_balance' && t.flow === 'out')
       .reduce((acc, t) => acc + t.amount, 0);
+
+    // Variáveis para indicadores customizados
+    const variables = {
+      RECEITAS: receitasMesAtual,
+      DESPESAS: despesasMesAtualCash,
+      LUCRO: receitasMesAtual - despesasMesAtualCash,
+      ATIVOS: totalAtivos,
+      PASSIVOS: totalPassivos,
+      PL: patrimonioLiquido,
+      CAIXA: caixaTotal,
+      DIVIDAS: saldoDevedor,
+      INVESTIMENTOS: totalInvestimentos,
+      RENDIMENTOS: rendimentosInvestimentos,
+    };
 
     const liquidezCorrente = passivoCurtoPrazo > 0 ? caixaTotal / passivoCurtoPrazo : caixaTotal > 0 ? 999 : 0;
     const liquidezGeral = totalPassivos > 0 ? totalAtivos / totalPassivos : totalAtivos > 0 ? 999 : 0;
@@ -291,6 +323,16 @@ export function IndicadoresTab({ dateRanges }: IndicadoresTabProps) {
     const burnRate = receitasMesAtual > 0 ? (despesasMesAtualCash / receitasMesAtual) * 100 : 0;
     const mesesSobrevivencia = despesasMesAtualCash > 0 ? caixaTotal / (despesasMesAtualCash / 30) : 999;
     const margemSeguranca = receitasMesAtual > 0 ? ((receitasMesAtual - despesasMesAtualCash) / receitasMesAtual) * 100 : 0;
+
+    // Calcula indicadores customizados
+    const calculatedCustoms = customIndicators.map(ci => {
+      const value = evaluateFormula(ci.formula, variables);
+      return {
+        ...ci,
+        calculatedValue: value,
+        status: determineStatus(value, ci)
+      };
+    });
 
     return {
       liquidez: {
@@ -324,42 +366,46 @@ export function IndicadoresTab({ dateRanges }: IndicadoresTabProps) {
         comprometimento: { valor: burnRate, status: (burnRate < 70 ? "success" : burnRate < 90 ? "warning" : "danger") as IndicatorStatus },
         margemSeguranca: { valor: margemSeguranca, status: (margemSeguranca >= 20 ? "success" : margemSeguranca >= 5 ? "warning" : "danger") as IndicatorStatus },
       },
-      outros: {
-        solvencia: { valor: liquidezGeral, status: (liquidezGeral >= 2 ? "success" : liquidezGeral >= 1 ? "warning" : "danger") as IndicatorStatus },
-        coberturaJuros: { valor: 5, status: "neutral" as IndicatorStatus },
-        diversificacao: { valor: 50, status: "neutral" as IndicatorStatus },
-      },
+      custom: calculatedCustoms,
     };
-  }, [transacoesV2, contasMovimento, getAtivosTotal, getPassivosTotal, getValorFipeTotal, getSaldoDevedor, calculateBalanceUpToDate, calculateLoanPrincipalDueInNextMonths, getSegurosAPagar, segurosVeiculo, categoriasV2]);
+  }, [transacoesV2, contasMovimento, getAtivosTotal, getPassivosTotal, getValorFipeTotal, getSaldoDevedor, calculateBalanceUpToDate, calculateLoanPrincipalDueInNextMonths, calculateTotalInvestmentBalanceAtDate, segurosVeiculo, customIndicators, evaluateFormula, determineStatus]);
 
   const indicadores1 = useMemo(() => calculateIndicatorsForRange(range1), [calculateIndicatorsForRange, range1]);
   const indicadores2 = useMemo(() => calculateIndicatorsForRange(range2), [calculateIndicatorsForRange, range2]);
 
-  const calculateTrend = useCallback(<G extends ValidGroupKey, K extends AllIndicatorKeys>(key: K, group: G): TrendResult => {
-    const val1 = (indicadores1[group] as any)[key].valor;
-    const val2 = (indicadores2[group] as any)[key].valor;
-    if (!range2.from || val2 === 0) return { diff: 0, percent: 0, trend: "stable" };
+  const calculatePercentChange = useCallback((value1: number, value2: number) => {
+    if (value2 === 0) return 0;
+    return ((value1 - value2) / Math.abs(value2)) * 100;
+  }, []);
+
+  const getDisplayTrend = useCallback((key: string, group: string): { trend: "up" | "down" | "stable", percent: number, status: IndicatorStatus } => {
+    const val1 = group === 'custom' 
+      ? indicadores1.custom.find(c => c.id === key)?.calculatedValue || 0
+      : (indicadores1 as any)[group][key].valor;
+      
+    const val2 = group === 'custom'
+      ? indicadores2.custom.find(c => c.id === key)?.calculatedValue || 0
+      : (indicadores2 as any)[group][key].valor;
+
+    if (!range2.from || val2 === 0) return { trend: "stable", percent: 0, status: "neutral" };
+    
     const percent = calculatePercentChange(val1, val2);
     const trend: "up" | "down" | "stable" = percent >= 0 ? "up" : "down";
-    return { diff: val1 - val2, percent, trend };
+    const status = group === 'custom'
+      ? indicadores1.custom.find(c => c.id === key)?.status || "neutral"
+      : (indicadores1 as any)[group][key].status;
+
+    return { trend, percent, status };
   }, [indicadores1, indicadores2, range2.from, calculatePercentChange]);
 
-  const getDisplayTrend = useCallback(<G extends ValidGroupKey, K extends AllIndicatorKeys>(key: K, group: G): DisplayTrendResult => {
-    const { percent, trend } = calculateTrend(key, group);
-    const { status } = (indicadores1[group] as any)[key];
-    const isInverse = group === 'endividamento' || 
-                      (group === 'eficiencia' && (key === 'operacional' || key === 'burnRate')) || 
-                      (group === 'pessoais' && key === 'comprometimento');
-    let finalTrend: "up" | "down" | "stable" = trend;
-    if (range2.from) {
-        if (isInverse) finalTrend = trend === 'up' ? 'down' : trend === 'down' ? 'up' : 'stable';
-    } else {
-        if (status === 'success') finalTrend = isInverse ? 'down' : 'up';
-        else if (status === 'danger') finalTrend = isInverse ? 'up' : 'down';
-        else finalTrend = 'stable';
+  const formatValue = (value: number, formato: string) => {
+    switch (formato) {
+      case 'percent': return `${value.toFixed(1)}%`;
+      case 'ratio': return value >= 999 ? "∞" : `${value.toFixed(2)}x`;
+      case 'currency': return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
+      default: return value.toFixed(2);
     }
-    return { trend: finalTrend, percent, status };
-  }, [calculateTrend, indicadores1, range2.from]);
+  };
 
   const formatPercent = (value: number) => `${value.toFixed(1)}%`;
   const formatRatio = (value: number) => value >= 999 ? "∞" : `${value.toFixed(2)}x`;
@@ -391,44 +437,26 @@ export function IndicadoresTab({ dateRanges }: IndicadoresTabProps) {
               Novo Indicador
             </Button>
           </DialogTrigger>
-          <DialogContent className="sm:max-w-[500px]">
+          <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Criar Indicador Personalizado</DialogTitle>
               <DialogDescription>
-                Defina um novo indicador financeiro com sua própria fórmula e limites.
+                Defina um novo indicador financeiro usando variáveis do sistema e fórmulas matemáticas.
               </DialogDescription>
             </DialogHeader>
-            <div className="grid gap-4 py-4">
-              <div className="grid gap-2">
-                <Label htmlFor="nome">Nome do Indicador</Label>
-                <Input
-                  id="nome"
-                  placeholder="Ex: Taxa de Economia"
-                  value={newIndicator.nome}
-                  onChange={(e) => setNewIndicator({ ...newIndicator, nome: e.target.value })}
-                />
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="descricao">Descrição</Label>
-                <Textarea
-                  id="descricao"
-                  placeholder="Descreva o que este indicador mede..."
-                  value={newIndicator.descricao}
-                  onChange={(e) => setNewIndicator({ ...newIndicator, descricao: e.target.value })}
-                />
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="formula">Fórmula (texto explicativo)</Label>
-                <Input
-                  id="formula"
-                  placeholder="Ex: (Receitas - Despesas) / Receitas × 100"
-                  value={newIndicator.formula}
-                  onChange={(e) => setNewIndicator({ ...newIndicator, formula: e.target.value })}
-                />
-              </div>
+            <div className="grid gap-6 py-4">
               <div className="grid grid-cols-2 gap-4">
                 <div className="grid gap-2">
-                  <Label htmlFor="formato">Formato</Label>
+                  <Label htmlFor="nome">Nome do Indicador</Label>
+                  <Input
+                    id="nome"
+                    placeholder="Ex: Taxa de Economia"
+                    value={newIndicator.nome}
+                    onChange={(e) => setNewIndicator({ ...newIndicator, nome: e.target.value })}
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="formato">Formato de Exibição</Label>
                   <Select 
                     value={newIndicator.formato} 
                     onValueChange={(v) => setNewIndicator({ ...newIndicator, formato: v as any })}
@@ -444,8 +472,61 @@ export function IndicadoresTab({ dateRanges }: IndicadoresTabProps) {
                     </SelectContent>
                   </Select>
                 </div>
+              </div>
+
+              <div className="grid gap-2">
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="formula">Fórmula Matemática</Label>
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <div className="flex items-center gap-1 text-xs text-blue-500 cursor-help">
+                          <AlertCircle className="w-3 h-3" />
+                          Variáveis Disponíveis
+                        </div>
+                      </TooltipTrigger>
+                      <TooltipContent side="right" className="w-80 p-3">
+                        <p className="font-bold mb-2">Use estas variáveis:</p>
+                        <div className="space-y-1">
+                          {Object.entries(FORMULA_VARIABLES).map(([key, desc]) => (
+                            <div key={key} className="flex flex-col border-b border-border pb-1 mb-1 last:border-0">
+                              <code className="text-blue-600 font-bold">{key}</code>
+                              <span className="text-[10px] text-muted-foreground">{desc}</span>
+                            </div>
+                          ))}
+                        </div>
+                        <p className="mt-2 text-[10px] italic">Ex: (RECEITAS - DESPESAS) / RECEITAS * 100</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                </div>
+                <Input
+                  id="formula"
+                  placeholder="Ex: (RECEITAS - DESPESAS) / RECEITAS * 100"
+                  value={newIndicator.formula}
+                  onChange={(e) => setNewIndicator({ ...newIndicator, formula: e.target.value.toUpperCase() })}
+                />
+              </div>
+
+              <div className="grid grid-cols-3 gap-4 border-t pt-4">
                 <div className="grid gap-2">
-                  <Label>Invertido?</Label>
+                  <Label className="text-success">Limite Saudável</Label>
+                  <Input
+                    type="number"
+                    value={newIndicator.limiteVerde}
+                    onChange={(e) => setNewIndicator({ ...newIndicator, limiteVerde: Number(e.target.value) })}
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <Label className="text-warning">Limite Atenção</Label>
+                  <Input
+                    type="number"
+                    value={newIndicator.limiteAmarelo}
+                    onChange={(e) => setNewIndicator({ ...newIndicator, limiteAmarelo: Number(e.target.value) })}
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <Label>Tipo de Lógica</Label>
                   <Select 
                     value={newIndicator.invertido ? "true" : "false"} 
                     onValueChange={(v) => setNewIndicator({ ...newIndicator, invertido: v === "true" })}
@@ -460,6 +541,16 @@ export function IndicadoresTab({ dateRanges }: IndicadoresTabProps) {
                   </Select>
                 </div>
               </div>
+
+              <div className="grid gap-2">
+                <Label htmlFor="descricao">Descrição (Aparece no Tooltip)</Label>
+                <Textarea
+                  id="descricao"
+                  placeholder="Descreva o que este indicador mede..."
+                  value={newIndicator.descricao}
+                  onChange={(e) => setNewIndicator({ ...newIndicator, descricao: e.target.value })}
+                />
+              </div>
             </div>
             <DialogFooter>
               <Button variant="outline" onClick={handleReset}>
@@ -473,6 +564,38 @@ export function IndicadoresTab({ dateRanges }: IndicadoresTabProps) {
           </DialogContent>
         </Dialog>
       </div>
+
+      {indicadores1.custom.length > 0 && (
+        <IndicatorGroup
+          title="Indicadores Personalizados"
+          subtitle="Métricas definidas pelo usuário"
+          icon={<Settings className="w-4 h-4" />}
+        >
+          {indicadores1.custom.map((ci) => (
+            <div key={ci.id} className="relative group/badge">
+              <DetailedIndicatorBadge
+                title={ci.nome}
+                value={formatValue(ci.calculatedValue, ci.formato)}
+                status={ci.status}
+                trend={getDisplayTrend(ci.id, 'custom').trend}
+                trendLabel={range2.from ? `${getDisplayTrend(ci.id, 'custom').percent.toFixed(1)}% vs anterior` : undefined}
+                descricao={ci.descricao}
+                formula={ci.formula}
+                sparklineData={generateSparkline(ci.calculatedValue, getDisplayTrend(ci.id, 'custom').trend)}
+                icon={<Activity className="w-4 h-4" />}
+              />
+              <Button
+                variant="ghost"
+                size="icon"
+                className="absolute -top-2 -right-2 h-6 w-6 rounded-full bg-destructive text-destructive-foreground opacity-0 group-hover/badge:opacity-100 transition-opacity z-10 shadow-sm"
+                onClick={() => handleRemoveIndicator(ci.id)}
+              >
+                <Trash2 className="w-3 h-3" />
+              </Button>
+            </div>
+          ))}
+        </IndicatorGroup>
+      )}
 
       <IndicatorGroup
         title="Indicadores de Liquidez"
@@ -523,33 +646,33 @@ export function IndicadoresTab({ dateRanges }: IndicadoresTabProps) {
           title="Endividamento Total"
           value={formatPercent(indicadores1.endividamento.total.valor)}
           status={indicadores1.endividamento.total.status}
-          trend={getDisplayTrend('total' as EndividamentoKey, 'endividamento').trend}
-          trendLabel={range2.from ? `${getDisplayTrend('total' as EndividamentoKey, 'endividamento').percent.toFixed(1)}% vs anterior` : undefined}
+          trend={getDisplayTrend('total', 'endividamento').trend}
+          trendLabel={range2.from ? `${getDisplayTrend('total', 'endividamento').percent.toFixed(1)}% vs anterior` : undefined}
           descricao="Percentual dos ativos financiados por terceiros (dívidas). Quanto menor, melhor. Ideal: abaixo de 30%"
           formula="(Passivo Total / Ativo Total) × 100 (na data final)"
-          sparklineData={generateSparkline(indicadores1.endividamento.total.valor, getDisplayTrend('total' as EndividamentoKey, 'endividamento').trend)}
+          sparklineData={generateSparkline(indicadores1.endividamento.total.valor, getDisplayTrend('total', 'endividamento').trend)}
           icon={<Shield className="w-4 h-4" />}
         />
         <DetailedIndicatorBadge
           title="Dívida / Patrimônio"
           value={formatPercent(indicadores1.endividamento.dividaPL.valor)}
           status={indicadores1.endividamento.dividaPL.status}
-          trend={getDisplayTrend('dividaPL' as EndividamentoKey, 'endividamento').trend}
-          trendLabel={range2.from ? `${getDisplayTrend('dividaPL' as EndividamentoKey, 'endividamento').percent.toFixed(1)}% vs anterior` : undefined}
+          trend={getDisplayTrend('dividaPL', 'endividamento').trend}
+          trendLabel={range2.from ? `${getDisplayTrend('dividaPL', 'endividamento').percent.toFixed(1)}% vs anterior` : undefined}
           descricao="Relação entre capital de terceiros e capital próprio. Indica alavancagem. Ideal: abaixo de 50%"
           formula="(Dívida Total / Patrimônio Líquido) × 100 (na data final)"
-          sparklineData={generateSparkline(indicadores1.endividamento.dividaPL.valor, getDisplayTrend('dividaPL' as EndividamentoKey, 'endividamento').trend)}
+          sparklineData={generateSparkline(indicadores1.endividamento.dividaPL.valor, getDisplayTrend('dividaPL', 'endividamento').trend)}
           icon={<Shield className="w-4 h-4" />}
         />
         <DetailedIndicatorBadge
           title="Imobilização do PL"
           value={formatPercent(indicadores1.endividamento.imobilizacao.valor)}
           status={indicadores1.endividamento.imobilizacao.status}
-          trend={getDisplayTrend('imobilizacao' as EndividamentoKey, 'endividamento').trend}
-          trendLabel={range2.from ? `${getDisplayTrend('imobilizacao' as EndividamentoKey, 'endividamento').percent.toFixed(1)}% vs anterior` : undefined}
+          trend={getDisplayTrend('imobilizacao', 'endividamento').trend}
+          trendLabel={range2.from ? `${getDisplayTrend('imobilizacao', 'endividamento').percent.toFixed(1)}% vs anterior` : undefined}
           descricao="Quanto do patrimônio está investido em bens imobilizados (veículos). Ideal: abaixo de 30%"
           formula="(Ativo Imobilizado / Patrimônio Líquido) × 100 (na data final)"
-          sparklineData={generateSparkline(indicadores1.endividamento.imobilizacao.valor, getDisplayTrend('imobilizacao' as EndividamentoKey, 'endividamento').trend)}
+          sparklineData={generateSparkline(indicadores1.endividamento.imobilizacao.valor, getDisplayTrend('imobilizacao', 'endividamento').trend)}
           icon={<Activity className="w-4 h-4" />}
         />
       </IndicatorGroup>
@@ -563,22 +686,22 @@ export function IndicadoresTab({ dateRanges }: IndicadoresTabProps) {
           title="Margem Líquida"
           value={formatPercent(indicadores1.rentabilidade.margemLiquida.valor)}
           status={indicadores1.rentabilidade.margemLiquida.status}
-          trend={getDisplayTrend('margemLiquida' as RentabilidadeKey, 'rentabilidade').trend}
-          trendLabel={range2.from ? `${getDisplayTrend('margemLiquida' as RentabilidadeKey, 'rentabilidade').percent.toFixed(1)}% vs anterior` : undefined}
+          trend={getDisplayTrend('margemLiquida', 'rentabilidade').trend}
+          trendLabel={range2.from ? `${getDisplayTrend('margemLiquida', 'rentabilidade').percent.toFixed(1)}% vs anterior` : undefined}
           descricao="Percentual das receitas que sobra como lucro. Mede eficiência na conversão de receita em resultado. Ideal: acima de 20%"
           formula="(Resultado Líquido / Receitas) × 100 (no período)"
-          sparklineData={generateSparkline(indicadores1.rentabilidade.margemLiquida.valor, getDisplayTrend('margemLiquida' as RentabilidadeKey, 'rentabilidade').trend)}
+          sparklineData={generateSparkline(indicadores1.rentabilidade.margemLiquida.valor, getDisplayTrend('margemLiquida', 'rentabilidade').trend)}
           icon={<TrendingUp className="w-4 h-4" />}
         />
         <DetailedIndicatorBadge
           title="Liberdade Financeira"
           value={formatPercent(indicadores1.rentabilidade.liberdadeFinanceira.valor)}
           status={indicadores1.rentabilidade.liberdadeFinanceira.status}
-          trend={getDisplayTrend('liberdadeFinanceira' as RentabilidadeKey, 'rentabilidade').trend}
-          trendLabel={range2.from ? `${getDisplayTrend('liberdadeFinanceira' as RentabilidadeKey, 'rentabilidade').percent.toFixed(1)}% vs anterior` : undefined}
+          trend={getDisplayTrend('liberdadeFinanceira', 'rentabilidade').trend}
+          trendLabel={range2.from ? `${getDisplayTrend('liberdadeFinanceira', 'rentabilidade').percent.toFixed(1)}% vs anterior` : undefined}
           descricao="Percentual das despesas cobertas por rendimentos passivos. 100% significa independência financeira."
           formula="(Rendimentos de Investimentos / Despesas Totais) × 100"
-          sparklineData={generateSparkline(indicadores1.rentabilidade.liberdadeFinanceira.valor, getDisplayTrend('liberdadeFinanceira' as RentabilidadeKey, 'rentabilidade').trend)}
+          sparklineData={generateSparkline(indicadores1.rentabilidade.liberdadeFinanceira.valor, getDisplayTrend('liberdadeFinanceira', 'rentabilidade').trend)}
           icon={<Anchor className="w-4 h-4" />}
         />
       </IndicatorGroup>
@@ -592,22 +715,22 @@ export function IndicadoresTab({ dateRanges }: IndicadoresTabProps) {
           title="Burn Rate (Consumo)"
           value={formatPercent(indicadores1.eficiencia.burnRate.valor)}
           status={indicadores1.eficiencia.burnRate.status}
-          trend={getDisplayTrend('burnRate' as EficienciaKey, 'eficiencia').trend}
-          trendLabel={range2.from ? `${getDisplayTrend('burnRate' as EficienciaKey, 'eficiencia').percent.toFixed(1)}% vs anterior` : undefined}
+          trend={getDisplayTrend('burnRate', 'eficiencia').trend}
+          trendLabel={range2.from ? `${getDisplayTrend('burnRate', 'eficiencia').percent.toFixed(1)}% vs anterior` : undefined}
           descricao="Velocidade com que você consome sua receita mensal. Ideal: abaixo de 70%"
           formula="(Despesas Totais / Receitas Totais) × 100"
-          sparklineData={generateSparkline(indicadores1.eficiencia.burnRate.valor, getDisplayTrend('burnRate' as EficienciaKey, 'eficiencia').trend)}
+          sparklineData={generateSparkline(indicadores1.eficiencia.burnRate.valor, getDisplayTrend('burnRate', 'eficiencia').trend)}
           icon={<Flame className="w-4 h-4" />}
         />
         <DetailedIndicatorBadge
           title="Eficiência Operacional"
           value={formatPercent(indicadores1.eficiencia.operacional.valor)}
           status={indicadores1.eficiencia.operacional.status}
-          trend={getDisplayTrend('operacional' as EficienciaKey, 'eficiencia').trend}
-          trendLabel={range2.from ? `${getDisplayTrend('operacional' as EficienciaKey, 'eficiencia').percent.toFixed(1)}% vs anterior` : undefined}
+          trend={getDisplayTrend('operacional', 'eficiencia').trend}
+          trendLabel={range2.from ? `${getDisplayTrend('operacional', 'eficiencia').percent.toFixed(1)}% vs anterior` : undefined}
           descricao="Percentual das receitas consumidas por despesas. Menor valor indica maior eficiência. Ideal: abaixo de 70%"
           formula="(Despesas Totais / Receitas) × 100 (no período)"
-          sparklineData={generateSparkline(indicadores1.eficiencia.operacional.valor, getDisplayTrend('operacional' as EficienciaKey, 'eficiencia').trend)}
+          sparklineData={generateSparkline(indicadores1.eficiencia.operacional.valor, getDisplayTrend('operacional', 'eficiencia').trend)}
           icon={<Activity className="w-4 h-4" />}
         />
       </IndicatorGroup>
@@ -621,22 +744,22 @@ export function IndicadoresTab({ dateRanges }: IndicadoresTabProps) {
           title="Margem de Segurança"
           value={formatPercent(indicadores1.pessoais.margemSeguranca.valor)}
           status={indicadores1.pessoais.margemSeguranca.status}
-          trend={getDisplayTrend('margemSeguranca' as PessoaisKey, 'pessoais').trend}
-          trendLabel={range2.from ? `${getDisplayTrend('margemSeguranca' as PessoaisKey, 'pessoais').percent.toFixed(1)}% vs anterior` : undefined}
+          trend={getDisplayTrend('margemSeguranca', 'pessoais').trend}
+          trendLabel={range2.from ? `${getDisplayTrend('margemSeguranca', 'pessoais').percent.toFixed(1)}% vs anterior` : undefined}
           descricao="Percentual da receita que sobra livre após todos os gastos e parcelas. Ideal: acima de 20%"
           formula="((Receita - Despesas - Parcelas) / Receita) × 100"
-          sparklineData={generateSparkline(indicadores1.pessoais.margemSeguranca.valor, getDisplayTrend('margemSeguranca' as PessoaisKey, 'pessoais').trend)}
+          sparklineData={generateSparkline(indicadores1.pessoais.margemSeguranca.valor, getDisplayTrend('margemSeguranca', 'pessoais').trend)}
           icon={<ShieldCheck className="w-4 h-4" />}
         />
         <DetailedIndicatorBadge
           title="Meses de Sobrevivência"
           value={formatMeses(indicadores1.pessoais.mesesSobrevivencia.valor)}
           status={indicadores1.pessoais.mesesSobrevivencia.status}
-          trend={getDisplayTrend('mesesSobrevivencia' as PessoaisKey, 'pessoais').trend}
-          trendLabel={range2.from ? `${getDisplayTrend('mesesSobrevivencia' as PessoaisKey, 'pessoais').percent.toFixed(1)}% vs anterior` : undefined}
+          trend={getDisplayTrend('mesesSobrevivencia', 'pessoais').trend}
+          trendLabel={range2.from ? `${getDisplayTrend('mesesSobrevivencia', 'pessoais').percent.toFixed(1)}% vs anterior` : undefined}
           descricao="Quantos meses você consegue manter seu padrão de vida apenas com reservas. Ideal: acima de 6 meses"
           formula="Caixa e Equivalentes / Custo de Vida Mensal"
-          sparklineData={generateSparkline(indicadores1.pessoais.mesesSobrevivencia.valor, getDisplayTrend('mesesSobrevivencia' as PessoaisKey, 'pessoais').trend)}
+          sparklineData={generateSparkline(indicadores1.pessoais.mesesSobrevivencia.valor, getDisplayTrend('mesesSobrevivencia', 'pessoais').trend)}
           icon={<Calculator className="w-4 h-4" />}
         />
       </IndicatorGroup>
