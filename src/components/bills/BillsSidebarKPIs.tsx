@@ -171,7 +171,9 @@ export function BillsSidebarKPIs({ currentDate, totalPendingBills, totalPaidBill
             calculos.status === 'warning' && "bg-warning/10 border-warning/50 text-warning",
             calculos.status === 'danger' && "bg-destructive/10 border-destructive/50 text-destructive"
           )}>
-            <span className="font-bold text-xs uppercase tracking-wider">Saldo Projetado (Com Caixa)</span>
+            <span className="font-bold text-xs uppercase tracking-wider">
+              Saldo Projetado <span className="whitespace-nowrap">(Com Caixa)</span>
+            </span>
             <span className="font-extrabold text-lg whitespace-nowrap">{formatCurrency(calculos.projectedBalance)}</span>
           </div>
           
