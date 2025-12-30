@@ -101,7 +101,7 @@ export function BillsSidebarKPIs({ currentDate, totalPendingBills, totalPaidBill
           {/* Saldo Inicial */}
           <div className="flex justify-between items-center text-sm p-2 rounded-lg bg-muted/30">
             <span className="text-muted-foreground">Saldo Inicial (Caixa)</span>
-            <span className="font-semibold text-primary">{formatCurrency(calculos.initialBalance)}</span>
+            <span className="font-semibold text-primary whitespace-nowrap">{formatCurrency(calculos.initialBalance)}</span>
           </div>
           
           {/* Previsão de Receita */}
@@ -134,19 +134,19 @@ export function BillsSidebarKPIs({ currentDate, totalPendingBills, totalPaidBill
                 <TrendingDown className="w-4 h-4" />
                 Despesas Totais (Mês)
             </span>
-            <span className="font-bold text-destructive">{formatCurrency(calculos.totalExpensesForMonth)}</span>
+            <span className="font-bold text-destructive whitespace-nowrap">{formatCurrency(calculos.totalExpensesForMonth)}</span>
           </div>
           
           {/* Detalhe Pendente */}
           <div className="flex justify-between items-center text-xs px-2 text-muted-foreground">
             <span>A pagar (Pendentes)</span>
-            <span className="font-medium text-destructive">{formatCurrency(totalPendingBills)}</span>
+            <span className="font-medium text-destructive whitespace-nowrap">{formatCurrency(totalPendingBills)}</span>
           </div>
           
           {/* Detalhe Pago */}
           <div className="flex justify-between items-center text-xs px-2 text-muted-foreground">
             <span>Já pago (Extrato/Tracker)</span>
-            <span className="font-medium text-success">{formatCurrency(totalPaidBills)}</span>
+            <span className="font-medium text-success whitespace-nowrap">{formatCurrency(totalPaidBills)}</span>
           </div>
 
           <Separator className="my-2" />
@@ -157,7 +157,7 @@ export function BillsSidebarKPIs({ currentDate, totalPendingBills, totalPaidBill
               <Calculator className="w-3.5 h-3.5" /> Fluxo Líquido Projetado
             </span>
             <span className={cn(
-              "font-bold",
+              "font-bold whitespace-nowrap",
               calculos.netFlowProjected >= 0 ? "text-success" : "text-destructive"
             )}>
               {formatCurrency(calculos.netFlowProjected)}
@@ -172,7 +172,7 @@ export function BillsSidebarKPIs({ currentDate, totalPendingBills, totalPaidBill
             calculos.status === 'danger' && "bg-destructive/10 border-destructive/50 text-destructive"
           )}>
             <span className="font-bold text-xs uppercase tracking-wider">Saldo Projetado (Com Caixa)</span>
-            <span className="font-extrabold text-lg">{formatCurrency(calculos.projectedBalance)}</span>
+            <span className="font-extrabold text-lg whitespace-nowrap">{formatCurrency(calculos.projectedBalance)}</span>
           </div>
           
         </CardContent>
