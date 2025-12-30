@@ -20,10 +20,9 @@ import { cn, parseDateLocal } from "@/lib/utils";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { EditableCell } from "../EditableCell";
-import { AddPurchaseInstallmentDialog } from "./AddPurchaseInstallmentDialog";
 
 interface BillsTrackerListProps {
-  bills: BillDisplayItem[]; // <-- ALTERADO PARA BillDisplayItem[]
+  bills: BillDisplayItem[];
   onUpdateBill: (id: string, updates: Partial<BillTracker>) => void;
   onDeleteBill: (id: string) => void;
   onAddBill: (bill: Omit<BillTracker, "id" | "isPaid" | "type">) => void;
@@ -37,11 +36,10 @@ const SOURCE_CONFIG: Record<BillSourceType | 'external_expense', { icon: React.E
   fixed_expense: { icon: Repeat, color: 'text-purple-500', label: 'Fixa' },
   variable_expense: { icon: DollarSign, color: 'text-warning', label: 'Variável' },
   ad_hoc: { icon: Info, color: 'text-primary', label: 'Avulsa' },
-  purchase_installment: { icon: ShoppingCart, color: 'text-pink-500', label: 'Parcela' }, // NOVO
-  external_expense: { icon: CheckCircle2, color: 'text-success', label: 'Extrato' }, // NOVO
+  purchase_installment: { icon: ShoppingCart, color: 'text-pink-500', label: 'Parcela' },
+  external_expense: { icon: CheckCircle2, color: 'text-success', label: 'Extrato' },
 };
 
-// Define column keys and initial widths (in pixels)
 const COLUMN_KEYS = ['pay', 'due', 'paymentDate', 'description', 'account', 'type', 'category', 'amount', 'actions'] as const;
 type ColumnKey = typeof COLUMN_KEYS[number];
 
@@ -69,7 +67,6 @@ const columnHeaders: { key: ColumnKey, label: string, align?: 'center' | 'right'
   { key: 'actions', label: 'Ações', align: 'center' },
 ];
 
-// Predicados de tipo
 const isBillTracker = (bill: BillDisplayItem): bill is BillTracker => bill.type === 'tracker';
 const isExternalPaidBill = (bill: BillDisplayItem): bill is ExternalPaidBill => bill.type === 'external_paid';
 
@@ -88,10 +85,7 @@ export function BillsTrackerList({
     amount: '',
     dueDate: format(currentDate, 'yyyy-MM-dd'),
   });
-  
-  const [isPurchaseDialogOpen, setIsPurchaseDialogOpen] = useState(false);
 
-  // --- Column Resizing State and Logic ---
   const [columnWidths, setColumnWidths] = useState<Record<ColumnKey, number>>(() => {
     try {
       const saved = localStorage.getItem('bills_column_widths');
@@ -118,14 +112,9 @@ export function BillsTrackerList({
 
   const handleMouseMove = useCallback((e: MouseEvent) => {
     if (!resizingColumn) return;
-
     const deltaX = e.clientX - startX;
-    const newWidth = Math.max(30, startWidth + deltaX); // Minimum width of 30px
-
-    setColumnWidths(prev => ({
-      ...prev,
-      [resizingColumn]: newWidth,
-    }));
+    const newWidth = Math.max(30, startWidth + deltaX);
+    setColumnWidths(prev => ({ ...prev, [resizingColumn]: newWidth }));
   }, [resizingColumn, startX, startWidth]);
 
   const handleMouseUp = useCallback(() => {
@@ -141,8 +130,7 @@ export function BillsTrackerList({
       window.removeEventListener('mousemove', handleMouseMove);
       window.removeEventListener('mouseup', handleMouseUp);
       document.body.style.cursor = 'default';
-    };
-
+    }
     return () => {
       window.removeEventListener('mousemove', handleMouseMove);
       window.removeEventListener('mouseup', handleMouseUp);
@@ -150,10 +138,7 @@ export function BillsTrackerList({
     };
   }, [resizingColumn, handleMouseMove, handleMouseUp]);
   
-  const totalWidth = useMemo(() => {
-    return Object.values(columnWidths).reduce((sum, w) => sum + w, 0);
-  }, [columnWidths]);
-  // ---------------------------------------------
+  const totalWidth = useMemo(() => Object.values(columnWidths).reduce((sum, w) => sum + w, 0), [columnWidths]);
 
   const formatAmount = (value: string) => {
     const cleaned = value.replace(/[^\d,]/g, '');
@@ -173,19 +158,14 @@ export function BillsTrackerList({
       toast.error("Preencha a descrição, valor e data de vencimento.");
       return;
     }
-    
-    // Default to 'ad_hoc' and null category ID
-    const suggestedCategoryId = null; 
-
     onAddBill({
       description: newBillData.description,
       dueDate: newBillData.dueDate,
       expectedAmount: amount,
-      sourceType: 'ad_hoc', // Default to ad_hoc
+      sourceType: 'ad_hoc',
       suggestedAccountId: contasMovimento.find(c => c.accountType === 'corrente')?.id,
-      suggestedCategoryId: suggestedCategoryId,
+      suggestedCategoryId: null,
     });
-
     setNewBillData({ description: '', amount: '', dueDate: format(currentDate, 'yyyy-MM-dd') });
     toast.success("Conta avulsa adicionada!");
   };
@@ -195,12 +175,10 @@ export function BillsTrackerList({
         toast.error("Não é possível excluir parcelas de empréstimo ou seguro.");
         return;
     }
-    
     if (bill.isPaid) {
         toast.error("Desmarque o pagamento antes de excluir.");
         return;
     }
-    
     onUpdateBill(bill.id, { isExcluded: true });
     toast.info(`Conta "${bill.description}" excluída da lista deste mês.`);
   };
@@ -215,7 +193,6 @@ export function BillsTrackerList({
         toast.error("Valor de parcelas fixas deve ser alterado no cadastro do Empréstimo/Seguro.");
         return;
     }
-    
     onUpdateBill(bill.id, { expectedAmount: newAmount });
     toast.success("Valor atualizado!");
   };
@@ -226,12 +203,9 @@ export function BillsTrackerList({
   };
   
   const handleUpdateSuggestedCategory = (bill: BillTracker, newCategoryId: string) => {
-    // Apenas permite alteração se for uma conta avulsa ou fixa genérica ou compra parcelada
     if (bill.sourceType === 'ad_hoc' || bill.sourceType === 'fixed_expense' || bill.sourceType === 'variable_expense' || bill.sourceType === 'purchase_installment') {
-        
         const selectedCategory = categoriasV2.find(c => c.id === newCategoryId);
         let newSourceType: BillSourceType = bill.sourceType;
-        
         if (selectedCategory && bill.sourceType !== 'purchase_installment') {
             if (selectedCategory.nature === 'despesa_fixa') {
                 newSourceType = 'fixed_expense';
@@ -239,7 +213,6 @@ export function BillsTrackerList({
                 newSourceType = 'variable_expense';
             }
         }
-        
         onUpdateBill(bill.id, { suggestedCategoryId: newCategoryId, sourceType: newSourceType });
         toast.success("Categoria atualizada!");
     } else {
@@ -252,7 +225,6 @@ export function BillsTrackerList({
         toast.error("Não é possível alterar a data de vencimento de contas já pagas.");
         return;
     }
-    
     onUpdateBill(bill.id, { dueDate: newDateStr });
     toast.success("Data de vencimento atualizada!");
   };
@@ -262,26 +234,18 @@ export function BillsTrackerList({
         toast.error("A conta deve estar paga para alterar a data de pagamento.");
         return;
     }
-    
     onUpdateBill(bill.id, { paymentDate: newDateStr });
     toast.success("Data de pagamento atualizada!");
   };
 
   const sortedBills = useMemo(() => {
-    // Filtra apenas BillTracker que não estão excluídos
     const trackerBills = bills.filter(isBillTracker).filter(b => !b.isExcluded);
-    // Filtra apenas ExternalPaidBill
     const externalBills = bills.filter(isExternalPaidBill);
-    
     const pending = trackerBills.filter(b => !b.isPaid);
     const paidTracker = trackerBills.filter(b => b.isPaid);
-    
-    // Combina pagas do tracker e externas
     const allPaid: BillDisplayItem[] = [...paidTracker, ...externalBills];
-    
     pending.sort((a, b) => parseDateLocal(a.dueDate).getTime() - parseDateLocal(b.dueDate).getTime());
     allPaid.sort((a, b) => parseDateLocal(b.paymentDate || b.dueDate).getTime() - parseDateLocal(a.paymentDate || a.dueDate).getTime());
-    
     return [...pending, ...allPaid];
   }, [bills]);
   
@@ -309,16 +273,16 @@ export function BillsTrackerList({
 
   return (
     <div className="space-y-4 h-full flex flex-col">
-      {/* Adição Rápida (Ad-Hoc) - SEMPRE VISÍVEL E MINIMALISTA */}
+      {/* Adição Rápida (Ad-Hoc) */}
       <div className="glass-card p-3 shrink-0">
-        <div className="grid grid-cols-[1fr_100px_100px_100px_40px] gap-2 items-end">
+        <div className="grid grid-cols-[1fr_120px_120px_40px] gap-2 items-end">
           <div className="space-y-1">
             <Label className="text-xs text-muted-foreground">Descrição</Label>
             <Input
               value={newBillData.description}
               onChange={(e) => setNewBillData(prev => ({ ...prev, description: e.target.value }))}
               placeholder="Conta avulsa"
-              className="h-7 text-xs"
+              className="h-8 text-sm rounded-lg"
             />
           </div>
           <div className="space-y-1">
@@ -329,7 +293,7 @@ export function BillsTrackerList({
               value={newBillData.amount}
               onChange={(e) => setNewBillData(prev => ({ ...prev, amount: formatAmount(e.target.value) }))}
               placeholder="0,00"
-              className="h-7 text-xs"
+              className="h-8 text-sm rounded-lg"
             />
           </div>
           <div className="space-y-1">
@@ -338,33 +302,20 @@ export function BillsTrackerList({
               type="date"
               value={newBillData.dueDate}
               onChange={(e) => setNewBillData(prev => ({ ...prev, dueDate: e.target.value }))}
-              className="h-7 text-xs"
+              className="h-8 text-sm rounded-lg"
             />
-          </div>
-          <div className="space-y-1">
-            <Label className="text-xs text-muted-foreground invisible">Ação</Label>
-            <Button 
-                variant="outline"
-                onClick={() => setIsPurchaseDialogOpen(true)}
-                className="h-7 w-full text-[10px] gap-1 px-1 border-pink-500/50 text-pink-500 hover:bg-pink-500/10"
-                title="Nova compra parcelada"
-            >
-                <ShoppingCart className="w-3 h-3" />
-                Parcelado
-            </Button>
           </div>
           <Button 
             onClick={handleAddAdHocBill} 
-            className="h-7 w-full text-xs p-0"
+            className="h-8 w-full p-0 rounded-lg"
             disabled={!newBillData.description || parseAmount(newBillData.amount) <= 0 || !newBillData.dueDate}
-            title="Adicionar conta avulsa"
           >
             <Plus className="w-4 h-4" />
           </Button>
         </div>
       </div>
 
-      {/* Tabela de Contas (Consolidada) */}
+      {/* Tabela de Contas */}
       <div className="glass-card p-3 flex-1 flex flex-col min-h-0">
         <div className="flex items-center justify-between mb-2 shrink-0">
           <h3 className="text-sm font-semibold text-foreground">Contas do Mês ({sortedBills.length})</h3>
@@ -388,7 +339,6 @@ export function BillsTrackerList({
                     style={{ width: columnWidths[header.key] }}
                   >
                     {header.label}
-                    {/* Resizer Handle - Ocupa toda a altura do cabeçalho */}
                     {header.key !== 'actions' && (
                       <div
                         className="absolute right-0 top-0 h-full w-2 cursor-col-resize"
@@ -407,16 +357,9 @@ export function BillsTrackerList({
                 const dueDate = parseDateLocal(bill.dueDate);
                 const isOverdue = dueDate < currentDate && !bill.isPaid;
                 const isPaid = bill.isPaid;
-                
-                // Apenas contas ad-hoc, fixed_expense, variable_expense ou purchase_installment podem ter valor alterado
                 const isAmountEditable = isBillTracker(bill) && bill.sourceType !== 'loan_installment' && bill.sourceType !== 'insurance_installment';
-                
-                // A data de vencimento pode ser alterada se não estiver paga (para qualquer tipo de conta)
                 const isDateEditable = isBillTracker(bill) && !isPaid;
-                
-                // A categoria é editável apenas para contas avulsas/fixas genéricas e se não estiver paga
                 const isCategoryEditable = isBillTracker(bill) && (bill.sourceType === 'ad_hoc' || bill.sourceType === 'fixed_expense' || bill.sourceType === 'variable_expense' || bill.sourceType === 'purchase_installment') && !isPaid;
-                
                 const currentCategory = expenseCategories.find(c => c.id === bill.suggestedCategoryId);
                 
                 return (
@@ -424,7 +367,7 @@ export function BillsTrackerList({
                     key={bill.id} 
                     className={cn(
                       "hover:bg-muted/30 transition-colors h-12",
-                      isExternalPaid && "bg-muted/10 text-muted-foreground/80", // Estilo para externo
+                      isExternalPaid && "bg-muted/10 text-muted-foreground/80",
                       isOverdue && "bg-destructive/5 hover:bg-destructive/10",
                       isPaid && !isExternalPaid && "bg-success/5 hover:bg-success/10 border-l-4 border-success/50"
                     )}
@@ -444,7 +387,6 @@ export function BillsTrackerList({
                     <TableCell className={cn("font-medium whitespace-nowrap text-base p-2", isOverdue && "text-destructive")} style={{ width: columnWidths.due }}>
                       <div className="flex items-center gap-1">
                         {isOverdue && <AlertTriangle className="w-4 h-4 text-destructive" />}
-                        
                         {isDateEditable ? (
                             <EditableCell
                                 value={bill.dueDate}
@@ -460,7 +402,6 @@ export function BillsTrackerList({
                       </div>
                     </TableCell>
                     
-                    {/* Payment Date Cell */}
                     <TableCell className="font-medium whitespace-nowrap text-base p-2" style={{ width: columnWidths.paymentDate }}>
                         {isPaid && bill.paymentDate ? (
                             isExternalPaid ? (
@@ -514,7 +455,6 @@ export function BillsTrackerList({
                       </Badge>
                     </TableCell>
                     
-                    {/* Categoria Cell */}
                     <TableCell className="p-2 text-base" style={{ width: columnWidths.category }}>
                         {isExternalPaid ? (
                             <span className="text-sm text-muted-foreground">
@@ -555,35 +495,17 @@ export function BillsTrackerList({
                     
                     <TableCell className="text-center p-2 text-base" style={{ width: columnWidths.actions }}>
                       {isExternalPaid ? (
-                        <Button 
-                          variant="ghost" 
-                          size="icon" 
-                          className="h-8 w-8 text-muted-foreground"
-                          onClick={() => toast.info(`Transação ID: ${bill.id}`)}
-                          title="Transação do Extrato (Somente Leitura)"
-                        >
+                        <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground" onClick={() => toast.info(`ID: ${bill.id}`)}>
                           <Info className="w-4 h-4" />
                         </Button>
                       ) : (
                         isAmountEditable && !isPaid && (
                           <div className="flex items-center justify-center gap-1">
-                            <Button 
-                                variant="ghost" 
-                                size="icon" 
-                                className="h-8 w-8 text-muted-foreground hover:text-destructive"
-                                onClick={() => handleExcludeBill(bill as BillTracker)}
-                                title="Excluir apenas esta parcela"
-                            >
+                            <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive" onClick={() => handleExcludeBill(bill as BillTracker)}>
                                 <X className="w-4 h-4" />
                             </Button>
                             {bill.sourceType === 'purchase_installment' && bill.sourceRef && (
-                                <Button 
-                                    variant="ghost" 
-                                    size="icon" 
-                                    className="h-8 w-8 text-muted-foreground hover:text-destructive"
-                                    onClick={() => handleDeletePurchaseGroup(bill.sourceRef!)}
-                                    title="Remover TODAS as parcelas futuras desta compra"
-                                >
+                                <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive" onClick={() => handleDeletePurchaseGroup(bill.sourceRef!)}>
                                     <Trash2 className="w-4 h-4" />
                                 </Button>
                             )}
@@ -591,12 +513,7 @@ export function BillsTrackerList({
                         )
                       )}
                       {isPaid && !isExternalPaid && (
-                          <Button 
-                            variant="ghost" 
-                            size="icon" 
-                            className="h-8 w-8 text-muted-foreground"
-                            onClick={() => toast.info(`Transação ID: ${(bill as BillTracker).transactionId}`)}
-                          >
+                          <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground" onClick={() => toast.info(`ID: ${(bill as BillTracker).transactionId}`)}>
                             <Info className="w-4 h-4" />
                           </Button>
                       )}
@@ -604,24 +521,10 @@ export function BillsTrackerList({
                   </TableRow>
                 );
               })}
-              {sortedBills.length === 0 && (
-                <TableRow>
-                  <TableCell colSpan={9} className="text-center text-muted-foreground py-8">
-                    <Check className="w-6 h-6 mx-auto mb-2 text-success" />
-                    Nenhuma conta pendente ou paga neste mês.
-                  </TableCell>
-                </TableRow>
-              )}
             </TableBody>
           </Table>
         </div>
       </div>
-
-      <AddPurchaseInstallmentDialog 
-        open={isPurchaseDialogOpen}
-        onOpenChange={setIsPurchaseDialogOpen}
-        currentDate={currentDate}
-      />
     </div>
   );
 }
