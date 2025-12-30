@@ -580,7 +580,6 @@ export function IndicadoresTab({ dateRanges }: IndicadoresTabProps) {
         </IndicatorGroup>
       )}
 
-      {/* ... Rest of the component (groups for Liquidez, Endividamento, etc.) remains unchanged */}
       <IndicatorGroup
         title="Indicadores de Liquidez"
         subtitle="Capacidade de solvência e cobertura de obrigações"
@@ -588,7 +587,7 @@ export function IndicadoresTab({ dateRanges }: IndicadoresTabProps) {
       >
         <DetailedIndicatorBadge
           title="Liquidez Corrente"
-          value={value >= 999 ? "∞" : `${indicadores1.liquidez.corrente.valor.toFixed(2)}x`}
+          value={indicadores1.liquidez.corrente.valor >= 999 ? "∞" : `${indicadores1.liquidez.corrente.valor.toFixed(2)}x`}
           status={indicadores1.liquidez.corrente.status}
           trend={getDisplayTrend('corrente', 'liquidez').trend}
           trendLabel={range2.from ? `${getDisplayTrend('corrente', 'liquidez').percent.toFixed(1)}% vs anterior` : undefined}
@@ -597,10 +596,9 @@ export function IndicadoresTab({ dateRanges }: IndicadoresTabProps) {
           sparklineData={generateSparkline(indicadores1.liquidez.corrente.valor, getDisplayTrend('corrente', 'liquidez').trend)}
           icon={<Droplets className="w-4 h-4" />}
         />
-        {/* Adicionando outros indicadores padrão com nomenclatura profissional */}
         <DetailedIndicatorBadge
           title="Solvência Imediata"
-          value={value >= 999 ? "∞" : `${indicadores1.liquidez.solvenciaImediata.valor.toFixed(2)}x`}
+          value={indicadores1.liquidez.solvenciaImediata.valor >= 999 ? "∞" : `${indicadores1.liquidez.solvenciaImediata.valor.toFixed(2)}x`}
           status={indicadores1.liquidez.solvenciaImediata.status}
           trend={getDisplayTrend('solvenciaImediata', 'liquidez').trend}
           trendLabel={range2.from ? `${getDisplayTrend('solvenciaImediata', 'liquidez').percent.toFixed(1)}% vs anterior` : undefined}
