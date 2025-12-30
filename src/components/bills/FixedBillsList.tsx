@@ -33,7 +33,7 @@ const SOURCE_CONFIG: Record<BillSourceType, { icon: React.ElementType; color: st
 
 export function FixedBillsList({ bills, onToggleFixedBill, mode = "current" }: FixedBillsListProps) {
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+    <div className="flex flex-col gap-3">
       {bills.map((bill) => {
         const config = SOURCE_CONFIG[bill.sourceType as BillSourceType];
         const Icon = config.icon;
@@ -51,49 +51,52 @@ export function FixedBillsList({ bills, onToggleFixedBill, mode = "current" }: F
           >
             <div className="flex items-center gap-4 flex-1 min-w-0">
               <div className={cn(
-                "w-10 h-10 rounded-xl flex items-center justify-center shrink-0",
+                "w-12 h-12 rounded-xl flex items-center justify-center shrink-0",
                 config.bgColor
               )}>
-                <Icon className={cn("w-5 h-5", config.color)} />
+                <Icon className={cn("w-6 h-6", config.color)} />
               </div>
               
               <div className="min-w-0">
                 <div className="flex items-center gap-2">
-                  <span className="font-bold text-sm truncate">{bill.description}</span>
+                  <span className="font-bold text-base truncate">{bill.description}</span>
                   {bill.isPaid && (
-                    <span className="text-[9px] bg-success/20 text-success px-1.5 py-0.5 rounded-full font-bold uppercase shrink-0">Paga</span>
+                    <span className="text-[10px] bg-success/20 text-success px-1.5 py-0.5 rounded-full font-bold uppercase tracking-wider shrink-0">Paga</span>
                   )}
                 </div>
-                <div className="flex items-center gap-2 text-xs text-muted-foreground mt-0.5">
+                <div className="flex items-center gap-3 text-sm text-muted-foreground mt-1">
                   <span className="flex items-center gap-1">
-                    <DateIcon className="w-3 h-3" />
-                    {format(dueDate, "dd 'de' MMM", { locale: ptBR })}
+                    <DateIcon className="w-3.5 h-3.5" />
+                    {format(dueDate, "dd 'de' MMMM", { locale: ptBR })}
                   </span>
+                  <span className="w-1 h-1 rounded-full bg-muted-foreground/30" />
                   <span className="font-bold text-foreground/80">{formatCurrency(bill.expectedAmount)}</span>
                 </div>
               </div>
             </div>
             
-            <Button
-              variant={bill.isIncluded ? "ghost" : "outline"}
-              size="sm"
-              onClick={() => onToggleFixedBill(bill, !bill.isIncluded)}
-              className={cn(
-                "h-9 px-3 rounded-xl gap-2 font-semibold shrink-0 ml-4",
-                bill.isIncluded 
-                  ? "text-destructive hover:bg-destructive/10" 
-                  : "border-primary/40 text-primary hover:bg-primary hover:text-white"
-              )}
-            >
-              {bill.isIncluded ? (
-                <Remove className="w-4 h-4" />
-              ) : (
-                <Add className="w-4 h-4" />
-              )}
-              <span className="hidden sm:inline">
-                {bill.isIncluded ? "Remover" : "Incluir"}
-              </span>
-            </Button>
+            <div className="flex items-center gap-2 ml-4">
+              <Button
+                variant={bill.isIncluded ? "ghost" : "outline"}
+                size="sm"
+                onClick={() => onToggleFixedBill(bill, !bill.isIncluded)}
+                className={cn(
+                  "h-10 px-4 rounded-xl gap-2 font-semibold shrink-0",
+                  bill.isIncluded 
+                    ? "text-destructive hover:bg-destructive/10" 
+                    : "border-primary/40 text-primary hover:bg-primary hover:text-white"
+                )}
+              >
+                {bill.isIncluded ? (
+                  <Remove className="w-4 h-4" />
+                ) : (
+                  <Add className="w-4 h-4" />
+                )}
+                <span>
+                  {bill.isIncluded ? "Remover" : "Incluir na lista"}
+                </span>
+              </Button>
+            </div>
           </div>
         );
       })}

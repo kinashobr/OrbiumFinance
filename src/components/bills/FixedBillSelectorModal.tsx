@@ -1,18 +1,18 @@
 import { useFinance } from "@/contexts/FinanceContext";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { FixedBillsList } from "./FixedBillsList";
-import { Settings2, FastForward, CheckCircle2, AlertCircle } from "lucide-react";
+import { Settings2, FastForward, CheckCircle2, AlertCircle, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { PotentialFixedBill, generateBillId } from "@/types/finance";
+import { Button } from "@/components/ui/button";
 
 interface FixedBillSelectorModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   mode: "current" | "future";
   currentDate: Date;
-  // Propriedades opcionais para compatibilidade com outros componentes
   potentialFixedBills?: PotentialFixedBill[];
   onToggleFixedBill?: (potential: PotentialFixedBill, isChecked: boolean) => void;
 }
@@ -34,19 +34,16 @@ export function FixedBillSelectorModal({
 
   const localBills = getBillsForMonth(currentDate);
   
-  // Usa as parcelas externas se fornecidas, caso contrário calcula internamente
   const potentialFixedBills = externalBills || (mode === "current" 
     ? getPotentialFixedBillsForMonth(currentDate, localBills)
     : getFutureFixedBills(currentDate, localBills));
 
   const handleToggleFixedBill = (potential: PotentialFixedBill, isChecked: boolean) => {
-    // Se houver uma função de toggle externa, usa ela
     if (externalToggle) {
       externalToggle(potential, isChecked);
       return;
     }
 
-    // Caso contrário, usa a lógica interna padrão
     if (isChecked) {
       setBillsTracker(prev => [
         ...prev,
@@ -76,35 +73,40 @@ export function FixedBillSelectorModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-[75vw] p-0 overflow-hidden border-border shadow-xl rounded-3xl">
-        <DialogHeader className="p-6 border-b bg-muted/20">
-          <div className="flex items-start gap-4">
-            <div className={cn(
-              "p-3 rounded-2xl",
-              isAdvance ? "bg-primary/10 text-primary" : "bg-accent/10 text-accent"
-            )}>
-              {isAdvance ? <FastForward className="w-6 h-6" /> : <Settings2 className="w-6 h-6" />}
+      <DialogContent className="max-w-[75vw] p-0 overflow-hidden border-border shadow-2xl rounded-3xl">
+        <DialogHeader className="p-8 border-b bg-card">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-5">
+              <div className={cn(
+                "p-4 rounded-2xl shadow-sm",
+                isAdvance ? "bg-primary/10 text-primary" : "bg-accent/10 text-accent"
+              )}>
+                {isAdvance ? <FastForward className="w-7 h-7" /> : <Settings2 className="w-7 h-7" />}
+              </div>
+              <div className="space-y-1">
+                <DialogTitle className="text-2xl font-bold tracking-tight text-foreground">
+                  {isAdvance ? "Adiantar Parcelas" : "Gerenciar Contas Fixas"}
+                </DialogTitle>
+                <DialogDescription className="text-base text-muted-foreground">
+                  {isAdvance 
+                    ? "Antecipe pagamentos de meses futuros na sua lista atual" 
+                    : `Parcelas automáticas disponíveis para ${format(currentDate, 'MMMM', { locale: ptBR })}`
+                  }
+                </DialogDescription>
+              </div>
             </div>
-            <div>
-              <DialogTitle className="text-xl font-bold text-foreground">
-                {isAdvance ? "Adiantar Parcelas" : "Gerenciar Contas Fixas"}
-              </DialogTitle>
-              <DialogDescription className="text-muted-foreground mt-1">
-                {isAdvance 
-                  ? "Selecione parcelas de meses futuros para pagar agora" 
-                  : `Selecione quais parcelas automáticas devem aparecer em ${format(currentDate, 'MMMM', { locale: ptBR })}`
-                }
-              </DialogDescription>
-            </div>
+            <Button variant="ghost" size="icon" onClick={() => onOpenChange(false)} className="rounded-full h-10 w-10">
+              <X className="w-5 h-5" />
+            </Button>
           </div>
         </DialogHeader>
 
-        <div className="p-6 max-h-[70vh] overflow-y-auto bg-background">
+        <div className="p-8 max-h-[75vh] overflow-y-auto bg-muted/5">
           {potentialFixedBills.length > 0 ? (
-            <div className="space-y-6">
-               <div className="flex items-center gap-2 text-sm text-muted-foreground bg-muted/40 p-3 rounded-xl border border-border/50">
-                 <AlertCircle className="w-4 h-4 text-primary" />
-                 <span>As parcelas selecionadas serão adicionadas à sua lista de controle mensal.</span>
+            <div className="space-y-8">
+               <div className="flex items-center gap-3 text-sm font-medium text-primary bg-primary/5 p-4 rounded-2xl border border-primary/10">
+                 <AlertCircle className="w-5 h-5" />
+                 <span>As parcelas que você selecionar serão exibidas no rastreador de contas deste mês.</span>
                </div>
                <FixedBillsList 
                   bills={potentialFixedBills} 
@@ -113,13 +115,13 @@ export function FixedBillSelectorModal({
                />
             </div>
           ) : (
-            <div className="py-16 text-center space-y-4">
-              <div className="w-20 h-20 bg-muted/30 rounded-full flex items-center justify-center mx-auto">
-                <CheckCircle2 className="w-10 h-10 text-muted-foreground/50" />
+            <div className="py-24 text-center space-y-5">
+              <div className="w-24 h-24 bg-muted/20 rounded-full flex items-center justify-center mx-auto">
+                <CheckCircle2 className="w-12 h-12 text-muted-foreground/30" />
               </div>
-              <div className="space-y-1">
-                <p className="text-lg font-medium text-foreground/80">Tudo certo!</p>
-                <p className="text-sm text-muted-foreground">Nenhuma parcela pendente encontrada para este critério.</p>
+              <div className="space-y-2">
+                <p className="text-xl font-bold text-foreground/70">Nenhuma parcela pendente</p>
+                <p className="text-muted-foreground max-w-sm mx-auto">Todas as parcelas fixas previstas para este período já foram incluídas ou não existem no momento.</p>
               </div>
             </div>
           )}

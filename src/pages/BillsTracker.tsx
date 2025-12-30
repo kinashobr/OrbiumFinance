@@ -34,6 +34,7 @@ export default function BillsTracker() {
 
   return (
     <div className="container mx-auto p-4 space-y-6 animate-in fade-in duration-500">
+      {/* Cabeçalho principal */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div className="flex items-center gap-4">
           <div className="p-3 rounded-2xl bg-primary/10 text-primary">
@@ -47,11 +48,12 @@ export default function BillsTracker() {
           </div>
         </div>
 
-        <div className="flex items-center gap-2 overflow-x-auto pb-2 md:pb-0 scrollbar-hide">
+        {/* Botões de Ação */}
+        <div className="flex flex-wrap items-center gap-2">
           <Button
             variant="outline"
             onClick={() => setIsPurchaseDialogOpen(true)}
-            className="rounded-xl border-pink-500/30 text-pink-600 hover:bg-pink-500/10 gap-2 shrink-0 h-10 px-4 font-semibold"
+            className="rounded-xl border-pink-200 bg-pink-50/30 text-pink-600 hover:bg-pink-100/50 gap-2 h-10 px-4 font-semibold shadow-sm"
           >
             <ShoppingCart className="w-4 h-4" />
             <span>Parcelado</span>
@@ -60,18 +62,18 @@ export default function BillsTracker() {
           <Button
             variant="outline"
             onClick={() => setIsManageModalOpen(true)}
-            className="rounded-xl gap-2 shrink-0 h-10 px-4"
+            className="rounded-xl gap-2 h-10 px-4 font-medium shadow-sm"
           >
-            <Settings2 className="w-4 h-4" />
+            <Settings2 className="w-4 h-4 text-muted-foreground" />
             <span>Gerenciar Fixas</span>
           </Button>
 
           <Button
             variant="outline"
             onClick={() => setIsAdvanceModalOpen(true)}
-            className="rounded-xl gap-2 shrink-0 h-10 px-4"
+            className="rounded-xl gap-2 h-10 px-4 font-medium shadow-sm"
           >
-            <FastForward className="w-4 h-4" />
+            <FastForward className="w-4 h-4 text-muted-foreground" />
             <span>Adiantar Parcelas</span>
           </Button>
         </div>
