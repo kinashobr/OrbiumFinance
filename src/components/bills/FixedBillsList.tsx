@@ -1,13 +1,13 @@
 import React from "react";
 import { Building2, Shield, Repeat, DollarSign, Info, ShoppingCart, Plus, Trash2 } from "lucide-react";
-import { BillSourceType } from "@/types/finance";
+import { BillSourceType, PotentialFixedBill } from "@/types/finance";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 
 interface FixedBillsListProps {
-  potentialBills: any[];
-  onToggleInclusion: (bill: any) => void;
+  bills: PotentialFixedBill[];
+  onToggleFixedBill: (bill: PotentialFixedBill, isChecked: boolean) => void;
+  mode?: "current" | "future";
 }
 
 const SOURCE_CONFIG: Record<BillSourceType, { icon: React.ElementType; color: string; label: string }> = {
@@ -19,10 +19,10 @@ const SOURCE_CONFIG: Record<BillSourceType, { icon: React.ElementType; color: st
   purchase_installment: { icon: ShoppingCart, color: 'text-pink-500', label: 'Parcela' },
 };
 
-export function FixedBillsList({ potentialBills, onToggleInclusion }: FixedBillsListProps) {
+export function FixedBillsList({ bills, onToggleFixedBill, mode = "current" }: FixedBillsListProps) {
   return (
     <div className="space-y-2">
-      {potentialBills.map((bill) => {
+      {bills.map((bill) => {
         const config = SOURCE_CONFIG[bill.sourceType as BillSourceType];
         const Icon = config.icon;
 
@@ -47,7 +47,7 @@ export function FixedBillsList({ potentialBills, onToggleInclusion }: FixedBills
             <Button
               variant={bill.isIncluded ? "ghost" : "outline"}
               size="sm"
-              onClick={() => onToggleInclusion(bill)}
+              onClick={() => onToggleFixedBill(bill, !bill.isIncluded)}
               className={cn("h-8 gap-1", bill.isIncluded ? "text-destructive hover:text-destructive" : "text-primary")}
             >
               {bill.isIncluded ? (
@@ -65,6 +65,12 @@ export function FixedBillsList({ potentialBills, onToggleInclusion }: FixedBills
           </div>
         );
       })}
+      
+      {bills.length === 0 && (
+        <div className="text-center py-8 text-muted-foreground text-sm">
+          Nenhuma conta fixa {mode === "future" ? "futura" : ""} encontrada para este período.
+        </div>
+      )}
     </div>
   );
 }
