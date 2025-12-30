@@ -405,17 +405,21 @@ export function BillsTrackerModal({ open, onOpenChange }: BillsTrackerModalProps
           </div>
         </DialogHeader>
 
-        <div className="flex flex-1 overflow-hidden min-w-0">
-          {/* Sidebar de KPIs */}
-<div className="w-[350px] shrink-0 border-r border-border">
-  <div className="p-4 overflow-y-auto h-full">
-    <BillsSidebarKPIs 
-      currentDate={currentDate}
-      totalPendingBills={totalUnpaidBills}
-      totalPaidBills={totalPaidBills}
-    />
+       <ResizableDialogContent className="flex min-w-0 overflow-hidden">
+  <div className="flex flex-1 min-w-0 overflow-hidden">
+
+    {/* Sidebar */}
+    <div className="w-[360px] shrink-0 border-r border-border">
+      <Sidebar />
+    </div>
+
+    {/* Conteúdo */}
+    <div className="flex-1 min-w-0 overflow-hidden">
+      <MainContent />
+    </div>
+
   </div>
-</div>
+</ResizableDialogContent>
 
           {/* Conteúdo Principal (Tabela de Contas) */}
           <div className="flex-1 flex flex-col p-4 overflow-hidden">
