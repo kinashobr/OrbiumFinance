@@ -454,7 +454,7 @@ export function ConsolidatedReviewDialog({
             {/* Coluna Lateral (Controle e Status) - AGORA REDIMENSIONÁVEL */}
             <ResizableSidebar
                 initialWidth={350}
-                minWidth={180}
+                minWidth={200}
                 maxWidth={350}
                 storageKey="review_sidebar_width"
             >
