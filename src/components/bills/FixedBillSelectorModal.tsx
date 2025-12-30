@@ -1,6 +1,5 @@
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { Settings, Plus, Check } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Settings, Plus } from "lucide-react";
 import { PotentialFixedBill } from "@/types/finance";
 import { FixedBillsList } from "./FixedBillsList";
 import { cn } from "@/lib/utils";
@@ -47,7 +46,7 @@ export function FixedBillSelectorModal({
           </div>
         </DialogHeader>
 
-        <div className="p-6 max-h-[60vh] overflow-y-auto">
+        <div className="p-6 max-h-[70vh] overflow-y-auto">
           <FixedBillsList
             bills={potentialFixedBills}
             onToggle={onToggleFixedBill}
@@ -56,31 +55,6 @@ export function FixedBillSelectorModal({
               : "Não há parcelas futuras disponíveis para adiantamento."}
           />
         </div>
-
-        <DialogFooter className="px-6 py-4 border-t bg-muted/50">
-          <div className="flex w-full gap-3">
-            <Button 
-              type="button" 
-              variant="outline" 
-              onClick={() => onOpenChange(false)}
-              className="flex-1 h-12 rounded-xl border-2"
-            >
-              Cancelar
-            </Button>
-            <Button 
-              onClick={() => onOpenChange(false)}
-              className={cn(
-                "flex-1 h-12 rounded-xl font-semibold",
-                isCurrent 
-                  ? "bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary"
-                  : "bg-gradient-to-r from-accent to-accent/90 hover:from-accent/90 hover:to-accent"
-              )}
-            >
-              <Check className="w-5 h-5 mr-2" />
-              Concluir
-            </Button>
-          </div>
-        </DialogFooter>
       </DialogContent>
     </Dialog>
   );
