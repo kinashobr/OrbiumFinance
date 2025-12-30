@@ -160,7 +160,7 @@ export function IndicadoresTab({ dateRanges }: IndicadoresTabProps) {
     }
   }, []);
 
-  const determineStatus = useCallback((value: number, config: CustomIndicator): IndicatorStatus => {
+  const determineStatus = useCallback((value: number, config: CustomIndicator | { limiteVerde: number, limiteAmarelo: number, invertido: boolean }): IndicatorStatus => {
     const { limiteVerde, limiteAmarelo, invertido } = config;
     
     if (invertido) {
@@ -287,10 +287,43 @@ export function IndicadoresTab({ dateRanges }: IndicadoresTabProps) {
       .filter(t => t.operationType !== 'initial_balance' && t.flow === 'out')
       .reduce((acc, t) => acc + t.amount, 0);
 
+    const lucroPeriodo = receitasMesAtual - despesasMesAtualCash;
+
+    // Métricas de Liquidez
+    const liquidezCorrente = passivoCurtoPrazo > 0 ? caixaTotal / passivoCurtoPrazo : caixaTotal > 0 ? 999 : 0;
+    const liquidezSeca = passivoCurtoPrazo > 0 ? (caixaTotal - totalInvestimentos * 0.3) / passivoCurtoPrazo : 0; // Remove 30% de investimentos menos liquidos
+    const liquidezGeral = totalPassivos > 0 ? totalAtivos / totalPassivos : totalAtivos > 0 ? 999 : 0;
+    const solvenciaImediata = despesasMesAtualCash > 0 ? contaCorrentePura / (despesasMesAtualCash / 30) : 999;
+
+    // Métricas de Endividamento
+    const endividamentoTotal = totalAtivos > 0 ? (totalPassivos / totalAtivos) * 100 : 0;
+    const dividaPL = patrimonioLiquido > 0 ? (saldoDevedor / patrimonioLiquido) * 100 : 0;
+    const imobilizacaoPL = patrimonioLiquido > 0 ? (valorVeiculos / patrimonioLiquido) * 100 : 0;
+    const composicaoEndividamento = totalPassivos > 0 ? (passivoCurtoPrazo / totalPassivos) * 100 : 0;
+
+    // Métricas de Rentabilidade
+    const margemLiquida = receitasMesAtual > 0 ? (lucroPeriodo / receitasMesAtual) * 100 : 0;
+    const liberdadeFinanceira = despesasMesAtualCash > 0 ? (rendimentosInvestimentos / despesasMesAtualCash) * 100 : 0;
+    const roa = totalAtivos > 0 ? (lucroPeriodo / totalAtivos) * 100 : 0;
+    const roe = patrimonioLiquido > 0 ? (lucroPeriodo / patrimonioLiquido) * 100 : 0;
+
+    // Métricas de Eficiência
+    const despesasFixasTotal = transacoesPeriodo
+      .filter(t => {
+        const cat = categoriasV2.find(c => c.id === t.categoryId);
+        return cat?.nature === 'despesa_fixa';
+      })
+      .reduce((acc, t) => acc + t.amount, 0);
+    
+    const participacaoFixas = receitasMesAtual > 0 ? (despesasFixasTotal / receitasMesAtual) * 100 : 0;
+    const burnRate = receitasMesAtual > 0 ? (despesasMesAtualCash / receitasMesAtual) * 100 : 0;
+    const mesesSobrevivencia = despesasMesAtualCash > 0 ? caixaTotal / (despesasMesAtualCash / 30) : 999;
+    const margemSeguranca = receitasMesAtual > 0 ? (lucroPeriodo / receitasMesAtual) * 100 : 0;
+
     const variables = {
       RECEITAS: receitasMesAtual,
       DESPESAS: despesasMesAtualCash,
-      LUCRO: receitasMesAtual - despesasMesAtualCash,
+      LUCRO: lucroPeriodo,
       ATIVOS: totalAtivos,
       PASSIVOS: totalPassivos,
       PL: patrimonioLiquido,
@@ -299,21 +332,6 @@ export function IndicadoresTab({ dateRanges }: IndicadoresTabProps) {
       INVESTIMENTOS: totalInvestimentos,
       RENDIMENTOS: rendimentosInvestimentos,
     };
-
-    const liquidezCorrente = passivoCurtoPrazo > 0 ? caixaTotal / passivoCurtoPrazo : caixaTotal > 0 ? 999 : 0;
-    const liquidezGeral = totalPassivos > 0 ? totalAtivos / totalPassivos : totalAtivos > 0 ? 999 : 0;
-    const solvenciaImediata = despesasMesAtualCash > 0 ? contaCorrentePura / (despesasMesAtualCash / 30) : 999;
-
-    const endividamentoTotal = totalAtivos > 0 ? (totalPassivos / totalAtivos) * 100 : 0;
-    const dividaPL = patrimonioLiquido > 0 ? (saldoDevedor / patrimonioLiquido) * 100 : 0;
-    const imobilizacaoPL = patrimonioLiquido > 0 ? (valorVeiculos / patrimonioLiquido) * 100 : 0;
-
-    const margemLiquida = receitasMesAtual > 0 ? ((receitasMesAtual - despesasMesAtualCash) / receitasMesAtual) * 100 : 0;
-    const liberdadeFinanceira = despesasMesAtualCash > 0 ? (rendimentosInvestimentos / despesasMesAtualCash) * 100 : 0;
-
-    const burnRate = receitasMesAtual > 0 ? (despesasMesAtualCash / receitasMesAtual) * 100 : 0;
-    const mesesSobrevivencia = despesasMesAtualCash > 0 ? caixaTotal / (despesasMesAtualCash / 30) : 999;
-    const margemSeguranca = receitasMesAtual > 0 ? ((receitasMesAtual - despesasMesAtualCash) / receitasMesAtual) * 100 : 0;
 
     const calculatedCustoms = customIndicators.map(ci => {
       const value = evaluateFormula(ci.formula, variables);
@@ -326,39 +344,34 @@ export function IndicadoresTab({ dateRanges }: IndicadoresTabProps) {
 
     return {
       liquidez: {
-        corrente: { valor: liquidezCorrente, status: (liquidezCorrente >= 1.5 ? "success" : liquidezCorrente >= 1 ? "warning" : "danger") as IndicatorStatus },
-        seca: { valor: liquidezCorrente * 0.8, status: "neutral" as IndicatorStatus },
-        imediata: { valor: liquidezCorrente * 0.5, status: "neutral" as IndicatorStatus },
-        geral: { valor: liquidezGeral, status: (liquidezGeral >= 2 ? "success" : liquidezGeral >= 1 ? "warning" : "danger") as IndicatorStatus },
-        solvenciaImediata: { valor: solvenciaImediata, status: (solvenciaImediata >= 1 ? "success" : solvenciaImediata >= 0.5 ? "warning" : "danger") as IndicatorStatus },
+        corrente: { valor: liquidezCorrente, status: determineStatus(liquidezCorrente, { limiteVerde: 1.5, limiteAmarelo: 1, invertido: false }) },
+        seca: { valor: Math.max(0, liquidezSeca), status: determineStatus(liquidezSeca, { limiteVerde: 1, limiteAmarelo: 0.8, invertido: false }) },
+        geral: { valor: liquidezGeral, status: determineStatus(liquidezGeral, { limiteVerde: 2, limiteAmarelo: 1.2, invertido: false }) },
+        solvenciaImediata: { valor: solvenciaImediata, status: determineStatus(solvenciaImediata, { limiteVerde: 1, limiteAmarelo: 0.5, invertido: false }) },
       },
       endividamento: {
-        total: { valor: endividamentoTotal, status: (endividamentoTotal < 30 ? "success" : endividamentoTotal < 50 ? "warning" : "danger") as IndicatorStatus },
-        dividaPL: { valor: dividaPL, status: (dividaPL < 50 ? "success" : dividaPL < 100 ? "warning" : "danger") as IndicatorStatus },
-        composicao: { valor: 50, status: "neutral" as IndicatorStatus },
-        imobilizacao: { valor: imobilizacaoPL, status: (imobilizacaoPL < 30 ? "success" : imobilizacaoPL < 50 ? "warning" : "danger") as IndicatorStatus },
+        total: { valor: endividamentoTotal, status: determineStatus(endividamentoTotal, { limiteVerde: 30, limiteAmarelo: 50, invertido: true }) },
+        dividaPL: { valor: dividaPL, status: determineStatus(dividaPL, { limiteVerde: 50, limiteAmarelo: 80, invertido: true }) },
+        imobilizacao: { valor: imobilizacaoPL, status: determineStatus(imobilizacaoPL, { limiteVerde: 30, limiteAmarelo: 45, invertido: true }) },
+        composicao: { valor: composicaoEndividamento, status: "neutral" as IndicatorStatus },
       },
       rentabilidade: {
-        margemLiquida: { valor: margemLiquida, status: (margemLiquida >= 20 ? "success" : margemLiquida >= 10 ? "warning" : "danger") as IndicatorStatus },
-        retornoAtivos: { valor: 10, status: "neutral" as IndicatorStatus },
-        retornoPL: { valor: 15, status: "neutral" as IndicatorStatus },
-        liberdadeFinanceira: { valor: liberdadeFinanceira, status: (liberdadeFinanceira >= 100 ? "success" : liberdadeFinanceira >= 20 ? "warning" : "danger") as IndicatorStatus },
+        margemLiquida: { valor: margemLiquida, status: determineStatus(margemLiquida, { limiteVerde: 20, limiteAmarelo: 10, invertido: false }) },
+        liberdadeFinanceira: { valor: liberdadeFinanceira, status: determineStatus(liberdadeFinanceira, { limiteVerde: 100, limiteAmarelo: 20, invertido: false }) },
+        roa: { valor: roa, status: determineStatus(roa, { limiteVerde: 5, limiteAmarelo: 2, invertido: false }) },
+        roe: { valor: roe, status: determineStatus(roe, { limiteVerde: 10, limiteAmarelo: 5, invertido: false }) },
       },
       eficiencia: {
-        despesasFixas: { valor: 40, status: "neutral" as IndicatorStatus },
-        operacional: { valor: burnRate, status: (burnRate < 70 ? "success" : burnRate < 85 ? "warning" : "danger") as IndicatorStatus },
-        burnRate: { valor: burnRate, status: (burnRate < 70 ? "success" : burnRate < 90 ? "warning" : "danger") as IndicatorStatus },
+        participacaoFixas: { valor: participacaoFixas, status: determineStatus(participacaoFixas, { limiteVerde: 40, limiteAmarelo: 60, invertido: true }) },
+        burnRate: { valor: burnRate, status: determineStatus(burnRate, { limiteVerde: 70, limiteAmarelo: 90, invertido: true }) },
       },
       pessoais: {
-        custoVida: { valor: despesasMesAtualCash, status: "neutral" as IndicatorStatus },
-        mesesSobrevivencia: { valor: mesesSobrevivencia, status: (mesesSobrevivencia >= 6 ? "success" : mesesSobrevivencia >= 3 ? "warning" : "danger") as IndicatorStatus },
-        taxaPoupanca: { valor: margemSeguranca, status: (margemSeguranca >= 20 ? "success" : margemSeguranca >= 10 ? "warning" : "danger") as IndicatorStatus },
-        comprometimento: { valor: burnRate, status: (burnRate < 70 ? "success" : burnRate < 90 ? "warning" : "danger") as IndicatorStatus },
-        margemSeguranca: { valor: margemSeguranca, status: (margemSeguranca >= 20 ? "success" : margemSeguranca >= 5 ? "warning" : "danger") as IndicatorStatus },
+        mesesSobrevivencia: { valor: mesesSobrevivencia, status: determineStatus(mesesSobrevivencia, { limiteVerde: 6, limiteAmarelo: 3, invertido: false }) },
+        margemSeguranca: { valor: margemSeguranca, status: determineStatus(margemSeguranca, { limiteVerde: 20, limiteAmarelo: 10, invertido: false }) },
       },
       custom: calculatedCustoms,
     };
-  }, [transacoesV2, contasMovimento, getAtivosTotal, getPassivosTotal, getValorFipeTotal, getSaldoDevedor, calculateBalanceUpToDate, calculateLoanPrincipalDueInNextMonths, calculateTotalInvestmentBalanceAtDate, segurosVeiculo, customIndicators, evaluateFormula, determineStatus]);
+  }, [transacoesV2, contasMovimento, getAtivosTotal, getPassivosTotal, getValorFipeTotal, getSaldoDevedor, calculateBalanceUpToDate, calculateLoanPrincipalDueInNextMonths, calculateTotalInvestmentBalanceAtDate, segurosVeiculo, customIndicators, evaluateFormula, determineStatus, categoriasV2]);
 
   const indicadores1 = useMemo(() => calculateIndicatorsForRange(range1), [calculateIndicatorsForRange, range1]);
   const indicadores2 = useMemo(() => calculateIndicatorsForRange(range2), [calculateIndicatorsForRange, range2]);
@@ -624,6 +637,17 @@ export function IndicadoresTab({ dateRanges }: IndicadoresTabProps) {
           icon={<Droplets className="w-4 h-4" />}
         />
         <DetailedIndicatorBadge
+          title="Liquidez Seca"
+          value={formatRatio(indicadores1.liquidez.seca.valor)}
+          status={indicadores1.liquidez.seca.status}
+          trend={getDisplayTrend('seca', 'liquidez').trend}
+          trendLabel={range2.from ? `${getDisplayTrend('seca', 'liquidez').percent.toFixed(1)}% vs anterior` : undefined}
+          descricao="Capacidade de cobrir dívidas imediatas removendo ativos de menor liquidez (como parte dos investimentos)."
+          formula="(Ativo Circulante - Investimentos Estáticos) / Passivo Circulante"
+          sparklineData={generateSparkline(indicadores1.liquidez.seca.valor, getDisplayTrend('seca', 'liquidez').trend)}
+          icon={<Droplets className="w-4 h-4" />}
+        />
+        <DetailedIndicatorBadge
           title="Solvência Imediata"
           value={formatRatio(indicadores1.liquidez.solvenciaImediata.valor)}
           status={indicadores1.liquidez.solvenciaImediata.status}
@@ -685,6 +709,17 @@ export function IndicadoresTab({ dateRanges }: IndicadoresTabProps) {
           sparklineData={generateSparkline(indicadores1.endividamento.imobilizacao.valor, getDisplayTrend('imobilizacao', 'endividamento').trend)}
           icon={<Activity className="w-4 h-4" />}
         />
+        <DetailedIndicatorBadge
+          title="Composição da Dívida"
+          value={formatPercent(indicadores1.endividamento.composicao.valor)}
+          status={indicadores1.endividamento.composicao.status}
+          trend={getDisplayTrend('composicao', 'endividamento').trend}
+          trendLabel={range2.from ? `${getDisplayTrend('composicao', 'endividamento').percent.toFixed(1)}% vs anterior` : undefined}
+          descricao="Indica quanto da dívida total vence no curto prazo (próximos 12 meses)."
+          formula="(Passivo Circulante / Passivo Total) × 100"
+          sparklineData={generateSparkline(indicadores1.endividamento.composicao.valor, getDisplayTrend('composicao', 'endividamento').trend)}
+          icon={<Calculator className="w-4 h-4" />}
+        />
       </IndicatorGroup>
 
       <IndicatorGroup
@@ -701,6 +736,28 @@ export function IndicadoresTab({ dateRanges }: IndicadoresTabProps) {
           descricao="Percentual das receitas que sobra como lucro. Mede eficiência na conversão de receita em resultado. Ideal: acima de 20%"
           formula="(Resultado Líquido / Receitas) × 100 (no período)"
           sparklineData={generateSparkline(indicadores1.rentabilidade.margemLiquida.valor, getDisplayTrend('margemLiquida', 'rentabilidade').trend)}
+          icon={<TrendingUp className="w-4 h-4" />}
+        />
+        <DetailedIndicatorBadge
+          title="Retorno sobre Ativos (ROA)"
+          value={formatPercent(indicadores1.rentabilidade.roa.valor)}
+          status={indicadores1.rentabilidade.roa.status}
+          trend={getDisplayTrend('roa', 'rentabilidade').trend}
+          trendLabel={range2.from ? `${getDisplayTrend('roa', 'rentabilidade').percent.toFixed(1)}% vs anterior` : undefined}
+          descricao="Mede a rentabilidade gerada sobre o total de ativos controlados."
+          formula="(Resultado Líquido / Ativos Totais) × 100"
+          sparklineData={generateSparkline(indicadores1.rentabilidade.roa.valor, getDisplayTrend('roa', 'rentabilidade').trend)}
+          icon={<Activity className="w-4 h-4" />}
+        />
+        <DetailedIndicatorBadge
+          title="Retorno sobre PL (ROE)"
+          value={formatPercent(indicadores1.rentabilidade.roe.valor)}
+          status={indicadores1.rentabilidade.roe.status}
+          trend={getDisplayTrend('roe', 'rentabilidade').trend}
+          trendLabel={range2.from ? `${getDisplayTrend('roe', 'rentabilidade').percent.toFixed(1)}% vs anterior` : undefined}
+          descricao="Mede a rentabilidade gerada sobre o capital próprio (Patrimônio Líquido)."
+          formula="(Resultado Líquido / Patrimônio Líquido) × 100"
+          sparklineData={generateSparkline(indicadores1.rentabilidade.roe.valor, getDisplayTrend('roe', 'rentabilidade').trend)}
           icon={<TrendingUp className="w-4 h-4" />}
         />
         <DetailedIndicatorBadge
@@ -722,6 +779,17 @@ export function IndicadoresTab({ dateRanges }: IndicadoresTabProps) {
         icon={<Gauge className="w-4 h-4" />}
       >
         <DetailedIndicatorBadge
+          title="Part. Despesas Fixas"
+          value={formatPercent(indicadores1.eficiencia.participacaoFixas.valor)}
+          status={indicadores1.eficiencia.participacaoFixas.status}
+          trend={getDisplayTrend('participacaoFixas', 'eficiencia').trend}
+          trendLabel={range2.from ? `${getDisplayTrend('participacaoFixas', 'eficiencia').percent.toFixed(1)}% vs anterior` : undefined}
+          descricao="Percentual das receitas consumido por gastos fixos recorrentes. Ideal: abaixo de 40%."
+          formula="(Despesas Fixas / Receitas Totais) × 100"
+          sparklineData={generateSparkline(indicadores1.eficiencia.participacaoFixas.valor, getDisplayTrend('participacaoFixas', 'eficiencia').trend)}
+          icon={<Activity className="w-4 h-4" />}
+        />
+        <DetailedIndicatorBadge
           title="Burn Rate (Consumo)"
           value={formatPercent(indicadores1.eficiencia.burnRate.valor)}
           status={indicadores1.eficiencia.burnRate.status}
@@ -731,17 +799,6 @@ export function IndicadoresTab({ dateRanges }: IndicadoresTabProps) {
           formula="(Despesas Totais / Receitas Totais) × 100"
           sparklineData={generateSparkline(indicadores1.eficiencia.burnRate.valor, getDisplayTrend('burnRate', 'eficiencia').trend)}
           icon={<Flame className="w-4 h-4" />}
-        />
-        <DetailedIndicatorBadge
-          title="Eficiência Operacional"
-          value={formatPercent(indicadores1.eficiencia.operacional.valor)}
-          status={indicadores1.eficiencia.operacional.status}
-          trend={getDisplayTrend('operacional', 'eficiencia').trend}
-          trendLabel={range2.from ? `${getDisplayTrend('operacional', 'eficiencia').percent.toFixed(1)}% vs anterior` : undefined}
-          descricao="Percentual das receitas consumidas por despesas. Menor valor indica maior eficiência. Ideal: abaixo de 70%"
-          formula="(Despesas Totais / Receitas) × 100 (no período)"
-          sparklineData={generateSparkline(indicadores1.eficiencia.operacional.valor, getDisplayTrend('operacional', 'eficiencia').trend)}
-          icon={<Activity className="w-4 h-4" />}
         />
       </IndicatorGroup>
 
