@@ -17,6 +17,7 @@ import {
   Anchor,
   Settings,
   AlertCircle,
+  HelpCircle,
 } from "lucide-react";
 import { useFinance } from "@/contexts/FinanceContext";
 import { ExpandablePanel } from "./ExpandablePanel";
@@ -42,11 +43,10 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { cn, parseDateLocal } from "@/lib/utils";
 import { addMonths, isBefore, isAfter, isSameDay, startOfDay, endOfDay, isWithinInterval } from "date-fns";
 import { toast } from "sonner";
@@ -95,7 +95,6 @@ interface IndicadoresTabProps {
   dateRanges: ComparisonDateRanges;
 }
 
-// Variáveis disponíveis para fórmulas
 const FORMULA_VARIABLES = {
   RECEITAS: "Total de receitas no período",
   DESPESAS: "Total de despesas no período",
@@ -148,19 +147,12 @@ export function IndicadoresTab({ dateRanges }: IndicadoresTabProps) {
     invertido: false,
   });
 
-  // Função segura para avaliar fórmulas
   const evaluateFormula = useCallback((formula: string, variables: Record<string, number>): number => {
     try {
-      // Limpeza básica e proteção contra caracteres maliciosos
       const sanitizedFormula = formula.replace(/[^0-9a-zA-Z\s\+\-\*\/\(\)\.]/g, '');
-      
-      // Cria um array com as chaves e valores para a função
       const keys = Object.keys(variables);
       const values = Object.values(variables);
-      
-      // Cria a função dinâmica: (v1, v2, ..., vn) => eval(formula)
       const dynamicFn = new Function(...keys, `return (${sanitizedFormula})`);
-      
       const result = dynamicFn(...values);
       return isFinite(result) ? result : 0;
     } catch (e) {
@@ -295,7 +287,6 @@ export function IndicadoresTab({ dateRanges }: IndicadoresTabProps) {
       .filter(t => t.operationType !== 'initial_balance' && t.flow === 'out')
       .reduce((acc, t) => acc + t.amount, 0);
 
-    // Variáveis para indicadores customizados
     const variables = {
       RECEITAS: receitasMesAtual,
       DESPESAS: despesasMesAtualCash,
@@ -324,7 +315,6 @@ export function IndicadoresTab({ dateRanges }: IndicadoresTabProps) {
     const mesesSobrevivencia = despesasMesAtualCash > 0 ? caixaTotal / (despesasMesAtualCash / 30) : 999;
     const margemSeguranca = receitasMesAtual > 0 ? ((receitasMesAtual - despesasMesAtualCash) / receitasMesAtual) * 100 : 0;
 
-    // Calcula indicadores customizados
     const calculatedCustoms = customIndicators.map(ci => {
       const value = evaluateFormula(ci.formula, variables);
       return {
@@ -477,34 +467,48 @@ export function IndicadoresTab({ dateRanges }: IndicadoresTabProps) {
               <div className="grid gap-2">
                 <div className="flex items-center justify-between">
                   <Label htmlFor="formula">Fórmula Matemática</Label>
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <div className="flex items-center gap-1 text-xs text-blue-500 cursor-help hover:text-blue-600 transition-colors">
-                          <AlertCircle className="w-3 h-3" />
-                          Variáveis Disponíveis
-                        </div>
-                      </TooltipTrigger>
-                      <TooltipContent 
-                        side="top" 
-                        sideOffset={5}
-                        className="w-[calc(100vw-4rem)] sm:w-80 p-3 bg-popover border-border shadow-lg"
-                      >
-                        <p className="font-bold mb-2 text-sm">Use estas variáveis:</p>
-                        <div className="space-y-1.5 max-h-[40vh] overflow-y-auto pr-2">
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button variant="ghost" size="sm" className="h-7 px-2 gap-1.5 text-blue-500 hover:text-blue-600 hover:bg-blue-50/50">
+                        <AlertCircle className="w-3.5 h-3.5" />
+                        <span className="text-xs font-medium">Variáveis Disponíveis</span>
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent align="end" className="w-80 p-0 shadow-2xl border-border/50">
+                      <div className="bg-muted/30 p-3 border-b border-border/50">
+                        <h4 className="font-semibold text-sm flex items-center gap-2">
+                          <Calculator className="w-4 h-4 text-primary" />
+                          Dicionário de Variáveis
+                        </h4>
+                        <p className="text-[10px] text-muted-foreground mt-1">
+                          Clique em uma variável para entender o que ela representa.
+                        </p>
+                      </div>
+                      <div className="max-h-[300px] overflow-y-auto p-2">
+                        <div className="grid gap-1">
                           {Object.entries(FORMULA_VARIABLES).map(([key, desc]) => (
-                            <div key={key} className="flex flex-col border-b border-border/50 pb-1.5 mb-1.5 last:border-0 last:mb-0 last:pb-0">
-                              <code className="text-blue-500 font-bold text-xs">{key}</code>
-                              <span className="text-[10px] text-muted-foreground leading-tight">{desc}</span>
+                            <div key={key} className="p-2 rounded-md hover:bg-muted/50 transition-colors group">
+                              <div className="flex items-center justify-between mb-0.5">
+                                <code className="text-blue-500 font-bold text-xs bg-blue-500/10 px-1.5 py-0.5 rounded">
+                                  {key}
+                                </code>
+                                <HelpCircle className="w-3 h-3 text-muted-foreground/50 opacity-0 group-hover:opacity-100 transition-opacity" />
+                              </div>
+                              <span className="text-[10px] text-muted-foreground leading-tight block">
+                                {desc}
+                              </span>
                             </div>
                           ))}
                         </div>
-                        <p className="mt-2 text-[10px] italic border-t border-border pt-2 text-muted-foreground">
-                          Ex: (RECEITAS - DESPESAS) / RECEITAS * 100
-                        </p>
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
+                      </div>
+                      <div className="p-3 bg-muted/20 border-t border-border/50">
+                        <div className="text-[10px] font-medium text-muted-foreground mb-1 uppercase tracking-wider">Exemplo de Fórmula:</div>
+                        <code className="text-[10px] block bg-background border border-border/50 p-1.5 rounded text-primary">
+                          (RECEITAS - DESPESAS) / RECEITAS * 100
+                        </code>
+                      </div>
+                    </PopoverContent>
+                  </Popover>
                 </div>
                 <Input
                   id="formula"
