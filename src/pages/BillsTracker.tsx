@@ -70,21 +70,21 @@ export default function BillsTracker() {
   }, [setBillsTracker, contasMovimento, categoriasV2]);
 
   return (
-    <div className="container mx-auto p-6 space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="container mx-auto p-3 md:p-6 space-y-4 md:space-y-6">
+      <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Contas a Pagar</h1>
-          <p className="text-muted-foreground">Gerenciamento de despesas e parcelas</p>
+          <h1 className="text-xl md:text-3xl font-bold">Contas a Pagar</h1>
+          <p className="text-xs md:text-base text-muted-foreground">Gerenciamento de despesas e parcelas</p>
         </div>
-        <div className="flex items-center gap-3">
-          <Button variant="outline" onClick={() => setShowPurchaseDialog(true)} className="gap-2">
-            <ShoppingCart className="w-4 h-4" /> Compra Parcelada
+        <div className="flex items-center gap-2 flex-wrap">
+          <Button variant="outline" onClick={() => setShowPurchaseDialog(true)} className="gap-2 text-xs md:text-sm h-8 md:h-10 px-2 md:px-4">
+            <ShoppingCart className="w-4 h-4" /> <span className="hidden sm:inline">Compra Parcelada</span><span className="sm:hidden">Parcelas</span>
           </Button>
-          <Button variant="outline" onClick={() => setIsManageModalOpen(true)} className="gap-2">
-            <Settings className="w-4 h-4" /> Gerenciar Fixas
+          <Button variant="outline" onClick={() => setIsManageModalOpen(true)} className="gap-2 text-xs md:text-sm h-8 md:h-10 px-2 md:px-4">
+            <Settings className="w-4 h-4" /> <span className="hidden sm:inline">Gerenciar Fixas</span><span className="sm:hidden">Fixas</span>
           </Button>
-          <Button onClick={() => setIsAdvanceModalOpen(true)} className="gap-2">
-            <Plus className="w-4 h-4" /> Adiantar Parcelas
+          <Button onClick={() => setIsAdvanceModalOpen(true)} className="gap-2 text-xs md:text-sm h-8 md:h-10 px-2 md:px-4">
+            <Plus className="w-4 h-4" /> <span className="hidden sm:inline">Adiantar Parcelas</span><span className="sm:hidden">Adiantar</span>
           </Button>
         </div>
       </div>

@@ -236,17 +236,19 @@ const Index = () => {
     <MainLayout>
       <div className="space-y-6">
         {/* Header */}
-        <div className="flex items-center gap-3 animate-fade-in">
-          <div className="p-2 rounded-xl bg-primary/10">
-            <LayoutDashboard className="h-6 w-6 text-primary" />
+        <div className="flex flex-col gap-3 md:flex-row md:items-center animate-fade-in">
+          <div className="flex items-center gap-3">
+            <div className="p-2 rounded-xl bg-primary/10">
+              <LayoutDashboard className="h-5 w-5 md:h-6 md:w-6 text-primary" />
+            </div>
+            <div>
+              <h1 className="text-xl md:text-2xl font-bold text-foreground">Central Financeira</h1>
+              <p className="text-xs md:text-sm text-muted-foreground">
+                Visão rápida da sua situação financeira
+              </p>
+            </div>
           </div>
-          <div>
-            <h1 className="text-2xl font-bold text-foreground">Central Financeira</h1>
-            <p className="text-sm text-muted-foreground">
-              Visão rápida da sua situação financeira
-            </p>
-          </div>
-          <div className="ml-auto">
+          <div className="md:ml-auto">
             <PeriodSelector 
               initialRanges={dateRanges}
               onDateRangeChange={handlePeriodChange} 

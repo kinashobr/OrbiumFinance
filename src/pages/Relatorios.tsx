@@ -33,19 +33,20 @@ const Relatorios = () => {
     <MainLayout>
       <div className="space-y-6">
         {/* Header */}
-        <div className="flex items-center justify-between animate-fade-in">
+        <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between animate-fade-in">
           <div>
-            <h1 className="text-3xl font-bold text-foreground">
+            <h1 className="text-xl md:text-3xl font-bold text-foreground">
               Relatórios Financeiros
             </h1>
-            <p className="text-muted-foreground mt-1">
+            <p className="text-xs md:text-base text-muted-foreground mt-1">
               Análise contábil profissional • Balanço, DRE e Indicadores
             </p>
-            <p className="text-sm text-muted-foreground mt-2">
+            <p className="text-xs md:text-sm text-muted-foreground mt-2">
               Período Principal: <span className="font-medium text-foreground">{formatRange(dateRanges.range1)}</span>
               {dateRanges.range2.from && (
                 <>
-                  <span className="mx-2">|</span>
+                  <span className="mx-2 hidden md:inline">|</span>
+                  <br className="md:hidden" />
                   Período Comparativo: <span className="font-medium text-foreground">{formatRange(dateRanges.range2)}</span>
                 </>
               )}

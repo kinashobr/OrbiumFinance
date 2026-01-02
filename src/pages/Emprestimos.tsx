@@ -170,10 +170,10 @@ const Emprestimos = () => {
     <MainLayout>
       <div className="space-y-6">
         {/* Header */}
-        <div className="flex items-center justify-between animate-fade-in">
+        <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between animate-fade-in">
           <div>
-            <h1 className="text-3xl font-bold text-foreground">Empréstimos & Financiamentos</h1>
-            <p className="text-muted-foreground mt-1">Gerencie seus passivos de longo prazo e simule cenários de quitação</p>
+            <h1 className="text-xl md:text-3xl font-bold text-foreground">Empréstimos & Financiamentos</h1>
+            <p className="text-xs md:text-base text-muted-foreground mt-1">Gerencie seus passivos de longo prazo e simule cenários de quitação</p>
           </div>
           <div className="flex items-center gap-2">
             <PeriodSelector 

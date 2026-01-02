@@ -260,12 +260,12 @@ const Investimentos = () => {
     <MainLayout>
       <div className="space-y-6">
         {/* Header */}
-        <div className="flex items-center justify-between animate-fade-in">
+        <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between animate-fade-in">
           <div>
-            <h1 className="text-3xl font-bold text-foreground">
+            <h1 className="text-xl md:text-3xl font-bold text-foreground">
               Investimentos & Patrimônio
             </h1>
-            <p className="text-muted-foreground mt-1">
+            <p className="text-xs md:text-base text-muted-foreground mt-1">
               Visão consolidada da sua carteira de ativos
             </p>
           </div>

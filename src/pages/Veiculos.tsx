@@ -288,13 +288,13 @@ const Veiculos = () => {
     <MainLayout>
       <div className="space-y-6">
         {/* Header */}
-        <div className="flex items-center justify-between animate-fade-in">
+        <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between animate-fade-in">
           <div>
-            <h1 className="text-3xl font-bold text-foreground">Imobilizado - Veículos</h1>
-            <p className="text-muted-foreground mt-1">Controle seus veículos, seguros e custos associados</p>
+            <h1 className="text-xl md:text-3xl font-bold text-foreground">Imobilizado - Veículos</h1>
+            <p className="text-xs md:text-base text-muted-foreground mt-1">Controle seus veículos, seguros e custos associados</p>
           </div>
           {/* Botões de Ação */}
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             {/* Botão Novo Seguro (RESTAURADO) */}
             <Dialog open={showAddSeguro} onOpenChange={setShowAddSeguro}>
               <DialogTrigger asChild>
