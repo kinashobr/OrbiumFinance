@@ -13,14 +13,12 @@ import { format, subDays, startOfMonth } from "date-fns";
 
 interface BillsSidebarKPIsProps {
   currentDate: Date;
-  totalPendingBills: number; // Valor que AINDA falta pagar (não marcados como pagos)
-  totalPaidBills?: number; // Valor que JÁ foi pago no mês
+  totalPendingBills: number;
+  totalPaidBills?: number;
 }
 
-// Helper para formatar número para string BR
 const formatToBR = (value: number) => value.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
-// Helper para converter string BR para float
 const parseFromBR = (value: string): number => {
     const cleaned = value.replace(/[^\d,]/g, '');
     const parsed = parseFloat(cleaned.replace(',', '.'));
@@ -37,15 +35,12 @@ export function BillsSidebarKPIs({ currentDate, totalPendingBills, totalPaidBill
     transacoesV2,
   } = useFinance();
   
-  // Inicializa o estado do input usando o formato BR
   const [forecastInput, setForecastInput] = useState(() => formatToBR(monthlyRevenueForecast));
   
-  // Sincroniza o input quando o monthlyRevenueForecast muda externamente
   useEffect(() => {
       setForecastInput(formatToBR(monthlyRevenueForecast));
   }, [monthlyRevenueForecast]);
 
-  // Contas de alta liquidez para cálculo de saldo inicial
   const highLiquidityAccountIds = useMemo(() => 
     contasMovimento
       .filter(c => ['corrente', 'poupanca', 'reserva', 'renda_fixa'].includes(c.accountType))
@@ -56,22 +51,14 @@ export function BillsSidebarKPIs({ currentDate, totalPendingBills, totalPaidBill
     const startOfCurrentMonth = startOfMonth(currentDate);
     const dayBeforeStart = subDays(startOfCurrentMonth, 1);
     
-    // 1. Saldo Inicial (Caixa e Equivalentes)
     const initialBalance = highLiquidityAccountIds.reduce((acc, accountId) => {
       const balance = calculateBalanceUpToDate(accountId, dayBeforeStart, transacoesV2, contasMovimento);
       return acc + balance;
     }, 0);
     
-    // 2. Receita do Mês Anterior (para sugestão)
     const revenuePrevMonth = getRevenueForPreviousMonth(currentDate);
-    
-    // 3. Totais de Despesa
     const totalExpensesForMonth = totalPendingBills + totalPaidBills;
-    
-    // 4. Fluxo Líquido Projetado (Receita Prevista - Despesas Totais)
     const netFlowProjected = monthlyRevenueForecast - totalExpensesForMonth;
-    
-    // 5. Saldo Final Projetado (Saldo Inicial + Fluxo Líquido)
     const projectedBalance = initialBalance + netFlowProjected;
     
     const status: 'success' | 'warning' | 'danger' = 
@@ -94,7 +81,7 @@ export function BillsSidebarKPIs({ currentDate, totalPendingBills, totalPaidBill
       return;
     }
     setMonthlyRevenueForecast(parsed);
-    setForecastInput(formatToBR(parsed)); // Garante que o input reflita o valor formatado
+    setForecastInput(formatToBR(parsed));
     toast.success("Previsão de receita atualizada!");
   };
   
@@ -102,111 +89,104 @@ export function BillsSidebarKPIs({ currentDate, totalPendingBills, totalPaidBill
     const suggestedValue = calculos.revenuePrevMonth;
     setForecastInput(formatToBR(suggestedValue));
     setMonthlyRevenueForecast(suggestedValue);
-    toast.info("Previsão ajustada para a receita do mês anterior.");
+    toast.info("Previsão ajustada para a receita anterior.");
   };
   
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     let value = e.target.value;
-    // Permite apenas dígitos, vírgula e ponto (para o usuário digitar)
     value = value.replace(/[^\d,.]/g, '');
-    
-    // Lógica simples para garantir que apenas uma vírgula seja usada como separador decimal
     const parts = value.split(',');
-    if (parts.length > 2) {
-        value = parts[0] + ',' + parts.slice(1).join('');
-    }
-    
+    if (parts.length > 2) value = parts[0] + ',' + parts.slice(1).join('');
     setForecastInput(value);
   };
 
   return (
-    <div className="space-y-4 shrink-0 w-full">
-      <Card className="glass-card stat-card-neutral">
-        <CardHeader className="p-4 pb-2">
-          <CardTitle className="text-base flex items-center gap-2">
-            <Wallet className="w-4 h-4 text-primary" />
-            Fluxo de Caixa Projetado
+    <div className="space-y-4">
+      <Card className="glass-card shadow-none border-none bg-transparent">
+        <CardHeader className="p-0 pb-3">
+          <CardTitle className="text-sm font-bold flex items-center gap-2 text-primary">
+            <Wallet className="w-4 h-4" />
+            RESUMO DE CAIXA
           </CardTitle>
         </CardHeader>
-        <CardContent className="p-4 pt-2 space-y-3">
+        <CardContent className="p-0 space-y-4">
           
-          {/* Saldo Inicial */}
-          <div className="flex justify-between items-center text-sm p-2 rounded-lg bg-muted/30">
-            <span className="text-muted-foreground">Saldo Inicial (Caixa)</span>
-            <span className="font-semibold text-primary whitespace-nowrap">{formatCurrency(calculos.initialBalance)}</span>
-          </div>
-          
-          {/* Previsão de Receita */}
-          <div className="space-y-1 border-b border-border/50 pb-3">
-            <Label className="text-xs text-muted-foreground flex items-center justify-between">
-                Previsão de Receita ({format(currentDate, 'MMM')})
-                <Button variant="ghost" size="sm" className="h-6 text-xs p-1 gap-1" onClick={handleSuggestForecast}>
-                    <RefreshCw className="w-3 h-3" /> Sugerir ({formatCurrency(calculos.revenuePrevMonth)})
-                </Button>
-            </Label>
-            <div className="flex gap-2">
-                <Input
-                    type="text"
-                    inputMode="decimal"
-                    value={forecastInput}
-                    onChange={handleInputChange}
-                    onBlur={handleUpdateForecast}
-                    placeholder="0,00"
-                    className="h-8 text-sm"
-                />
-                <Button onClick={handleUpdateForecast} className="h-8 w-16 shrink-0">
-                    Salvar
-                </Button>
+          <div className="space-y-2">
+            <div className="flex justify-between items-center text-[11px] font-bold uppercase text-muted-foreground px-1">
+              <span>Saldo Inicial</span>
+              <span className="text-primary">{formatCurrency(calculos.initialBalance)}</span>
+            </div>
+            
+            <div className="p-3 rounded-xl bg-muted/30 border border-border/50 space-y-2">
+              <Label className="text-[10px] uppercase font-extrabold tracking-widest text-muted-foreground flex items-center justify-between">
+                  Previsão Receita ({format(currentDate, 'MMM')})
+                  <Button variant="ghost" size="sm" className="h-5 text-[9px] px-1.5 gap-1 hover:bg-primary/10 hover:text-primary" onClick={handleSuggestForecast}>
+                      <RefreshCw className="w-2.5 h-2.5" /> Sugerir
+                  </Button>
+              </Label>
+              <div className="flex gap-2">
+                  <Input
+                      type="text"
+                      inputMode="decimal"
+                      value={forecastInput}
+                      onChange={handleInputChange}
+                      onBlur={handleUpdateForecast}
+                      className="h-8 text-xs font-bold bg-background/50"
+                  />
+                  <Button onClick={handleUpdateForecast} className="h-8 px-3 text-[10px] font-bold uppercase">
+                      OK
+                  </Button>
+              </div>
             </div>
           </div>
           
-          {/* Despesas Totais */}
-          <div className="flex justify-between items-center text-sm p-2 rounded-lg bg-destructive/10">
-            <span className="text-destructive font-medium flex items-center gap-2">
-                <TrendingDown className="w-4 h-4" />
-                Despesas Totais (Mês)
-            </span>
-            <span className="font-bold text-destructive whitespace-nowrap">{formatCurrency(calculos.totalExpensesForMonth)}</span>
-          </div>
-          
-          {/* Detalhe Pendente */}
-          <div className="flex justify-between items-center text-xs px-2 text-muted-foreground">
-            <span>A pagar (Pendentes)</span>
-            <span className="font-medium text-destructive whitespace-nowrap">{formatCurrency(totalPendingBills)}</span>
-          </div>
-          
-          {/* Detalhe Pago */}
-          <div className="flex justify-between items-center text-xs px-2 text-muted-foreground">
-            <span>Já pago (Extrato/Tracker)</span>
-            <span className="font-medium text-success whitespace-nowrap">{formatCurrency(totalPaidBills)}</span>
+          <div className="space-y-2">
+            <div className="flex justify-between items-center p-3 rounded-xl bg-destructive/5 border border-destructive/10">
+              <span className="text-destructive text-[11px] font-bold uppercase flex items-center gap-2">
+                  <TrendingDown className="w-3.5 h-3.5" />
+                  Despesas Totais
+              </span>
+              <span className="font-bold text-destructive text-sm">{formatCurrency(calculos.totalExpensesForMonth)}</span>
+            </div>
+            
+            <div className="grid grid-cols-2 gap-2 px-1">
+              <div className="space-y-0.5">
+                <span className="text-[9px] uppercase font-bold text-muted-foreground block">Pendentes</span>
+                <span className="text-xs font-bold text-destructive">{formatCurrency(totalPendingBills)}</span>
+              </div>
+              <div className="space-y-0.5 text-right">
+                <span className="text-[9px] uppercase font-bold text-muted-foreground block">Já Pagas</span>
+                <span className="text-xs font-bold text-success">{formatCurrency(totalPaidBills)}</span>
+              </div>
+            </div>
           </div>
 
-          <Separator className="my-2" />
+          <Separator className="opacity-50" />
 
-          {/* NOVO: Fluxo Líquido Projetado */}
-          <div className="flex justify-between items-center text-sm px-2">
-            <span className="text-muted-foreground flex items-center gap-1">
-              <Calculator className="w-3.5 h-3.5" /> Fluxo Líquido Projetado
-            </span>
-            <span className={cn(
-              "font-bold whitespace-nowrap",
-              calculos.netFlowProjected >= 0 ? "text-success" : "text-destructive"
+          <div className="space-y-3">
+            <div className="flex justify-between items-center px-1">
+              <span className="text-[11px] font-bold uppercase text-muted-foreground flex items-center gap-1.5">
+                <Calculator className="w-3.5 h-3.5" /> Fluxo Líquido
+              </span>
+              <span className={cn(
+                "font-bold text-sm",
+                calculos.netFlowProjected >= 0 ? "text-success" : "text-destructive"
+              )}>
+                {formatCurrency(calculos.netFlowProjected)}
+              </span>
+            </div>
+            
+            <div className={cn(
+              "flex flex-col gap-1 p-4 rounded-2xl border-2 transition-colors",
+              calculos.status === 'success' && "bg-success/5 border-success/20 text-success",
+              calculos.status === 'warning' && "bg-warning/5 border-warning/20 text-warning",
+              calculos.status === 'danger' && "bg-destructive/5 border-destructive/20 text-destructive"
             )}>
-              {formatCurrency(calculos.netFlowProjected)}
-            </span>
-          </div>
-          
-          {/* Saldo Final Projetado */}
-          <div className={cn(
-            "flex justify-between items-center p-3 rounded-lg border-2 mt-2",
-            calculos.status === 'success' && "bg-success/10 border-success/50 text-success",
-            calculos.status === 'warning' && "bg-warning/10 border-warning/50 text-warning",
-            calculos.status === 'danger' && "bg-destructive/10 border-destructive/50 text-destructive"
-          )}>
-            <span className="font-bold text-xs uppercase tracking-wider">
-              Saldo Projetado <span className="whitespace-nowrap">(Com Caixa)</span>
-            </span>
-            <span className="font-extrabold text-lg whitespace-nowrap">{formatCurrency(calculos.projectedBalance)}</span>
+              <span className="font-black text-[10px] uppercase tracking-[0.2em] opacity-70">
+                Saldo Projetado
+              </span>
+              <span className="font-black text-2xl tracking-tighter">{formatCurrency(calculos.projectedBalance)}</span>
+            </div>
           </div>
           
         </CardContent>
