@@ -395,9 +395,9 @@ export function BillsTrackerModal({ open, onOpenChange }: BillsTrackerModalProps
           minWidth={900}
           minHeight={600}
           hideCloseButton={true}
-          className="bg-card border-border overflow-hidden flex flex-col min-w-0 max-h-[92vh]"
+          className="bg-card border-border overflow-hidden flex flex-col min-w-0"
         >
-          <DialogHeader className="px-4 pt-3 pb-2 border-b shrink-0">
+          <DialogHeader className="px-6 pt-4 pb-2 border-b shrink-0">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <CalendarCheck className="w-5 h-5 text-primary" />
@@ -418,8 +418,8 @@ export function BillsTrackerModal({ open, onOpenChange }: BillsTrackerModalProps
 
           <div className="flex flex-1 overflow-hidden min-w-0">
             {/* Sidebar de KPIs */}
-            <div className="w-[380px] shrink-0 border-r border-border">
-              <div className="p-3 overflow-y-auto h-full">
+            <div className="w-[400px] shrink-0 border-r border-border">
+              <div className="p-4 overflow-y-auto h-full">
                 <BillsSidebarKPIs 
                   currentDate={currentDate}
                   totalPendingBills={totalUnpaidBills}
@@ -429,8 +429,8 @@ export function BillsTrackerModal({ open, onOpenChange }: BillsTrackerModalProps
             </div>
 
             {/* Conteúdo Principal */}
-            <div className="flex-1 flex flex-col p-3 overflow-hidden">
-              <div className="flex items-center justify-between mb-3 shrink-0">
+            <div className="flex-1 flex flex-col p-4 overflow-hidden">
+              <div className="flex items-center justify-between mb-4 shrink-0">
                 <div className="flex items-center gap-2">
                   <Button variant="outline" size="sm" onClick={() => handleMonthChange('prev')}>
                     Anterior
