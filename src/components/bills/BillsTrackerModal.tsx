@@ -2,7 +2,7 @@ import { useState, useMemo, useCallback } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
-import { Plus, CalendarCheck, Repeat, Shield, Building2, DollarSign, Info, Settings, ShoppingCart } from "lucide-react";
+import { Plus, CalendarCheck, Repeat, Shield, Building2, DollarSign, Info, Settings, ShoppingCart, ChevronLeft, ChevronRight } from "lucide-react";
 import { useFinance } from "@/contexts/FinanceContext";
 import { BillTracker, PotentialFixedBill, BillSourceType, formatCurrency, generateBillId, TransactionLinks, OperationType, BillDisplayItem, ExternalPaidBill } from "@/types/finance";
 import { BillsTrackerList } from "./BillsTrackerList";
@@ -426,17 +426,34 @@ export function BillsTrackerModal({ open, onOpenChange }: BillsTrackerModalProps
             {/* Conteúdo Principal */}
             <div className="flex-1 flex flex-col p-4 overflow-hidden">
               <div className="flex items-center justify-between mb-4 shrink-0">
-                <div className="flex items-center gap-2">
-                  <Button variant="outline" size="sm" onClick={() => handleMonthChange('prev')}>
-                    Anterior
+                {/* Navegação de Data Moderna */}
+                <div className="flex items-center bg-muted/50 rounded-lg p-1 border border-border/50">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 hover:bg-background hover:shadow-sm"
+                    onClick={() => handleMonthChange('prev')}
+                  >
+                    <ChevronLeft className="w-4 h-4" />
                   </Button>
-                  <h3 className="text-lg font-semibold text-foreground">
-                    {format(currentDate, 'MMMM yyyy', { locale: ptBR })}
-                  </h3>
-                  <Button variant="outline" size="sm" onClick={() => handleMonthChange('next')}>
-                    Próximo
+                  <div className="px-4 min-w-[140px] text-center">
+                    <span className="text-sm font-bold text-foreground capitalize">
+                      {format(currentDate, 'MMMM', { locale: ptBR })}
+                    </span>
+                    <span className="text-[10px] text-muted-foreground block leading-none">
+                      {format(currentDate, 'yyyy')}
+                    </span>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 hover:bg-background hover:shadow-sm"
+                    onClick={() => handleMonthChange('next')}
+                  >
+                    <ChevronRight className="w-4 h-4" />
                   </Button>
                 </div>
+
                 <div className="flex items-center gap-2">
                   <Button variant="outline" size="sm" onClick={() => setShowAddPurchaseDialog(true)} className="gap-2">
                     <ShoppingCart className="w-4 h-4" />
