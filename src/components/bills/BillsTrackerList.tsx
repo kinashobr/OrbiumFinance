@@ -249,7 +249,17 @@ export function BillsTrackerList({
     return [...pending, ...allPaid];
   }, [bills]);
   
-  const totalPending = sortedBills.filter(b => isBillTracker(b) && !b.isPaid).reduce((acc, b) => acc + b.expectedAmount, 0);
+  // NOVA LÓGICA: Soma pendências considerando pagamentos em cartão como "ainda por sair do caixa"
+  const totalPending = useMemo(() => {
+    const creditCardAccountIds = new Set(contasMovimento.filter(c => c.accountType === 'cartao_credito').map(c => c.id));
+    return sortedBills.reduce((acc, b) => {
+        const isCC = b.suggestedAccountId && creditCardAccountIds.has(b.suggestedAccountId);
+        if (!b.isPaid || isCC) {
+            return acc + b.expectedAmount;
+        }
+        return acc;
+    }, 0);
+  }, [sortedBills, contasMovimento]);
 
   const formatDate = (dateStr: string) => {
     const date = parseDateLocal(dateStr);
@@ -320,7 +330,7 @@ export function BillsTrackerList({
         <div className="flex items-center justify-between mb-2 shrink-0">
           <h3 className="text-sm font-semibold text-foreground">Contas do Mês ({sortedBills.length})</h3>
           <Badge variant="destructive" className="text-xs">
-            Pendentes: {formatCurrency(totalPending)}
+            Pendentes + Cartão: {formatCurrency(totalPending)}
           </Badge>
         </div>
         

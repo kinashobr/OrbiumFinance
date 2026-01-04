@@ -13,8 +13,8 @@ import { format, subDays, startOfMonth } from "date-fns";
 
 interface BillsSidebarKPIsProps {
   currentDate: Date;
-  totalPendingBills: number; // Valor que AINDA falta pagar (não marcados como pagos)
-  totalPaidBills?: number; // Valor que JÁ foi pago no mês
+  totalPendingBills: number; // Valor que AINDA falta pagar (não pagos OU pagos em cartão)
+  totalPaidBills?: number; // Valor que JÁ foi pago no mês (débito/dinheiro)
 }
 
 // Helper para formatar número para string BR
@@ -171,19 +171,19 @@ export function BillsSidebarKPIs({ currentDate, totalPendingBills, totalPaidBill
           
           {/* Detalhe Pendente */}
           <div className="flex justify-between items-center text-xs px-2 text-muted-foreground">
-            <span>A pagar (Pendentes)</span>
+            <span>Pendentes + Cartão</span>
             <span className="font-medium text-destructive whitespace-nowrap">{formatCurrency(totalPendingBills)}</span>
           </div>
           
           {/* Detalhe Pago */}
           <div className="flex justify-between items-center text-xs px-2 text-muted-foreground">
-            <span>Já pago (Extrato/Tracker)</span>
+            <span>Pago (Débito/Dinheiro)</span>
             <span className="font-medium text-success whitespace-nowrap">{formatCurrency(totalPaidBills)}</span>
           </div>
 
           <Separator className="my-2" />
 
-          {/* NOVO: Fluxo Líquido Projetado */}
+          {/* Fluxo Líquido Projetado */}
           <div className="flex justify-between items-center text-sm px-2">
             <span className="text-muted-foreground flex items-center gap-1">
               <Calculator className="w-3.5 h-3.5" /> Fluxo Líquido Projetado

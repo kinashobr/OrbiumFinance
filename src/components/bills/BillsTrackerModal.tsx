@@ -91,19 +91,37 @@ export function BillsTrackerModal({ open, onOpenChange }: BillsTrackerModalProps
     getFutureFixedBills(currentDate, trackerManagedBills)
   , [getFutureFixedBills, currentDate, trackerManagedBills]);
   
-  // A pagar (Pendentes)
-  const totalUnpaidBills = useMemo(() => 
-    combinedBills
-      .filter(b => !b.isPaid)
-      .reduce((acc, b) => acc + b.expectedAmount, 0)
-  , [combinedBills]);
+  // --- NOVA LÓGICA DE TOTAIS (CONSIDERANDO CARTÃO DE CRÉDITO) ---
+
+  // A pagar (Pendentes + Cartão de Crédito)
+  // Representa tudo o que ainda não saiu do saldo das contas correntes/reservas
+  const totalUnpaidBills = useMemo(() => {
+    const creditCardAccountIds = new Set(contasMovimento.filter(c => c.accountType === 'cartao_credito').map(c => c.id));
+    
+    return combinedBills.reduce((acc, b) => {
+        const isCC = b.suggestedAccountId && creditCardAccountIds.has(b.suggestedAccountId);
+        // Entra no "Pendente" se: NÃO está pago OU se está pago via CARTÃO
+        if (!b.isPaid || isCC) {
+            return acc + b.expectedAmount;
+        }
+        return acc;
+    }, 0);
+  }, [combinedBills, contasMovimento]);
   
-  // Total Pago
+  // Total Pago (Desembolso Real de Caixa)
+  // Representa o que já saiu efetivamente das contas bancárias
   const totalPaidBills = useMemo(() => {
-    const trackerPaid = trackerManagedBills.filter(b => b.isPaid).reduce((acc, b) => acc + b.expectedAmount, 0);
-    const externalPaid = externalPaidBills.reduce((acc, b) => acc + b.expectedAmount, 0);
-    return trackerPaid + externalPaid;
-  }, [trackerManagedBills, externalPaidBills]);
+    const creditCardAccountIds = new Set(contasMovimento.filter(c => c.accountType === 'cartao_credito').map(c => c.id));
+
+    return combinedBills.reduce((acc, b) => {
+        const isCC = b.suggestedAccountId && creditCardAccountIds.has(b.suggestedAccountId);
+        // Entra no "Pago" apenas se: ESTÁ pago E NÃO foi via CARTÃO
+        if (b.isPaid && !isCC) {
+            return acc + b.expectedAmount;
+        }
+        return acc;
+    }, 0);
+  }, [combinedBills, contasMovimento]);
 
   // --- Handlers ---
   
