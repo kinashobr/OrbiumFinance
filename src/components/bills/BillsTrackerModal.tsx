@@ -427,30 +427,30 @@ export function BillsTrackerModal({ open, onOpenChange }: BillsTrackerModalProps
             <div className="flex-1 flex flex-col p-4 overflow-hidden">
               <div className="flex items-center justify-between mb-4 shrink-0">
                 {/* Navegação de Data Moderna */}
-                <div className="flex items-center bg-muted/50 rounded-lg p-1 border border-border/50">
+                <div className="flex items-center bg-muted/50 rounded-lg p-1.5 border border-border/50">
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="h-8 w-8 hover:bg-background hover:shadow-sm"
+                    className="h-10 w-10 hover:bg-background hover:shadow-sm"
                     onClick={() => handleMonthChange('prev')}
                   >
-                    <ChevronLeft className="w-4 h-4" />
+                    <ChevronLeft className="w-5 h-5" />
                   </Button>
-                  <div className="px-4 min-w-[140px] text-center">
-                    <span className="text-sm font-bold text-foreground capitalize">
+                  <div className="px-6 min-w-[160px] text-center">
+                    <span className="text-lg font-bold text-foreground capitalize">
                       {format(currentDate, 'MMMM', { locale: ptBR })}
                     </span>
-                    <span className="text-[10px] text-muted-foreground block leading-none">
+                    <span className="text-xs text-muted-foreground block leading-none font-medium">
                       {format(currentDate, 'yyyy')}
                     </span>
                   </div>
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="h-8 w-8 hover:bg-background hover:shadow-sm"
+                    className="h-10 w-10 hover:bg-background hover:shadow-sm"
                     onClick={() => handleMonthChange('next')}
                   >
-                    <ChevronRight className="w-4 h-4" />
+                    <ChevronRight className="w-5 h-5" />
                   </Button>
                 </div>
 
