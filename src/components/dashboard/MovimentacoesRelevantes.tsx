@@ -83,10 +83,10 @@ export function MovimentacoesRelevantes({ transacoes, limit = 6 }: Movimentacoes
   };
 
   return (
-    <div className="glass-card p-5">
+    <div className="glass-card p-4 md:p-5">
       <div className="flex items-center justify-between mb-4">
         <div>
-          <h3 className="text-lg font-semibold text-foreground">Movimentações Relevantes</h3>
+          <h3 className="text-base md:text-lg font-semibold text-foreground">Movimentações Relevantes</h3>
           <p className="text-xs text-muted-foreground">Eventos financeiros mais importantes</p>
         </div>
         <Button 
@@ -108,28 +108,28 @@ export function MovimentacoesRelevantes({ transacoes, limit = 6 }: Movimentacoes
           return (
             <div 
               key={mov.id}
-              className="flex items-center justify-between p-3 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors"
+              className="flex items-center justify-between p-2.5 md:p-3 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors gap-2"
             >
-              <div className="flex items-center gap-3">
-                <div className={cn("p-2 rounded-lg", config.bgColor)}>
-                  <Icon className={cn("h-4 w-4", config.color)} />
+              <div className="flex items-center gap-2 md:gap-3 min-w-0 flex-1">
+                <div className={cn("p-1.5 md:p-2 rounded-lg shrink-0", config.bgColor)}>
+                  <Icon className={cn("h-3.5 w-3.5 md:h-4 md:w-4", config.color)} />
                 </div>
-                <div className="min-w-0">
-                  <p className="text-sm font-medium text-foreground truncate max-w-[180px]">
+                <div className="min-w-0 flex-1">
+                  <p className="text-xs md:text-sm font-medium text-foreground truncate">
                     {mov.description}
                   </p>
-                  <div className="flex items-center gap-2">
-                    <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
+                  <div className="flex items-center gap-1.5 md:gap-2 flex-wrap">
+                    <Badge variant="secondary" className="text-[9px] md:text-[10px] px-1 md:px-1.5 py-0">
                       {config.label}
                     </Badge>
-                    <span className="text-xs text-muted-foreground">
+                    <span className="text-[10px] md:text-xs text-muted-foreground">
                       {formatDate(mov.date)}
                     </span>
                   </div>
                 </div>
               </div>
               <span className={cn(
-                "font-semibold text-sm whitespace-nowrap",
+                "font-semibold text-xs md:text-sm whitespace-nowrap shrink-0",
                 isIncome ? "text-success" : "text-destructive"
               )}>
                 {isIncome ? "+" : "-"} {formatCurrency(mov.amount)}

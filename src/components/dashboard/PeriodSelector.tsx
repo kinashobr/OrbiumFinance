@@ -191,7 +191,7 @@ export function PeriodSelector({
         <Button
           variant="outline"
           className={cn(
-            "w-[260px] justify-start text-left font-normal h-9 border-border shadow-sm hover:bg-muted/50 transition-colors",
+            "w-full sm:w-[260px] justify-start text-left font-normal h-9 border-border shadow-sm hover:bg-muted/50 transition-colors",
             (!range.from && !range.to) && "text-muted-foreground",
             className
           )}
@@ -205,20 +205,21 @@ export function PeriodSelector({
       </PopoverTrigger>
       
       <PopoverContent 
-        className="p-3 bg-card border-border w-auto max-w-none"
+        className="p-3 bg-card border-border w-[95vw] sm:w-auto max-w-none"
         side="bottom"
         align="start"
       >
-        <div className="flex gap-3">
-          <div className="w-[140px] shrink-0 space-y-1">
+        <div className="flex flex-col sm:flex-row gap-3">
+          {/* Presets - horizontal scroll on mobile */}
+          <div className="sm:w-[140px] shrink-0 space-y-1">
             <Label className="text-xs font-medium text-muted-foreground px-1">Presets</Label>
-            <div className="flex flex-col gap-1">
+            <div className="flex sm:flex-col gap-1 overflow-x-auto pb-2 sm:pb-0 hide-scrollbar-mobile">
               {presets.map((preset) => (
                 <Button
                   key={preset.id}
                   variant={selectedPreset === preset.id ? "default" : "outline"}
                   size="sm"
-                  className="w-full justify-start text-xs h-7 px-2"
+                  className="whitespace-nowrap sm:w-full justify-start text-xs h-8 sm:h-7 px-3 sm:px-2"
                   onClick={() => handleSelectPreset(preset.id)}
                 >
                   {preset.label}
@@ -227,7 +228,7 @@ export function PeriodSelector({
               <Button
                 variant={selectedPreset === "custom" ? "default" : "outline"}
                 size="sm"
-                className="w-full justify-start text-xs h-7 px-2"
+                className="whitespace-nowrap sm:w-full justify-start text-xs h-8 sm:h-7 px-3 sm:px-2"
                 onClick={() => setSelectedPreset("custom")}
               >
                 Personalizado
@@ -235,19 +236,33 @@ export function PeriodSelector({
             </div>
           </div>
 
-          <div className="space-y-2 min-w-[540px] max-w-[540px]">
-            <Calendar
-              mode="range"
-              selected={{ from: tempRange.from, to: tempRange.to }}
-              onSelect={handleCalendarSelect}
-              numberOfMonths={2}
-              locale={ptBR}
-              initialFocus
-            />
+          {/* Calendar - single month on mobile */}
+          <div className="space-y-2 w-full sm:min-w-[540px] sm:max-w-[540px]">
+            <div className="hidden sm:block">
+              <Calendar
+                mode="range"
+                selected={{ from: tempRange.from, to: tempRange.to }}
+                onSelect={handleCalendarSelect}
+                numberOfMonths={2}
+                locale={ptBR}
+                initialFocus
+              />
+            </div>
+            <div className="block sm:hidden">
+              <Calendar
+                mode="range"
+                selected={{ from: tempRange.from, to: tempRange.to }}
+                onSelect={handleCalendarSelect}
+                numberOfMonths={1}
+                locale={ptBR}
+                initialFocus
+                className="w-full"
+              />
+            </div>
             <div className="flex items-center gap-2 pt-2 border-t border-border/40">
               <Button 
                 onClick={handleCalendarApply} 
-                className="flex-1 h-7 gap-1 text-xs"
+                className="flex-1 h-9 sm:h-7 gap-1 text-xs"
                 disabled={!tempRange.from || !tempRange.to}
               >
                 <Check className="w-3 h-3" />
@@ -257,7 +272,7 @@ export function PeriodSelector({
                 variant="ghost"
                 size="sm"
                 onClick={handleClearAll}
-                className="h-7 gap-1 text-xs text-destructive hover:text-destructive"
+                className="h-9 sm:h-7 gap-1 text-xs text-destructive hover:text-destructive"
               >
                 <X className="w-3 h-3" />
                 Limpar
