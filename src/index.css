@@ -575,6 +575,118 @@
     background: hsl(var(--muted));
     border-radius: 3px;
   }
+
+  /* ==================== MOBILE UTILITIES ==================== */
+  
+  /* Touch-friendly targets - minimum 44px for accessibility */
+  .touch-target {
+    @apply min-h-[44px] min-w-[44px];
+  }
+
+  .touch-target-sm {
+    @apply min-h-[36px] min-w-[36px] md:min-h-[auto] md:min-w-[auto];
+  }
+
+  /* Safe area insets for notched devices */
+  .safe-area-inset-top {
+    padding-top: env(safe-area-inset-top);
+  }
+
+  .safe-area-inset-bottom {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  .safe-area-inset-left {
+    padding-left: env(safe-area-inset-left);
+  }
+
+  .safe-area-inset-right {
+    padding-right: env(safe-area-inset-right);
+  }
+
+  /* Mobile-first spacing utilities */
+  .mobile-padding {
+    @apply px-4 py-3 md:px-6 md:py-4;
+  }
+
+  .mobile-gap {
+    @apply gap-3 md:gap-4;
+  }
+
+  /* Hide scrollbar on mobile for cleaner UI */
+  .hide-scrollbar-mobile {
+    -webkit-overflow-scrolling: touch;
+  }
+
+  @media (max-width: 768px) {
+    .hide-scrollbar-mobile {
+      scrollbar-width: none;
+      -ms-overflow-style: none;
+    }
+    .hide-scrollbar-mobile::-webkit-scrollbar {
+      display: none;
+    }
+  }
+
+  /* Prevent text selection on touch devices */
+  .no-select-mobile {
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    user-select: none;
+  }
+
+  /* Smooth momentum scrolling */
+  .scroll-smooth-mobile {
+    -webkit-overflow-scrolling: touch;
+    scroll-behavior: smooth;
+  }
+
+  /* Full viewport height accounting for mobile browsers */
+  .mobile-vh {
+    min-height: 100vh;
+    min-height: 100dvh;
+  }
+
+  /* Text utilities for mobile */
+  .text-responsive {
+    @apply text-sm md:text-base;
+  }
+
+  .text-responsive-lg {
+    @apply text-base md:text-lg;
+  }
+
+  .text-responsive-xl {
+    @apply text-lg md:text-xl;
+  }
+}
+
+/* Mobile-specific global styles */
+@media (max-width: 768px) {
+  /* Ensure all interactive elements meet touch target requirements */
+  button:not(.no-touch-target),
+  [role="button"]:not(.no-touch-target),
+  a:not(.no-touch-target),
+  input[type="checkbox"],
+  input[type="radio"],
+  .touch-interactive {
+    min-height: 44px;
+    min-width: 44px;
+  }
+
+  /* Improve tap highlight on mobile */
+  button,
+  a,
+  [role="button"] {
+    -webkit-tap-highlight-color: hsl(var(--primary) / 0.1);
+  }
+
+  /* Prevent zoom on input focus (iOS) */
+  input,
+  select,
+  textarea {
+    font-size: 16px !important;
+  }
 }
 
 @keyframes glow {
