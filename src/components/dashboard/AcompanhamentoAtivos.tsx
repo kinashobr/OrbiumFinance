@@ -104,8 +104,8 @@ export function AcompanhamentoAtivos({
   return (
     <div className="glass-card p-4 md:p-5">
       <div className="mb-3 md:mb-4">
-        <h3 className="text-base md:text-lg font-semibold text-foreground">Acompanhamento de Ativos</h3>
-        <p className="text-xs text-muted-foreground">Visão consolidada dos investimentos</p>
+        <h3 className="text-fluid-lg font-semibold text-foreground">Acompanhamento de Ativos</h3>
+        <p className="text-fluid-xs text-muted-foreground">Visão consolidada dos investimentos</p>
       </div>
 
       {grupos.length > 0 ? (
@@ -120,10 +120,10 @@ export function AcompanhamentoAtivos({
                     <div className={cn("p-1.5 rounded-md", grupo.bgColor)}>
                       <grupo.icon className={cn("h-3.5 w-3.5", grupo.color)} />
                     </div>
-                    <span className="text-sm font-medium text-foreground">{grupo.nome}</span>
+                    <span className="text-fluid-sm font-medium text-foreground">{grupo.nome}</span>
                   </div>
                   <div className="flex items-center gap-2">
-                    <span className="text-sm font-bold text-foreground">
+                    <span className="text-fluid-sm font-bold text-foreground">
                       {formatCurrency(grupo.valor)}
                     </span>
                     {grupo.variacao !== 0 && (
@@ -154,8 +154,8 @@ export function AcompanhamentoAtivos({
 
           <div className="pt-3 mt-3 border-t border-border/50">
             <div className="flex items-center justify-between">
-              <span className="text-sm font-medium text-muted-foreground">Total Investido</span>
-              <span className="text-lg font-bold text-foreground">
+              <span className="text-fluid-sm font-medium text-muted-foreground">Total Investido</span>
+              <span className="text-fluid-lg font-bold text-foreground">
                 {formatCurrency(totalAtivos)}
               </span>
             </div>

@@ -114,7 +114,7 @@ export function CockpitCards({ data }: CockpitCardsProps) {
                 )}
               >
                 <div className="flex items-center justify-between">
-                  <span className="text-xs text-muted-foreground font-medium uppercase tracking-wide whitespace-normal">
+                  <span className="text-fluid-xs text-muted-foreground font-medium uppercase tracking-wide whitespace-normal">
                     {card.title}
                   </span>
                   <div 
@@ -126,13 +126,13 @@ export function CockpitCards({ data }: CockpitCardsProps) {
                 </div>
                 
                 <div className="flex flex-col">
-                  <span className={cn("text-lg md:text-xl font-bold", card.color)}>
+                  <span className={cn("text-fluid-lg font-bold", card.color)}>
                     {card.trend === 'down' && '-'}
                     {card.trend === 'up' && '+'}
                     {card.value}
                   </span>
                   {card.subtitle && (
-                    <span className={cn("text-xs font-medium mt-1 whitespace-nowrap", card.color)}>
+                    <span className={cn("text-fluid-xs font-medium mt-1 whitespace-nowrap", card.color)}>
                       {card.subtitle}
                     </span>
                   )}

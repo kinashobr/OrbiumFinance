@@ -35,7 +35,7 @@ export function StandardizationRuleManagerModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[85vh]">
+      <DialogContent className="max-w-[min(95vw,56rem)] max-h-[min(85vh,800px)]">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Pin className="w-5 h-5 text-primary" />

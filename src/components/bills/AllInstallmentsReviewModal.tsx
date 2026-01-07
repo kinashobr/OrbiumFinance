@@ -182,7 +182,7 @@ export function AllInstallmentsReviewModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-5xl h-[90vh] flex flex-col">
+      <DialogContent className="max-w-[min(95vw,64rem)] h-[min(90vh,900px)] flex flex-col">
         <DialogHeader className="shrink-0">
           <DialogTitle className="flex items-center gap-2">
             <ListChecks className="w-5 h-5 text-primary" />

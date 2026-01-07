@@ -129,8 +129,8 @@ export function FluxoCaixaHeatmap({ month, year, transacoes }: FluxoCaixaHeatmap
       <div className="glass-card p-4 md:p-5 animate-fade-in-up">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
           <div>
-            <h3 className="text-base md:text-lg font-semibold text-foreground">Fluxo de Caixa Mensal</h3>
-            <p className="text-sm text-muted-foreground">
+            <h3 className="text-fluid-lg font-semibold text-foreground">Fluxo de Caixa Mensal</h3>
+            <p className="text-fluid-sm text-muted-foreground">
               Saldo: <span className={cn(totalMes.saldo >= 0 ? "text-success" : "text-destructive", "font-medium")}>
                 {formatCurrency(totalMes.saldo)}
               </span>
