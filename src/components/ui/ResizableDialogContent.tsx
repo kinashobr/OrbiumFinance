@@ -1,157 +1,134 @@
-import { useState, useEffect, useRef, useCallback, ReactNode } from "react";
+"use client";
+
+import React, { useState, useEffect, useRef, useCallback } from "react";
+import { DialogContent } from "./dialog";
 import { cn } from "@/lib/utils";
-import { DialogContent } from "@/components/ui/dialog";
-import * as DialogPrimitive from "@radix-ui/react-dialog";
 
-// Define DialogContentProps manually since it's not exported by shadcn/ui
-interface DialogContentProps extends React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content> {
-  className?: string;
-  children?: React.ReactNode;
-  hideCloseButton?: boolean; // Added to support hiding the default close button
-}
-
-// Helper to load/save dimensions
-const loadDimensions = (key: string, initial: number, min: number, max: number): number => {
-  if (typeof window === 'undefined') return initial;
-  try {
-    const saved = localStorage.getItem(key);
-    if (saved) {
-      const value = parseInt(saved);
-      return Math.min(max, Math.max(min, value));
-    }
-  } catch (e) {
-    console.error(`Failed to load dimension for ${key}`, e);
-  }
-  return initial;
-};
-
-interface ResizableDialogContentProps extends DialogContentProps {
-  children: ReactNode;
-  initialWidth?: number;
-  initialHeight?: number;
+interface ResizableDialogContentProps extends React.ComponentPropsWithoutRef<typeof DialogContent> {
+  storageKey: string;
+  initialWidth: number;
+  initialHeight: number;
   minWidth?: number;
   minHeight?: number;
   maxWidth?: number;
   maxHeight?: number;
-  storageKey: string;
+  hideCloseButton?: boolean;
 }
 
-export function ResizableDialogContent({
-  children,
-  initialWidth = 900,
-  initialHeight = 600,
-  minWidth = 600, // Reduzido para monitores menores
-  minHeight = 400, // Reduzido para monitores menores
-  maxWidth = 1600,
-  maxHeight = 1000,
-  storageKey,
-  className,
-  hideCloseButton,
-  ...props
-}: ResizableDialogContentProps) {
-  // Ajustar limites baseado no viewport
-  const viewportWidth = typeof window !== 'undefined' ? window.innerWidth : 1920;
-  const viewportHeight = typeof window !== 'undefined' ? window.innerHeight : 1080;
-  
-  const effectiveMinWidth = Math.min(minWidth, viewportWidth * 0.9);
-  const effectiveMinHeight = Math.min(minHeight, viewportHeight * 0.8);
-  const effectiveMaxWidth = Math.min(maxWidth, viewportWidth * 0.95);
-  const effectiveMaxHeight = Math.min(maxHeight, viewportHeight * 0.9);
-  
-  const [width, setWidth] = useState(() => 
-    loadDimensions(`${storageKey}_width`, Math.min(initialWidth, effectiveMaxWidth), effectiveMinWidth, effectiveMaxWidth)
-  );
-  const [height, setHeight] = useState(() => 
-    loadDimensions(`${storageKey}_height`, Math.min(initialHeight, effectiveMaxHeight), effectiveMinHeight, effectiveMaxHeight)
-  );
+export const ResizableDialogContent = React.forwardRef<
+  React.ElementRef<typeof DialogContent>,
+  ResizableDialogContentProps
+>(({ 
+  storageKey, 
+  initialWidth, 
+  initialHeight, 
+  minWidth = 400, 
+  minHeight = 300, 
+  maxWidth = 2000,
+  maxHeight = 1500,
+  hideCloseButton = false,
+  className, 
+  children, 
+  ...props 
+}, ref) => {
+  const [size, setSize] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem(storageKey);
+      if (saved) {
+        try {
+          const parsed = JSON.parse(saved);
+          return {
+            width: Math.min(maxWidth, Math.max(minWidth, parsed.width)),
+            height: Math.min(maxHeight, Math.max(minHeight, parsed.height))
+          };
+        } catch (e) {
+          return { width: initialWidth, height: initialHeight };
+        }
+      }
+    }
+    return { width: initialWidth, height: initialHeight };
+  });
+
   const [isResizing, setIsResizing] = useState(false);
-  const startX = useRef(0);
-  const startY = useRef(0);
-  const startWidth = useRef(0);
-  const startHeight = useRef(0);
+  const resizeRef = useRef<{ startX: number; startY: number; startWidth: number; startHeight: number } | null>(null);
 
-  // Save dimensions on change
   useEffect(() => {
-    localStorage.setItem(`${storageKey}_width`, width.toString());
-    localStorage.setItem(`${storageKey}_height`, height.toString());
-  }, [width, height, storageKey]);
+    localStorage.setItem(storageKey, JSON.stringify(size));
+  }, [size, storageKey]);
 
-  const handleMouseDown = (e: React.MouseEvent) => {
+  const onMouseDown = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
     setIsResizing(true);
-    startX.current = e.clientX;
-    startY.current = e.clientY;
-    startWidth.current = width;
-    startHeight.current = height;
-  };
+    resizeRef.current = {
+      startX: e.clientX,
+      startY: e.clientY,
+      startWidth: size.width,
+      startHeight: size.height,
+    };
+  }, [size]);
 
-  const handleMouseMove = useCallback((e: MouseEvent) => {
-    if (!isResizing) return;
+  const onMouseMove = useCallback((e: MouseEvent) => {
+    if (!isResizing || !resizeRef.current) return;
 
-    const deltaX = e.clientX - startX.current;
-    const deltaY = e.clientY - startY.current;
+    const deltaX = e.clientX - resizeRef.current.startX;
+    const deltaY = e.clientY - resizeRef.current.startY;
 
-    const newWidth = Math.min(effectiveMaxWidth, Math.max(effectiveMinWidth, startWidth.current + deltaX));
-    const newHeight = Math.min(effectiveMaxHeight, Math.max(effectiveMinHeight, startHeight.current + deltaY));
+    const newWidth = Math.min(maxWidth, Math.max(minWidth, resizeRef.current.startWidth + deltaX * 2));
+    const newHeight = Math.min(maxHeight, Math.max(minHeight, resizeRef.current.startHeight + deltaY * 2));
 
-    setWidth(newWidth);
-    setHeight(newHeight);
-  }, [isResizing, effectiveMinWidth, effectiveMinHeight, effectiveMaxWidth, effectiveMaxHeight]);
+    setSize({
+      width: newWidth,
+      height: newHeight,
+    });
+  }, [isResizing, minWidth, minHeight, maxWidth, maxHeight]);
 
-  const handleMouseUp = useCallback(() => {
+  const onMouseUp = useCallback(() => {
     setIsResizing(false);
+    resizeRef.current = null;
   }, []);
 
   useEffect(() => {
     if (isResizing) {
-      window.addEventListener('mousemove', handleMouseMove);
-      window.addEventListener('mouseup', handleMouseUp);
+      window.addEventListener('mousemove', onMouseMove);
+      window.addEventListener('mouseup', onMouseUp);
       document.body.style.cursor = 'nwse-resize';
       document.body.style.userSelect = 'none';
     } else {
-      window.removeEventListener('mousemove', handleMouseMove);
-      window.removeEventListener('mouseup', handleMouseUp);
+      window.removeEventListener('mousemove', onMouseMove);
+      window.removeEventListener('mouseup', onMouseUp);
       document.body.style.cursor = 'default';
       document.body.style.userSelect = 'auto';
     }
-
     return () => {
-      window.removeEventListener('mousemove', handleMouseMove);
-      window.removeEventListener('mouseup', handleMouseUp);
-      document.body.style.cursor = 'default';
-      document.body.style.userSelect = 'auto';
+      window.removeEventListener('mousemove', onMouseMove);
+      window.removeEventListener('mouseup', onMouseUp);
     };
-  }, [isResizing, handleMouseMove, handleMouseUp]);
-
-  const style = {
-    width: `${width}px`,
-    height: `${height}px`,
-    // Override Radix defaults that might be set by shadcn/ui DialogContent
-    maxWidth: 'none',
-    maxHeight: 'none',
-  };
+  }, [isResizing, onMouseMove, onMouseUp]);
 
   return (
     <DialogContent
-      {...props}
-      className={cn(
-        // Remove default size constraints and ensure flex column layout for internal content
-        "max-w-none max-h-none p-0 flex flex-col", 
-        isResizing && "transition-none",
-        className
-      )}
-      style={style}
-      // Pass hideCloseButton to DialogContent
+      ref={ref}
+      className={cn("p-0 overflow-hidden flex flex-col", className)}
+      style={{
+        width: `${size.width}px`,
+        height: `${size.height}px`,
+        maxWidth: '95vw',
+        maxHeight: '95vh',
+      }}
       hideCloseButton={hideCloseButton}
+      {...props}
     >
       {children}
       
-      {/* Resizer Handle (Bottom Right) */}
+      {/* Resizer handle (Bottom Right) */}
       <div
-        className="absolute bottom-0 right-0 h-4 w-4 cursor-nwse-resize z-50 transition-colors bg-primary/50 hover:bg-primary rounded-tl-lg"
-        onMouseDown={handleMouseDown}
-        title="Arraste para redimensionar"
-      />
+        className="absolute bottom-0 right-0 w-6 h-6 cursor-nwse-resize z-[100] group"
+        onMouseDown={onMouseDown}
+      >
+        <div className="absolute bottom-1 right-1 w-2 h-2 border-r-2 border-b-2 border-muted-foreground/30 group-hover:border-primary transition-colors" />
+      </div>
     </DialogContent>
   );
-}
+});
+
+ResizableDialogContent.displayName = "ResizableDialogContent";
