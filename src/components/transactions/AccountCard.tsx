@@ -1,7 +1,6 @@
 import { Building2, MoreVertical, ArrowUpRight, ArrowDownRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { AccountSummary, formatCurrency } from "@/types/finance";
 import { cn } from "@/lib/utils";
@@ -72,6 +71,9 @@ export function AccountCard({ summary, onMovimentar, onViewHistory, onEdit, onIm
             <DropdownMenuItem onClick={() => onViewHistory(accountId)}>
               Ver Extrato
             </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => onMovimentar(accountId)}>
+              Movimentar
+            </DropdownMenuItem>
             {onEdit && (
               <DropdownMenuItem onClick={() => onEdit(accountId)}>
                 Editar Conta
@@ -86,7 +88,7 @@ export function AccountCard({ summary, onMovimentar, onViewHistory, onEdit, onIm
         </DropdownMenu>
       </div>
 
-      <div className="space-y-2 mb-4">
+      <div className="space-y-2 mb-3">
         <div className="flex items-center justify-between text-xs text-muted-foreground">
           <span>Saldo Inicial</span>
           <span>{formatCurrency(initialBalance)}</span>
@@ -96,50 +98,27 @@ export function AccountCard({ summary, onMovimentar, onViewHistory, onEdit, onIm
           <span className="text-sm font-medium text-foreground">Saldo Atual</span>
           <span className="text-lg font-bold text-foreground">{formatCurrency(currentBalance)}</span>
         </div>
-
-        <div className="grid grid-cols-2 gap-2 pt-1">
-          <div className="space-y-0.5">
-            <span className="text-[10px] text-muted-foreground uppercase font-semibold">Entradas</span>
-            <p className="text-xs font-bold text-success">+{formatCurrency(totalIn)}</p>
-          </div>
-          <div className="space-y-0.5 text-right">
-            <span className="text-[10px] text-muted-foreground uppercase font-semibold">Saídas</span>
-            <p className="text-xs font-bold text-destructive">-{formatCurrency(totalOut)}</p>
-          </div>
-        </div>
-
-        <div className="flex items-center justify-between text-[10px] text-muted-foreground pt-1">
-          <span>Total de Transações</span>
-          <span className="font-bold">{transactionCount}</span>
-        </div>
       </div>
 
-      {/* Seção de rodapé com variação e botão */}
-      <div className="flex items-center justify-between pt-4 border-t border-border">
-        <TooltipProvider>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <div className={cn(
-                "flex items-center gap-1 text-xs font-semibold px-2 py-1 rounded-md",
-                isPositive ? "bg-success/10 text-success" : "bg-destructive/10 text-destructive"
-              )}>
-                {isPositive ? <ArrowUpRight className="w-3 h-3" /> : <ArrowDownRight className="w-3 h-3" />}
-                <span>{isPositive ? '+' : ''}{formatCurrency(balanceChange)}</span>
-              </div>
-            </TooltipTrigger>
-            <TooltipContent>
-              <p>Variação líquida no período selecionado</p>
-            </TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
-
-        <Button 
-          size="sm" 
-          className="bg-primary hover:bg-primary/90 h-8"
-          onClick={() => onMovimentar(accountId)}
-        >
-          Movimentar
-        </Button>
+      {/* Seção compacta com os 3 valores em uma linha */}
+      <div className="flex items-center justify-between pt-2 border-t border-border/50 text-[10px]">
+        <div className="flex items-center gap-1 text-success">
+          <ArrowUpRight className="w-3 h-3" />
+          <span className="font-bold">+{formatCurrency(totalIn)}</span>
+        </div>
+        
+        <div className="flex items-center gap-1 text-destructive">
+          <ArrowDownRight className="w-3 h-3" />
+          <span className="font-bold">-{formatCurrency(totalOut)}</span>
+        </div>
+        
+        <div className={cn(
+          "flex items-center gap-1 font-bold",
+          isPositive ? "text-success" : "text-destructive"
+        )}>
+          {isPositive ? <ArrowUpRight className="w-3 h-3" /> : <ArrowDownRight className="w-3 h-3" />}
+          <span>{isPositive ? '+' : ''}{formatCurrency(balanceChange)}</span>
+        </div>
       </div>
     </Card>
   );
