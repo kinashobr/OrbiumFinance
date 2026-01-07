@@ -100,24 +100,21 @@ export function AccountCard({ summary, onMovimentar, onViewHistory, onEdit, onIm
         </div>
       </div>
 
-      {/* Seção compacta com os 3 valores em uma linha */}
-      <div className="flex items-center justify-between mb-3 text-[10px]">
+      {/* Seção compacta com entradas, saídas e total de transações */}
+      <div className="flex items-center justify-between mb-3 text-xs">
         <div className="flex items-center gap-1 text-success">
           <ArrowUpRight className="w-3 h-3" />
-          <span className="font-bold">+{formatCurrency(totalIn)}</span>
+          <span className="font-bold">{formatCurrency(totalIn)}</span>
         </div>
         
         <div className="flex items-center gap-1 text-destructive">
           <ArrowDownRight className="w-3 h-3" />
-          <span className="font-bold">-{formatCurrency(totalOut)}</span>
+          <span className="font-bold">{formatCurrency(totalOut)}</span>
         </div>
         
-        <div className={cn(
-          "flex items-center gap-1 font-bold",
-          isPositive ? "text-success" : "text-destructive"
-        )}>
-          {isPositive ? <ArrowUpRight className="w-3 h-3" /> : <ArrowDownRight className="w-3 h-3" />}
-          <span>{isPositive ? '+' : ''}{formatCurrency(balanceChange)}</span>
+        <div className="flex items-center gap-1 text-foreground font-bold">
+          <span>{transactionCount}</span>
+          <span className="text-[10px]">trans.</span>
         </div>
       </div>
 
