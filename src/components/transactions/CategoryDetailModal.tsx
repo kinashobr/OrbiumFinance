@@ -74,7 +74,7 @@ export const CategoryDetailModal = ({
       <DialogTrigger asChild>
         {children}
       </DialogTrigger>
-      <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto bg-card border-border">
+      <DialogContent className="max-w-[min(95vw,48rem)] max-h-[min(80vh,700px)] overflow-y-auto bg-card border-border">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-3">
             <span>{categoriaLabel}</span>

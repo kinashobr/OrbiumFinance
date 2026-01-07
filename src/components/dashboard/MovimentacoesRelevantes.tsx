@@ -86,8 +86,8 @@ export function MovimentacoesRelevantes({ transacoes, limit = 6 }: Movimentacoes
     <div className="glass-card p-4 md:p-5">
       <div className="flex items-center justify-between mb-4">
         <div>
-          <h3 className="text-base md:text-lg font-semibold text-foreground">Movimentações Relevantes</h3>
-          <p className="text-xs text-muted-foreground">Eventos financeiros mais importantes</p>
+          <h3 className="text-fluid-lg font-semibold text-foreground">Movimentações Relevantes</h3>
+          <p className="text-fluid-xs text-muted-foreground">Eventos financeiros mais importantes</p>
         </div>
         <Button 
           variant="ghost" 
@@ -115,14 +115,14 @@ export function MovimentacoesRelevantes({ transacoes, limit = 6 }: Movimentacoes
                   <Icon className={cn("h-3.5 w-3.5 md:h-4 md:w-4", config.color)} />
                 </div>
                 <div className="min-w-0 flex-1">
-                  <p className="text-xs md:text-sm font-medium text-foreground truncate">
+                  <p className="text-fluid-sm font-medium text-foreground truncate">
                     {mov.description}
                   </p>
                   <div className="flex items-center gap-1.5 md:gap-2 flex-wrap">
                     <Badge variant="secondary" className="text-[9px] md:text-[10px] px-1 md:px-1.5 py-0">
                       {config.label}
                     </Badge>
-                    <span className="text-[10px] md:text-xs text-muted-foreground">
+                    <span className="text-fluid-xs text-muted-foreground">
                       {formatDate(mov.date)}
                     </span>
                   </div>

@@ -259,7 +259,7 @@ export function FipeConsultaDialog({ open, onOpenChange, veiculo, onUpdateFipe }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="bg-card border-border max-w-lg">
+      <DialogContent className="max-w-[min(95vw,32rem)] bg-card border-border">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Search className="w-5 h-5 text-primary" />

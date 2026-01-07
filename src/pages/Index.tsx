@@ -242,8 +242,8 @@ const Index = () => {
               <LayoutDashboard className="h-5 w-5 md:h-6 md:w-6 text-primary" />
             </div>
             <div>
-              <h1 className="text-xl md:text-2xl font-bold text-foreground">Central Financeira</h1>
-              <p className="text-xs md:text-sm text-muted-foreground">
+              <h1 className="text-fluid-2xl font-bold text-foreground">Central Financeira</h1>
+              <p className="text-fluid-sm text-muted-foreground">
                 Visão rápida da sua situação financeira
               </p>
             </div>

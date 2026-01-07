@@ -275,8 +275,8 @@ export function SaudeFinanceira({
       <div className="glass-card p-4 md:p-5">
         <div className="flex items-center justify-between mb-3 md:mb-4">
           <div>
-            <h3 className="text-base md:text-lg font-semibold text-foreground">Saúde Financeira</h3>
-            <p className="text-xs text-muted-foreground">Indicadores sintéticos</p>
+            <h3 className="text-fluid-lg font-semibold text-foreground">Saúde Financeira</h3>
+            <p className="text-fluid-xs text-muted-foreground">Indicadores sintéticos</p>
           </div>
           <div className={cn("flex items-center gap-1.5 px-2.5 py-1 rounded-full", configGeral.bgColor)}>
             <IconGeral className={cn("h-3.5 w-3.5", configGeral.color)} />
@@ -298,10 +298,10 @@ export function SaudeFinanceira({
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
                         <ind.icon className="h-3.5 w-3.5 text-muted-foreground" />
-                        <span className="text-sm font-medium text-foreground">{ind.nome}</span>
+                        <span className="text-fluid-sm font-medium text-foreground">{ind.nome}</span>
                       </div>
                       <div className={cn(
-                        "px-2 py-0.5 rounded text-xs font-medium",
+                        "px-2 py-0.5 rounded text-fluid-xs font-medium",
                         config.bgColor,
                         config.color
                       )}>
@@ -325,7 +325,7 @@ export function SaudeFinanceira({
                       </div>
                     </div>
                     
-                    <p className="text-xs text-muted-foreground">{ind.descricao}</p>
+                    <p className="text-fluid-xs text-muted-foreground">{ind.descricao}</p>
                   </div>
                 </TooltipTrigger>
                 <TooltipContent className="max-w-xs sidebar-tooltip p-3 space-y-2">
