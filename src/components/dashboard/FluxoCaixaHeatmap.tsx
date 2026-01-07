@@ -126,18 +126,18 @@ export function FluxoCaixaHeatmap({ month, year, transacoes }: FluxoCaixaHeatmap
 
   return (
     <TooltipProvider>
-      <div className="glass-card p-5 animate-fade-in-up">
-        <div className="flex items-center justify-between mb-4">
+      <div className="glass-card p-4 md:p-5 animate-fade-in-up">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
           <div>
-            <h3 className="text-lg font-semibold text-foreground">Fluxo de Caixa Mensal</h3>
+            <h3 className="text-base md:text-lg font-semibold text-foreground">Fluxo de Caixa Mensal</h3>
             <p className="text-sm text-muted-foreground">
               Saldo: <span className={cn(totalMes.saldo >= 0 ? "text-success" : "text-destructive", "font-medium")}>
                 {formatCurrency(totalMes.saldo)}
               </span>
             </p>
           </div>
-          <div className="flex items-center gap-2">
-            <div className="flex bg-muted rounded-lg p-1 text-xs">
+          <div className="flex items-center gap-2 overflow-x-auto hide-scrollbar-mobile">
+            <div className="flex bg-muted rounded-lg p-1 text-xs whitespace-nowrap">
               {[
                 { value: "all", label: "Tudo" },
                 { value: "receitas", label: "Receitas" },
@@ -148,7 +148,7 @@ export function FluxoCaixaHeatmap({ month, year, transacoes }: FluxoCaixaHeatmap
                   key={opt.value}
                   onClick={() => setViewType(opt.value as typeof viewType)}
                   className={cn(
-                    "px-3 py-1 rounded-md transition-colors",
+                    "px-2.5 md:px-3 py-1.5 md:py-1 rounded-md transition-colors min-h-[36px] md:min-h-[auto]",
                     viewType === opt.value ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"
                   )}
                 >
@@ -177,21 +177,21 @@ export function FluxoCaixaHeatmap({ month, year, transacoes }: FluxoCaixaHeatmap
           </div>
         </div>
 
-        <div className="grid grid-cols-7 gap-1 mb-2">
+        <div className="grid grid-cols-7 gap-0.5 md:gap-1 mb-2">
           {weekDays.map(day => (
-            <div key={day} className="text-center text-xs text-muted-foreground py-1">
+            <div key={day} className="text-center text-[10px] md:text-xs text-muted-foreground py-1">
               {day}
             </div>
           ))}
         </div>
 
-        <div className="grid grid-cols-7 gap-1">
+        <div className="grid grid-cols-7 gap-0.5 md:gap-1">
           {calendarDays.map((dayData, index) => (
             <Tooltip key={index}>
               <TooltipTrigger asChild>
                 <div
                   className={cn(
-                    "aspect-square rounded-lg flex items-center justify-center text-xs font-medium transition-all cursor-pointer hover:scale-105 border",
+                    "aspect-square rounded-md md:rounded-lg flex items-center justify-center text-[10px] md:text-xs font-medium transition-all cursor-pointer hover:scale-105 border",
                     getIntensity(dayData),
                     getBorderColor(dayData),
                     !dayData && "cursor-default hover:scale-100"
@@ -241,18 +241,18 @@ export function FluxoCaixaHeatmap({ month, year, transacoes }: FluxoCaixaHeatmap
           ))}
         </div>
 
-        <div className="flex items-center justify-center gap-4 mt-4 text-xs text-muted-foreground">
+        <div className="flex flex-wrap items-center justify-center gap-3 md:gap-4 mt-4 text-[10px] md:text-xs text-muted-foreground">
           <div className="flex items-center gap-1">
-            <div className="w-3 h-3 rounded bg-muted/30" /> Nenhum
+            <div className="w-2.5 h-2.5 md:w-3 md:h-3 rounded bg-muted/30" /> Nenhum
           </div>
           <div className="flex items-center gap-1">
-            <div className="w-3 h-3 rounded bg-success/30" /> Baixo
+            <div className="w-2.5 h-2.5 md:w-3 md:h-3 rounded bg-success/30" /> Baixo
           </div>
           <div className="flex items-center gap-1">
-            <div className="w-3 h-3 rounded bg-success/60" /> Médio
+            <div className="w-2.5 h-2.5 md:w-3 md:h-3 rounded bg-success/60" /> Médio
           </div>
           <div className="flex items-center gap-1">
-            <div className="w-3 h-3 rounded bg-success/90" /> Alto
+            <div className="w-2.5 h-2.5 md:w-3 md:h-3 rounded bg-success/90" /> Alto
           </div>
         </div>
       </div>
