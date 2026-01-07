@@ -214,8 +214,8 @@ export function BillsTrackerModal({ open, onOpenChange }: BillsTrackerModalProps
             </DialogHeader>
 
             <div className="flex flex-1 overflow-hidden">
-              {/* Sidebar de KPIs com largura proporcional reduzida em 30% */}
-              <div className="w-[20%] min-w-[200px] max-w-[320px] shrink-0 border-r border-border bg-muted/10">
+              {/* Sidebar de KPIs com largura proporcional e contêiner próprio */}
+              <div className="w-[20%] min-w-[210px] max-w-[320px] shrink-0 border-r border-border bg-muted/10 sidebar-container">
                 <div className="p-4 overflow-y-auto h-full">
                   <BillsSidebarKPIs 
                     currentDate={currentDate}

@@ -72,30 +72,30 @@ export function BillsSidebarKPIs({ currentDate, totalPendingBills, totalPaidBill
   const monthLabel = format(currentDate, 'MMM', { locale: ptBR });
 
   return (
-    <div className="flex flex-col h-full space-y-2.5">
+    <div className="flex flex-col h-full space-y-2.5 overflow-hidden">
       {/* HEADER COMPACTO */}
-      <div className="flex items-center gap-2 px-1 mb-1">
-        <Wallet className="w-3.5 h-3.5 text-primary" />
-        <h3 className="cq-text-xs font-bold uppercase tracking-tight text-muted-foreground">Projeção {monthLabel}</h3>
+      <div className="flex items-center gap-2 px-1 mb-1 shrink-0">
+        <Wallet className="w-3.5 h-3.5 text-primary shrink-0" />
+        <h3 className="cq-text-xs font-bold uppercase tracking-tight text-muted-foreground truncate">Projeção {monthLabel}</h3>
       </div>
 
       {/* DISPONIBILIDADE */}
-      <div className="glass-card p-3 flex justify-between items-center">
-        <span className="cq-text-xs text-muted-foreground font-medium">Caixa Inicial</span>
-        <span className="cq-text-sm font-bold text-foreground">{formatCurrency(calculos.initialBalance)}</span>
+      <div className="glass-card p-3 flex justify-between items-center gap-2">
+        <span className="cq-text-xs text-muted-foreground font-medium truncate">Caixa Inicial</span>
+        <span className="cq-text-sm font-bold text-foreground truncate">{formatCurrency(calculos.initialBalance)}</span>
       </div>
 
       {/* PREVISÃO RECEITA */}
       <div className="glass-card p-3 space-y-2">
-        <div className="flex justify-between items-center">
-          <Label className="cq-text-xs text-muted-foreground font-medium">Prev. Entradas</Label>
+        <div className="flex justify-between items-center gap-2">
+          <Label className="cq-text-xs text-muted-foreground font-medium truncate">Prev. Entradas</Label>
           <button 
             onClick={() => {
               const sugg = getRevenueForPreviousMonth(currentDate);
               setForecastInput(formatToBR(sugg));
               setMonthlyRevenueForecast(sugg);
             }}
-            className="text-[10px] font-bold text-primary hover:underline flex items-center gap-1"
+            className="text-[10px] font-bold text-primary hover:underline flex items-center gap-1 shrink-0"
           >
             <RefreshCw className="w-2.5 h-2.5" /> SUGERIR
           </button>
@@ -107,7 +107,7 @@ export function BillsSidebarKPIs({ currentDate, totalPendingBills, totalPaidBill
               type="text"
               value={forecastInput}
               onChange={(e) => setForecastInput(e.target.value)}
-              className="h-8 pl-6 cq-text-xs bg-background/50 border-border/40 rounded-lg"
+              className="h-8 pl-6 cq-text-xs bg-background/50 border-border/40 rounded-lg w-full"
             />
           </div>
           <Button size="icon" variant="secondary" onClick={handleUpdateForecast} className="h-8 w-8 shrink-0">
@@ -116,45 +116,45 @@ export function BillsSidebarKPIs({ currentDate, totalPendingBills, totalPaidBill
         </div>
       </div>
 
-      {/* COMPROMISSOS (Box Vermelho Compacto) */}
+      {/* COMPROMISSOS */}
       <div className="glass-card stat-card-negative p-3 bg-destructive/5 border-destructive/20">
-        <div className="flex justify-between items-center mb-2">
-          <span className="cq-text-xs font-bold text-destructive uppercase tracking-tighter">Compromissos</span>
-          <span className="cq-text-base font-black text-destructive">{formatCurrency(calculos.totalExpensesForMonth)}</span>
+        <div className="flex justify-between items-center mb-2 gap-2">
+          <span className="cq-text-xs font-bold text-destructive uppercase tracking-tighter truncate">Compromissos</span>
+          <span className="cq-text-base font-black text-destructive truncate">{formatCurrency(calculos.totalExpensesForMonth)}</span>
         </div>
         <div className="space-y-1 pt-1 border-t border-destructive/10">
-          <div className="flex justify-between text-[10px] md:cq-text-xs">
-            <span className="text-muted-foreground">Pendentes + Cartão</span>
-            <span className="font-semibold text-destructive">{formatCurrency(totalPendingBills)}</span>
+          <div className="flex justify-between text-[10px] md:cq-text-xs gap-2">
+            <span className="text-muted-foreground truncate">Pendentes + Cartão</span>
+            <span className="font-semibold text-destructive truncate">{formatCurrency(totalPendingBills)}</span>
           </div>
-          <div className="flex justify-between text-[10px] md:cq-text-xs">
-            <span className="text-muted-foreground">Já Pago (Débito)</span>
-            <span className="text-success font-semibold">{formatCurrency(totalPaidBills)}</span>
+          <div className="flex justify-between text-[10px] md:cq-text-xs gap-2">
+            <span className="text-muted-foreground truncate">Já Pago (Débito)</span>
+            <span className="text-success font-semibold truncate">{formatCurrency(totalPaidBills)}</span>
           </div>
         </div>
       </div>
 
-      {/* RESULTADO E SALDO FINAL (A parte mais importante, compactada) */}
+      {/* RESULTADO E SALDO FINAL */}
       <div className={cn(
         "glass-card p-3 space-y-2 border-l-4 transition-all duration-300",
         calculos.projectedBalance >= 0 ? "stat-card-positive" : "stat-card-negative"
       )}>
-        <div className="flex justify-between items-center cq-text-xs">
-          <span className="text-muted-foreground font-medium">Fluxo Líquido</span>
-          <span className={cn("font-bold", calculos.netFlowProjected >= 0 ? "text-success" : "text-destructive")}>
+        <div className="flex justify-between items-center cq-text-xs gap-2">
+          <span className="text-muted-foreground font-medium truncate">Fluxo Líquido</span>
+          <span className={cn("font-bold truncate", calculos.netFlowProjected >= 0 ? "text-success" : "text-destructive")}>
             {calculos.netFlowProjected > 0 ? '+' : ''}{formatCurrency(calculos.netFlowProjected)}
           </span>
         </div>
         
         <Separator className="opacity-30" />
         
-        <div className="flex justify-between items-center">
-          <div className="flex flex-col">
-            <span className="cq-text-xs font-bold text-muted-foreground uppercase leading-none tracking-tighter">Saldo Final</span>
-            <span className="text-[9px] text-muted-foreground opacity-70">Projetado</span>
+        <div className="flex justify-between items-center gap-2">
+          <div className="flex flex-col min-w-0">
+            <span className="cq-text-xs font-bold text-muted-foreground uppercase leading-none tracking-tighter truncate">Saldo Final</span>
+            <span className="text-[9px] text-muted-foreground opacity-70 truncate">Projetado</span>
           </div>
           <span className={cn(
-            "cq-text-lg font-black tracking-tight",
+            "cq-text-lg font-black tracking-tight truncate",
             calculos.projectedBalance >= 0 ? "text-success" : "text-destructive"
           )}>
             {formatCurrency(calculos.projectedBalance)}
@@ -162,9 +162,9 @@ export function BillsSidebarKPIs({ currentDate, totalPendingBills, totalPaidBill
         </div>
       </div>
 
-      {/* ALERTA DE ATENÇÃO (Apenas se negativo e bem pequeno) */}
+      {/* ALERTA DE ATENÇÃO */}
       {calculos.projectedBalance < 0 && (
-        <div className="p-2 rounded-lg bg-warning/10 border border-warning/20 flex gap-2">
+        <div className="p-2 rounded-lg bg-warning/10 border border-warning/20 flex gap-2 shrink-0">
           <AlertCircle className="w-3.5 h-3.5 text-warning shrink-0" />
           <p className="text-[9px] leading-tight text-warning-foreground font-medium">
             Saldo projetado negativo. Revise seus custos.

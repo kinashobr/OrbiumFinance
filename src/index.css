@@ -25,7 +25,7 @@
     --container-max: min(1400px, 95vw);
   }
 
-  /* ... Temas (mantidos) ... */
+  /* ... Temas ... */
   :root, .theme-brown-light {
     --background: 30 20% 94%;
     --foreground: 25 30% 20%;
@@ -125,22 +125,24 @@
   /* ==================== SISTEMA DE CONTAINER QUERIES FLUÍDAS ==================== */
   .modal-viewport {
     container-type: inline-size;
-    container-name: modal-view;
     @apply h-full w-full overflow-hidden flex flex-col;
   }
 
-  /* Utilitários de texto que escalam com o modal */
-  @container modal-view (min-width: 0px) {
-    .cq-text-xs { font-size: clamp(0.65rem, 0.8cqw + 0.4rem, 0.875rem); }
-    .cq-text-sm { font-size: clamp(0.75rem, 1cqw + 0.5rem, 1rem); }
-    .cq-text-base { font-size: clamp(0.875rem, 1.2cqw + 0.6rem, 1.125rem); }
-    .cq-text-lg { font-size: clamp(1.125rem, 1.5cqw + 0.8rem, 1.75rem); }
-    .cq-text-xl { font-size: clamp(1.5rem, 2cqw + 1rem, 2.25rem); }
-    .cq-text-2xl { font-size: clamp(1.75rem, 2.5cqw + 1.2rem, 3rem); }
+  /* Barra lateral como contêiner próprio para que o texto escale com a largura dela */
+  .sidebar-container {
+    container-type: inline-size;
+  }
+
+  /* Utilitários de texto que escalam com o contêiner mais próximo */
+  @container (min-width: 0px) {
+    .cq-text-xs { font-size: clamp(0.6rem, 1.5cqw + 0.3rem, 0.75rem); }
+    .cq-text-sm { font-size: clamp(0.7rem, 2cqw + 0.4rem, 0.875rem); }
+    .cq-text-base { font-size: clamp(0.8rem, 2.5cqw + 0.5rem, 1rem); }
+    .cq-text-lg { font-size: clamp(0.95rem, 3cqw + 0.6rem, 1.25rem); }
+    .cq-text-xl { font-size: clamp(1.2rem, 4cqw + 0.8rem, 1.875rem); }
     
-    /* Utilitários de padding que escalam com o modal */
-    .cq-p-md { padding: clamp(0.75rem, 2cqw, 2rem); }
-    .cq-gap-md { gap: clamp(0.5rem, 1.5cqw, 1.5rem); }
+    .cq-p-md { padding: clamp(0.5rem, 2cqw, 1.5rem); }
+    .cq-gap-md { gap: clamp(0.25rem, 1.5cqw, 1rem); }
   }
 
   .glass-card {
@@ -154,7 +156,6 @@
   .stat-card-warning { border-left: 1px solid hsl(var(--warning)); }
   .stat-card-info { border-left: 1px solid hsl(var(--info)); }
 
-  /* ... Restante mantido ... */
   .sidebar-bg { background-color: hsl(var(--sidebar-background)); color: hsl(var(--sidebar-foreground)); }
   .sidebar-border { border-color: hsl(var(--sidebar-border)); }
   .sidebar-divider { background-color: hsl(var(--sidebar-divider)); }
