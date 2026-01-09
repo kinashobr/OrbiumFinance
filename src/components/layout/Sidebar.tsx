@@ -142,7 +142,13 @@ export function Sidebar() {
     if (collapsed) {
       return <Tooltip>
           <TooltipTrigger asChild>
-            <NavLink to={item.path} className={cn("flex items-center justify-center w-10 h-10 rounded-lg transition-all duration-200 mx-auto", isActive ? "sidebar-nav-active" : "sidebar-nav-item")}>
+            <NavLink
+              to={item.path}
+              className={cn(
+                "flex items-center justify-center w-10 h-10 rounded-xl transition-all duration-200 mx-auto focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 focus-visible:ring-offset-background",
+                isActive ? "sidebar-nav-active" : "sidebar-nav-item",
+              )}
+            >
               <Icon className="w-5 h-5" />
             </NavLink>
           </TooltipTrigger>
@@ -151,11 +157,21 @@ export function Sidebar() {
           </TooltipContent>
         </Tooltip>;
     }
-    return <NavLink to={item.path} className={cn("flex items-center gap-3 px-3 py-2 rounded-lg transition-all duration-200 group", isActive ? "sidebar-nav-active" : "sidebar-nav-item")}>
+    return (
+      <NavLink
+        to={item.path}
+        className={cn(
+          "group flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm leading-tight transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 focus-visible:ring-offset-background",
+          isActive ? "sidebar-nav-active" : "sidebar-nav-item",
+        )}
+      >
         <Icon className="w-4 h-4 flex-shrink-0" />
-        <span className="font-medium text-sm truncate">{item.title}</span>
-        {isActive && <div className="ml-auto w-1.5 h-1.5 rounded-full bg-current opacity-80 animate-pulse" />}
-      </NavLink>;
+        <span className="font-medium truncate">{item.title}</span>
+        {isActive && (
+          <div className="ml-auto w-1.5 h-1.5 rounded-full bg-current opacity-80 animate-pulse" />
+        )}
+      </NavLink>
+    );
   };
   return <aside className={cn("hidden md:flex fixed left-4 top-4 bottom-4 z-40 glass-card rounded-[2rem] border border-border/40 bg-card shadow-lg transition-all duration-300 ease-in-out flex-col", collapsed ? "w-16" : "w-60")}>
       {/* Header - Logo & App Name (Desktop) */}
