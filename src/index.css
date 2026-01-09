@@ -4,37 +4,48 @@
 
 @layer base {
   :root {
-    /* Paleta clara inspirada no modelo HTML – fundo bege, acentos marrom/esverdeado */
-    --md-sys-color-primary: 26 72% 42%; /* marrom-dourado principal */
-    --md-sys-color-on-primary: 0 0% 100%;
-    --md-sys-color-primary-container: 28 70% 90%;
-    --md-sys-color-on-primary-container: 26 40% 22%;
+    /* Material Expressive 3 – Light theme focado em dashboard financeiro */
+    /* Primary */
+    --md-sys-color-primary: 262 35% 48%; /* #6750A4 */
+    --md-sys-color-on-primary: 0 0% 100%; /* #FFFFFF */
+    --md-sys-color-primary-container: 267 100% 94%; /* #EADDFF */
+    --md-sys-color-on-primary-container: 263 100% 18%; /* #21005D */
 
-    --md-sys-color-secondary: 24 18% 38%;
-    --md-sys-color-on-secondary: 35 25% 96%;
-    --md-sys-color-secondary-container: 32 30% 92%;
-    --md-sys-color-on-secondary-container: 26 28% 20%;
+    /* Secondary */
+    --md-sys-color-secondary: 257 9% 41%; /* #625B71 */
+    --md-sys-color-on-secondary: 0 0% 100%; /* #FFFFFF */
+    --md-sys-color-secondary-container: 267 52% 92%; /* #E8DEF8 */
+    --md-sys-color-on-secondary-container: 270 21% 14%; /* #1D192B */
 
-    --md-sys-color-surface: 35 41% 96%; /* fundo geral bege-claro */
-    --md-sys-color-on-surface: 26 25% 18%;
-    --md-sys-color-surface-variant: 35 30% 92%; /* cards levemente destacados */
-    --md-sys-color-on-surface-variant: 26 15% 32%;
+    /* Tertiary – destaques/insights */
+    --md-sys-color-tertiary: 338 21% 40%; /* #7D5260 */
+    --md-sys-color-on-tertiary: 0 0% 100%; /* #FFFFFF */
+    --md-sys-color-tertiary-container: 338 100% 92%; /* #FFD8E4 */
+    --md-sys-color-on-tertiary-container: 338 29% 14%; /* #31111D */
 
-    --md-sys-color-outline: 30 22% 80%;
-    --md-sys-color-outline-variant: 35 25% 88%;
+    /* Superfícies */
+    --md-sys-color-surface: 285 100% 99%; /* #FEF7FF */
+    --md-sys-color-on-surface: 270 7% 12%; /* #1C1B1F */
+    --md-sys-color-surface-variant: 273 26% 89%; /* #E7E0EC */
+    --md-sys-color-on-surface-variant: 270 6% 30%; /* #49454F */
 
-    --md-sys-color-error: 4 73% 50%;
-    --md-sys-color-on-error: 0 0% 100%;
+    /* Outline / divisores */
+    --md-sys-color-outline: 270 5% 48%; /* #79747E aproximado */
+    --md-sys-color-outline-variant: 270 11% 80%; /* #CAC4D0 */
 
-    --md-sys-color-success: 142 45% 38%; /* verde mais sóbrio, menos “neon” */
-    --md-sys-color-warning: 37 92% 54%;
-    --md-sys-color-info: 204 82% 45%;
+    /* Estados semânticos */
+    --md-sys-color-error: 4 73% 43%; /* #B3261E */
+    --md-sys-color-on-error: 0 0% 100%; /* #FFFFFF */
+
+    --md-sys-color-success: 152 67% 25%; /* #146C43 */
+    --md-sys-color-warning: 26 100% 45%; /* #E65100 */
+    --md-sys-color-info: 204 82% 45%; /* azul info existente */
 
     /* Mapping to app design tokens used in Tailwind */
     --background: var(--md-sys-color-surface);
     --foreground: var(--md-sys-color-on-surface);
 
-    --card: 35 35% 98%;
+    --card: 285 60% 99%;
     --card-foreground: var(--md-sys-color-on-surface);
 
     --popover: var(--md-sys-color-surface);
@@ -69,7 +80,7 @@
 
     --radius: 0.9rem;
 
-    /* Sidebar tokens alinhados com o novo fundo bege */
+    /* Sidebar tokens alinhados com o tema claro M3 */
     --sidebar-background: var(--md-sys-color-surface);
     --sidebar-foreground: var(--md-sys-color-on-surface);
     --sidebar-primary: var(--md-sys-color-primary);
