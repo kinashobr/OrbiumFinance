@@ -10,6 +10,7 @@ import {
   Upload,
   MoreVertical,
   Bell,
+  ArrowLeft,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useFinance } from "@/contexts/FinanceContext";
@@ -29,7 +30,7 @@ import { Drawer, DrawerClose, DrawerContent, DrawerHeader, DrawerTitle } from "@
 import { SidebarAlertas } from "@/components/dashboard/SidebarAlertas";
 
 const FINANCE_ITEMS = [
-  { label: "Receitas & Despesas", to: "/receitas-despesas", icon: Receipt },
+  { label: "Extratos", to: "/receitas-despesas", icon: Receipt },
   { label: "Empréstimos", to: "/emprestimos", icon: CreditCard },
   { label: "Relatórios", to: "/relatorios", icon: BarChart3 },
 ] as const;
@@ -85,8 +86,8 @@ export function BottomNav() {
   };
 
   return (
-    <nav className="fixed bottom-4 inset-x-0 z-40 flex justify-center md:hidden pointer-events-none">
-      <div className="pointer-events-auto glass-card rounded-[1.75rem] border border-border/60 bg-card/95 shadow-lg max-w-[480px] w-[calc(100%-2rem)] flex flex-col">
+    <nav className="fixed bottom-4 inset-x-0 z-40 flex justify-center md:hidden pointer-events-none px-4">
+      <div className="pointer-events-auto glass-card rounded-full border border-border/60 bg-card/95 shadow-lg max-w-[480px] w-full overflow-hidden transition-all duration-300">
         <input
           ref={fileInputRef}
           type="file"
@@ -95,120 +96,132 @@ export function BottomNav() {
           onChange={handleFileChange}
         />
 
-        <div className="flex items-center justify-between gap-1 px-2 py-1">
-          <div className="flex flex-1 items-center gap-1 overflow-x-auto no-scrollbar">
-            {/* Dashboard */}
-            <NavLink
-              to="/"
-              className={({ isActive }) =>
-                cn(
-                  "group flex flex-col items-center justify-center gap-0.5 rounded-full px-2.5 py-1.5 text-[11px] font-medium transition-colors min-w-[64px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 focus-visible:ring-offset-background",
-                  isActive
-                    ? "text-primary"
-                    : "text-muted-foreground hover:text-foreground",
-                )
-              }
-            >
-              <div
-                className={cn(
-                  "flex h-8 w-8 items-center justify-center rounded-full text-current transition-colors transition-transform group-hover:-translate-y-0.5",
-                  isPathActive("/") && "bg-primary/10",
-                )}
+        <div className="flex items-center h-16 px-2">
+          {/* Container animado para troca de itens na mesma linha */}
+          <div className="flex flex-1 items-center h-full relative overflow-hidden">
+            
+            {/* Menu Principal */}
+            <div className={cn(
+              "flex items-center gap-1 w-full transition-all duration-300 transform absolute inset-0 px-2",
+              showFinanceGroup ? "-translate-x-full opacity-0 pointer-events-none" : "translate-x-0 opacity-100"
+            )}>
+              <NavLink
+                to="/"
+                className={({ isActive }) =>
+                  cn(
+                    "flex-1 flex flex-col items-center justify-center gap-1 py-1 text-[10px] font-medium transition-colors",
+                    isActive ? "text-primary" : "text-muted-foreground"
+                  )
+                }
               >
-                <LayoutDashboard className="h-4 w-4" />
-              </div>
-              <span className="leading-none text-center truncate max-w-[80px]">
-                Dashboard
-              </span>
-            </NavLink>
+                <div className={cn("p-2 rounded-xl transition-colors", isPathActive("/") && "bg-primary/10")}>
+                  <LayoutDashboard className="h-5 w-5" />
+                </div>
+                <span>Início</span>
+              </NavLink>
 
-            {/* Grupo Financeiro: ao tocar, mostra as abas internas na própria navbar */}
-            <button
-              type="button"
-              onClick={() => setShowFinanceGroup((prev) => !prev)}
-              className={cn(
-                "group flex flex-col items-center justify-center gap-0.5 rounded-full px-2.5 py-1.5 text-[11px] font-medium transition-colors min-w-[72px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 focus-visible:ring-offset-background",
-                showFinanceGroup || isFinanceActive
-                  ? "text-primary"
-                  : "text-muted-foreground hover:text-foreground",
-              )}
-            >
-              <div
+              <button
+                type="button"
+                onClick={() => setShowFinanceGroup(true)}
                 className={cn(
-                  "flex h-8 w-8 items-center justify-center rounded-full text-current transition-colors transition-transform group-hover:-translate-y-0.5",
-                  (showFinanceGroup || isFinanceActive) && "bg-primary/10",
+                  "flex-1 flex flex-col items-center justify-center gap-1 py-1 text-[10px] font-medium transition-colors",
+                  isFinanceActive ? "text-primary" : "text-muted-foreground"
                 )}
               >
-                <Receipt className="h-4 w-4" />
-              </div>
-              <span className="leading-none text-center truncate max-w-[80px]">
-                Financeiro
-              </span>
-            </button>
+                <div className={cn("p-2 rounded-xl transition-colors", isFinanceActive && "bg-primary/10")}>
+                  <Receipt className="h-5 w-5" />
+                </div>
+                <span>Financeiro</span>
+              </button>
 
-            {/* Investimentos */}
-            <NavLink
-              to="/investimentos"
-              className={({ isActive }) =>
-                cn(
-                  "group flex flex-col items-center justify-center gap-0.5 rounded-full px-2.5 py-1.5 text-[11px] font-medium transition-colors min-w-[72px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 focus-visible:ring-offset-background",
-                  isActive
-                    ? "text-primary"
-                    : "text-muted-foreground hover:text-foreground",
-                )
-              }
-            >
-              <div
-                className={cn(
-                  "flex h-8 w-8 items-center justify-center rounded-full text-current transition-colors transition-transform group-hover:-translate-y-0.5",
-                  isPathActive("/investimentos") && "bg-primary/10",
-                )}
+              <NavLink
+                to="/investimentos"
+                className={({ isActive }) =>
+                  cn(
+                    "flex-1 flex flex-col items-center justify-center gap-1 py-1 text-[10px] font-medium transition-colors",
+                    isActive ? "text-primary" : "text-muted-foreground"
+                  )
+                }
               >
-                <TrendingUp className="h-4 w-4" />
-              </div>
-              <span className="leading-none text-center truncate max-w-[80px]">
-                Investimentos
-              </span>
-            </NavLink>
+                <div className={cn("p-2 rounded-xl transition-colors", isPathActive("/investimentos") && "bg-primary/10")}>
+                  <TrendingUp className="h-5 w-5" />
+                </div>
+                <span>Investir</span>
+              </NavLink>
 
-            {/* Veículos */}
-            <NavLink
-              to="/veiculos"
-              className={({ isActive }) =>
-                cn(
-                  "group flex flex-col items-center justify-center gap-0.5 rounded-full px-2.5 py-1.5 text-[11px] font-medium transition-colors min-w-[72px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 focus-visible:ring-offset-background",
-                  isActive
-                    ? "text-primary"
-                    : "text-muted-foreground hover:text-foreground",
-                )
-              }
-            >
-              <div
-                className={cn(
-                  "flex h-8 w-8 items-center justify-center rounded-full text-current transition-colors transition-transform group-hover:-translate-y-0.5",
-                  isPathActive("/veiculos") && "bg-primary/10",
-                )}
+              <NavLink
+                to="/veiculos"
+                className={({ isActive }) =>
+                  cn(
+                    "flex-1 flex flex-col items-center justify-center gap-1 py-1 text-[10px] font-medium transition-colors",
+                    isActive ? "text-primary" : "text-muted-foreground"
+                  )
+                }
               >
-                <Car className="h-4 w-4" />
+                <div className={cn("p-2 rounded-xl transition-colors", isPathActive("/veiculos") && "bg-primary/10")}>
+                  <Car className="h-5 w-5" />
+                </div>
+                <span>Veículos</span>
+              </NavLink>
+            </div>
+
+            {/* Menu Financeiro (Submenu) */}
+            <div className={cn(
+              "flex items-center gap-1 w-full transition-all duration-300 transform absolute inset-0 px-2",
+              showFinanceGroup ? "translate-x-0 opacity-100" : "translate-x-full opacity-0 pointer-events-none"
+            )}>
+              <button
+                type="button"
+                onClick={() => setShowFinanceGroup(false)}
+                className="flex-none flex flex-col items-center justify-center gap-1 p-2 text-primary"
+              >
+                <div className="p-2 rounded-full bg-primary/10">
+                  <ArrowLeft className="h-5 w-5" />
+                </div>
+                <span className="text-[10px] font-bold">Voltar</span>
+              </button>
+
+              <div className="flex-1 flex items-center justify-around">
+                {FINANCE_ITEMS.map((item) => {
+                  const Icon = item.icon;
+                  const active = isPathActive(item.to);
+                  return (
+                    <button
+                      key={item.to}
+                      type="button"
+                      onClick={() => {
+                        navigate(item.to);
+                        setShowFinanceGroup(false);
+                      }}
+                      className={cn(
+                        "flex flex-col items-center justify-center gap-1 py-1 text-[10px] font-medium transition-colors",
+                        active ? "text-primary" : "text-muted-foreground"
+                      )}
+                    >
+                      <div className={cn("p-2 rounded-xl transition-colors", active && "bg-primary/10")}>
+                        <Icon className="h-5 w-5" />
+                      </div>
+                      <span>{item.label}</span>
+                    </button>
+                  );
+                })}
               </div>
-              <span className="leading-none text-center truncate max-w-[80px]">
-                Veículos
-              </span>
-            </NavLink>
+            </div>
+
           </div>
 
-          <div className="flex items-center justify-end px-1">
+          {/* Botão de Opções (Fixo à direita) */}
+          <div className="flex-none flex items-center justify-center pr-2">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <button
                   type="button"
-                  className="inline-flex h-8 w-8 items-center justify-center rounded-full text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 focus-visible:ring-offset-background"
-                  aria-label="Mais opções"
+                  className="inline-flex h-10 w-10 items-center justify-center rounded-full text-muted-foreground hover:text-foreground transition-colors"
                 >
-                  <MoreVertical className="h-4 w-4" />
+                  <MoreVertical className="h-5 w-5" />
                 </button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent side="top" align="end" className="text-xs min-w-[220px]">
+              <DropdownMenuContent side="top" align="end" className="text-xs min-w-[220px] rounded-2xl mb-2">
                 <DropdownMenuLabel className="text-[11px] uppercase tracking-wide text-muted-foreground">
                   Tema
                 </DropdownMenuLabel>
@@ -218,12 +231,12 @@ export function BottomNav() {
                     <DropdownMenuItem
                       key={t.id}
                       className={cn(
-                        "flex items-center gap-2 py-1.5 text-[11px]",
+                        "flex items-center gap-2 py-2 text-[11px]",
                         isActive && "text-primary",
                       )}
                       onClick={() => setTheme(t.id)}
                     >
-                      <span className="text-xs leading-none">{t.icon}</span>
+                      <span className="text-sm leading-none">{t.icon}</span>
                       <span className="truncate">
                         {t.id === "system"
                           ? "Sistema"
@@ -239,49 +252,19 @@ export function BottomNav() {
                 <DropdownMenuLabel className="text-[11px] uppercase tracking-wide text-muted-foreground">
                   Dados & alertas
                 </DropdownMenuLabel>
-                <DropdownMenuItem onClick={handleExport}>
-                  <Download className="mr-2 h-3.5 w-3.5" /> Exportar dados
+                <DropdownMenuItem onClick={handleExport} className="py-2">
+                  <Download className="mr-2 h-4 w-4" /> Exportar dados
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={handleImportClick}>
-                  <Upload className="mr-2 h-3.5 w-3.5" /> Importar JSON
+                <DropdownMenuItem onClick={handleImportClick} className="py-2">
+                  <Upload className="mr-2 h-4 w-4" /> Importar JSON
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setShowAlerts(true)}>
-                  <Bell className="mr-2 h-3.5 w-3.5" /> Alertas
+                <DropdownMenuItem onClick={() => setShowAlerts(true)} className="py-2">
+                  <Bell className="mr-2 h-4 w-4" /> Alertas
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
         </div>
-
-        {showFinanceGroup && (
-          <div className="flex items-center gap-1 px-3 pb-2 pt-1 border-t border-border/60 bg-background/60 rounded-b-[1.75rem]">
-            {FINANCE_ITEMS.map((item) => {
-              const Icon = item.icon;
-              const active = isPathActive(item.to);
-              return (
-                <button
-                  key={item.to}
-                  type="button"
-                  onClick={() => {
-                    navigate(item.to);
-                    setShowFinanceGroup(false);
-                  }}
-                  className={cn(
-                    "flex-1 flex flex-col items-center justify-center gap-0.5 rounded-full px-2 py-1.5 text-[10px] font-medium transition-colors",
-                    active
-                      ? "text-primary bg-primary/5"
-                      : "text-muted-foreground hover:text-foreground hover:bg-muted/60",
-                  )}
-                >
-                  <Icon className="h-3.5 w-3.5" />
-                  <span className="leading-tight text-center truncate max-w-[80px]">
-                    {item.label}
-                  </span>
-                </button>
-              );
-            })}
-          </div>
-        )}
       </div>
 
       {/* Modal de alertas financeiros */}
@@ -297,88 +280,6 @@ export function BottomNav() {
           </div>
         </DialogContent>
       </Dialog>
-
-      {/* Drawer de navegação avançada seguindo agrupamento da Sidebar */}
-      <Drawer open={showNavDrawer} onOpenChange={setShowNavDrawer}>
-        <DrawerContent className="max-h-[75vh]">
-          <DrawerHeader className="pb-2">
-            <DrawerTitle className="text-sm font-semibold">Navegação avançada</DrawerTitle>
-          </DrawerHeader>
-          <div className="px-4 pb-4 space-y-4 text-sm">
-            <div>
-              <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground mb-1">
-                Financeiro
-              </p>
-              <div className="flex flex-col gap-1">
-                <button
-                  type="button"
-                  className="text-left rounded-lg px-3 py-1.5 hover:bg-muted transition-colors"
-                  onClick={() => {
-                    navigate("/");
-                    setShowNavDrawer(false);
-                  }}
-                >
-                  Dashboard
-                </button>
-                {FINANCE_ITEMS.map((item) => (
-                  <button
-                    key={item.to}
-                    type="button"
-                    className="text-left rounded-lg px-3 py-1.5 hover:bg-muted transition-colors"
-                    onClick={() => {
-                      navigate(item.to);
-                      setShowNavDrawer(false);
-                    }}
-                  >
-                    {item.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div>
-              <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground mb-1">
-                Investimentos
-              </p>
-              <button
-                type="button"
-                className="w-full text-left rounded-lg px-3 py-1.5 hover:bg-muted transition-colors"
-                onClick={() => {
-                  navigate("/investimentos");
-                  setShowNavDrawer(false);
-                }}
-              >
-                Carteira Geral
-              </button>
-            </div>
-
-            <div>
-              <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground mb-1">
-                Patrimônio
-              </p>
-              <button
-                type="button"
-                className="w-full text-left rounded-lg px-3 py-1.5 hover:bg-muted transition-colors"
-                onClick={() => {
-                  navigate("/veiculos");
-                  setShowNavDrawer(false);
-                }}
-              >
-                Veículos
-              </button>
-            </div>
-
-            <DrawerClose asChild>
-              <button
-                type="button"
-                className="mt-1 w-full rounded-full border border-border bg-background px-3 py-2 text-sm font-medium hover:bg-muted transition-colors"
-              >
-                Fechar
-              </button>
-            </DrawerClose>
-          </div>
-        </DrawerContent>
-      </Drawer>
     </nav>
   );
 }
