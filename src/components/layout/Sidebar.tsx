@@ -15,10 +15,8 @@ import {
   PieChart,
   BarChart3,
   Building,
-  Palette,
-  Check,
-  CircleDollarSign,
-  ChevronDown,
+  Bell,
+  Settings,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useFinance } from "@/contexts/FinanceContext";
@@ -29,18 +27,14 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "@/components/ui/collapsible";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { SidebarAlertas } from "@/components/dashboard/SidebarAlertas";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 
 interface NavSection {
   id: string;
@@ -81,7 +75,8 @@ const navSections: NavSection[] = [
 
 export function Sidebar() {
   const [collapsed, setCollapsed] = useState(false);
-  const [openSections, setOpenSections] = useState<string[]>(["financeiro", "patrimonio", "investimentos", "relatorios"]);
+  const [openSections, setOpenSections] = useState<string[]>(["financeiro", "patrimonio", "investimentos"]);
+  const [showAlerts, setShowAlerts] = useState(false);
   const location = useLocation();
   const { exportData, importData } = useFinance();
   const { theme, setTheme, themes } = useTheme();
@@ -233,142 +228,142 @@ export function Sidebar() {
 
       {/* Navigation - Scrollable */}
       <div className="flex-1 overflow-y-auto scrollbar-thin py-4 px-2">
-        <nav className="flex flex-col gap-2">
-          {navSections.map((section) => {
-            const SectionIcon = section.icon;
-            const isOpen = openSections.includes(section.id);
-            const hasActiveItem = section.items.some((item) => isPathActive(item.path));
-
-            if (collapsed) {
-              return (
-                <div key={section.id} className="flex flex-col gap-1">
-                  {section.items.map((item) => (
-                    <NavItem
-                      key={item.path}
-                      item={item}
-                      isActive={isPathActive(item.path)}
-                    />
-                  ))}
+        <nav className="flex flex-col gap-1">
+          {navSections.map((section) => (
+            <div key={section.id} className="mb-1">
+              {!collapsed && (
+                <div className="px-3 pb-1 flex items-center gap-2">
+                  <section.icon className="w-3.5 h-3.5 text-muted-foreground" />
+                  <span className="text-[11px] font-semibold uppercase tracking-wide sidebar-section-label">
+                    {section.title}
+                  </span>
                 </div>
-              );
-            }
-
-            return (
-              <Collapsible
-                key={section.id}
-                open={isOpen}
-                onOpenChange={() => toggleSection(section.id)}
-              >
-                <CollapsibleTrigger asChild>
-                  <button
-                    className={cn(
-                      "w-full flex items-center gap-2 px-3 py-2 rounded-lg transition-colors text-left",
-                      hasActiveItem
-                        ? "sidebar-section-active"
-                        : "sidebar-section-header",
-                    )}
-                  >
-                    <SectionIcon className="w-4 h-4" />
-                    <span className="font-semibold text-xs uppercase tracking-wider flex-1">
-                      {section.title}
-                    </span>
-                    <ChevronDown
-                      className={cn(
-                        "w-4 h-4 transition-transform",
-                        isOpen && "rotate-180",
-                      )}
-                    />
-                  </button>
-                </CollapsibleTrigger>
-                <CollapsibleContent className="mt-1 space-y-1 pl-1">
-                  {section.items.map((item) => (
-                    <NavItem
-                      key={item.path}
-                      item={item}
-                      isActive={isPathActive(item.path)}
-                    />
-                  ))}
-                </CollapsibleContent>
-              </Collapsible>
-            );
-          })}
+              )}
+              <div className="flex flex-col gap-0.5">
+                {section.items.map((item) => (
+                  <NavItem
+                    key={item.path}
+                    item={item}
+                    isActive={isPathActive(item.path)}
+                  />
+                ))}
+              </div>
+            </div>
+          ))}
         </nav>
-
-        {/* Alertas contextuais */}
-        <div className="mt-4">
-          <SidebarAlertas collapsed={collapsed} />
-        </div>
       </div>
 
-      {/* Footer actions + Theme selector */}
+      {/* Footer actions + Theme selector + Alerts */}
       <div className="border-t sidebar-border px-3 py-3 space-y-3 mt-auto">
-        {/* Theme selector */}
-        <div className="flex flex-col gap-1 mb-1">
+        {/* Alerts bell */}
+        <div className="flex items-center justify-between gap-2 mb-1">
           {!collapsed && (
             <span className="text-[11px] font-semibold uppercase tracking-wide sidebar-section-label">
-              Aparência
+              Atalhos
             </span>
           )}
-          <div className="flex flex-wrap items-center justify-end gap-1">
-            {themes.map((t) => {
-              const isActive = theme === t.id;
-              return (
+          <div className="flex items-center gap-1 ml-auto">
+            <Dialog>
+              <DialogTrigger asChild>
                 <button
-                  key={t.id}
                   type="button"
-                  onClick={() => setTheme(t.id)}
-                  className={cn(
-                    "inline-flex max-w-full items-center justify-center rounded-full border px-2 py-1 text-[10px] font-medium transition-colors overflow-hidden",
-                    collapsed ? "w-8 h-8 p-0" : "gap-1",
-                    isActive
-                      ? "bg-primary/10 border-primary text-primary"
-                      : "bg-muted/60 border-border text-muted-foreground hover:text-foreground hover:bg-muted",
-                  )}
-                  aria-label={t.name}
+                  className="w-8 h-8 rounded-full sidebar-action-btn flex items-center justify-center"
+                  aria-label="Ver alertas"
                 >
-                  <span className="text-xs leading-none flex-shrink-0">{t.icon}</span>
-                  {!collapsed && (
-                    <span className="leading-none truncate max-w-[80px]">
-                      {t.id === "system" ? "Sistema" : t.id === "brown-light" ? "Claro" : "Escuro"}
-                    </span>
-                  )}
+                  <Bell className="w-4 h-4" />
                 </button>
-              );
-            })}
+              </DialogTrigger>
+              <DialogContent className="max-w-sm p-0 overflow-hidden">
+                <DialogHeader className="px-4 pt-4 pb-2">
+                  <DialogTitle className="flex items-center gap-2 text-sm">
+                    <Bell className="w-4 h-4" />
+                    Alertas financeiros
+                  </DialogTitle>
+                </DialogHeader>
+                <div className="px-3 pb-4">
+                  <SidebarAlertas collapsed={false} />
+                </div>
+              </DialogContent>
+            </Dialog>
+
+            <Dialog>
+              <DialogTrigger asChild>
+                <button
+                  type="button"
+                  className="w-8 h-8 rounded-full sidebar-action-btn flex items-center justify-center"
+                  aria-label="Aparência e dados"
+                >
+                  <Settings className="w-4 h-4" />
+                </button>
+              </DialogTrigger>
+              <DialogContent className="max-w-sm p-0 overflow-hidden">
+                <DialogHeader className="px-4 pt-4 pb-2">
+                  <DialogTitle className="text-sm">Aparência</DialogTitle>
+                </DialogHeader>
+                <div className="px-4 pb-4 space-y-4">
+                  <div className="space-y-2">
+                    <p className="text-[11px] text-muted-foreground uppercase tracking-wide">Tema</p>
+                    <div className="flex flex-wrap gap-1">
+                      {themes.map((t) => {
+                        const isActive = theme === t.id;
+                        return (
+                          <button
+                            key={t.id}
+                            type="button"
+                            onClick={() => setTheme(t.id)}
+                            className={cn(
+                              "inline-flex max-w-full items-center justify-center rounded-full border px-2.5 py-1.5 text-[11px] font-medium transition-colors overflow-hidden gap-1",
+                              isActive
+                                ? "bg-primary/10 border-primary text-primary"
+                                : "bg-muted/60 border-border text-muted-foreground hover:text-foreground hover:bg-muted",
+                            )}
+                          >
+                            <span className="text-xs leading-none flex-shrink-0">{t.icon}</span>
+                            <span className="leading-none truncate max-w-[96px]">
+                              {t.id === "system" ? "Sistema" : t.id === "brown-light" ? "Claro" : "Escuro"}
+                            </span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  <div className="space-y-2 border-t border-border pt-3">
+                    <p className="text-[11px] text-muted-foreground uppercase tracking-wide">Dados</p>
+                    <div className="flex flex-col gap-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="w-full justify-start gap-2 text-xs"
+                        onClick={handleExport}
+                      >
+                        <Download className="w-4 h-4" />
+                        Exportar dados
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="w-full justify-start gap-2 text-xs"
+                        onClick={handleImportClick}
+                      >
+                        <Upload className="w-4 h-4" />
+                        Importar JSON
+                      </Button>
+                      <input
+                        ref={fileInputRef}
+                        type="file"
+                        accept="application/json"
+                        className="hidden"
+                        onChange={handleFileChange}
+                      />
+                    </div>
+                  </div>
+                </div>
+              </DialogContent>
+            </Dialog>
           </div>
-        </div>
-
-        {/* Export / Import */}
-        <div className="flex flex-col gap-2">
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            className="w-full justify-start gap-2"
-            onClick={handleExport}
-          >
-            <Download className="w-4 h-4" />
-            {!collapsed && <span className="text-xs font-medium">Exportar dados</span>}
-          </Button>
-
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            className="w-full justify-start gap-2"
-            onClick={handleImportClick}
-          >
-            <Upload className="w-4 h-4" />
-            {!collapsed && <span className="text-xs font-medium">Importar JSON</span>}
-          </Button>
-
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept="application/json"
-            className="hidden"
-            onChange={handleFileChange}
-          />
         </div>
 
         {/* Collapse Toggle */}
@@ -403,3 +398,4 @@ export function Sidebar() {
     </aside>
   );
 }
+
