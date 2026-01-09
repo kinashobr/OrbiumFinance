@@ -210,17 +210,6 @@ export function BottomNav() {
               </DropdownMenuTrigger>
               <DropdownMenuContent side="top" align="end" className="text-xs min-w-[220px]">
                 <DropdownMenuLabel className="text-[11px] uppercase tracking-wide text-muted-foreground">
-                  Navegação extra
-                </DropdownMenuLabel>
-                <DropdownMenuItem onClick={() => navigate("/investimentos")}>
-                  <TrendingUp className="mr-2 h-3.5 w-3.5" /> Carteira Geral
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => navigate("/veiculos")}>
-                  <Car className="mr-2 h-3.5 w-3.5" /> Veículos
-                </DropdownMenuItem>
-
-                <DropdownMenuSeparator />
-                <DropdownMenuLabel className="text-[11px] uppercase tracking-wide text-muted-foreground">
                   Tema
                 </DropdownMenuLabel>
                 {themes.map((t) => {
@@ -258,11 +247,6 @@ export function BottomNav() {
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => setShowAlerts(true)}>
                   <Bell className="mr-2 h-3.5 w-3.5" /> Alertas
-                </DropdownMenuItem>
-
-                <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={() => setShowNavDrawer(true)}>
-                  Navegação avançada
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
