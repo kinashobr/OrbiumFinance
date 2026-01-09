@@ -875,7 +875,7 @@ const ReceitasDespesas = () => {
                 </Button>
               </div>
             </div>
-            <div className="rounded-[1.75rem] border border-border/40 bg-card p-3 md:p-4 shadow-sm">
+            <div className="p-1">
               <AccountsCarousel
                 accounts={accountSummaries}
                 onMovimentar={handleMovimentar}
