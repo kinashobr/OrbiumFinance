@@ -869,12 +869,19 @@ const ReceitasDespesas = () => {
           {/* Contas Movimento */}
           <div className="space-y-3">
             <div className="flex items-center justify-between px-1">
-              <div className="flex items-center gap-2 text-xs md:text-sm font-medium text-muted-foreground">
-                <span className="material-symbols-rounded text-base md:text-lg">account_balance_wallet</span>
-                <span>Contas movimento</span>
+              <h2 className="text-sm font-semibold text-foreground">Contas Movimento</h2>
+              <div className="flex items-center gap-1 text-muted-foreground">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-7 w-7 rounded-full"
+                  onClick={() => setShowAccountModal(true)}
+                >
+                  <Plus className="h-4 w-4" />
+                </Button>
               </div>
             </div>
-            <div className="rounded-2xl border border-border/70 bg-card p-3 md:p-4 shadow-sm">
+            <div className="rounded-[1.75rem] border border-border/40 bg-card p-3 md:p-4 shadow-sm">
               <AccountsCarousel
                 accounts={accountSummaries}
                 onMovimentar={handleMovimentar}
@@ -885,6 +892,7 @@ const ReceitasDespesas = () => {
                 }}
                 onEditAccount={handleEditAccount}
                 onImportAccount={handleImportExtrato}
+                showHeader={false}
               />
             </div>
           </div>
@@ -892,12 +900,9 @@ const ReceitasDespesas = () => {
           {/* Indicadores do Período */}
           <div className="space-y-3">
             <div className="flex items-center justify-between px-1">
-              <div className="flex items-center gap-2 text-xs md:text-sm font-medium text-muted-foreground">
-                <span className="material-symbols-rounded text-base md:text-lg">bar_chart</span>
-                <span>Indicadores do período</span>
-              </div>
+              <h2 className="text-sm font-semibold text-foreground">Indicadores do Período</h2>
             </div>
-            <div className="rounded-2xl border border-border/70 bg-card p-3 md:p-4 shadow-sm">
+            <div className="rounded-[1.75rem] border border-border/40 bg-card p-3 md:p-4 shadow-sm">
               <KPISidebar transactions={transacoesPeriodo1} categories={categories} />
             </div>
           </div>

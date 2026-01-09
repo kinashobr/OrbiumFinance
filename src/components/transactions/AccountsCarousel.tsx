@@ -28,6 +28,7 @@ interface AccountsCarouselProps {
   onAddAccount?: () => void;
   onEditAccount?: (accountId: string) => void;
   onImportAccount?: (accountId: string) => void;
+  showHeader?: boolean;
 }
 
 export function AccountsCarousel({ 
@@ -37,6 +38,7 @@ export function AccountsCarousel({
   onAddAccount,
   onEditAccount,
   onImportAccount,
+  showHeader = true,
 }: AccountsCarouselProps) {
   // Alterado para focar no elemento de scroll real
   const scrollContainerRef = useRef<HTMLDivElement>(null);
@@ -96,37 +98,40 @@ export function AccountsCarousel({
 
   return (
     <div className="relative">
-      <div className="flex items-center justify-between mb-3">
-        <h3 className="text-lg font-semibold text-foreground">Contas Movimento</h3>
-        <div className="flex items-center gap-2">
-          {onAddAccount && (
-            <Button variant="outline" size="sm" onClick={onAddAccount} className="gap-1">
-              <Plus className="w-4 h-4" />
-              Nova Conta
-            </Button>
-          )}
-          <div className="flex gap-1">
-            <Button 
-              variant="ghost" 
-              size="icon" 
-              className="h-8 w-8"
-              onClick={() => handleScroll('left')}
-              title="Rolar para esquerda"
-            >
-              <ChevronLeft className="w-4 h-4" />
-            </Button>
-            <Button 
-              variant="ghost" 
-              size="icon" 
-              className="h-8 w-8"
-              onClick={() => handleScroll('right')}
-              title="Rolar para direita"
-            >
-              <ChevronRight className="w-4 h-4" />
-            </Button>
+      {showHeader && (
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="text-base md:text-lg font-semibold text-foreground">Contas Movimento</h3>
+          <div className="flex items-center gap-2">
+            {onAddAccount && (
+              <Button variant="outline" size="sm" onClick={onAddAccount} className="gap-1 rounded-full text-xs">
+                <Plus className="w-4 h-4" />
+                Nova Conta
+              </Button>
+            )}
+            <div className="flex gap-1">
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                className="h-8 w-8 rounded-full"
+                onClick={() => handleScroll('left')}
+                title="Rolar para esquerda"
+              >
+                <ChevronLeft className="w-4 h-4" />
+              </Button>
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                className="h-8 w-8 rounded-full"
+                onClick={() => handleScroll('right')}
+                title="Rolar para direita"
+              >
+                <ChevronRight className="w-4 h-4" />
+              </Button>
+            </div>
           </div>
         </div>
-      </div>
+      )}
+
 
       <DndContext
         sensors={sensors}
