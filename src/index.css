@@ -1,125 +1,177 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
-
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 @layer base {
   :root {
-    --text-xs: clamp(0.625rem, 0.5rem + 0.5vw, 0.75rem);
-    --text-sm: clamp(0.75rem, 0.625rem + 0.5vw, 0.875rem);
-    --text-base: clamp(0.875rem, 0.75rem + 0.5vw, 1rem);
-    --text-lg: clamp(1rem, 0.875rem + 0.5vw, 1.125rem);
-    --text-xl: clamp(1.125rem, 1rem + 0.5vw, 1.25rem);
-    --text-2xl: clamp(1.25rem, 1rem + 1vw, 1.5rem);
-    --text-3xl: clamp(1.5rem, 1.25rem + 1vw, 1.875rem);
-    --text-4xl: clamp(1.875rem, 1.5rem + 1.5vw, 2.25rem);
+    /* Material 3 – Light scheme base tokens */
+    --md-sys-color-primary: 262 83% 57%; /* M3 primary */
+    --md-sys-color-on-primary: 0 0% 100%;
+    --md-sys-color-primary-container: 267 100% 92%;
+    --md-sys-color-on-primary-container: 267 42% 23%;
 
-    --space-xs: clamp(0.25rem, 0.125rem + 0.5vw, 0.5rem);
-    --space-sm: clamp(0.5rem, 0.25rem + 0.75vw, 0.75rem);
-    --space-md: clamp(0.75rem, 0.5rem + 1vw, 1rem);
-    --space-lg: clamp(1rem, 0.75rem + 1vw, 1.5rem);
-    --space-xl: clamp(1.5rem, 1rem + 1.5vw, 2rem);
-    --space-2xl: clamp(2rem, 1.5rem + 2vw, 3rem);
+    --md-sys-color-secondary: 255 21% 49%;
+    --md-sys-color-on-secondary: 0 0% 100%;
+    --md-sys-color-secondary-container: 255 100% 94%;
+    --md-sys-color-on-secondary-container: 255 32% 22%;
 
-    --container-max: min(1400px, 95vw);
+    --md-sys-color-surface: 0 0% 99%;
+    --md-sys-color-on-surface: 240 4% 16%;
+    --md-sys-color-surface-variant: 280 14% 94%;
+    --md-sys-color-on-surface-variant: 270 10% 38%;
+
+    --md-sys-color-outline: 270 10% 70%;
+    --md-sys-color-outline-variant: 280 18% 88%;
+
+    --md-sys-color-error: 2 70% 50%;
+    --md-sys-color-on-error: 0 0% 100%;
+
+    --md-sys-color-success: 142 52% 45%;
+    --md-sys-color-warning: 43 96% 56%;
+    --md-sys-color-info: 208 84% 56%;
+
+    /* Mapping to app design tokens used in Tailwind */
+    --background: var(--md-sys-color-surface);
+    --foreground: var(--md-sys-color-on-surface);
+
+    --card: var(--md-sys-color-surface-variant);
+    --card-foreground: var(--md-sys-color-on-surface);
+
+    --popover: var(--md-sys-color-surface);
+    --popover-foreground: var(--md-sys-color-on-surface);
+
+    --primary: var(--md-sys-color-primary);
+    --primary-foreground: var(--md-sys-color-on-primary);
+
+    --secondary: var(--md-sys-color-secondary);
+    --secondary-foreground: var(--md-sys-color-on-secondary);
+
+    --muted: var(--md-sys-color-surface-variant);
+    --muted-foreground: var(--md-sys-color-on-surface-variant);
+
+    --accent: var(--md-sys-color-secondary);
+    --accent-foreground: var(--md-sys-color-on-secondary);
+
+    --destructive: var(--md-sys-color-error);
+    --destructive-foreground: var(--md-sys-color-on-error);
+
+    --success: var(--md-sys-color-success);
+    --success-foreground: 0 0% 100%;
+
+    --warning: var(--md-sys-color-warning);
+    --warning-foreground: 33 39% 15%;
+
+    --info: var(--md-sys-color-info);
+
+    --border: var(--md-sys-color-outline-variant);
+    --input: var(--md-sys-color-outline-variant);
+    --ring: var(--md-sys-color-primary);
+
+    --radius: 0.9rem;
+
+    /* Sidebar tokens aligned to Material surfaces */
+    --sidebar-background: var(--md-sys-color-surface);
+    --sidebar-foreground: var(--md-sys-color-on-surface);
+    --sidebar-primary: var(--md-sys-color-primary);
+    --sidebar-primary-foreground: var(--md-sys-color-on-primary);
+    --sidebar-accent: var(--md-sys-color-surface-variant);
+    --sidebar-accent-foreground: var(--md-sys-color-on-surface);
+    --sidebar-border: var(--md-sys-color-outline-variant);
+    --sidebar-ring: var(--md-sys-color-primary);
+    --sidebar-muted: var(--md-sys-color-on-surface-variant);
+    --sidebar-highlight: var(--md-sys-color-secondary);
+    --sidebar-divider: var(--md-sys-color-outline-variant);
   }
 
-  /* ... Temas ... */
-  :root, .theme-brown-light {
-    --background: 30 20% 94%;
-    --foreground: 25 30% 20%;
-    --card: 30 25% 96%;
-    --card-foreground: 25 30% 20%;
-    --popover: 30 25% 97%;
-    --popover-foreground: 25 30% 20%;
-    --primary: 25 60% 45%;
-    --primary-foreground: 30 20% 98%;
-    --secondary: 30 15% 88%;
-    --secondary-foreground: 25 30% 25%;
-    --muted: 30 15% 90%;
-    --muted-foreground: 25 20% 45%;
-    --accent: 25 50% 55%;
-    --accent-foreground: 30 20% 98%;
-    --destructive: 0 65% 50%;
-    --destructive-foreground: 30 20% 98%;
-    --success: 145 60% 35%;
-    --success-foreground: 30 20% 98%;
-    --warning: 38 80% 50%;
-    --warning-foreground: 25 30% 15%;
-    --info: 199 89% 48%;
-    --border: 30 20% 82%;
-    --input: 30 15% 88%;
-    --ring: 25 60% 45%;
-    --radius: 0.75rem;
-    --neon-cyan: 25 60% 45%;
-    --neon-purple: 25 50% 55%;
-    --neon-blue: 25 45% 50%;
-    --neon-pink: 15 55% 50%;
-    --neon-green: 145 50% 40%;
-    --glass-bg: 30 25% 95% / 0.8;
-    --glass-border: 30 20% 75% / 0.5;
-    --sidebar-background: 30 22% 91%;
-    --sidebar-foreground: 25 30% 22%;
-    --sidebar-primary: 25 60% 45%;
-    --sidebar-primary-foreground: 30 20% 98%;
-    --sidebar-accent: 30 18% 86%;
-    --sidebar-accent-foreground: 25 30% 22%;
-    --sidebar-border: 30 18% 84%;
-    --sidebar-ring: 25 60% 45%;
-    --sidebar-muted: 25 15% 50%;
-    --sidebar-highlight: 25 50% 55%;
-    --sidebar-divider: 30 18% 80%;
-  }
-
+  .dark,
   .theme-dark-neon {
-    --background: 220 20% 4%;
-    --foreground: 210 40% 98%;
-    --card: 220 20% 8%;
-    --card-foreground: 210 40% 98%;
-    --popover: 220 20% 6%;
-    --popover-foreground: 210 40% 98%;
-    --primary: 199 89% 48%;
-    --primary-foreground: 220 20% 4%;
-    --secondary: 220 20% 14%;
-    --secondary-foreground: 210 40% 98%;
-    --muted: 220 20% 12%;
-    --muted-foreground: 215 20% 55%;
-    --accent: 270 80% 60%;
-    --accent-foreground: 210 40% 98%;
-    --destructive: 0 72% 51%;
-    --destructive-foreground: 210 40% 98%;
-    --success: 142 76% 36%;
-    --success-foreground: 210 40% 98%;
-    --warning: 38 92% 50%;
-    --warning-foreground: 220 20% 4%;
-    --info: 185 100% 50%;
-    --border: 220 20% 18%;
-    --input: 220 20% 14%;
-    --ring: 199 89% 48%;
-    --neon-cyan: 185 100% 50%;
-    --neon-purple: 270 100% 65%;
-    --neon-blue: 210 100% 60%;
-    --neon-pink: 330 100% 65%;
-    --neon-green: 160 100% 45%;
-    --glass-bg: 220 20% 10% / 0.6;
-    --glass-border: 220 20% 30% / 0.3;
-    --sidebar-background: 220 20% 5%;
-    --sidebar-foreground: 210 40% 98%;
-    --sidebar-primary: 199 89% 48%;
-    --sidebar-primary-foreground: 220 20% 4%;
-    --sidebar-accent: 220 20% 12%;
-    --sidebar-accent-foreground: 210 40% 98%;
-    --sidebar-border: 220 20% 12%;
-    --sidebar-ring: 199 89% 48%;
-    --sidebar-muted: 215 20% 50%;
-    --sidebar-highlight: 270 100% 65%;
-    --sidebar-divider: 220 20% 15%;
+    /* Material 3 – Dark scheme base tokens */
+    --md-sys-color-primary: 262 80% 80%;
+    --md-sys-color-on-primary: 261 28% 26%;
+    --md-sys-color-primary-container: 262 41% 30%;
+    --md-sys-color-on-primary-container: 267 100% 92%;
+
+    --md-sys-color-secondary: 255 25% 75%;
+    --md-sys-color-on-secondary: 255 26% 20%;
+    --md-sys-color-secondary-container: 255 21% 32%;
+    --md-sys-color-on-secondary-container: 255 100% 94%;
+
+    --md-sys-color-surface: 240 6% 8%;
+    --md-sys-color-on-surface: 210 40% 98%;
+    --md-sys-color-surface-variant: 260 10% 20%;
+    --md-sys-color-on-surface-variant: 260 13% 75%;
+
+    --md-sys-color-outline: 260 15% 55%;
+    --md-sys-color-outline-variant: 260 12% 26%;
+
+    --md-sys-color-error: 0 72% 60%;
+    --md-sys-color-on-error: 210 40% 98%;
+
+    --md-sys-color-success: 142 70% 55%;
+    --md-sys-color-warning: 43 96% 60%;
+    --md-sys-color-info: 198 93% 60%;
+
+    --background: var(--md-sys-color-surface);
+    --foreground: var(--md-sys-color-on-surface);
+
+    --card: 240 6% 10%;
+    --card-foreground: var(--md-sys-color-on-surface);
+
+    --popover: 240 6% 8%;
+    --popover-foreground: var(--md-sys-color-on-surface);
+
+    --primary: var(--md-sys-color-primary);
+    --primary-foreground: var(--md-sys-color-on-primary);
+
+    --secondary: var(--md-sys-color-secondary);
+    --secondary-foreground: var(--md-sys-color-on-secondary);
+
+    --muted: var(--md-sys-color-surface-variant);
+    --muted-foreground: var(--md-sys-color-on-surface-variant);
+
+    --accent: var(--md-sys-color-secondary);
+    --accent-foreground: var(--md-sys-color-on-secondary);
+
+    --destructive: var(--md-sys-color-error);
+    --destructive-foreground: var(--md-sys-color-on-error);
+
+    --success: var(--md-sys-color-success);
+    --success-foreground: 0 0% 0%;
+
+    --warning: var(--md-sys-color-warning);
+    --warning-foreground: 0 0% 0%;
+
+    --info: var(--md-sys-color-info);
+
+    --border: var(--md-sys-color-outline-variant);
+    --input: var(--md-sys-color-outline-variant);
+    --ring: var(--md-sys-color-primary);
+
+    --radius: 0.9rem;
+
+    --sidebar-background: var(--md-sys-color-surface);
+    --sidebar-foreground: var(--md-sys-color-on-surface);
+    --sidebar-primary: var(--md-sys-color-primary);
+    --sidebar-primary-foreground: var(--md-sys-color-on-primary);
+    --sidebar-accent: var(--md-sys-color-surface-variant);
+    --sidebar-accent-foreground: var(--md-sys-color-on-surface);
+    --sidebar-border: var(--md-sys-color-outline-variant);
+    --sidebar-ring: var(--md-sys-color-primary);
+    --sidebar-muted: var(--md-sys-color-on-surface-variant);
+    --sidebar-highlight: var(--md-sys-color-secondary);
+    --sidebar-divider: var(--md-sys-color-outline-variant);
   }
 
-  * { @apply border-border; }
-  body { @apply bg-background text-foreground font-sans antialiased; font-family: 'Inter', sans-serif; }
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-family: "Roboto Flex", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  }
 }
+
 
 @layer components {
   /* ==================== SISTEMA DE CONTAINER QUERIES FLUÍDAS ==================== */
