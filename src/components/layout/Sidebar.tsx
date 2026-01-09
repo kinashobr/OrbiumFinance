@@ -208,23 +208,13 @@ export function Sidebar() {
       {/* Header - Logo & App Name (Desktop) */}
       <div className="h-16 flex items-center px-4 shrink-0">
         {!collapsed ? (
-          <div className="flex items-center justify-between w-full gap-2 overflow-hidden">
-            <div className="flex items-center gap-3 min-w-0">
-              <div className="w-9 h-9 rounded-2xl sidebar-logo-bg flex items-center justify-center shrink-0">
-                <Wallet className="w-5 h-5 sidebar-logo-icon" />
-              </div>
-              <div className="flex flex-col min-w-0">
-                <span className="font-bold text-sm sidebar-brand-text truncate">Orbium</span>
-                <span className="text-[11px] sidebar-brand-subtitle truncate">Finance pessoal</span>
-              </div>
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-9 h-9 rounded-2xl sidebar-logo-bg flex items-center justify-center shrink-0">
+              <Wallet className="w-5 h-5 sidebar-logo-icon" />
             </div>
-            <div className="ml-2 flex items-center">
-              <span className="inline-flex items-center gap-1.5 rounded-full border border-border/60 bg-muted/70 px-2.5 py-1 text-[11px] font-medium text-muted-foreground">
-                <span className="text-xs leading-none">{themes.find(t => t.id === theme)?.icon}</span>
-                <span className="leading-none truncate max-w-[96px]">
-                  {themes.find(t => t.id === theme)?.name ?? "Marrom Claro"}
-                </span>
-              </span>
+            <div className="flex flex-col min-w-0">
+              <span className="font-bold text-sm sidebar-brand-text truncate">Orbium</span>
+              <span className="text-[11px] sidebar-brand-subtitle truncate">Finance pessoal</span>
             </div>
           </div>
         ) : (
@@ -310,8 +300,40 @@ export function Sidebar() {
         </div>
       </div>
 
-      {/* Footer actions */}
-      <div className="border-t sidebar-border px-3 py-3 space-y-3">
+      {/* Footer actions + Theme selector */}
+      <div className="border-t sidebar-border px-3 py-3 space-y-3 mt-auto">
+        {/* Theme selector */}
+        <div className="flex items-center justify-between gap-2 mb-1">
+          {!collapsed && (
+            <span className="text-[11px] font-semibold uppercase tracking-wide sidebar-section-label">
+              Aparência
+            </span>
+          )}
+          <div className="flex items-center gap-1 ml-auto">
+            {themes.map((t) => {
+              const isActive = theme === t.id;
+              return (
+                <button
+                  key={t.id}
+                  type="button"
+                  onClick={() => setTheme(t.id)}
+                  className={cn(
+                    "inline-flex items-center justify-center rounded-full border px-2 py-1 text-[10px] font-medium transition-colors",
+                    collapsed ? "w-8 h-8 p-0" : "gap-1",
+                    isActive
+                      ? "bg-primary/10 border-primary text-primary"
+                      : "bg-muted/60 border-border text-muted-foreground hover:text-foreground hover:bg-muted",
+                  )}
+                  aria-label={t.name}
+               >
+                  <span className="text-xs leading-none">{t.icon}</span>
+                  {!collapsed && <span className="leading-none">{t.id === "system" ? "Sistema" : t.id === "brown-light" ? "Claro" : "Escuro"}</span>}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
         {/* Export / Import */}
         <div className="flex flex-col gap-2">
           <Button
@@ -344,8 +366,6 @@ export function Sidebar() {
             onChange={handleFileChange}
           />
         </div>
-
-        {/* Tema removido a pedido: mantemos apenas ações de dados e collapse */}
 
         {/* Collapse Toggle */}
         <div className="pt-1">
