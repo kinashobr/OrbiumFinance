@@ -72,7 +72,17 @@ export function AccountsCarousel({
       {showHeader && <div className="flex items-center justify-between mb-3">
           <h3 className="text-base md:text-lg font-semibold text-foreground">Contas Movimento</h3>
           <div className="flex items-center gap-2">
-            {onAddAccount}
+            {onAddAccount && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="rounded-full text-xs font-medium"
+                onClick={onAddAccount}
+              >
+                <Plus className="w-4 h-4 mr-1" />
+                Nova conta
+              </Button>
+            )}
             <div className="flex gap-1">
               <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full" onClick={() => handleScroll('left')} title="Rolar para esquerda">
                 <ChevronLeft className="w-4 h-4" />
