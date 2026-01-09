@@ -756,28 +756,28 @@ const ReceitasDespesas = () => {
           </div>
 
           {/* Filtros em formato de chips */}
-          <div className="inline-flex flex-wrap items-center gap-2 rounded-full">
+          <div className="flex flex-wrap items-stretch gap-2 max-w-full">
             <PeriodSelector
               initialRanges={dateRanges}
               onDateRangeChange={handlePeriodChange}
-              className="h-8 rounded-full border-none bg-card px-4 text-xs font-medium text-secondary shadow-xs"
+              className="h-8 rounded-full border-none bg-card px-3 text-[11px] font-medium text-secondary shadow-xs"
             />
             <Button
               variant="tonal"
               size="sm"
               onClick={() => setShowBillsTrackerModal(true)}
-              className="h-8 rounded-full gap-2 px-4 text-xs font-medium bg-card text-secondary border-none shadow-xs hover:bg-card/90"
+              className="h-8 rounded-full gap-1.5 px-3 text-[11px] font-medium bg-card text-secondary border-none shadow-xs hover:bg-card/90"
             >
-              <CalendarCheck className="h-4 w-4" />
+              <CalendarCheck className="h-3.5 w-3.5" />
               <span>Contas a Pagar</span>
             </Button>
             <Button
               variant="tonal"
               size="sm"
               onClick={() => setShowCategoryListModal(true)}
-              className="h-8 rounded-full gap-2 px-4 text-xs font-medium bg-card text-secondary border-none shadow-xs hover:bg-card/90"
+              className="h-8 rounded-full gap-1.5 px-3 text-[11px] font-medium bg-card text-secondary border-none shadow-xs hover:bg-card/90"
             >
-              <Tags className="h-4 w-4" />
+              <Tags className="h-3.5 w-3.5" />
               <span>Categorias</span>
             </Button>
           </div>
