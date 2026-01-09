@@ -2,11 +2,12 @@ import { ReactNode } from "react";
 import { cn } from "@/lib/utils";
 import { TrendingUp, TrendingDown, Minus, Info } from "lucide-react";
 import { MiniSparkline } from "./MiniSparkline";
+import type { KpiStatus } from "@/components/ui/KpiCard";
 
 interface IndicatorBadgeProps {
   title: string;
   value: string;
-  status: "success" | "warning" | "danger" | "neutral";
+  status: KpiStatus;
   trend?: "up" | "down" | "stable";
   tooltip?: string; // Mantido como opcional, mas não usado internamente
   sparklineData?: number[];
@@ -25,26 +26,31 @@ export function IndicatorBadge({
   className,
   trendLabel, // Recebido aqui
 }: IndicatorBadgeProps) {
-  const statusStyles = {
+  const statusStyles: Record<KpiStatus, { bg: string; text: string; sparkline: string }> = {
     success: {
       bg: "bg-success/5 border-l-success",
       text: "text-success",
-      sparkline: "hsl(142, 76%, 36%)",
+      sparkline: "hsl(var(--success))",
     },
     warning: {
       bg: "bg-warning/5 border-l-warning",
       text: "text-warning",
-      sparkline: "hsl(38, 92%, 50%)",
+      sparkline: "hsl(var(--warning))",
     },
     danger: {
       bg: "bg-destructive/5 border-l-destructive",
       text: "text-destructive",
-      sparkline: "hsl(0, 72%, 51%)",
+      sparkline: "hsl(var(--destructive))",
     },
     neutral: {
       bg: "bg-primary/5 border-l-primary",
       text: "text-primary",
-      sparkline: "hsl(199, 89%, 48%)",
+      sparkline: "hsl(var(--primary))",
+    },
+    info: {
+      bg: "bg-neon-cyan/5 border-l-neon-cyan",
+      text: "text-neon-cyan",
+      sparkline: "hsl(var(--md-sys-color-tertiary))",
     },
   };
 

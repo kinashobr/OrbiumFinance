@@ -8,9 +8,10 @@ import {
 } from "@/components/ui/tooltip";
 import { IndicatorBadge } from "./IndicatorBadge";
 import { Calculator, Info, TrendingUp, TrendingDown, Minus } from "lucide-react";
+import type { KpiStatus } from "@/components/ui/KpiCard";
 
 // Define o tipo de status esperado pelo IndicatorBadge
-type IndicatorStatus = "success" | "warning" | "danger" | "neutral";
+type IndicatorStatus = KpiStatus;
 
 interface DetailedIndicatorBadgeProps {
   title: string;
