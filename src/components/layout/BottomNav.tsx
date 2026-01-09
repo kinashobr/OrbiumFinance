@@ -97,137 +97,104 @@ export function BottomNav() {
 
         <div className="flex items-center justify-between gap-1 px-2 py-1">
           <div className="flex flex-1 items-center gap-1 overflow-x-auto no-scrollbar">
-            {showFinanceGroup ? (
-              // Modo Financeiro: exibe abas internas na própria faixa da navbar
-              <>
-                {FINANCE_ITEMS.map((item) => {
-                  const Icon = item.icon;
-                  const active = isPathActive(item.to);
-                  return (
-                    <button
-                      key={item.to}
-                      type="button"
-                      onClick={() => {
-                        navigate(item.to);
-                        setShowFinanceGroup(false);
-                      }}
-                      className={cn(
-                        "flex-1 flex flex-col items-center justify-center gap-0.5 rounded-full px-2.5 py-1.5 text-[10px] font-medium transition-colors min-w-[72px]",
-                        active
-                          ? "text-primary bg-primary/5"
-                          : "text-muted-foreground hover:text-foreground hover:bg-muted/60",
-                      )}
-                    >
-                      <Icon className="h-3.5 w-3.5" />
-                      <span className="leading-tight text-center truncate max-w-[80px]">
-                        {item.label}
-                      </span>
-                    </button>
-                  );
-                })}
-              </>
-            ) : (
-              <>
-                {/* Dashboard */}
-                <NavLink
-                  to="/"
-                  className={({ isActive }) =>
-                    cn(
-                      "group flex flex-col items-center justify-center gap-0.5 rounded-full px-2.5 py-1.5 text-[11px] font-medium transition-colors min-w-[64px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 focus-visible:ring-offset-background",
-                      isActive
-                        ? "text-primary"
-                        : "text-muted-foreground hover:text-foreground",
-                    )
-                  }
-                >
-                  <div
-                    className={cn(
-                      "flex h-8 w-8 items-center justify-center rounded-full text-current transition-colors transition-transform group-hover:-translate-y-0.5",
-                      isPathActive("/") && "bg-primary/10",
-                    )}
-                  >
-                    <LayoutDashboard className="h-4 w-4" />
-                  </div>
-                  <span className="leading-none text-center truncate max-w-[80px]">
-                    Dashboard
-                  </span>
-                </NavLink>
+            {/* Dashboard */}
+            <NavLink
+              to="/"
+              className={({ isActive }) =>
+                cn(
+                  "group flex flex-col items-center justify-center gap-0.5 rounded-full px-2.5 py-1.5 text-[11px] font-medium transition-colors min-w-[64px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 focus-visible:ring-offset-background",
+                  isActive
+                    ? "text-primary"
+                    : "text-muted-foreground hover:text-foreground",
+                )
+              }
+            >
+              <div
+                className={cn(
+                  "flex h-8 w-8 items-center justify-center rounded-full text-current transition-colors transition-transform group-hover:-translate-y-0.5",
+                  isPathActive("/") && "bg-primary/10",
+                )}
+              >
+                <LayoutDashboard className="h-4 w-4" />
+              </div>
+              <span className="leading-none text-center truncate max-w-[80px]">
+                Dashboard
+              </span>
+            </NavLink>
 
-                {/* Grupo Financeiro: alterna para modo de abas internas na própria navbar */}
-                <button
-                  type="button"
-                  onClick={() => setShowFinanceGroup(true)}
-                  className={cn(
-                    "group flex flex-col items-center justify-center gap-0.5 rounded-full px-2.5 py-1.5 text-[11px] font-medium transition-colors min-w-[72px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 focus-visible:ring-offset-background",
-                    isFinanceActive
-                      ? "text-primary"
-                      : "text-muted-foreground hover:text-foreground",
-                  )}
-                >
-                  <div
-                    className={cn(
-                      "flex h-8 w-8 items-center justify-center rounded-full text-current transition-colors transition-transform group-hover:-translate-y-0.5",
-                      isFinanceActive && "bg-primary/10",
-                    )}
-                  >
-                    <Receipt className="h-4 w-4" />
-                  </div>
-                  <span className="leading-none text-center truncate max-w-[80px]">
-                    Financeiro
-                  </span>
-                </button>
+            {/* Grupo Financeiro: ao tocar, mostra as abas internas na própria navbar */}
+            <button
+              type="button"
+              onClick={() => setShowFinanceGroup((prev) => !prev)}
+              className={cn(
+                "group flex flex-col items-center justify-center gap-0.5 rounded-full px-2.5 py-1.5 text-[11px] font-medium transition-colors min-w-[72px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 focus-visible:ring-offset-background",
+                showFinanceGroup || isFinanceActive
+                  ? "text-primary"
+                  : "text-muted-foreground hover:text-foreground",
+              )}
+            >
+              <div
+                className={cn(
+                  "flex h-8 w-8 items-center justify-center rounded-full text-current transition-colors transition-transform group-hover:-translate-y-0.5",
+                  (showFinanceGroup || isFinanceActive) && "bg-primary/10",
+                )}
+              >
+                <Receipt className="h-4 w-4" />
+              </div>
+              <span className="leading-none text-center truncate max-w-[80px]">
+                Financeiro
+              </span>
+            </button>
 
-                {/* Investimentos */}
-                <NavLink
-                  to="/investimentos"
-                  className={({ isActive }) =>
-                    cn(
-                      "group flex flex-col items-center justify-center gap-0.5 rounded-full px-2.5 py-1.5 text-[11px] font-medium transition-colors min-w-[72px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 focus-visible:ring-offset-background",
-                      isActive
-                        ? "text-primary"
-                        : "text-muted-foreground hover:text-foreground",
-                    )
-                  }
-                >
-                  <div
-                    className={cn(
-                      "flex h-8 w-8 items-center justify-center rounded-full text-current transition-colors transition-transform group-hover:-translate-y-0.5",
-                      isPathActive("/investimentos") && "bg-primary/10",
-                    )}
-                  >
-                    <TrendingUp className="h-4 w-4" />
-                  </div>
-                  <span className="leading-none text-center truncate max-w-[80px]">
-                    Investimentos
-                  </span>
-                </NavLink>
+            {/* Investimentos */}
+            <NavLink
+              to="/investimentos"
+              className={({ isActive }) =>
+                cn(
+                  "group flex flex-col items-center justify-center gap-0.5 rounded-full px-2.5 py-1.5 text-[11px] font-medium transition-colors min-w-[72px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 focus-visible:ring-offset-background",
+                  isActive
+                    ? "text-primary"
+                    : "text-muted-foreground hover:text-foreground",
+                )
+              }
+            >
+              <div
+                className={cn(
+                  "flex h-8 w-8 items-center justify-center rounded-full text-current transition-colors transition-transform group-hover:-translate-y-0.5",
+                  isPathActive("/investimentos") && "bg-primary/10",
+                )}
+              >
+                <TrendingUp className="h-4 w-4" />
+              </div>
+              <span className="leading-none text-center truncate max-w-[80px]">
+                Investimentos
+              </span>
+            </NavLink>
 
-                {/* Veículos */}
-                <NavLink
-                  to="/veiculos"
-                  className={({ isActive }) =>
-                    cn(
-                      "group flex flex-col items-center justify-center gap-0.5 rounded-full px-2.5 py-1.5 text-[11px] font-medium transition-colors min-w-[72px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 focus-visible:ring-offset-background",
-                      isActive
-                        ? "text-primary"
-                        : "text-muted-foreground hover:text-foreground",
-                    )
-                  }
-                >
-                  <div
-                    className={cn(
-                      "flex h-8 w-8 items-center justify-center rounded-full text-current transition-colors transition-transform group-hover:-translate-y-0.5",
-                      isPathActive("/veiculos") && "bg-primary/10",
-                    )}
-                  >
-                    <Car className="h-4 w-4" />
-                  </div>
-                  <span className="leading-none text-center truncate max-w-[80px]">
-                    Veículos
-                  </span>
-                </NavLink>
-              </>
-            )}
+            {/* Veículos */}
+            <NavLink
+              to="/veiculos"
+              className={({ isActive }) =>
+                cn(
+                  "group flex flex-col items-center justify-center gap-0.5 rounded-full px-2.5 py-1.5 text-[11px] font-medium transition-colors min-w-[72px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 focus-visible:ring-offset-background",
+                  isActive
+                    ? "text-primary"
+                    : "text-muted-foreground hover:text-foreground",
+                )
+              }
+            >
+              <div
+                className={cn(
+                  "flex h-8 w-8 items-center justify-center rounded-full text-current transition-colors transition-transform group-hover:-translate-y-0.5",
+                  isPathActive("/veiculos") && "bg-primary/10",
+                )}
+              >
+                <Car className="h-4 w-4" />
+              </div>
+              <span className="leading-none text-center truncate max-w-[80px]">
+                Veículos
+              </span>
+            </NavLink>
           </div>
 
           <div className="flex items-center justify-end px-1">
