@@ -97,7 +97,7 @@ export function BottomNav() {
                   to={item.to}
                   className={({ isActive }) =>
                     cn(
-                      "flex flex-col items-center justify-center gap-0.5 rounded-full px-2 py-1 text-[10px] font-medium transition-colors min-w-[64px]",
+                      "group flex flex-col items-center justify-center gap-0.5 rounded-full px-2.5 py-1.5 text-[11px] font-medium transition-colors min-w-[64px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 focus-visible:ring-offset-background",
                       (isActive || active)
                         ? "text-primary"
                         : "text-muted-foreground hover:text-foreground",
@@ -106,7 +106,7 @@ export function BottomNav() {
                 >
                   <div
                     className={cn(
-                      "flex h-8 w-8 items-center justify-center rounded-full text-current transition-colors",
+                      "flex h-8 w-8 items-center justify-center rounded-full text-current transition-colors transition-transform group-hover:-translate-y-0.5",
                       active && "bg-primary/10",
                     )}
                   >
