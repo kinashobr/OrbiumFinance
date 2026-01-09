@@ -9,24 +9,16 @@ import {
   ChevronLeft,
   ChevronRight,
   Wallet,
-  FileBarChart,
   Download,
   Upload,
   TrendingUp,
   PieChart,
-  Target,
   BarChart3,
-  AlertTriangle,
-  LineChart,
-  ChevronDown,
   Building,
-  Coins,
-  Bitcoin,
   Palette,
   Check,
   CircleDollarSign,
-  Menu,
-  X,
+  ChevronDown,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useFinance } from "@/contexts/FinanceContext";
@@ -77,24 +69,18 @@ const navSections: NavSection[] = [
     id: "investimentos",
     title: "Investimentos",
     icon: TrendingUp,
-    items: [
-      { title: "Carteira Geral", path: "/investimentos", icon: PieChart },
-    ],
+    items: [{ title: "Carteira Geral", path: "/investimentos", icon: PieChart }],
   },
   {
     id: "patrimonio",
     title: "Patrimônio",
     icon: Building,
-    items: [
-      { title: "Veículos", path: "/veiculos", icon: Car },
-    ],
+    items: [{ title: "Veículos", path: "/veiculos", icon: Car }],
   },
 ];
 
-
 export function Sidebar() {
   const [collapsed, setCollapsed] = useState(false);
-  const [mobileOpen, setMobileOpen] = useState(false);
   const [openSections, setOpenSections] = useState<string[]>(["financeiro", "patrimonio", "investimentos", "relatorios"]);
   const location = useLocation();
   const { exportData, importData } = useFinance();
@@ -114,23 +100,6 @@ export function Sidebar() {
     localStorage.setItem("sidebar-collapsed", JSON.stringify(collapsed));
     window.dispatchEvent(new CustomEvent("sidebar-toggle", { detail: collapsed }));
   }, [collapsed]);
-
-  // Close mobile menu on route change
-  useEffect(() => {
-    setMobileOpen(false);
-  }, [location.pathname]);
-
-  // Prevent body scroll when mobile menu is open
-  useEffect(() => {
-    if (mobileOpen) {
-      document.body.style.overflow = 'hidden';
-    } else {
-      document.body.style.overflow = '';
-    }
-    return () => {
-      document.body.style.overflow = '';
-    };
-  }, [mobileOpen]);
 
   const handleExport = () => {
     exportData();
@@ -158,7 +127,7 @@ export function Sidebar() {
     }
 
     const result = await importData(file);
-    
+
     toast({
       title: result.success ? "Sucesso" : "Erro",
       description: result.message,
@@ -174,7 +143,7 @@ export function Sidebar() {
     setOpenSections((prev) =>
       prev.includes(sectionId)
         ? prev.filter((id) => id !== sectionId)
-        : [...prev, sectionId]
+        : [...prev, sectionId],
     );
   };
 
@@ -182,9 +151,15 @@ export function Sidebar() {
     return location.pathname === path;
   };
 
-  const NavItem = ({ item, isActive }: { item: { title: string; path: string; icon: React.ElementType }; isActive: boolean }) => {
+  const NavItem = ({
+    item,
+    isActive,
+  }: {
+    item: { title: string; path: string; icon: React.ElementType };
+    isActive: boolean;
+  }) => {
     const Icon = item.icon;
-    
+
     if (collapsed) {
       return (
         <Tooltip>
@@ -193,9 +168,7 @@ export function Sidebar() {
               to={item.path}
               className={cn(
                 "flex items-center justify-center w-10 h-10 rounded-lg transition-all duration-200 mx-auto",
-                isActive
-                  ? "sidebar-nav-active"
-                  : "sidebar-nav-item"
+                isActive ? "sidebar-nav-active" : "sidebar-nav-item",
               )}
             >
               <Icon className="w-5 h-5" />
@@ -213,9 +186,7 @@ export function Sidebar() {
         to={item.path}
         className={cn(
           "flex items-center gap-3 px-3 py-2 rounded-lg transition-all duration-200 group",
-          isActive
-            ? "sidebar-nav-active"
-            : "sidebar-nav-item"
+          isActive ? "sidebar-nav-active" : "sidebar-nav-item",
         )}
       >
         <Icon className="w-4 h-4 flex-shrink-0" />
@@ -335,7 +306,7 @@ export function Sidebar() {
         <div className="flex flex-col gap-2">
           <Button
             type="button"
-            variant="outlined"
+            variant="outline"
             size="sm"
             className="w-full justify-start gap-2"
             onClick={handleExport}
@@ -346,7 +317,7 @@ export function Sidebar() {
 
           <Button
             type="button"
-            variant="text"
+            variant="ghost"
             size="sm"
             className="w-full justify-start gap-2"
             onClick={handleImportClick}
@@ -390,7 +361,7 @@ export function Sidebar() {
                   className="flex items-center justify-between gap-2 text-xs"
                   onClick={() => setTheme(t.id)}
                 >
-                  <span>{t.label}</span>
+                  <span>{t.name}</span>
                   {theme === t.id && <Check className="w-4 h-4 text-primary" />}
                 </DropdownMenuItem>
               ))}
@@ -428,286 +399,5 @@ export function Sidebar() {
         </div>
       </div>
     </aside>
-  );
-}
-
-
-          // Desktop styles
-          "hidden md:flex",
-          collapsed ? "md:w-16" : "md:w-64",
-          // Mobile styles - slide in from left
-          mobileOpen && "flex w-[280px] top-14 h-[calc(100vh-3.5rem)]"
-        )}
-      >
-      {/* Header - Logo & App Name (Desktop only, mobile has separate header) */}
-      <div className="hidden md:flex h-16 items-center justify-between px-4 border-b sidebar-border shrink-0">
-        {!collapsed ? (
-          <div className="flex items-center gap-3 overflow-hidden">
-            <div className="w-9 h-9 rounded-xl sidebar-logo-bg flex items-center justify-center shrink-0">
-              <CircleDollarSign className="w-5 h-5 sidebar-logo-icon" />
-            </div>
-            <div className="flex flex-col min-w-0">
-              <span className="font-bold text-sm sidebar-brand-text truncate">
-                Orbium
-              </span>
-              <span className="text-xs sidebar-brand-subtitle truncate">
-                Finance
-              </span>
-            </div>
-          </div>
-        ) : (
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <div className="w-9 h-9 rounded-xl sidebar-logo-bg flex items-center justify-center mx-auto cursor-pointer">
-                <CircleDollarSign className="w-5 h-5 sidebar-logo-icon" />
-              </div>
-            </TooltipTrigger>
-            <TooltipContent side="right" className="sidebar-tooltip">
-              Orbium Finance
-            </TooltipContent>
-          </Tooltip>
-        )}
-      </div>
-
-      {/* Navigation - Scrollable */}
-      <div className="flex-1 overflow-y-auto scrollbar-thin py-4 px-2">
-        <nav className="flex flex-col gap-2">
-          {navSections.map((section) => {
-            const SectionIcon = section.icon;
-            const isOpen = openSections.includes(section.id);
-            const hasActiveItem = section.items.some((item) => isPathActive(item.path));
-
-            if (collapsed) {
-              return (
-                <div key={section.id} className="flex flex-col gap-1">
-                  {section.items.map((item) => (
-                    <NavItem
-                      key={item.path}
-                      item={item}
-                      isActive={isPathActive(item.path)}
-                    />
-                  ))}
-                </div>
-              );
-            }
-
-            return (
-              <Collapsible
-                key={section.id}
-                open={isOpen}
-                onOpenChange={() => toggleSection(section.id)}
-              >
-                <CollapsibleTrigger asChild>
-                  <button
-                    className={cn(
-                      "w-full flex items-center gap-2 px-3 py-2 rounded-lg transition-colors text-left",
-                      hasActiveItem ? "sidebar-section-active" : "sidebar-section-header"
-                    )}
-                  >
-                    <SectionIcon className="w-4 h-4" />
-                    <span className="font-semibold text-xs uppercase tracking-wider flex-1">
-                      {section.title}
-                    </span>
-                    <ChevronDown
-                      className={cn(
-                        "w-4 h-4 transition-transform duration-200",
-                        isOpen && "rotate-180"
-                      )}
-                    />
-                  </button>
-                </CollapsibleTrigger>
-                <CollapsibleContent className="pl-2 mt-1 space-y-0.5">
-                  {section.items.map((item) => (
-                    <NavItem
-                      key={item.path}
-                      item={item}
-                      isActive={isPathActive(item.path)}
-                    />
-                  ))}
-                </CollapsibleContent>
-              </Collapsible>
-            );
-          })}
-        </nav>
-
-        {/* Divider */}
-        <div className="my-4 mx-2 h-px sidebar-divider" />
-
-        {/* Import/Export Section */}
-        <div className={cn("px-1", collapsed && "px-0")}>
-          {!collapsed && (
-            <p className="text-xs sidebar-section-label mb-2 px-2">
-              Transferir Dados
-            </p>
-          )}
-          <div className={cn("flex gap-2", collapsed ? "flex-col items-center" : "flex-row")}>
-            {collapsed ? (
-              <>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={handleExport}
-                      className="sidebar-action-btn w-10 h-10"
-                    >
-                      <Download className="w-4 h-4" />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent side="right" className="sidebar-tooltip">
-                    Exportar dados
-                  </TooltipContent>
-                </Tooltip>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={handleImportClick}
-                      className="sidebar-action-btn w-10 h-10"
-                    >
-                      <Upload className="w-4 h-4" />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent side="right" className="sidebar-tooltip">
-                    Importar dados
-                  </TooltipContent>
-                </Tooltip>
-              </>
-            ) : (
-              <>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={handleExport}
-                  className="flex-1 sidebar-action-btn justify-start gap-2"
-                >
-                  <Download className="w-4 h-4" />
-                  Exportar
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={handleImportClick}
-                  className="flex-1 sidebar-action-btn justify-start gap-2"
-                >
-                  <Upload className="w-4 h-4" />
-                  Importar
-                </Button>
-              </>
-            )}
-          </div>
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept=".json"
-            onChange={handleFileChange}
-            className="hidden"
-          />
-        </div>
-
-        {/* Divider */}
-        <div className="my-4 mx-2 h-px sidebar-divider" />
-
-        {/* Alertas Inteligentes */}
-        <SidebarAlertas collapsed={collapsed} />
-      </div>
-
-      {/* Footer - Theme Selector */}
-      <div className="shrink-0 p-3 border-t sidebar-border">
-        {!collapsed ? (
-          <div className="space-y-2">
-            <p className="text-xs sidebar-section-label px-1 flex items-center gap-1.5">
-              <Palette className="w-3 h-3" />
-              Tema
-            </p>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <button className="w-full flex items-center justify-between gap-2 p-2 rounded-lg sidebar-theme-switcher-bg text-sm">
-                  <div className="flex items-center gap-2">
-                    <span>{themes.find(t => t.id === theme)?.icon}</span>
-                    <span className="text-xs font-medium">{themes.find(t => t.id === theme)?.name}</span>
-                  </div>
-                  <ChevronDown className="w-3.5 h-3.5 opacity-50" />
-                </button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="start" className="w-48">
-                {themes.map((t) => (
-                  <DropdownMenuItem
-                    key={t.id}
-                    onClick={() => setTheme(t.id)}
-                    className="flex items-center justify-between"
-                  >
-                    <div className="flex items-center gap-2">
-                      <span>{t.icon}</span>
-                      <span>{t.name}</span>
-                    </div>
-                    {theme === t.id && <Check className="w-4 h-4 text-primary" />}
-                  </DropdownMenuItem>
-                ))}
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
-        ) : (
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <button className="w-10 h-10 rounded-lg sidebar-theme-btn flex items-center justify-center mx-auto">
-                    <Palette className="w-4 h-4" />
-                  </button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent side="right" align="end" className="w-48">
-                  {themes.map((t) => (
-                    <DropdownMenuItem
-                      key={t.id}
-                      onClick={() => setTheme(t.id)}
-                      className="flex items-center justify-between"
-                    >
-                      <div className="flex items-center gap-2">
-                        <span>{t.icon}</span>
-                        <span>{t.name}</span>
-                      </div>
-                      {theme === t.id && <Check className="w-4 h-4 text-primary" />}
-                    </DropdownMenuItem>
-                  ))}
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </TooltipTrigger>
-            <TooltipContent side="right" className="sidebar-tooltip">
-              Selecionar tema
-            </TooltipContent>
-          </Tooltip>
-        )}
-
-        {/* Collapse Toggle - Desktop only */}
-        <div className="mt-3 hidden md:flex justify-center">
-          {collapsed ? (
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <button
-                  onClick={() => setCollapsed(false)}
-                  className="w-10 h-10 rounded-lg sidebar-collapse-btn flex items-center justify-center"
-                >
-                  <ChevronRight className="w-4 h-4" />
-                </button>
-              </TooltipTrigger>
-              <TooltipContent side="right" className="sidebar-tooltip">
-                Expandir sidebar
-              </TooltipContent>
-            </Tooltip>
-          ) : (
-            <button
-              onClick={() => setCollapsed(true)}
-              className="w-full py-2 rounded-lg sidebar-collapse-btn flex items-center justify-center gap-2 text-xs"
-            >
-              <ChevronLeft className="w-4 h-4" />
-              Recolher
-            </button>
-          )}
-        </div>
-      </div>
-    </aside>
-    </>
   );
 }
