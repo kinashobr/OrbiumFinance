@@ -26,15 +26,15 @@ export function AccountCard({ summary, onMovimentar, onViewHistory, onEdit, onIm
   } = summary;
 
   const statusClasses = {
-    ok: 'stat-card-positive',
-    warning: 'stat-card-warning',
-    error: 'stat-card-negative'
+    ok: "stat-card-positive",
+    warning: "stat-card-warning",
+    error: "stat-card-negative",
   };
 
   const statusBadgeColors = {
-    ok: 'bg-success/20 text-success',
-    warning: 'bg-warning/20 text-warning',
-    error: 'bg-destructive/20 text-destructive'
+    ok: "bg-success/20 text-success",
+    warning: "bg-warning/20 text-warning",
+    error: "bg-destructive/20 text-destructive",
   };
 
   const balanceChange = currentBalance - initialBalance;
@@ -43,7 +43,7 @@ export function AccountCard({ summary, onMovimentar, onViewHistory, onEdit, onIm
   return (
     <Card
       className={cn(
-        "glass-card min-w-[72vw] xs:min-w-[68vw] sm:min-w-[240px] max-w-[280px] p-2.5 md:p-5 transition-all hover:shadow-md rounded-[1.75rem] border border-border/40 bg-card",
+        "glass-card min-w-[72vw] xs:min-w-[68vw] sm:min-w-[240px] max-w-[280px] p-3.5 md:p-6 transition-all hover:shadow-md rounded-[1.75rem] border border-border/40 bg-card",
         statusClasses[reconciliationStatus],
       )}
     >
