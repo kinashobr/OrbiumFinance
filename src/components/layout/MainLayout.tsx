@@ -31,7 +31,7 @@ export function MainLayout({
         {/* Desktop navigation drawer */}
         <Sidebar />
 
-        <main className={cn("flex-1 min-h-[calc(100vh-3.5rem)] px-3 md:px-6 pb-20 md:pb-8 pt-4 md:pt-6 transition-all duration-300", sidebarCollapsed ? "md:ml-16" : "md:ml-64")}>
+        <main className={cn("flex-1 min-h-[calc(100vh-3.5rem)] px-3 md:px-6 pb-20 md:pb-8 pt-4 md:pt-6 transition-all duration-300", sidebarCollapsed ? "md:ml-20" : "md:ml-[280px]")}>
           <div className="max-w-[min(1400px,95vw)] mx-auto space-y-4">{children}</div>
         </main>
       </div>
