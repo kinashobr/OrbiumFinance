@@ -126,7 +126,7 @@ export function BillsSidebarKPIs({ currentDate, totalPendingBills, totalPaidBill
       </div>
 
       {/* COMPROMISSOS */}
-      <div className="glass-card stat-card-negative p-3 bg-destructive/5 border-destructive/20">
+      <div className="glass-card stat-card-negative p-3">
         <div className="flex justify-between items-center mb-2 gap-2">
           <span className="cq-text-xs font-bold text-destructive uppercase tracking-tighter truncate">Compromissos</span>
           <span className="cq-text-base font-black text-destructive truncate">{formatCurrency(calculos.totalExpensesForMonth)}</span>
