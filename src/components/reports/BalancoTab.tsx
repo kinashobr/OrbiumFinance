@@ -340,12 +340,13 @@ export function BalancoTab({ dateRanges }: BalancoTabProps) {
 
   return (
     <div className="space-y-6">
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+      {/* Indicadores Patrimoniais (Resumo em cards padrão KpiCard) */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <ReportCard
           title="Total de Ativos"
           value={formatCurrency(balanco1.ativos.total)}
           status="success"
-          icon={<TrendingUp className="w-5 h-5" />}
+          icon={<TrendingUp className="w-6 h-6" />}
           tooltip="Soma de todos os bens e direitos: caixa, investimentos, veículos"
           delay={0}
           trend={variacoes.ativosTotal}
@@ -355,7 +356,7 @@ export function BalancoTab({ dateRanges }: BalancoTabProps) {
           title="Ativos Circulantes"
           value={formatCurrency(balanco1.ativos.circulantes.caixa + balanco1.ativos.circulantes.segurosAApropriar)}
           status="success"
-          icon={<Banknote className="w-5 h-5" />}
+          icon={<Banknote className="w-6 h-6" />}
           tooltip="Recursos de alta liquidez: contas correntes, poupança, reserva, renda fixa e seguros a apropriar"
           delay={50}
           trend={variacoes.circulantes}
@@ -365,7 +366,7 @@ export function BalancoTab({ dateRanges }: BalancoTabProps) {
           title="Investimentos Não Circulantes"
           value={formatCurrency(balanco1.ativos.naoCirculantes.investimentos)}
           status="success"
-          icon={<PiggyBank className="w-5 h-5" />}
+          icon={<PiggyBank className="w-6 h-6" />}
           tooltip="Criptoativos e Objetivos de longo prazo"
           delay={100}
           trend={variacoes.investimentos}
@@ -375,7 +376,7 @@ export function BalancoTab({ dateRanges }: BalancoTabProps) {
           title="Total de Passivos"
           value={formatCurrency(balanco1.passivos.total)}
           status={balanco1.passivos.total > 0 ? "danger" : "success"}
-          icon={<TrendingDown className="w-5 h-5" />}
+          icon={<TrendingDown className="w-6 h-6" />}
           tooltip="Soma de todas as obrigações: empréstimos, cartões de crédito e seguros a pagar"
           delay={150}
           trend={variacoes.passivosTotal}
@@ -385,7 +386,7 @@ export function BalancoTab({ dateRanges }: BalancoTabProps) {
           title="Patrimônio Líquido"
           value={formatCurrency(balanco1.patrimonioLiquido)}
           status={balanco1.patrimonioLiquido >= 0 ? "success" : "danger"}
-          icon={<Scale className="w-5 h-5" />}
+          icon={<Scale className="w-6 h-6" />}
           tooltip="Ativos - Passivos = Riqueza Líquida"
           delay={200}
           trend={variacoes.patrimonioLiquido}
@@ -397,7 +398,7 @@ export function BalancoTab({ dateRanges }: BalancoTabProps) {
           trend={variacoes.patrimonioLiquido}
           trendLabel="anterior"
           status={getTrend(variacoes.patrimonioLiquido || 0) === "up" ? "success" : "danger"}
-          icon={<LineChart className="w-5 h-5" />}
+          icon={<LineChart className="w-6 h-6" />}
           tooltip={`Variação do Patrimônio Líquido comparado ao período anterior. Diferença: ${formatCurrency(balanco1.patrimonioLiquido - balanco2.patrimonioLiquido)}`}
           delay={250}
         />
