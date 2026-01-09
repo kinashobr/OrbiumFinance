@@ -42,6 +42,7 @@ export function BottomNav() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [showAlerts, setShowAlerts] = useState(false);
   const [showNavDrawer, setShowNavDrawer] = useState(false);
+  const [showFinanceGroup, setShowFinanceGroup] = useState(false);
 
   const isPathActive = (path: string) => location.pathname === path;
   const isFinanceActive = FINANCE_ITEMS.some((item) => isPathActive(item.to));
@@ -121,13 +122,13 @@ export function BottomNav() {
               </span>
             </NavLink>
 
-            {/* Financeiro: abre drawer com as abas internas (Receitas & Despesas, Empréstimos, Relatórios) */}
+            {/* Grupo Financeiro: ao tocar, mostra as abas internas na própria navbar */}
             <button
               type="button"
-              onClick={() => setShowNavDrawer(true)}
+              onClick={() => setShowFinanceGroup((prev) => !prev)}
               className={cn(
                 "group flex flex-col items-center justify-center gap-0.5 rounded-full px-2.5 py-1.5 text-[11px] font-medium transition-colors min-w-[72px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 focus-visible:ring-offset-background",
-                isFinanceActive
+                showFinanceGroup || isFinanceActive
                   ? "text-primary"
                   : "text-muted-foreground hover:text-foreground",
               )}
@@ -135,7 +136,7 @@ export function BottomNav() {
               <div
                 className={cn(
                   "flex h-8 w-8 items-center justify-center rounded-full text-current transition-colors transition-transform group-hover:-translate-y-0.5",
-                  isFinanceActive && "bg-primary/10",
+                  (showFinanceGroup || isFinanceActive) && "bg-primary/10",
                 )}
               >
                 <Receipt className="h-4 w-4" />
@@ -252,6 +253,35 @@ export function BottomNav() {
           </div>
         </div>
 
+        {showFinanceGroup && (
+          <div className="flex items-center gap-1 px-3 pb-2 pt-1 border-t border-border/60 bg-background/60 rounded-b-[1.75rem]">
+            {FINANCE_ITEMS.map((item) => {
+              const Icon = item.icon;
+              const active = isPathActive(item.to);
+              return (
+                <button
+                  key={item.to}
+                  type="button"
+                  onClick={() => {
+                    navigate(item.to);
+                    setShowFinanceGroup(false);
+                  }}
+                  className={cn(
+                    "flex-1 flex flex-col items-center justify-center gap-0.5 rounded-full px-2 py-1.5 text-[10px] font-medium transition-colors",
+                    active
+                      ? "text-primary bg-primary/5"
+                      : "text-muted-foreground hover:text-foreground hover:bg-muted/60",
+                  )}
+                >
+                  <Icon className="h-3.5 w-3.5" />
+                  <span className="leading-tight text-center truncate max-w-[80px]">
+                    {item.label}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        )}
       </div>
 
       {/* Modal de alertas financeiros */}
