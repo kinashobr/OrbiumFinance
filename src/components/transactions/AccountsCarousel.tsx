@@ -132,32 +132,6 @@ export function AccountsCarousel({
         </div>
       )}
 
-      {/* Controles de seta flutuantes quando o header não é exibido (ex.: Receitas & Despesas) */}
-      {!showHeader && (
-        <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-1">
-          <div className="flex flex-col gap-1">
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-7 w-7 rounded-full bg-background/80 backdrop-blur-sm shadow-sm pointer-events-auto"
-              onClick={() => handleScroll('left')}
-              title="Rolar para esquerda"
-            >
-              <ChevronLeft className="w-4 h-4" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-7 w-7 rounded-full bg-background/80 backdrop-blur-sm shadow-sm pointer-events-auto"
-              onClick={() => handleScroll('right')}
-              title="Rolar para direita"
-            >
-              <ChevronRight className="w-4 h-4" />
-            </Button>
-          </div>
-        </div>
-      )}
-
       <DndContext
         sensors={sensors}
         collisionDetection={closestCenter}

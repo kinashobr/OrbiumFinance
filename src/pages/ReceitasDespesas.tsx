@@ -789,15 +789,20 @@ const ReceitasDespesas = () => {
           <div className="space-y-3">
             <div className="flex items-center justify-between px-1">
               <h2 className="text-sm font-semibold text-foreground">Contas Movimento</h2>
-              <div className="flex items-center gap-1 text-muted-foreground">
-                
-              </div>
+              <div className="flex items-center gap-1 text-muted-foreground" />
             </div>
             <div className="p-1">
-              <AccountsCarousel accounts={accountSummaries} onMovimentar={handleMovimentar} onViewHistory={handleViewStatement} onAddAccount={() => {
-              setEditingAccount(undefined);
-              setShowAccountModal(true);
-            }} onEditAccount={handleEditAccount} onImportAccount={handleImportExtrato} showHeader={false} />
+              <AccountsCarousel
+                accounts={accountSummaries}
+                onMovimentar={handleMovimentar}
+                onViewHistory={handleViewStatement}
+                onAddAccount={() => {
+                  setEditingAccount(undefined);
+                  setShowAccountModal(true);
+                }}
+                onEditAccount={handleEditAccount}
+                onImportAccount={handleImportExtrato}
+              />
             </div>
           </div>
 
