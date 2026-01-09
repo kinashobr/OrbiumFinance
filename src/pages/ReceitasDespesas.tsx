@@ -822,18 +822,12 @@ const ReceitasDespesas = () => {
         <section className="space-y-3 animate-fade-in">
           {/* Top app bar for this section */}
           <div className="flex items-center justify-between text-xs text-muted-foreground">
-            <div className="inline-flex items-center gap-3">
-              <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full">
-                <Menu className="h-4 w-4" />
-              </Button>
+            <div className="inline-flex items-start gap-3">
               <div className="flex flex-col">
                 <span className="text-sm font-semibold text-foreground">Receitas e Despesas</span>
                 <span className="text-[11px]">Visão Geral</span>
               </div>
             </div>
-            <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full">
-              <Bell className="h-4 w-4" />
-            </Button>
           </div>
 
           {/* Filtros em formato de chips */}
@@ -864,8 +858,8 @@ const ReceitasDespesas = () => {
           </div>
         </section>
 
-        {/* Main content: accounts on the left, KPIs on the right */}
-        <section className="grid gap-4 md:grid-cols-[minmax(0,1.6fr)_minmax(0,1.2fr)] lg:gap-6 animate-fade-in-up">
+        {/* Main content: accounts first, KPIs abaixo em todas as larguras */}
+        <section className="space-y-4 lg:space-y-6 animate-fade-in-up">
           {/* Contas Movimento */}
           <div className="space-y-3">
             <div className="flex items-center justify-between px-1">
