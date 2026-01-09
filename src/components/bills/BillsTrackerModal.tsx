@@ -1,14 +1,17 @@
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, useRef } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetClose } from "@/components/ui/sheet";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
 import { Plus, CalendarCheck, Repeat, Shield, Building2, DollarSign, Info, Settings, ShoppingCart, ChevronLeft, ChevronRight, X } from "lucide-react";
 import { useFinance } from "@/contexts/FinanceContext";
 import { BillTracker, PotentialFixedBill, BillSourceType, formatCurrency, generateBillId, TransactionLinks, OperationType, BillDisplayItem, ExternalPaidBill } from "@/types/finance";
 import { BillsTrackerList } from "./BillsTrackerList";
-import { BillsTrackerMobileList } from "./BillsTrackerMobileList";
+// import { BillsTrackerMobileList } from "./BillsTrackerMobileList";
 import { FixedBillsList } from "./FixedBillsList";
 import { BillsSidebarKPIs } from "./BillsSidebarKPIs";
 import { FixedBillSelectorModal } from "./FixedBillSelectorModal";
@@ -16,7 +19,7 @@ import { AddPurchaseInstallmentDialog } from "./AddPurchaseInstallmentDialog";
 import { format, startOfMonth, endOfMonth, subMonths, addMonths } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { toast } from "sonner";
-import { parseDateLocal } from "@/lib/utils";
+import { cn, parseDateLocal } from "@/lib/utils";
 import { ResizableDialogContent } from "../ui/ResizableDialogContent";
 import { useMediaQuery } from "@/hooks/useMediaQuery";
 
@@ -95,6 +98,104 @@ export function BillsTrackerModal({ open, onOpenChange }: BillsTrackerModalProps
         return acc;
     }, 0);
   }, [combinedBills, contasMovimento]);
+
+  // Helpers específicos para o layout mobile "Pixel Style"
+  const today = useMemo(() => new Date(), []);
+  const todayMid = useMemo(() => new Date(today.getFullYear(), today.getMonth(), today.getDate()), [today]);
+
+  const mobileBills = useMemo(() => {
+    // Mantém tracker e extrato, mas em lista única ordenada por data de vencimento / pagamento
+    const tracker = combinedBills.filter((b) => b.type === 'tracker') as BillTracker[];
+    const external = combinedBills.filter((b) => b.type === 'external_paid') as ExternalPaidBill[];
+
+    const pending = tracker
+      .filter((b) => !b.isExcluded && !b.isPaid)
+      .sort((a, b) => parseDateLocal(a.dueDate).getTime() - parseDateLocal(b.dueDate).getTime());
+
+    const paid = [...tracker.filter((b) => b.isPaid && !b.isExcluded), ...external].sort(
+      (a, b) =>
+        parseDateLocal((b as BillTracker | ExternalPaidBill).paymentDate || b.dueDate).getTime() -
+        parseDateLocal((a as BillTracker | ExternalPaidBill).paymentDate || a.dueDate).getTime()
+    );
+
+    return [...pending, ...paid];
+  }, [combinedBills]);
+
+  const upcomingInfo = useMemo(() => {
+    const unpaid = combinedBills.filter((b) => !b.isPaid);
+    if (!unpaid.length) {
+      return { total: 0, nextDate: null as Date | null };
+    }
+
+    const unpaidWithDates = unpaid.map((b) => parseDateLocal(b.dueDate));
+    const futureOrToday = unpaidWithDates.filter((d) => d >= todayMid);
+
+    const referenceDates = futureOrToday.length ? futureOrToday : unpaidWithDates;
+    const nextDate = referenceDates.reduce((min, d) => (d < min ? d : min), referenceDates[0]);
+
+    const total = unpaid.reduce((acc, b) => (parseDateLocal(b.dueDate) >= todayMid ? acc + b.expectedAmount : acc), 0);
+
+    return { total, nextDate };
+  }, [combinedBills, todayMid]);
+
+  const [newBillDescription, setNewBillDescription] = useState("");
+  const [newBillAmount, setNewBillAmount] = useState("");
+  const [newBillDueDate, setNewBillDueDate] = useState(format(currentDate, "yyyy-MM-dd"));
+  const newBillCardRef = useRef<HTMLDivElement | null>(null);
+
+  const parseAmount = (value: string): number => {
+    const parsed = parseFloat(value.replace(".", "").replace(",", "."));
+    return isNaN(parsed) ? 0 : parsed;
+  };
+
+  const formatAmountInput = (value: string) => {
+    const cleaned = value.replace(/[^\d,]/g, "");
+    const parts = cleaned.split(",");
+    if (parts.length > 2) return value;
+    return cleaned;
+  };
+
+  const handleAddAdHocBill = () => {
+    const amount = parseAmount(newBillAmount);
+    if (!newBillDescription || amount <= 0 || !newBillDueDate) return;
+
+    handleAddBill({
+      description: newBillDescription,
+      dueDate: newBillDueDate,
+      expectedAmount: amount,
+      sourceType: "ad_hoc",
+      suggestedAccountId: contasMovimento.find((c) => c.accountType === "corrente")?.id,
+      suggestedCategoryId: null,
+    });
+
+    setNewBillDescription("");
+    setNewBillAmount("");
+    setNewBillDueDate(format(currentDate, "yyyy-MM-dd"));
+  };
+
+  const scrollToNewBillCard = () => {
+    if (newBillCardRef.current) {
+      newBillCardRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  };
+
+  const getBillStatus = (bill: BillDisplayItem): "pago" | "atrasado" | "pendente" => {
+    if (bill.isPaid || bill.type === "external_paid") return "pago";
+    const due = parseDateLocal(bill.dueDate);
+    const dueMid = new Date(due.getFullYear(), due.getMonth(), due.getDate());
+    return dueMid < todayMid ? "atrasado" : "pendente";
+  };
+
+  const getBillStatusClasses = (status: "pago" | "atrasado" | "pendente") => {
+    switch (status) {
+      case "pago":
+        return "bg-success/10 text-success";
+      case "atrasado":
+        return "bg-destructive/10 text-destructive";
+      default:
+        return "bg-warning/10 text-warning";
+    }
+  };
 
   const handleMonthChange = (direction: 'prev' | 'next') => {
     setCurrentDate(prev => direction === 'prev' ? subMonths(prev, 1) : addMonths(prev, 1));
@@ -273,11 +374,12 @@ export function BillsTrackerModal({ open, onOpenChange }: BillsTrackerModalProps
     </>
   );
 
-  // Mobile: conteúdo em cards verticais (Pixel Style)
+  // Mobile: conteúdo em cards verticais (Pixel Style) – novo layout Contas a Pagar
   const renderMobileContent = () => (
     <>
+      {/* Cabeçalho de navegação de mês */}
       <div className="flex items-center justify-between mb-3 shrink-0 gap-2 flex-wrap">
-        <div className="flex items-center bg-muted/50 rounded-lg p-1 border border-border/50">
+        <div className="flex items-center bg-muted/50 rounded-2xl p-1 border border-border/50 shadow-sm">
           <Button
             variant="ghost"
             size="icon"
@@ -287,9 +389,12 @@ export function BillsTrackerModal({ open, onOpenChange }: BillsTrackerModalProps
             <ChevronLeft className="w-4 h-4" />
           </Button>
           <div className="px-2 min-w-[90px] text-center">
-            <span className="text-[11px] font-bold text-foreground capitalize">
-              {format(currentDate, "MMMM", { locale: ptBR })}
-            </span>
+            <p className="text-[10px] uppercase tracking-wide text-muted-foreground leading-tight">
+              {format(currentDate, "MMMM yyyy", { locale: ptBR })}
+            </p>
+            <p className="text-[11px] font-semibold text-foreground leading-tight">
+              Contas do mês
+            </p>
           </div>
           <Button
             variant="ghost"
@@ -300,53 +405,310 @@ export function BillsTrackerModal({ open, onOpenChange }: BillsTrackerModalProps
             <ChevronRight className="w-4 h-4" />
           </Button>
         </div>
-
-        <div className="flex items-center gap-1 flex-wrap">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setShowAddPurchaseDialog(true)}
-            className="text-[10px] h-8 px-2"
-          >
-            <ShoppingCart className="w-3 h-3 mr-1" />
-            <span>+ Parcela</span>
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => {
-              setFixedBillSelectorMode("current");
-              setShowFixedBillSelector(true);
-            }}
-            className="text-[10px] h-8 px-2"
-          >
-            <Settings className="w-3 h-3 mr-1" />
-            <span>Fixas</span>
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => {
-              setFixedBillSelectorMode("future");
-              setShowFixedBillSelector(true);
-            }}
-            className="text-[10px] h-8 px-2"
-          >
-            <Plus className="w-3 h-3 mr-1" />
-            <span>Adiant.</span>
-          </Button>
-        </div>
       </div>
 
-      <div className="flex-1 overflow-hidden flex flex-col">
-        <BillsTrackerMobileList
-          bills={combinedBills}
-          onUpdateBill={handleUpdateBill}
-          onDeleteBill={handleDeleteBill}
-          onAddBill={handleAddBill}
-          onTogglePaid={handleTogglePaid}
-          currentDate={currentDate}
-        />
+      {/* Conteúdo scrollável */}
+      <div className="flex-1 flex flex-col overflow-hidden gap-3">
+        <ScrollArea className="flex-1 overflow-y-auto pb-24 pr-1 animate-fade-in">
+          <div className="space-y-3">
+            {/* Cards-resumo principais */}
+            <div className="grid grid-cols-2 gap-3">
+              <div className="rounded-2xl bg-card shadow-lg shadow-primary/5 border border-border/60 px-3 py-2.5 flex flex-col justify-between">
+                <p className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground mb-0.5">
+                  Total a pagar
+                </p>
+                <p className="text-lg font-extrabold text-destructive leading-snug">
+                  {formatCurrency(totalUnpaidBills)}
+                </p>
+              </div>
+
+              <div className="rounded-2xl bg-card shadow-lg shadow-success/5 border border-border/60 px-3 py-2.5 flex flex-col justify-between">
+                <p className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground mb-0.5">
+                  Pago no mês
+                </p>
+                <p className="text-lg font-extrabold text-success leading-snug">
+                  {formatCurrency(totalPaidBills)}
+                </p>
+              </div>
+
+              <div className="col-span-2 rounded-2xl bg-card shadow-lg shadow-primary/5 border border-border/60 px-3 py-2.5 flex items-center justify-between">
+                <div>
+                  <p className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground mb-0.5">
+                    Próximos vencimentos
+                  </p>
+                  <p className="text-base font-extrabold text-primary leading-snug">
+                    {formatCurrency(upcomingInfo.total)}
+                  </p>
+                </div>
+                <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+                  <CalendarCheck className="w-3.5 h-3.5 text-primary" />
+                  <span>
+                    {upcomingInfo.nextDate
+                      ? format(upcomingInfo.nextDate, "dd/MM", { locale: ptBR })
+                      : "Sem contas"}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Nova Conta (compacto) */}
+            <div
+              ref={newBillCardRef}
+              className="glass-card p-3 rounded-2xl bg-muted/30 border border-border/60 shrink-0"
+            >
+              <div className="flex items-end gap-2">
+                <div className="flex-1 space-y-0.5">
+                  <p className="text-[10px] text-muted-foreground opacity-80">Nova conta</p>
+                  <Input
+                    value={newBillDescription}
+                    onChange={(e) => setNewBillDescription(e.target.value)}
+                    placeholder="Descrição..."
+                    className="h-8 text-xs rounded-lg"
+                  />
+                </div>
+                <div className="w-[90px] space-y-0.5">
+                  <p className="text-[10px] text-muted-foreground opacity-80">Valor</p>
+                  <Input
+                    type="text"
+                    inputMode="decimal"
+                    value={newBillAmount}
+                    onChange={(e) => setNewBillAmount(formatAmountInput(e.target.value))}
+                    placeholder="0,00"
+                    className="h-8 text-xs rounded-lg"
+                  />
+                </div>
+                <div className="w-[110px] space-y-0.5">
+                  <p className="text-[10px] text-muted-foreground opacity-80">Vencimento</p>
+                  <Input
+                    type="date"
+                    value={newBillDueDate}
+                    onChange={(e) => setNewBillDueDate(e.target.value)}
+                    className="h-8 text-[11px] rounded-lg"
+                  />
+                </div>
+                <Button
+                  onClick={handleAddAdHocBill}
+                  className="h-8 w-9 p-0"
+                  disabled={!newBillDescription || parseAmount(newBillAmount) <= 0}
+                >
+                  +
+                </Button>
+              </div>
+            </div>
+
+            {/* Contas do mês - lista principal */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between px-1">
+                <p className="text-[10px] font-semibold uppercase tracking-tight text-muted-foreground">
+                  Contas do mês
+                </p>
+                <div className="flex items-center gap-1 text-[10px] text-muted-foreground/80">
+                  <Info className="w-3 h-3" />
+                  <span>{mobileBills.length} itens</span>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                {mobileBills.map((bill) => {
+                  const status = getBillStatus(bill);
+                  const isTracker = bill.type === "tracker";
+                  const isPaid = bill.isPaid || bill.type === "external_paid";
+                  const dueDate = parseDateLocal(bill.dueDate);
+
+                  let Icon = DollarSign;
+                  let label = "Despesa";
+                  if (bill.sourceType === "loan_installment") {
+                    Icon = Building2;
+                    label = "Empréstimo";
+                  } else if (bill.sourceType === "insurance_installment") {
+                    Icon = Shield;
+                    label = "Seguro";
+                  } else if (bill.sourceType === "fixed_expense") {
+                    Icon = Repeat;
+                    label = "Fixa";
+                  } else if (bill.sourceType === "purchase_installment") {
+                    Icon = ShoppingCart;
+                    label = "Parcela";
+                  } else if (bill.sourceType === "ad_hoc") {
+                    Icon = Info;
+                    label = "Avulsa";
+                  }
+
+                  return (
+                    <div
+                      key={bill.id}
+                      className={cn(
+                        "rounded-2xl border px-3 py-2.5 flex gap-3 items-center bg-card/95 shadow-sm",
+                        "border-border/60",
+                        status === "atrasado" && "border-destructive/40 bg-destructive/5",
+                        status === "pago" && "border-success/40 bg-success/5",
+                        bill.type === "external_paid" && "opacity-80"
+                      )}
+                    >
+                      <div className="flex flex-col items-center gap-1">
+                        <div className="w-9 h-9 rounded-xl bg-muted/70 flex items-center justify-center">
+                          <Icon className="w-4 h-4 text-primary" />
+                        </div>
+                        <Badge
+                          variant="outline"
+                          className="px-1.5 py-0 h-5 text-[9px] border-0 font-semibold text-muted-foreground"
+                        >
+                          {label}
+                        </Badge>
+                      </div>
+
+                      <div className="flex-1 min-w-0 space-y-0.5">
+                        <p className="text-xs font-semibold text-foreground truncate">
+                          {bill.description}
+                        </p>
+                        <p className="text-[10px] text-muted-foreground truncate">
+                          {isTracker && bill.suggestedCategoryId
+                            ? (categoriasV2.find((c) => c.id === bill.suggestedCategoryId)?.label || "Sem categoria")
+                            : "Despesa do mês"}
+                        </p>
+                        <p className="text-[10px] text-muted-foreground/80">
+                          {status === "pago" ? "Pago em " : "Vence em "}
+                          {bill.paymentDate
+                            ? format(parseDateLocal(bill.paymentDate), "dd/MM", { locale: ptBR })
+                            : format(dueDate, "dd/MM", { locale: ptBR })}
+                        </p>
+                      </div>
+
+                      <div className="flex flex-col items-end justify-between gap-1 self-stretch">
+                        <p
+                          className={cn(
+                            "text-xs font-extrabold",
+                            status === "pago" || bill.type === "external_paid"
+                              ? "text-success"
+                              : status === "atrasado"
+                              ? "text-destructive"
+                              : "text-foreground"
+                          )}
+                        >
+                          {formatCurrency(bill.expectedAmount)}
+                        </p>
+
+                        <div className="flex items-center gap-2">
+                          {bill.type === "external_paid" ? (
+                            <Shield className="w-4 h-4 text-success" />
+                          ) : (
+                            <Checkbox
+                              className="h-4 w-4"
+                              checked={isPaid}
+                              onCheckedChange={(checked) =>
+                                handleTogglePaid(bill, checked as boolean)
+                              }
+                            />
+                          )}
+
+                          <Badge
+                            variant="outline"
+                            className={cn(
+                              "h-5 px-1.5 text-[9px] font-semibold border-0",
+                              getBillStatusClasses(status)
+                            )}
+                          >
+                            {status === "pago"
+                              ? "Concluído"
+                              : status === "atrasado"
+                              ? "Vencido"
+                              : "Pendente"}
+                          </Badge>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Procedimentos */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between px-1">
+                <p className="text-[10px] font-semibold uppercase tracking-tight text-muted-foreground">
+                  Procedimentos
+                </p>
+              </div>
+
+              <div className="rounded-2xl bg-muted/40 border border-border/60 p-3 space-y-2 shadow-sm">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
+                      <Settings className="w-4 h-4 text-primary" />
+                    </div>
+                    <div>
+                      <p className="text-xs font-semibold text-foreground">Contas fixas</p>
+                      <p className="text-[10px] text-muted-foreground">Gerenciadas automaticamente</p>
+                    </div>
+                  </div>
+                  <Badge variant="outline" className="text-[10px] px-2 py-0 h-5">
+                    {potentialFixedBills.length + futureFixedBills.length} itens
+                  </Badge>
+                </div>
+
+                <div className="grid grid-cols-3 gap-2 text-[10px]">
+                  <div className="rounded-xl bg-card/60 border border-border/60 p-2 flex flex-col gap-0.5">
+                    <span className="text-[9px] text-muted-foreground uppercase tracking-wide">
+                      Pendentes
+                    </span>
+                    <span className="text-xs font-semibold">
+                      {formatCurrency(totalUnpaidBills)}
+                    </span>
+                  </div>
+                  <div className="rounded-xl bg-card/60 border border-border/60 p-2 flex flex-col gap-0.5">
+                    <span className="text-[9px] text-muted-foreground uppercase tracking-wide">
+                      Pagas
+                    </span>
+                    <span className="text-xs font-semibold">
+                      {formatCurrency(totalPaidBills)}
+                    </span>
+                  </div>
+                  <div className="rounded-xl bg-card/60 border border-border/60 p-2 flex flex-col gap-0.5">
+                    <span className="text-[9px] text-muted-foreground uppercase tracking-wide">
+                      Fixas
+                    </span>
+                    <span className="text-xs font-semibold">
+                      {potentialFixedBills.length}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </ScrollArea>
+
+        {/* Rodapé com ações principais */}
+        <div className="pt-2 pb-3 border-t border-border/60 bg-background/95 flex items-center justify-between gap-3 px-1">
+          <Button
+            className="flex-1 h-10 rounded-full text-sm font-semibold shadow-expressive bg-primary text-primary-foreground hover:bg-primary/90"
+            onClick={scrollToNewBillCard}
+          >
+            <Plus className="w-4 h-4 mr-1" />
+            Adicionar conta
+          </Button>
+
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="icon"
+              className="h-9 w-9 rounded-full"
+              onClick={() => {
+                setFixedBillSelectorMode("current");
+                setShowFixedBillSelector(true);
+              }}
+            >
+              <Repeat className="w-4 h-4" />
+            </Button>
+            <Button
+              variant="outline"
+              size="icon"
+              className="h-9 w-9 rounded-full"
+              onClick={() => setShowAddPurchaseDialog(true)}
+            >
+              <ShoppingCart className="w-4 h-4" />
+            </Button>
+          </div>
+        </div>
       </div>
     </>
   );
