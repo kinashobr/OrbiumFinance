@@ -490,23 +490,7 @@ export function BillsTrackerModal({
 
             {/* Nova Conta (compacto) */}
             <div ref={newBillCardRef} className="glass-card p-3 rounded-2xl bg-muted/30 border border-border/60 shrink-0">
-              <div className="flex items-end gap-2">
-                <div className="flex-1 space-y-0.5">
-                  <p className="text-[10px] text-muted-foreground opacity-80">Nova conta</p>
-                  <Input value={newBillDescription} onChange={e => setNewBillDescription(e.target.value)} placeholder="Descrição..." className="h-8 text-xs rounded-lg" />
-                </div>
-                <div className="w-[90px] space-y-0.5">
-                  <p className="text-[10px] text-muted-foreground opacity-80">Valor</p>
-                  <Input type="text" inputMode="decimal" value={newBillAmount} onChange={e => setNewBillAmount(formatAmountInput(e.target.value))} placeholder="0,00" className="h-8 text-xs rounded-lg" />
-                </div>
-                <div className="w-[110px] space-y-0.5">
-                  <p className="text-[10px] text-muted-foreground opacity-80">Vencimento</p>
-                  <Input type="date" value={newBillDueDate} onChange={e => setNewBillDueDate(e.target.value)} className="h-8 text-[11px] rounded-lg" />
-                </div>
-                <Button onClick={handleAddAdHocBill} className="h-8 w-9 p-0" disabled={!newBillDescription || parseAmount(newBillAmount) <= 0}>
-                  +
-                </Button>
-              </div>
+              
             </div>
 
             {/* Contas do mês - lista principal */}
