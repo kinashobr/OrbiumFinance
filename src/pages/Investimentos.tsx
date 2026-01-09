@@ -278,69 +278,36 @@ const Investimentos = () => {
 
         {/* Summary Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          <Card className="glass-card stat-card-positive animate-fade-in-up">
-            <CardContent className="p-5">
-              <div className="flex items-start justify-between">
-                <div>
-                  <p className="text-sm text-muted-foreground font-medium">Patrimônio Total</p>
-                  <p className="text-2xl font-bold text-success mt-1">
-                    {formatCurrency(calculosPatrimonio.patrimonioTotal)}
-                  </p>
-                </div>
-                <div className="p-3 rounded-xl bg-success/10 text-success">
-                  <CircleDollarSign className="w-6 h-6" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+          <KpiCard
+            title="Patrimônio Total"
+            value={formatCurrency(calculosPatrimonio.patrimonioTotal)}
+            status="success"
+            icon={<CircleDollarSign className="w-6 h-6" />}
+          />
 
-          <Card className="glass-card stat-card-neutral animate-fade-in-up" style={{ animationDelay: "50ms" }}>
-            <CardContent className="p-5">
-              <div className="flex items-start justify-between">
-                <div>
-                  <p className="text-sm text-muted-foreground font-medium">Total Investido</p>
-                  <p className="text-2xl font-bold text-primary mt-1">
-                    {formatCurrency(calculosPatrimonio.patrimonioInvestimentos)}
-                  </p>
-                </div>
-                <div className="p-3 rounded-xl bg-primary/10 text-primary">
-                  <Landmark className="w-6 h-6" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+          <KpiCard
+            title="Total Investido"
+            value={formatCurrency(calculosPatrimonio.patrimonioInvestimentos)}
+            status="neutral"
+            icon={<Landmark className="w-6 h-6" />}
+            delay={50}
+          />
 
-          <Card className="glass-card stat-card-positive animate-fade-in-up" style={{ animationDelay: "100ms" }}>
-            <CardContent className="p-5">
-              <div className="flex items-start justify-between">
-                <div>
-                  <p className="text-sm text-muted-foreground font-medium">Rentabilidade Média</p>
-                  <p className="text-2xl font-bold text-success mt-1">
-                    {calculosPatrimonio.rentabilidadeMedia.toFixed(1)}%
-                  </p>
-                </div>
-                <div className="p-3 rounded-xl bg-success/10 text-success">
-                  <TrendingUp className="w-6 h-6" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+          <KpiCard
+            title="Rentabilidade Média"
+            value={`${calculosPatrimonio.rentabilidadeMedia.toFixed(1)}%`}
+            status="success"
+            icon={<TrendingUp className="w-6 h-6" />}
+            delay={100}
+          />
 
-          <Card className="glass-card stat-card-warning animate-fade-in-up" style={{ animationDelay: "150ms" }}>
-            <CardContent className="p-5">
-              <div className="flex items-start justify-between">
-                <div>
-                  <p className="text-sm text-muted-foreground font-medium">Exposição Cripto</p>
-                  <p className="text-2xl font-bold text-warning mt-1">
-                    {calculosPatrimonio.exposicaoCripto.toFixed(1)}%
-                  </p>
-                </div>
-                <div className="p-3 rounded-xl bg-warning/10 text-warning">
-                  <Bitcoin className="w-6 h-6" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+          <KpiCard
+            title="Exposição Cripto"
+            value={`${calculosPatrimonio.exposicaoCripto.toFixed(1)}%`}
+            status="warning"
+            icon={<Bitcoin className="w-6 h-6" />}
+            delay={150}
+          />
         </div>
 
         {/* Tabs */}
