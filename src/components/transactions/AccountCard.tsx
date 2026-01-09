@@ -99,18 +99,18 @@ export function AccountCard({ summary, onMovimentar, onViewHistory, onEdit, onIm
       </div>
 
       <div className="space-y-2 mb-3">
-        <div className="flex items-center justify-between pt-1 border-t border-border/30">
-          <span className="text-xs font-medium text-muted-foreground">Saldo Atual</span>
-          <span className="text-lg sm:text-xl font-extrabold text-foreground">{formatCurrency(currentBalance)}</span>
+        <div className="flex items-center justify-between gap-2 pt-1 border-t border-border/30">
+          <span className="text-[11px] sm:text-xs font-medium text-muted-foreground">Saldo Atual</span>
+          <span className="text-base sm:text-lg font-extrabold text-foreground">{formatCurrency(currentBalance)}</span>
         </div>
 
-        <div className="flex items-center justify-between text-[11px] text-muted-foreground">
+        <div className="flex items-center justify-between gap-2 text-[10px] sm:text-[11px] text-muted-foreground">
           <span>Saldo Inicial</span>
           <span>{formatCurrency(initialBalance)}</span>
         </div>
       </div>
 
-      <div className="flex items-center justify-between mb-3 text-[10px] sm:text-[11px]">
+      <div className="flex flex-wrap items-center justify-between gap-2 mb-3 text-[10px] sm:text-[11px]">
         <div className="flex items-center gap-1 text-success">
           <ArrowUpRight className="w-3 h-3" />
           <span className="font-semibold">{formatCurrency(totalIn)}</span>
