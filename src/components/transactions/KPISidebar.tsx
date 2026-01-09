@@ -60,14 +60,14 @@ export function KPISidebar({ transactions, categories }: KPISidebarProps) {
   return (
     <div className="space-y-4">
       {/* KPIs Principais */}
-      <Card className="glass-card">
-        <CardHeader className="pb-2">
-          <CardTitle className="text-sm font-medium flex items-center gap-2">
+      <Card className="rounded-[1.75rem] border border-border/40 bg-card shadow-sm px-3 py-3 md:px-4 md:py-4">
+        <CardHeader className="pb-2 px-0 pt-0">
+          <CardTitle className="text-sm font-semibold flex items-center gap-2 text-foreground">
             <BarChart3 className="w-4 h-4 text-primary" />
             Indicadores do Período
           </CardTitle>
         </CardHeader>
-        <CardContent className="space-y-4">
+        <CardContent className="space-y-4 pt-2 px-0 pb-0">
           {/* Receitas */}
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
@@ -153,20 +153,22 @@ export function KPISidebar({ transactions, categories }: KPISidebarProps) {
       </Card>
 
       {/* Previsão de Caixa */}
-      <Card className="glass-card">
-        <CardHeader className="pb-2">
-          <CardTitle className="text-sm font-medium flex items-center gap-2">
+      <Card className="rounded-[1.75rem] border border-border/40 bg-card shadow-sm px-3 py-3 md:px-4 md:py-4">
+        <CardHeader className="pb-2 px-0 pt-0">
+          <CardTitle className="text-sm font-semibold flex items-center gap-2 text-foreground">
             <Target className="w-4 h-4 text-primary" />
             Previsão de Caixa
           </CardTitle>
         </CardHeader>
-        <CardContent>
-          <div className="p-3 rounded-lg bg-muted/50 text-center">
-            <span className="text-xs text-muted-foreground block mb-1">Próximos 30 dias</span>
-            <span className={cn(
-              "font-bold text-xl",
-              projecao >= 0 ? "text-success" : "text-destructive"
-            )}>
+        <CardContent className="px-0 pb-0 pt-2">
+          <div className="rounded-[1.5rem] bg-muted/40 px-4 py-3 text-center">
+            <span className="text-[11px] text-muted-foreground block mb-1">Próximos 30 dias</span>
+            <span
+              className={cn(
+                "font-extrabold text-lg",
+                projecao >= 0 ? "text-success" : "text-destructive",
+              )}
+            >
               {formatCurrency(projecao)}
             </span>
           </div>
@@ -174,21 +176,23 @@ export function KPISidebar({ transactions, categories }: KPISidebarProps) {
       </Card>
 
       {/* Top Despesas */}
-      <Card className="glass-card">
-        <CardHeader className="pb-2">
-          <CardTitle className="text-sm font-medium flex items-center gap-2">
+      <Card className="rounded-[1.75rem] border border-border/40 bg-card shadow-sm px-3 py-3 md:px-4 md:py-4">
+        <CardHeader className="pb-2 px-0 pt-0">
+          <CardTitle className="text-sm font-semibold flex items-center gap-2 text-foreground">
             <TrendingDown className="w-4 h-4 text-destructive" />
             Top Despesas
           </CardTitle>
         </CardHeader>
-        <CardContent className="space-y-2">
+        <CardContent className="space-y-2 px-0 pb-0 pt-2">
           {despesasPorCategoria.map((cat, index) => (
             <div key={cat.id} className="flex items-center justify-between py-1">
               <div className="flex items-center gap-2">
                 <span className="text-xs font-medium text-muted-foreground w-4">{index + 1}</span>
-                <span className="text-sm">{cat.icon} {cat.label}</span>
+                <span className="text-sm text-foreground">
+                  {cat.icon} {cat.label}
+                </span>
               </div>
-              <span className="text-sm font-medium text-destructive">
+              <span className="text-sm font-semibold text-destructive">
                 {formatCurrency(cat.total)}
               </span>
             </div>
@@ -202,21 +206,23 @@ export function KPISidebar({ transactions, categories }: KPISidebarProps) {
       </Card>
 
       {/* Top Receitas */}
-      <Card className="glass-card">
-        <CardHeader className="pb-2">
-          <CardTitle className="text-sm font-medium flex items-center gap-2">
+      <Card className="rounded-[1.75rem] border border-border/40 bg-card shadow-sm px-3 py-3 md:px-4 md:py-4">
+        <CardHeader className="pb-2 px-0 pt-0">
+          <CardTitle className="text-sm font-semibold flex items-center gap-2 text-foreground">
             <TrendingUp className="w-4 h-4 text-success" />
             Fontes de Receita
           </CardTitle>
         </CardHeader>
-        <CardContent className="space-y-2">
+        <CardContent className="space-y-2 px-0 pb-0 pt-2">
           {receitasPorCategoria.map((cat, index) => (
             <div key={cat.id} className="flex items-center justify-between py-1">
               <div className="flex items-center gap-2">
                 <span className="text-xs font-medium text-muted-foreground w-4">{index + 1}</span>
-                <span className="text-sm">{cat.icon} {cat.label}</span>
+                <span className="text-sm text-foreground">
+                  {cat.icon} {cat.label}
+                </span>
               </div>
-              <span className="text-sm font-medium text-success">
+              <span className="text-sm font-semibold text-success">
                 {formatCurrency(cat.total)}
               </span>
             </div>
