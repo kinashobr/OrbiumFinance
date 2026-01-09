@@ -117,37 +117,61 @@ export function BottomNav() {
   };
 
   const renderRoot = () => (
-    <div className="flex items-center justify-between gap-2 px-2 py-1">
-      {ROOT_ITEMS.map((item) => {
-        const Icon = item.icon;
-        const hasActiveChild = NAV_SECTIONS[item.id].items.some((sub) =>
-          isPathActive(sub.to),
-        );
+    <div className="flex items-center justify-between gap-1 px-2 py-1">
+      <div className="flex flex-1 items-center justify-between gap-2">
+        {ROOT_ITEMS.map((item) => {
+          const Icon = item.icon;
+          const hasActiveChild = NAV_SECTIONS[item.id].items.some((sub) =>
+            isPathActive(sub.to),
+          );
 
-        return (
-          <button
-            key={item.id}
-            type="button"
-            onClick={() => handleRootClick(item.id)}
-            className={cn(
-              "flex flex-1 flex-col items-center justify-center gap-0.5 rounded-full px-2 py-1 text-[11px] font-medium transition-colors",
-              hasActiveChild
-                ? "text-primary"
-                : "text-muted-foreground hover:text-foreground",
-            )}
-          >
-            <div
+          return (
+            <button
+              key={item.id}
+              type="button"
+              onClick={() => handleRootClick(item.id)}
               className={cn(
-                "flex h-8 w-8 items-center justify-center rounded-full text-current transition-colors",
-                hasActiveChild && "bg-primary/10",
+                "flex flex-1 flex-col items-center justify-center gap-0.5 rounded-full px-2 py-1 text-[11px] font-medium transition-colors",
+                hasActiveChild
+                  ? "text-primary"
+                  : "text-muted-foreground hover:text-foreground",
               )}
             >
-              <Icon className="h-4 w-4" />
-            </div>
-            <span className="leading-none truncate">{item.label}</span>
-          </button>
-        );
-      })}
+              <div
+                className={cn(
+                  "flex h-8 w-8 items-center justify-center rounded-full text-current transition-colors",
+                  hasActiveChild && "bg-primary/10",
+                )}
+              >
+                <Icon className="h-4 w-4" />
+              </div>
+              <span className="leading-none truncate">{item.label}</span>
+            </button>
+          );
+        })}
+      </div>
+
+      <div className="flex items-center justify-end px-1">
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button
+              type="button"
+              className="inline-flex h-8 w-8 items-center justify-center rounded-full text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors"
+              aria-label="Mais opções"
+            >
+              <MoreVertical className="h-4 w-4" />
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent side="top" align="end" className="text-xs">
+            <DropdownMenuItem onClick={handleExport}>
+              <Download className="mr-2 h-3.5 w-3.5" /> Exportar backup
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={handleImportClick}>
+              <Upload className="mr-2 h-3.5 w-3.5" /> Importar JSON
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
     </div>
   );
 
