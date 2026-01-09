@@ -61,6 +61,7 @@ export function BillsTrackerModal({
   const [showFixedBillSelector, setShowFixedBillSelector] = useState(false);
   const [fixedBillSelectorMode, setFixedBillSelectorMode] = useState<'current' | 'future'>('current');
   const [showAddPurchaseDialog, setShowAddPurchaseDialog] = useState(false);
+  const [showNewBillModal, setShowNewBillModal] = useState(false);
   const trackerManagedBills = useMemo(() => getBillsForMonth(currentDate), [getBillsForMonth, currentDate]);
   const externalPaidBills = useMemo(() => getOtherPaidExpensesForMonth(currentDate), [getOtherPaidExpensesForMonth, currentDate]);
   const combinedBills: BillDisplayItem[] = useMemo(() => {
@@ -131,9 +132,9 @@ export function BillsTrackerModal({
     if (parts.length > 2) return value;
     return cleaned;
   };
-  const handleAddAdHocBill = () => {
+  const handleAddAdHocBill = (): boolean => {
     const amount = parseAmount(newBillAmount);
-    if (!newBillDescription || amount <= 0 || !newBillDueDate) return;
+    if (!newBillDescription || amount <= 0 || !newBillDueDate) return false;
     handleAddBill({
       description: newBillDescription,
       dueDate: newBillDueDate,
@@ -145,14 +146,8 @@ export function BillsTrackerModal({
     setNewBillDescription("");
     setNewBillAmount("");
     setNewBillDueDate(format(currentDate, "yyyy-MM-dd"));
-  };
-  const scrollToNewBillCard = () => {
-    if (newBillCardRef.current) {
-      newBillCardRef.current.scrollIntoView({
-        behavior: "smooth",
-        block: "start"
-      });
-    }
+    toast.success("Despesa adicionada ao Contas a Pagar.");
+    return true;
   };
   const getBillStatus = (bill: BillDisplayItem): "pago" | "atrasado" | "pendente" => {
     if (bill.isPaid || bill.type === "external_paid") return "pago";
@@ -631,19 +626,32 @@ export function BillsTrackerModal({
 
         {/* Rodapé com ações principais */}
         <div className="pt-2 pb-3 border-t border-border/60 bg-background/95 flex items-center justify-between gap-3 px-[10px] py-px">
-          <Button className="flex-1 h-10 rounded-full text-sm font-semibold shadow-expressive bg-primary text-primary-foreground hover:bg-primary/90" onClick={scrollToNewBillCard}>
+          <Button
+            className="flex-1 h-10 rounded-full text-sm font-semibold shadow-expressive bg-primary text-primary-foreground hover:bg-primary/90"
+            onClick={() => setShowNewBillModal(true)}
+          >
             <Plus className="w-4 h-4 mr-1" />
-            Adicionar conta
+            Nova despesa
           </Button>
 
           <div className="flex items-center gap-2">
-            <Button variant="outline" size="icon" className="h-9 w-9 rounded-full" onClick={() => {
-            setFixedBillSelectorMode("current");
-            setShowFixedBillSelector(true);
-          }}>
+            <Button
+              variant="outline"
+              size="icon"
+              className="h-9 w-9 rounded-full"
+              onClick={() => {
+                setFixedBillSelectorMode("current");
+                setShowFixedBillSelector(true);
+              }}
+            >
               <Repeat className="w-4 h-4" />
             </Button>
-            <Button variant="outline" size="icon" className="h-9 w-9 rounded-full" onClick={() => setShowAddPurchaseDialog(true)}>
+            <Button
+              variant="outline"
+              size="icon"
+              className="h-9 w-9 rounded-full"
+              onClick={() => setShowAddPurchaseDialog(true)}
+            >
               <ShoppingCart className="w-4 h-4" />
             </Button>
           </div>
@@ -713,6 +721,66 @@ export function BillsTrackerModal({
             </div>
           </ResizableDialogContent>
         </Dialog>)}
+
+      <Dialog open={showNewBillModal} onOpenChange={setShowNewBillModal}>
+        <DialogContent className="max-w-[min(95vw,24rem)]">
+          <DialogHeader>
+            <DialogTitle>Nova despesa do mês</DialogTitle>
+          </DialogHeader>
+
+          <div className="space-y-3 mt-2">
+            <div className="space-y-1">
+              <p className="text-[11px] font-medium text-muted-foreground">Descrição</p>
+              <Input
+                value={newBillDescription}
+                onChange={e => setNewBillDescription(e.target.value)}
+                placeholder="Ex.: Assinatura, boleto, conta pontual..."
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <p className="text-[11px] font-medium text-muted-foreground">Valor</p>
+                <Input
+                  value={newBillAmount}
+                  onChange={e => setNewBillAmount(formatAmountInput(e.target.value))}
+                  placeholder="0,00"
+                  inputMode="decimal"
+                />
+              </div>
+              <div className="space-y-1">
+                <p className="text-[11px] font-medium text-muted-foreground">Vencimento</p>
+                <Input
+                  type="date"
+                  value={newBillDueDate}
+                  onChange={e => setNewBillDueDate(e.target.value)}
+                />
+              </div>
+            </div>
+          </div>
+
+          <div className="mt-4 flex justify-end gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowNewBillModal(false)}
+            >
+              Cancelar
+            </Button>
+            <Button
+              size="sm"
+              className="rounded-full"
+              onClick={() => {
+                const ok = handleAddAdHocBill();
+                if (ok) setShowNewBillModal(false);
+              }}
+            >
+              <Plus className="w-4 h-4 mr-1" />
+              Salvar despesa
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       <FixedBillSelectorModal open={showFixedBillSelector} onOpenChange={setShowFixedBillSelector} mode={fixedBillSelectorMode} currentDate={currentDate} potentialFixedBills={fixedBillSelectorMode === 'current' ? potentialFixedBills : futureFixedBills} onToggleFixedBill={handleToggleFixedBill} />
       <AddPurchaseInstallmentDialog open={showAddPurchaseDialog} onOpenChange={setShowAddPurchaseDialog} currentDate={currentDate} />
