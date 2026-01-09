@@ -4,37 +4,37 @@
 
 @layer base {
   :root {
-    /* Material 3 – Light scheme base tokens */
-    --md-sys-color-primary: 262 83% 57%; /* M3 primary */
+    /* Paleta clara inspirada no modelo HTML – fundo bege, acentos marrom/esverdeado */
+    --md-sys-color-primary: 26 72% 42%; /* marrom-dourado principal */
     --md-sys-color-on-primary: 0 0% 100%;
-    --md-sys-color-primary-container: 267 100% 92%;
-    --md-sys-color-on-primary-container: 267 42% 23%;
+    --md-sys-color-primary-container: 28 70% 90%;
+    --md-sys-color-on-primary-container: 26 40% 22%;
 
-    --md-sys-color-secondary: 255 21% 49%;
-    --md-sys-color-on-secondary: 0 0% 100%;
-    --md-sys-color-secondary-container: 255 100% 94%;
-    --md-sys-color-on-secondary-container: 255 32% 22%;
+    --md-sys-color-secondary: 24 18% 38%;
+    --md-sys-color-on-secondary: 35 25% 96%;
+    --md-sys-color-secondary-container: 32 30% 92%;
+    --md-sys-color-on-secondary-container: 26 28% 20%;
 
-    --md-sys-color-surface: 0 0% 99%;
-    --md-sys-color-on-surface: 240 4% 16%;
-    --md-sys-color-surface-variant: 280 14% 94%;
-    --md-sys-color-on-surface-variant: 270 10% 38%;
+    --md-sys-color-surface: 35 41% 96%; /* fundo geral bege-claro */
+    --md-sys-color-on-surface: 26 25% 18%;
+    --md-sys-color-surface-variant: 35 30% 92%; /* cards levemente destacados */
+    --md-sys-color-on-surface-variant: 26 15% 32%;
 
-    --md-sys-color-outline: 270 10% 70%;
-    --md-sys-color-outline-variant: 280 18% 88%;
+    --md-sys-color-outline: 30 22% 80%;
+    --md-sys-color-outline-variant: 35 25% 88%;
 
-    --md-sys-color-error: 2 70% 50%;
+    --md-sys-color-error: 4 73% 50%;
     --md-sys-color-on-error: 0 0% 100%;
 
-    --md-sys-color-success: 142 52% 45%;
-    --md-sys-color-warning: 43 96% 56%;
-    --md-sys-color-info: 208 84% 56%;
+    --md-sys-color-success: 142 45% 38%; /* verde mais sóbrio, menos “neon” */
+    --md-sys-color-warning: 37 92% 54%;
+    --md-sys-color-info: 204 82% 45%;
 
     /* Mapping to app design tokens used in Tailwind */
     --background: var(--md-sys-color-surface);
     --foreground: var(--md-sys-color-on-surface);
 
-    --card: var(--md-sys-color-surface-variant);
+    --card: 35 35% 98%;
     --card-foreground: var(--md-sys-color-on-surface);
 
     --popover: var(--md-sys-color-surface);
@@ -69,7 +69,7 @@
 
     --radius: 0.9rem;
 
-    /* Sidebar tokens aligned to Material surfaces */
+    /* Sidebar tokens alinhados com o novo fundo bege */
     --sidebar-background: var(--md-sys-color-surface);
     --sidebar-foreground: var(--md-sys-color-on-surface);
     --sidebar-primary: var(--md-sys-color-primary);
@@ -85,39 +85,39 @@
 
   .dark,
   .theme-dark-neon {
-    /* Material 3 – Dark scheme base tokens */
-    --md-sys-color-primary: 262 80% 80%;
-    --md-sys-color-on-primary: 261 28% 26%;
-    --md-sys-color-primary-container: 262 41% 30%;
-    --md-sys-color-on-primary-container: 267 100% 92%;
+    /* Paleta escura correspondente – fundo quase preto com acentos dourados/verde */
+    --md-sys-color-primary: 26 72% 68%;
+    --md-sys-color-on-primary: 26 40% 16%;
+    --md-sys-color-primary-container: 26 45% 26%;
+    --md-sys-color-on-primary-container: 32 40% 92%;
 
-    --md-sys-color-secondary: 255 25% 75%;
-    --md-sys-color-on-secondary: 255 26% 20%;
-    --md-sys-color-secondary-container: 255 21% 32%;
-    --md-sys-color-on-secondary-container: 255 100% 94%;
+    --md-sys-color-secondary: 32 15% 70%;
+    --md-sys-color-on-secondary: 28 35% 12%;
+    --md-sys-color-secondary-container: 28 20% 26%;
+    --md-sys-color-on-secondary-container: 35 25% 94%;
 
-    --md-sys-color-surface: 240 6% 8%;
-    --md-sys-color-on-surface: 210 40% 98%;
-    --md-sys-color-surface-variant: 260 10% 20%;
-    --md-sys-color-on-surface-variant: 260 13% 75%;
+    --md-sys-color-surface: 210 18% 9%;
+    --md-sys-color-on-surface: 32 35% 96%;
+    --md-sys-color-surface-variant: 215 16% 16%;
+    --md-sys-color-on-surface-variant: 35 18% 75%;
 
-    --md-sys-color-outline: 260 15% 55%;
-    --md-sys-color-outline-variant: 260 12% 26%;
+    --md-sys-color-outline: 220 12% 36%;
+    --md-sys-color-outline-variant: 215 16% 22%;
 
-    --md-sys-color-error: 0 72% 60%;
-    --md-sys-color-on-error: 210 40% 98%;
+    --md-sys-color-error: 4 73% 60%;
+    --md-sys-color-on-error: 0 0% 100%;
 
-    --md-sys-color-success: 142 70% 55%;
-    --md-sys-color-warning: 43 96% 60%;
-    --md-sys-color-info: 198 93% 60%;
+    --md-sys-color-success: 142 50% 50%;
+    --md-sys-color-warning: 37 92% 58%;
+    --md-sys-color-info: 204 82% 55%;
 
     --background: var(--md-sys-color-surface);
     --foreground: var(--md-sys-color-on-surface);
 
-    --card: 240 6% 10%;
+    --card: 215 20% 11%;
     --card-foreground: var(--md-sys-color-on-surface);
 
-    --popover: 240 6% 8%;
+    --popover: 210 18% 9%;
     --popover-foreground: var(--md-sys-color-on-surface);
 
     --primary: var(--md-sys-color-primary);
