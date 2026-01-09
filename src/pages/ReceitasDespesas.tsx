@@ -831,17 +831,17 @@ const ReceitasDespesas = () => {
           </div>
 
           {/* Filtros em formato de chips */}
-          <div className="flex flex-wrap items-center gap-2 rounded-full bg-muted/40 px-2 py-2">
+          <div className="inline-flex flex-wrap items-center gap-2 rounded-full bg-card px-3 py-2 border border-border/60">
             <PeriodSelector
               initialRanges={dateRanges}
               onDateRangeChange={handlePeriodChange}
-              className="h-8 rounded-full border-none bg-card px-4 text-xs font-medium shadow-xs"
+              className="h-8 rounded-full border-none bg-muted px-4 text-xs font-medium text-foreground shadow-xs"
             />
             <Button
               variant="tonal"
               size="sm"
               onClick={() => setShowBillsTrackerModal(true)}
-              className="h-8 rounded-full gap-2 px-4 text-xs font-medium"
+              className="h-8 rounded-full gap-2 px-4 text-xs font-medium text-foreground"
             >
               <CalendarCheck className="h-4 w-4" />
               <span>Contas a Pagar</span>
@@ -850,7 +850,7 @@ const ReceitasDespesas = () => {
               variant="tonal"
               size="sm"
               onClick={() => setShowCategoryListModal(true)}
-              className="h-8 rounded-full gap-2 px-4 text-xs font-medium"
+              className="h-8 rounded-full gap-2 px-4 text-xs font-medium text-foreground"
             >
               <Tags className="h-4 w-4" />
               <span>Categorias</span>
