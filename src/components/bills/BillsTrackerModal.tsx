@@ -720,7 +720,7 @@ export function BillsTrackerModal({ open, onOpenChange }: BillsTrackerModalProps
     <>
       {isMobile ? (
         open ? (
-          <div className="fixed inset-0 z-40 bg-background flex flex-col">
+          <div className="fixed inset-0 z-50 bg-background flex flex-col">
             <header className="px-4 pt-3 pb-2 border-b shrink-0 bg-muted/20">
               <div className="flex items-center gap-3">
                 <div className="p-2 bg-primary/10 rounded-lg">
