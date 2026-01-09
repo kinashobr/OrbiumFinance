@@ -67,7 +67,14 @@
     --input: var(--md-sys-color-outline-variant);
     --ring: var(--md-sys-color-primary);
 
-    --radius: 0.9rem;
+    --radius: 1.5rem;
+
+    /* Neon accents (light theme, mais sutis) */
+    --neon-cyan: 174 72% 56%;   /* teal-400-ish */
+    --neon-purple: 267 83% 67%; /* purple-400-ish */
+    --neon-blue: 217 91% 60%;   /* blue-500-ish */
+    --neon-pink: 340 82% 72%;   /* pink-400-ish */
+    --neon-green: 142 71% 45%;  /* green-500-ish */
 
     /* Sidebar tokens alinhados com o novo fundo bege */
     --sidebar-background: var(--md-sys-color-surface);
@@ -104,30 +111,37 @@
     --md-sys-color-tertiary-container: 338 26% 34%; /* #633B48 */
     --md-sys-color-on-tertiary-container: 338 100% 92%; /* #FFD8E4 */
 
-    /* Superfícies */
-    --md-sys-color-surface: 270 7% 12%; /* #1C1B1F aproximado */
-    --md-sys-color-on-surface: 270 14% 89%; /* #E6E1E5 */
-    --md-sys-color-surface-variant: 270 6% 30%; /* #49454F */
-    --md-sys-color-on-surface-variant: 270 11% 80%; /* #CAC4D0 */
+    /* Superfícies – fundo quase preto marrom (#1C1917) */
+    --md-sys-color-surface: 24 11% 9%;  /* #1C1917 */
+    --md-sys-color-on-surface: 30 9% 90%; /* #E7E5E4 */
+    --md-sys-color-surface-variant: 24 9% 18%;
+    --md-sys-color-on-surface-variant: 27 9% 70%;
 
     /* Outline / divisores */
-    --md-sys-color-outline: 270 7% 58%; /* #938F99 */
+    --md-sys-color-outline: 24 8% 35%;
     --md-sys-color-outline-variant: 24 11% 25%; /* #44403C */
 
-    /* Estados semânticos */
-    --md-sys-color-error: 7 76% 83%; /* #F2B8B5 */
-    --md-sys-color-on-error: 10 63% 22%; /* #601410 aproximado */
+    /* Estados semânticos com acentos neon */
+    --md-sys-color-error: 0 91% 71%;   /* red-400 */
+    --md-sys-color-on-error: 0 0% 0%;
 
-    --md-sys-color-success: 154 58% 66%; /* #7DDBB0 */
-    --md-sys-color-warning: 35 100% 65%; /* #FFB74D */
-    --md-sys-color-info: 204 82% 55%; /* mantém azul atual para info */
+    --md-sys-color-success: 142 72% 45%; /* green-500 */
+    --md-sys-color-warning: 35 100% 65%; /* amber-400 */
+    --md-sys-color-info: 188 78% 59%;    /* cyan-400 */
+
+    /* Neon accents (dark theme, mais intensos) */
+    --neon-cyan: 188 78% 59%;
+    --neon-purple: 267 83% 67%;
+    --neon-blue: 217 91% 60%;
+    --neon-pink: 340 82% 72%;
+    --neon-green: 142 72% 45%;
 
     /* Mapeamento para tokens da aplicação */
     --background: var(--md-sys-color-surface);
     --foreground: var(--md-sys-color-on-surface);
 
     /* Cards levemente elevados em relação ao background */
-    --card: 270 7% 14%;
+    --card: 24 10% 11%;
     --card-foreground: var(--md-sys-color-on-surface);
 
     --popover: var(--md-sys-color-surface);
@@ -182,7 +196,7 @@
 
   body {
     @apply bg-background text-foreground antialiased;
-    font-family: "Roboto Flex", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    font-family: "Outfit", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   }
 }
 
@@ -212,8 +226,11 @@
   }
 
   .glass-card {
-    @apply bg-card/80 backdrop-blur-xl border border-border/40 rounded-xl;
-    box-shadow: 0 0 0 1px hsl(var(--border) / 0.1), 0 4px 20px hsl(var(--foreground) / 0.05), inset 0 1px 0 hsl(var(--background) / 0.5);
+    @apply bg-card/85 backdrop-blur-2xl border border-border/40 rounded-[1.5rem];
+    box-shadow:
+      0 18px 45px hsl(var(--background) / 0.65),
+      0 0 0 1px hsl(var(--border) / 0.4),
+      inset 0 1px 0 hsl(var(--background) / 0.6);
   }
 
   .stat-card-positive { border-left: 1px solid hsl(var(--success)); }

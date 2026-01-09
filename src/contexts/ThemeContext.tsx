@@ -19,21 +19,33 @@ const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
   const [theme, setThemeState] = useState<ThemeType>(() => {
-    const saved = localStorage.getItem("app-theme");
-    // Default to brown-light
-    return (saved as ThemeType) || "brown-light";
+    const saved = localStorage.getItem("app-theme") as ThemeType | null;
+
+    if (saved === "brown-light" || saved === "dark-neon") {
+      return saved;
+    }
+
+    // Fallback: seguir preferência do sistema
+    if (window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches) {
+      return "dark-neon";
+    }
+
+    return "brown-light";
   });
 
   useEffect(() => {
     localStorage.setItem("app-theme", theme);
-    
+
+    const root = document.documentElement;
+
     // Remove all previous theme classes
-    document.documentElement.classList.remove(
-      "theme-brown-light",
-      "theme-dark-neon"
-    );
-    // Add current theme class
-    document.documentElement.classList.add(`theme-${theme}`);
+    root.classList.remove("theme-brown-light", "theme-dark-neon", "dark");
+
+    // Add current theme class + dark helper when necessário
+    root.classList.add(`theme-${theme}`);
+    if (theme === "dark-neon") {
+      root.classList.add("dark");
+    }
   }, [theme]);
 
   const setTheme = (newTheme: ThemeType) => {
