@@ -1,4 +1,4 @@
-import { NavLink, useLocation } from "react-router-dom";
+import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import {
   LayoutDashboard,
   Receipt,
@@ -17,23 +17,29 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { useRef } from "react";
+import { useRef, useState } from "react";
+import { useTheme } from "@/contexts/ThemeContext";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { SidebarAlertas } from "@/components/dashboard/SidebarAlertas";
 
 const NAV_ITEMS = [
   { label: "Dashboard", to: "/", icon: LayoutDashboard },
   { label: "Receitas & Despesas", to: "/receitas-despesas", icon: Receipt },
-  { label: "Emprstimos", to: "/emprestimos", icon: CreditCard },
-  { label: "Relatrios", to: "/relatorios", icon: BarChart3 },
-  { label: "Carteira Geral", to: "/investimentos", icon: TrendingUp },
-  { label: "Veculos", to: "/veiculos", icon: Car },
+  { label: "Empréstimos", to: "/emprestimos", icon: CreditCard },
+  { label: "Relatórios", to: "/relatorios", icon: BarChart3 },
 ] as const;
 
 export function BottomNav() {
   const location = useLocation();
+  const navigate = useNavigate();
   const { exportData, importData } = useFinance();
+  const { theme, setTheme, themes } = useTheme();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [showAlerts, setShowAlerts] = useState(false);
 
   const isPathActive = (path: string) => location.pathname === path;
 
