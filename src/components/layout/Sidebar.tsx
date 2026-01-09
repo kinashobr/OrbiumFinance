@@ -228,36 +228,210 @@ export function Sidebar() {
   };
 
   return (
-    <>
-      {/* Mobile Header with Hamburger */}
-      <header className="md:hidden fixed top-0 left-0 right-0 z-50 h-14 bg-background border-b flex items-center justify-between px-4">
-        <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-lg sidebar-logo-bg flex items-center justify-center">
-            <CircleDollarSign className="w-4 h-4 sidebar-logo-icon" />
-          </div>
-          <span className="font-bold text-sm">Orbium Finance</span>
-        </div>
-        <button
-          onClick={() => setMobileOpen(!mobileOpen)}
-          className="w-10 h-10 rounded-lg flex items-center justify-center hover:bg-muted transition-colors"
-          aria-label={mobileOpen ? "Fechar menu" : "Abrir menu"}
-        >
-          {mobileOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
-        </button>
-      </header>
-
-      {/* Mobile Overlay */}
-      {mobileOpen && (
-        <div
-          className="md:hidden fixed inset-0 z-40 bg-black/60 backdrop-blur-sm"
-          onClick={() => setMobileOpen(false)}
-        />
+    <aside
+      className={cn(
+        "hidden md:flex fixed left-0 top-0 z-40 h-screen sidebar-bg border-r sidebar-border transition-all duration-300 ease-in-out flex-col",
+        collapsed ? "w-16" : "w-64",
       )}
+    >
+      {/* Header - Logo & App Name (Desktop) */}
+      <div className="h-16 flex items-center justify-between px-4 border-b sidebar-border shrink-0">
+        {!collapsed ? (
+          <div className="flex items-center gap-3 overflow-hidden">
+            <div className="w-9 h-9 rounded-xl sidebar-logo-bg flex items-center justify-center shrink-0">
+              <CircleDollarSign className="w-5 h-5 sidebar-logo-icon" />
+            </div>
+            <div className="flex flex-col min-w-0">
+              <span className="font-bold text-sm sidebar-brand-text truncate">Orbium</span>
+              <span className="text-xs sidebar-brand-subtitle truncate">Finance</span>
+            </div>
+          </div>
+        ) : (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <div className="w-9 h-9 rounded-xl sidebar-logo-bg flex items-center justify-center mx-auto cursor-pointer">
+                <CircleDollarSign className="w-5 h-5 sidebar-logo-icon" />
+              </div>
+            </TooltipTrigger>
+            <TooltipContent side="right" className="sidebar-tooltip">
+              Orbium Finance
+            </TooltipContent>
+          </Tooltip>
+        )}
+      </div>
 
-      {/* Sidebar */}
-      <aside
-        className={cn(
-          "fixed left-0 top-0 z-50 h-screen sidebar-bg border-r sidebar-border transition-all duration-300 ease-in-out flex flex-col",
+      {/* Navigation - Scrollable */}
+      <div className="flex-1 overflow-y-auto scrollbar-thin py-4 px-2">
+        <nav className="flex flex-col gap-2">
+          {navSections.map((section) => {
+            const SectionIcon = section.icon;
+            const isOpen = openSections.includes(section.id);
+            const hasActiveItem = section.items.some((item) => isPathActive(item.path));
+
+            if (collapsed) {
+              return (
+                <div key={section.id} className="flex flex-col gap-1">
+                  {section.items.map((item) => (
+                    <NavItem
+                      key={item.path}
+                      item={item}
+                      isActive={isPathActive(item.path)}
+                    />
+                  ))}
+                </div>
+              );
+            }
+
+            return (
+              <Collapsible
+                key={section.id}
+                open={isOpen}
+                onOpenChange={() => toggleSection(section.id)}
+              >
+                <CollapsibleTrigger asChild>
+                  <button
+                    className={cn(
+                      "w-full flex items-center gap-2 px-3 py-2 rounded-lg transition-colors text-left",
+                      hasActiveItem
+                        ? "sidebar-section-active"
+                        : "sidebar-section-header",
+                    )}
+                  >
+                    <SectionIcon className="w-4 h-4" />
+                    <span className="font-semibold text-xs uppercase tracking-wider flex-1">
+                      {section.title}
+                    </span>
+                    <ChevronDown
+                      className={cn(
+                        "w-4 h-4 transition-transform",
+                        isOpen && "rotate-180",
+                      )}
+                    />
+                  </button>
+                </CollapsibleTrigger>
+                <CollapsibleContent className="mt-1 space-y-1 pl-1">
+                  {section.items.map((item) => (
+                    <NavItem
+                      key={item.path}
+                      item={item}
+                      isActive={isPathActive(item.path)}
+                    />
+                  ))}
+                </CollapsibleContent>
+              </Collapsible>
+            );
+          })}
+        </nav>
+
+        {/* Alertas contextuais */}
+        <div className="mt-4">
+          <SidebarAlertas collapsed={collapsed} />
+        </div>
+      </div>
+
+      {/* Footer actions */}
+      <div className="border-t sidebar-border px-3 py-3 space-y-3">
+        {/* Export / Import */}
+        <div className="flex flex-col gap-2">
+          <Button
+            type="button"
+            variant="outlined"
+            size="sm"
+            className="w-full justify-start gap-2"
+            onClick={handleExport}
+          >
+            <Download className="w-4 h-4" />
+            {!collapsed && <span className="text-xs font-medium">Exportar dados</span>}
+          </Button>
+
+          <Button
+            type="button"
+            variant="text"
+            size="sm"
+            className="w-full justify-start gap-2"
+            onClick={handleImportClick}
+          >
+            <Upload className="w-4 h-4" />
+            {!collapsed && <span className="text-xs font-medium">Importar JSON</span>}
+          </Button>
+
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="application/json"
+            className="hidden"
+            onChange={handleFileChange}
+          />
+        </div>
+
+        {/* Tema */}
+        <div className="flex items-center justify-between gap-2">
+          {!collapsed && (
+            <span className="text-[11px] font-medium text-muted-foreground">
+              Tema
+            </span>
+          )}
+
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                type="button"
+                size="icon"
+                variant="ghost"
+                className="h-8 w-8 rounded-full border border-border/60"
+              >
+                <Palette className="w-4 h-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-40">
+              {themes.map((t) => (
+                <DropdownMenuItem
+                  key={t.id}
+                  className="flex items-center justify-between gap-2 text-xs"
+                  onClick={() => setTheme(t.id)}
+                >
+                  <span>{t.label}</span>
+                  {theme === t.id && <Check className="w-4 h-4 text-primary" />}
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+
+        {/* Collapse Toggle */}
+        <div className="pt-1">
+          {collapsed ? (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  type="button"
+                  onClick={() => setCollapsed(false)}
+                  className="w-9 h-9 rounded-full sidebar-collapse-btn flex items-center justify-center mx-auto"
+                >
+                  <ChevronRight className="w-4 h-4" />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent side="right" className="sidebar-tooltip">
+                Expandir sidebar
+              </TooltipContent>
+            </Tooltip>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setCollapsed(true)}
+              className="w-full py-2 rounded-full sidebar-collapse-btn flex items-center justify-center gap-2 text-xs"
+            >
+              <ChevronLeft className="w-4 h-4" />
+              Recolher
+            </button>
+          )}
+        </div>
+      </div>
+    </aside>
+  );
+}
+
+
           // Desktop styles
           "hidden md:flex",
           collapsed ? "md:w-16" : "md:w-64",
