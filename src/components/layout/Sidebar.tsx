@@ -201,27 +201,37 @@ export function Sidebar() {
   return (
     <aside
       className={cn(
-        "hidden md:flex fixed left-4 top-4 bottom-4 z-40 glass-card rounded-[1.75rem] border border-border/40 bg-card shadow-lg transition-all duration-300 ease-in-out flex-col",
-        collapsed ? "w-16" : "w-64",
+        "hidden md:flex fixed left-4 top-4 bottom-4 z-40 glass-card rounded-[2rem] border border-border/40 bg-card shadow-lg transition-all duration-300 ease-in-out flex-col",
+        collapsed ? "w-16" : "w-60",
       )}
     >
       {/* Header - Logo & App Name (Desktop) */}
-      <div className="h-16 flex items-center justify-between px-4 border-b sidebar-border shrink-0">
+      <div className="h-16 flex items-center px-4 shrink-0">
         {!collapsed ? (
-          <div className="flex items-center gap-3 overflow-hidden">
-            <div className="w-9 h-9 rounded-xl sidebar-logo-bg flex items-center justify-center shrink-0">
-              <CircleDollarSign className="w-5 h-5 sidebar-logo-icon" />
+          <div className="flex items-center justify-between w-full gap-2 overflow-hidden">
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="w-9 h-9 rounded-2xl sidebar-logo-bg flex items-center justify-center shrink-0">
+                <Wallet className="w-5 h-5 sidebar-logo-icon" />
+              </div>
+              <div className="flex flex-col min-w-0">
+                <span className="font-bold text-sm sidebar-brand-text truncate">Orbium</span>
+                <span className="text-[11px] sidebar-brand-subtitle truncate">Finance pessoal</span>
+              </div>
             </div>
-            <div className="flex flex-col min-w-0">
-              <span className="font-bold text-sm sidebar-brand-text truncate">Orbium</span>
-              <span className="text-xs sidebar-brand-subtitle truncate">Finance</span>
+            <div className="ml-2 flex items-center">
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-border/60 bg-muted/70 px-2.5 py-1 text-[11px] font-medium text-muted-foreground">
+                <span className="text-xs leading-none">{themes.find(t => t.id === theme)?.icon}</span>
+                <span className="leading-none truncate max-w-[96px]">
+                  {themes.find(t => t.id === theme)?.name ?? "Marrom Claro"}
+                </span>
+              </span>
             </div>
           </div>
         ) : (
           <Tooltip>
             <TooltipTrigger asChild>
-              <div className="w-9 h-9 rounded-xl sidebar-logo-bg flex items-center justify-center mx-auto cursor-pointer">
-                <CircleDollarSign className="w-5 h-5 sidebar-logo-icon" />
+              <div className="w-10 h-10 rounded-2xl sidebar-logo-bg flex items-center justify-center mx-auto cursor-pointer">
+                <Wallet className="w-5 h-5 sidebar-logo-icon" />
               </div>
             </TooltipTrigger>
             <TooltipContent side="right" className="sidebar-tooltip">
