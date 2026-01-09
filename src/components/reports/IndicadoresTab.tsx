@@ -21,11 +21,11 @@ import {
 } from "lucide-react";
 import { useFinance } from "@/contexts/FinanceContext";
 import { ExpandablePanel } from "./ExpandablePanel";
-import { DetailedIndicatorBadge } from "./DetailedIndicatorBadge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { ReportCard } from "./ReportCard";
 import {
   Dialog,
   DialogContent,
@@ -616,16 +616,15 @@ export function IndicadoresTab({ dateRanges }: IndicadoresTabProps) {
         >
           {indicadores1.custom.map((ci) => (
             <div key={ci.id} className="relative group/badge">
-              <DetailedIndicatorBadge
+              <ReportCard
                 title={ci.nome}
                 value={formatValue(ci.calculatedValue, ci.formato)}
                 status={ci.status}
-                trend={getDisplayTrend(ci.id, 'custom').trend}
-                trendLabel={range2.from ? `${getDisplayTrend(ci.id, 'custom').percent.toFixed(1)}% vs anterior` : undefined}
-                descricao={ci.descricao}
-                formula={ci.formula}
-                sparklineData={generateSparkline(ci.calculatedValue, getDisplayTrend(ci.id, 'custom').trend)}
-                icon={<Activity className="w-4 h-4" />}
+                trend={range2.from ? getDisplayTrend(ci.id, 'custom').percent : undefined}
+                trendLabel={range2.from ? "período anterior" : undefined}
+                tooltip={ci.descricao || ci.formula ? `${ci.descricao || ''}${ci.formula ? ` Fórmula: ${ci.formula}` : ''}` : undefined}
+                icon={<Activity className="w-6 h-6" />}
+                size="sm"
               />
               <Button
                 variant="ghost"
@@ -645,49 +644,45 @@ export function IndicadoresTab({ dateRanges }: IndicadoresTabProps) {
         subtitle="Capacidade de pagamento de curto prazo"
         icon={<Droplets className="w-4 h-4" />}
       >
-        <DetailedIndicatorBadge
+        <ReportCard
           title="Liquidez Corrente"
           value={formatRatio(indicadores1.liquidez.corrente.valor)}
           status={indicadores1.liquidez.corrente.status}
-          trend={getDisplayTrend('corrente', 'liquidez').trend}
-          trendLabel={range2.from ? `${getDisplayTrend('corrente', 'liquidez').percent.toFixed(1)}% vs anterior` : undefined}
-          descricao="Mede a capacidade de pagar obrigações de curto prazo com ativos circulantes. Valor ideal: acima de 1.5x"
-          formula="Ativo Circulante / Passivo Circulante (12 meses)"
-          sparklineData={generateSparkline(indicadores1.liquidez.corrente.valor, getDisplayTrend('corrente', 'liquidez').trend)}
-          icon={<Droplets className="w-4 h-4" />}
+          trend={range2.from ? getDisplayTrend('corrente', 'liquidez').percent : undefined}
+          trendLabel={range2.from ? "período anterior" : undefined}
+          tooltip="Capacidade de pagar obrigações de curto prazo com ativos circulantes. Ideal: acima de 1.5x. Fórmula: Ativo Circulante / Passivo Circulante (12 meses)."
+          icon={<Droplets className="w-6 h-6" />}
+          size="sm"
         />
-        <DetailedIndicatorBadge
+        <ReportCard
           title="Liquidez Seca"
           value={formatRatio(indicadores1.liquidez.seca.valor)}
           status={indicadores1.liquidez.seca.status}
-          trend={getDisplayTrend('seca', 'liquidez').trend}
-          trendLabel={range2.from ? `${getDisplayTrend('seca', 'liquidez').percent.toFixed(1)}% vs anterior` : undefined}
-          descricao="Capacidade de cobrir dívidas imediatas removendo ativos de menor liquidez (como parte dos investimentos)."
-          formula="(Ativo Circulante - Investimentos Estáticos) / Passivo Circulante"
-          sparklineData={generateSparkline(indicadores1.liquidez.seca.valor, getDisplayTrend('seca', 'liquidez').trend)}
-          icon={<Droplets className="w-4 h-4" />}
+          trend={range2.from ? getDisplayTrend('seca', 'liquidez').percent : undefined}
+          trendLabel={range2.from ? "período anterior" : undefined}
+          tooltip="Capacidade de cobrir dívidas imediatas removendo parte dos investimentos de menor liquidez. Fórmula: (Ativo Circulante - Investimentos Estáticos) / Passivo Circulante."
+          icon={<Droplets className="w-6 h-6" />}
+          size="sm"
         />
-        <DetailedIndicatorBadge
+        <ReportCard
           title="Solvência Imediata"
           value={formatRatio(indicadores1.liquidez.solvenciaImediata.valor)}
           status={indicadores1.liquidez.solvenciaImediata.status}
-          trend={getDisplayTrend('solvenciaImediata', 'liquidez').trend}
-          trendLabel={range2.from ? `${getDisplayTrend('solvenciaImediata', 'liquidez').percent.toFixed(1)}% vs anterior` : undefined}
-          descricao="Capacidade de cobrir dívidas imediatas e gastos do mês apenas com saldo em conta corrente. Ideal: acima de 1x"
-          formula="Saldo Conta Corrente / (Dívidas Cartão + Gastos Médios Mês)"
-          sparklineData={generateSparkline(indicadores1.liquidez.solvenciaImediata.valor, getDisplayTrend('solvenciaImediata', 'liquidez').trend)}
-          icon={<Zap className="w-4 h-4" />}
+          trend={range2.from ? getDisplayTrend('solvenciaImediata', 'liquidez').percent : undefined}
+          trendLabel={range2.from ? "período anterior" : undefined}
+          tooltip="Capacidade de cobrir dívidas imediatas e gastos do mês apenas com saldo em conta corrente. Ideal: acima de 1x."
+          icon={<Zap className="w-6 h-6" />}
+          size="sm"
         />
-        <DetailedIndicatorBadge
+        <ReportCard
           title="Liquidez Geral"
           value={formatRatio(indicadores1.liquidez.geral.valor)}
           status={indicadores1.liquidez.geral.status}
-          trend={getDisplayTrend('geral', 'liquidez').trend}
-          trendLabel={range2.from ? `${getDisplayTrend('geral', 'liquidez').percent.toFixed(1)}% vs anterior` : undefined}
-          descricao="Capacidade de pagar todas as dívidas com todos os ativos. Visão de longo prazo. Ideal: acima de 2x"
-          formula="Ativo Total / Passivo Total (na data final)"
-          sparklineData={generateSparkline(indicadores1.liquidez.geral.valor, getDisplayTrend('geral', 'liquidez').trend)}
-          icon={<Shield className="w-4 h-4" />}
+          trend={range2.from ? getDisplayTrend('geral', 'liquidez').percent : undefined}
+          trendLabel={range2.from ? "período anterior" : undefined}
+          tooltip="Capacidade de pagar todas as dívidas com todos os ativos. Visão de longo prazo. Ideal: acima de 2x. Fórmula: Ativo Total / Passivo Total."
+          icon={<Shield className="w-6 h-6" />}
+          size="sm"
         />
       </IndicatorGroup>
 
@@ -696,49 +691,45 @@ export function IndicadoresTab({ dateRanges }: IndicadoresTabProps) {
         subtitle="Nível de comprometimento com dívidas"
         icon={<Shield className="w-4 h-4" />}
       >
-        <DetailedIndicatorBadge
+        <ReportCard
           title="Endividamento Total"
           value={formatPercent(indicadores1.endividamento.total.valor)}
           status={indicadores1.endividamento.total.status}
-          trend={getDisplayTrend('total', 'endividamento').trend}
-          trendLabel={range2.from ? `${getDisplayTrend('total', 'endividamento').percent.toFixed(1)}% vs anterior` : undefined}
-          descricao="Percentual dos ativos financiados por terceiros (dívidas). Quanto menor, melhor. Ideal: abaixo de 30%"
-          formula="(Passivo Total / Ativo Total) × 100 (na data final)"
-          sparklineData={generateSparkline(indicadores1.endividamento.total.valor, getDisplayTrend('total', 'endividamento').trend)}
-          icon={<Shield className="w-4 h-4" />}
+          trend={range2.from ? getDisplayTrend('total', 'endividamento').percent : undefined}
+          trendLabel={range2.from ? "período anterior" : undefined}
+          tooltip="Percentual dos ativos financiados por terceiros. Quanto menor, melhor. Ideal: abaixo de 30%. Fórmula: (Passivo Total / Ativo Total) × 100."
+          icon={<Shield className="w-6 h-6" />}
+          size="sm"
         />
-        <DetailedIndicatorBadge
+        <ReportCard
           title="Dívida / Patrimônio"
           value={formatPercent(indicadores1.endividamento.dividaPL.valor)}
           status={indicadores1.endividamento.dividaPL.status}
-          trend={getDisplayTrend('dividaPL', 'endividamento').trend}
-          trendLabel={range2.from ? `${getDisplayTrend('dividaPL', 'endividamento').percent.toFixed(1)}% vs anterior` : undefined}
-          descricao="Relação entre capital de terceiros e capital próprio. Indica alavancagem. Ideal: abaixo de 50%"
-          formula="(Dívida Total / Patrimônio Líquido) × 100 (na data final)"
-          sparklineData={generateSparkline(indicadores1.endividamento.dividaPL.valor, getDisplayTrend('dividaPL', 'endividamento').trend)}
-          icon={<Shield className="w-4 h-4" />}
+          trend={range2.from ? getDisplayTrend('dividaPL', 'endividamento').percent : undefined}
+          trendLabel={range2.from ? "período anterior" : undefined}
+          tooltip="Relação entre capital de terceiros e capital próprio. Ideal: abaixo de 50%. Fórmula: (Dívida Total / Patrimônio Líquido) × 100."
+          icon={<Shield className="w-6 h-6" />}
+          size="sm"
         />
-        <DetailedIndicatorBadge
+        <ReportCard
           title="Imobilização do PL"
           value={formatPercent(indicadores1.endividamento.imobilizacao.valor)}
           status={indicadores1.endividamento.imobilizacao.status}
-          trend={getDisplayTrend('imobilizacao', 'endividamento').trend}
-          trendLabel={range2.from ? `${getDisplayTrend('imobilizacao', 'endividamento').percent.toFixed(1)}% vs anterior` : undefined}
-          descricao="Quanto do patrimônio está investido em bens imobilizados (veículos). Ideal: abaixo de 30%"
-          formula="(Ativo Imobilizado / Patrimônio Líquido) × 100 (na data final)"
-          sparklineData={generateSparkline(indicadores1.endividamento.imobilizacao.valor, getDisplayTrend('imobilizacao', 'endividamento').trend)}
-          icon={<Activity className="w-4 h-4" />}
+          trend={range2.from ? getDisplayTrend('imobilizacao', 'endividamento').percent : undefined}
+          trendLabel={range2.from ? "período anterior" : undefined}
+          tooltip="Quanto do patrimônio está investido em bens imobilizados (veículos). Ideal: abaixo de 30%. Fórmula: (Ativo Imobilizado / Patrimônio Líquido) × 100."
+          icon={<Activity className="w-6 h-6" />}
+          size="sm"
         />
-        <DetailedIndicatorBadge
+        <ReportCard
           title="Composição da Dívida"
           value={formatPercent(indicadores1.endividamento.composicao.valor)}
           status={indicadores1.endividamento.composicao.status}
-          trend={getDisplayTrend('composicao', 'endividamento').trend}
-          trendLabel={range2.from ? `${getDisplayTrend('composicao', 'endividamento').percent.toFixed(1)}% vs anterior` : undefined}
-          descricao="Indica quanto da dívida total vence no curto prazo (próximos 12 meses)."
-          formula="(Passivo Circulante / Passivo Total) × 100"
-          sparklineData={generateSparkline(indicadores1.endividamento.composicao.valor, getDisplayTrend('composicao', 'endividamento').trend)}
-          icon={<Calculator className="w-4 h-4" />}
+          trend={range2.from ? getDisplayTrend('composicao', 'endividamento').percent : undefined}
+          trendLabel={range2.from ? "período anterior" : undefined}
+          tooltip="Quanto da dívida total vence no curto prazo (próximos 12 meses). Fórmula: (Passivo Circulante / Passivo Total) × 100."
+          icon={<Calculator className="w-6 h-6" />}
+          size="sm"
         />
       </IndicatorGroup>
 
@@ -747,49 +738,45 @@ export function IndicadoresTab({ dateRanges }: IndicadoresTabProps) {
         subtitle="Retorno sobre recursos"
         icon={<TrendingUp className="w-4 h-4" />}
       >
-        <DetailedIndicatorBadge
+        <ReportCard
           title="Margem Líquida"
           value={formatPercent(indicadores1.rentabilidade.margemLiquida.valor)}
           status={indicadores1.rentabilidade.margemLiquida.status}
-          trend={getDisplayTrend('margemLiquida', 'rentabilidade').trend}
-          trendLabel={range2.from ? `${getDisplayTrend('margemLiquida', 'rentabilidade').percent.toFixed(1)}% vs anterior` : undefined}
-          descricao="Percentual das receitas que sobra como lucro. Mede eficiência na conversão de receita em resultado. Ideal: acima de 20%"
-          formula="(Resultado Líquido / Receitas) × 100 (no período)"
-          sparklineData={generateSparkline(indicadores1.rentabilidade.margemLiquida.valor, getDisplayTrend('margemLiquida', 'rentabilidade').trend)}
-          icon={<TrendingUp className="w-4 h-4" />}
+          trend={range2.from ? getDisplayTrend('margemLiquida', 'rentabilidade').percent : undefined}
+          trendLabel={range2.from ? "período anterior" : undefined}
+          tooltip="Percentual das receitas que sobra como lucro. Ideal: acima de 20%. Fórmula: (Resultado Líquido / Receitas) × 100."
+          icon={<TrendingUp className="w-6 h-6" />}
+          size="sm"
         />
-        <DetailedIndicatorBadge
+        <ReportCard
           title="Retorno sobre Ativos (ROA)"
           value={formatPercent(indicadores1.rentabilidade.roa.valor)}
           status={indicadores1.rentabilidade.roa.status}
-          trend={getDisplayTrend('roa', 'rentabilidade').trend}
-          trendLabel={range2.from ? `${getDisplayTrend('roa', 'rentabilidade').percent.toFixed(1)}% vs anterior` : undefined}
-          descricao="Mede a rentabilidade gerada sobre o total de ativos controlados."
-          formula="(Resultado Líquido / Ativos Totais) × 100"
-          sparklineData={generateSparkline(indicadores1.rentabilidade.roa.valor, getDisplayTrend('roa', 'rentabilidade').trend)}
-          icon={<Activity className="w-4 h-4" />}
+          trend={range2.from ? getDisplayTrend('roa', 'rentabilidade').percent : undefined}
+          trendLabel={range2.from ? "período anterior" : undefined}
+          tooltip="Rentabilidade gerada sobre o total de ativos. Fórmula: (Resultado Líquido / Ativos Totais) × 100."
+          icon={<Activity className="w-6 h-6" />}
+          size="sm"
         />
-        <DetailedIndicatorBadge
+        <ReportCard
           title="Retorno sobre PL (ROE)"
           value={formatPercent(indicadores1.rentabilidade.roe.valor)}
           status={indicadores1.rentabilidade.roe.status}
-          trend={getDisplayTrend('roe', 'rentabilidade').trend}
-          trendLabel={range2.from ? `${getDisplayTrend('roe', 'rentabilidade').percent.toFixed(1)}% vs anterior` : undefined}
-          descricao="Mede a rentabilidade gerada sobre o capital próprio (Patrimônio Líquido)."
-          formula="(Resultado Líquido / Patrimônio Líquido) × 100"
-          sparklineData={generateSparkline(indicadores1.rentabilidade.roe.valor, getDisplayTrend('roe', 'rentabilidade').trend)}
-          icon={<TrendingUp className="w-4 h-4" />}
+          trend={range2.from ? getDisplayTrend('roe', 'rentabilidade').percent : undefined}
+          trendLabel={range2.from ? "período anterior" : undefined}
+          tooltip="Rentabilidade gerada sobre o capital próprio. Fórmula: (Resultado Líquido / Patrimônio Líquido) × 100."
+          icon={<TrendingUp className="w-6 h-6" />}
+          size="sm"
         />
-        <DetailedIndicatorBadge
+        <ReportCard
           title="Liberdade Financeira"
           value={formatPercent(indicadores1.rentabilidade.liberdadeFinanceira.valor)}
           status={indicadores1.rentabilidade.liberdadeFinanceira.status}
-          trend={getDisplayTrend('liberdadeFinanceira', 'rentabilidade').trend}
-          trendLabel={range2.from ? `${getDisplayTrend('liberdadeFinanceira', 'rentabilidade').percent.toFixed(1)}% vs anterior` : undefined}
-          descricao="Percentual das despesas cobertas por rendimentos passivos. 100% significa independência financeira."
-          formula="(Rendimentos de Investimentos / Despesas Totais) × 100"
-          sparklineData={generateSparkline(indicadores1.rentabilidade.liberdadeFinanceira.valor, getDisplayTrend('liberdadeFinanceira', 'rentabilidade').trend)}
-          icon={<Anchor className="w-4 h-4" />}
+          trend={range2.from ? getDisplayTrend('liberdadeFinanceira', 'rentabilidade').percent : undefined}
+          trendLabel={range2.from ? "período anterior" : undefined}
+          tooltip="Percentual das despesas cobertas por rendimentos passivos. 100% significa independência financeira. Fórmula: (Rendimentos / Despesas Totais) × 100."
+          icon={<Anchor className="w-6 h-6" />}
+          size="sm"
         />
       </IndicatorGroup>
 
@@ -798,27 +785,25 @@ export function IndicadoresTab({ dateRanges }: IndicadoresTabProps) {
         subtitle="Otimização de recursos"
         icon={<Gauge className="w-4 h-4" />}
       >
-        <DetailedIndicatorBadge
+        <ReportCard
           title="Part. Despesas Fixas"
           value={formatPercent(indicadores1.eficiencia.participacaoFixas.valor)}
           status={indicadores1.eficiencia.participacaoFixas.status}
-          trend={getDisplayTrend('participacaoFixas', 'eficiencia').trend}
-          trendLabel={range2.from ? `${getDisplayTrend('participacaoFixas', 'eficiencia').percent.toFixed(1)}% vs anterior` : undefined}
-          descricao="Percentual das receitas consumido por gastos fixos recorrentes. Ideal: abaixo de 40%."
-          formula="(Despesas Fixas / Receitas Totais) × 100"
-          sparklineData={generateSparkline(indicadores1.eficiencia.participacaoFixas.valor, getDisplayTrend('participacaoFixas', 'eficiencia').trend)}
-          icon={<Activity className="w-4 h-4" />}
+          trend={range2.from ? getDisplayTrend('participacaoFixas', 'eficiencia').percent : undefined}
+          trendLabel={range2.from ? "período anterior" : undefined}
+          tooltip="Percentual das receitas consumido por gastos fixos recorrentes. Ideal: abaixo de 40%. Fórmula: (Despesas Fixas / Receitas Totais) × 100."
+          icon={<Activity className="w-6 h-6" />}
+          size="sm"
         />
-        <DetailedIndicatorBadge
+        <ReportCard
           title="Burn Rate (Consumo)"
           value={formatPercent(indicadores1.eficiencia.burnRate.valor)}
           status={indicadores1.eficiencia.burnRate.status}
-          trend={getDisplayTrend('burnRate', 'eficiencia').trend}
-          trendLabel={range2.from ? `${getDisplayTrend('burnRate', 'eficiencia').percent.toFixed(1)}% vs anterior` : undefined}
-          descricao="Velocidade com que você consome sua receita mensal. Ideal: abaixo de 70%"
-          formula="(Despesas Totais / Receitas Totais) × 100"
-          sparklineData={generateSparkline(indicadores1.eficiencia.burnRate.valor, getDisplayTrend('burnRate', 'eficiencia').trend)}
-          icon={<Flame className="w-4 h-4" />}
+          trend={range2.from ? getDisplayTrend('burnRate', 'eficiencia').percent : undefined}
+          trendLabel={range2.from ? "período anterior" : undefined}
+          tooltip="Velocidade com que você consome sua receita mensal. Ideal: abaixo de 70%. Fórmula: (Despesas Totais / Receitas Totais) × 100."
+          icon={<Flame className="w-6 h-6" />}
+          size="sm"
         />
       </IndicatorGroup>
 
@@ -827,27 +812,25 @@ export function IndicadoresTab({ dateRanges }: IndicadoresTabProps) {
         subtitle="Saúde financeira individual"
         icon={<Activity className="w-4 h-4" />}
       >
-        <DetailedIndicatorBadge
+        <ReportCard
           title="Margem de Segurança"
           value={formatPercent(indicadores1.pessoais.margemSeguranca.valor)}
           status={indicadores1.pessoais.margemSeguranca.status}
-          trend={getDisplayTrend('margemSeguranca', 'pessoais').trend}
-          trendLabel={range2.from ? `${getDisplayTrend('margemSeguranca', 'pessoais').percent.toFixed(1)}% vs anterior` : undefined}
-          descricao="Percentual da receita que sobra livre após todos os gastos e parcelas. Ideal: acima de 20%"
-          formula="((Receita - Despesas - Parcelas) / Receita) × 100"
-          sparklineData={generateSparkline(indicadores1.pessoais.margemSeguranca.valor, getDisplayTrend('margemSeguranca', 'pessoais').trend)}
-          icon={<ShieldCheck className="w-4 h-4" />}
+          trend={range2.from ? getDisplayTrend('margemSeguranca', 'pessoais').percent : undefined}
+          trendLabel={range2.from ? "período anterior" : undefined}
+          tooltip="Percentual da receita que sobra livre após todos os gastos e parcelas. Ideal: acima de 20%."
+          icon={<ShieldCheck className="w-6 h-6" />}
+          size="sm"
         />
-        <DetailedIndicatorBadge
+        <ReportCard
           title="Meses de Sobrevivência"
           value={formatMeses(indicadores1.pessoais.mesesSobrevivencia.valor)}
           status={indicadores1.pessoais.mesesSobrevivencia.status}
-          trend={getDisplayTrend('mesesSobrevivencia', 'pessoais').trend}
-          trendLabel={range2.from ? `${getDisplayTrend('mesesSobrevivencia', 'pessoais').percent.toFixed(1)}% vs anterior` : undefined}
-          descricao="Quantos meses você consegue manter seu padrão de vida apenas com reservas. Ideal: acima de 6 meses"
-          formula="Caixa e Equivalentes / Custo de Vida Mensal"
-          sparklineData={generateSparkline(indicadores1.pessoais.mesesSobrevivencia.valor, getDisplayTrend('mesesSobrevivencia', 'pessoais').trend)}
-          icon={<Calculator className="w-4 h-4" />}
+          trend={range2.from ? getDisplayTrend('mesesSobrevivencia', 'pessoais').percent : undefined}
+          trendLabel={range2.from ? "período anterior" : undefined}
+          tooltip="Quantos meses você consegue manter seu padrão de vida apenas com reservas. Ideal: acima de 6 meses. Fórmula: Caixa / Custo de Vida Mensal."
+          icon={<Calculator className="w-6 h-6" />}
+          size="sm"
         />
       </IndicatorGroup>
     </div>
