@@ -6,12 +6,7 @@ import { toast } from "sonner";
 import { isWithinInterval, startOfMonth, endOfMonth, subDays, startOfDay, endOfDay, addMonths, format } from "date-fns";
 
 // Types
-import { 
-  ContaCorrente, Categoria, TransacaoCompleta, TransferGroup,
-  AccountSummary, OperationType, DEFAULT_ACCOUNTS, DEFAULT_CATEGORIES, 
-  generateTransactionId, formatCurrency, generateTransferGroupId,
-  DateRange, ComparisonDateRanges, TransactionLinks
-} from "@/types/finance";
+import { ContaCorrente, Categoria, TransacaoCompleta, TransferGroup, AccountSummary, OperationType, DEFAULT_ACCOUNTS, DEFAULT_CATEGORIES, generateTransactionId, formatCurrency, generateTransferGroupId, DateRange, ComparisonDateRanges, TransactionLinks } from "@/types/finance";
 
 // Components
 import { AccountsCarousel } from "@/components/transactions/AccountsCarousel";
@@ -24,21 +19,20 @@ import { CategoryListModal } from "@/components/transactions/CategoryListModal";
 import { AccountStatementDialog } from "@/components/transactions/AccountStatementDialog";
 import { PeriodSelector } from "@/components/dashboard/PeriodSelector";
 import { BillsTrackerModal } from "@/components/bills/BillsTrackerModal";
-import { StatementManagerDialog } from "@/components/transactions/StatementManagerDialog"; 
-import { ConsolidatedReviewDialog } from "@/components/transactions/ConsolidatedReviewDialog"; 
+import { StatementManagerDialog } from "@/components/transactions/StatementManagerDialog";
+import { ConsolidatedReviewDialog } from "@/components/transactions/ConsolidatedReviewDialog";
 import { StandardizationRuleManagerModal } from "@/components/transactions/StandardizationRuleManagerModal";
 
 // Context
 import { useFinance } from "@/contexts/FinanceContext";
 import { parseDateLocal } from "@/lib/utils";
-
 const ReceitasDespesas = () => {
-  const { 
-    contasMovimento, 
+  const {
+    contasMovimento,
     setContasMovimento,
-    categoriasV2: categories, 
+    categoriasV2: categories,
     setCategoriasV2,
-    transacoesV2, 
+    transacoesV2,
     setTransacoesV2,
     addTransacaoV2,
     emprestimos,
@@ -46,17 +40,17 @@ const ReceitasDespesas = () => {
     markLoanParcelPaid,
     unmarkLoanParcelPaid,
     veiculos,
-    addVeiculo, 
-    deleteVeiculo, 
-    calculateBalanceUpToDate, 
-    dateRanges, 
-    setDateRanges, 
+    addVeiculo,
+    deleteVeiculo,
+    calculateBalanceUpToDate,
+    dateRanges,
+    setDateRanges,
     markSeguroParcelPaid,
-    unmarkSeguroParcelPaid, 
-    standardizationRules, 
-    deleteStandardizationRule, 
-    uncontabilizeImportedTransaction, 
-    segurosVeiculo, // <-- ADDED
+    unmarkSeguroParcelPaid,
+    standardizationRules,
+    deleteStandardizationRule,
+    uncontabilizeImportedTransaction,
+    segurosVeiculo // <-- ADDED
   } = useFinance();
 
   // Local state for transfer groups
@@ -66,7 +60,7 @@ const ReceitasDespesas = () => {
   const [showMovimentarModal, setShowMovimentarModal] = useState(false);
   const [selectedAccountForModal, setSelectedAccountForModal] = useState<string>();
   // Removed: const [showReconciliation, setShowReconciliation] = useState(false);
-  
+
   // New modals
   const [showAccountModal, setShowAccountModal] = useState(false);
   const [editingAccount, setEditingAccount] = useState<ContaCorrente>();
@@ -74,34 +68,33 @@ const ReceitasDespesas = () => {
   const [showCategoryListModal, setShowCategoryListModal] = useState(false);
   const [editingCategory, setEditingCategory] = useState<Categoria>();
   const [editingTransaction, setEditingTransaction] = useState<TransacaoCompleta>();
-  
+
   // Statement dialog
   const [viewingAccountId, setViewingAccountId] = useState<string | null>(null);
   const [showStatementDialog, setShowStatementDialog] = useState(false);
-  
+
   // Bills Tracker Modal (NEW STATE)
   const [showBillsTrackerModal, setShowBillsTrackerModal] = useState(false);
-  
+
   // Import Modal State (UPDATED)
   const [showStatementManagerModal, setShowStatementManagerModal] = useState(false);
   const [accountToManage, setAccountToManage] = useState<ContaCorrente | null>(null);
-  
+
   // NEW STATE: Consolidated Review (Fase 2)
   const [showConsolidatedReview, setShowConsolidatedReview] = useState(false);
   const [accountForConsolidatedReview, setAccountForConsolidatedReview] = useState<string | null>(null);
-  
+
   // NEW STATE: Standardization Rule Manager
   const [showRuleManagerModal, setShowRuleManagerModal] = useState(false);
 
   // Filter state (REMOVIDOS: searchTerm, selectedAccountId, selectedCategoryId, selectedTypes)
-  
+
   const dateFrom = dateRanges.range1.from ? dateRanges.range1.from.toISOString().split('T')[0] : "";
   const dateTo = dateRanges.range1.to ? dateRanges.range1.to.toISOString().split('T')[0] : "";
 
   // Alias for context data
   const accounts = contasMovimento;
   const transactions = transacoesV2;
-
   const handlePeriodChange = useCallback((ranges: ComparisonDateRanges) => {
     setDateRanges(ranges);
   }, [setDateRanges]);
@@ -109,14 +102,16 @@ const ReceitasDespesas = () => {
   // Helper para filtrar transações por um range específico
   const filterTransactionsByRange = useCallback((range: DateRange) => {
     if (!range.from || !range.to) return transacoesV2;
-    
+
     // Normaliza os limites do período para garantir que o dia inteiro seja incluído
     const rangeFrom = startOfDay(range.from);
     const rangeTo = endOfDay(range.to);
-    
     return transacoesV2.filter(t => {
       const transactionDate = parseDateLocal(t.date);
-      return isWithinInterval(transactionDate, { start: rangeFrom, end: rangeTo });
+      return isWithinInterval(transactionDate, {
+        start: rangeFrom,
+        end: rangeTo
+      });
     });
   }, [transacoesV2]);
 
@@ -135,35 +130,24 @@ const ReceitasDespesas = () => {
   const accountSummaries: AccountSummary[] = useMemo(() => {
     const periodStart = dateRanges.range1.from;
     const periodEnd = dateRanges.range1.to;
-    
     return visibleAccounts.map(account => {
-      
       let periodInitialBalance = 0;
-      
       if (periodStart) {
-          const dayBeforeStart = subDays(periodStart, 1);
-          periodInitialBalance = calculateBalanceUpToDate(account.id, dayBeforeStart, transactions, accounts);
+        const dayBeforeStart = subDays(periodStart, 1);
+        periodInitialBalance = calculateBalanceUpToDate(account.id, dayBeforeStart, transactions, accounts);
       }
-      
       const accountTxInPeriod = transactions.filter(t => {
         if (t.accountId !== account.id) return false;
-        
         const transactionDate = parseDateLocal(t.date);
-        
         const rangeFrom = periodStart ? startOfDay(periodStart) : undefined;
         const rangeTo = periodEnd ? endOfDay(periodEnd) : undefined;
-        
-        if (!rangeFrom) return true; 
-        
+        if (!rangeFrom) return true;
         return transactionDate >= rangeFrom && transactionDate <= (rangeTo || new Date());
       });
-
       let totalIn = 0;
       let totalOut = 0;
-      
       accountTxInPeriod.forEach(t => {
         const isCreditCard = account.accountType === 'cartao_credito';
-        
         if (isCreditCard) {
           if (t.operationType === 'despesa') {
             totalOut += t.amount;
@@ -178,20 +162,20 @@ const ReceitasDespesas = () => {
           }
         }
       });
-      
       const periodFinalBalance = periodInitialBalance + totalIn - totalOut;
-      
       const conciliatedCount = accountTxInPeriod.filter(t => t.conciliated).length;
       const reconciliationStatus = accountTxInPeriod.length === 0 || conciliatedCount === accountTxInPeriod.length ? 'ok' : 'warning' as const;
-
       return {
         accountId: account.id,
         accountName: account.name,
         accountType: account.accountType,
         institution: account.institution,
-        initialBalance: periodInitialBalance, // Saldo Inicial (período)
-        currentBalance: periodFinalBalance, // Saldo Final (período)
-        projectedBalance: periodFinalBalance, // Simplified: using final balance as projected for now
+        initialBalance: periodInitialBalance,
+        // Saldo Inicial (período)
+        currentBalance: periodFinalBalance,
+        // Saldo Final (período)
+        projectedBalance: periodFinalBalance,
+        // Simplified: using final balance as projected for now
         totalIn,
         totalOut,
         reconciliationStatus,
@@ -206,12 +190,11 @@ const ReceitasDespesas = () => {
     setEditingTransaction(undefined);
     setShowMovimentarModal(true);
   };
-
   const handleViewStatement = (accountId: string) => {
     setViewingAccountId(accountId);
     setShowStatementDialog(true);
   };
-  
+
   // UPDATED HANDLER: Import Extrato
   const handleImportExtrato = (accountId: string) => {
     const account = accounts.find(a => a.id === accountId);
@@ -219,84 +202,81 @@ const ReceitasDespesas = () => {
       setAccountToManage(account);
       setShowStatementManagerModal(true);
     } else {
-        toast.error("A importação de extrato é permitida apenas para Contas Correntes.");
+      toast.error("A importação de extrato é permitida apenas para Contas Correntes.");
     }
   };
-  
+
   // NEW HANDLER: Start Consolidated Review (Fase 2)
   const handleStartConsolidatedReview = (accountId: string) => {
     setAccountForConsolidatedReview(accountId);
     setShowConsolidatedReview(true);
   };
-  
+
   // NEW HANDLER: Manage Rules
   const handleManageRules = () => {
     setShowStatementManagerModal(false); // Close statement manager if open
     setShowRuleManagerModal(true);
   };
-
   const handleTransactionSubmit = (transaction: TransacaoCompleta, transferGroup?: TransferGroup) => {
     // Ensure tx has complete links structure
-    const tx: TransacaoCompleta = { 
-        ...transaction, 
-        links: { 
-            investmentId: transaction.links.investmentId || null,
-            loanId: transaction.links.loanId || null,
-            transferGroupId: transaction.links.transferGroupId || null,
-            parcelaId: transaction.links.parcelaId || null,
-            vehicleTransactionId: transaction.links.vehicleTransactionId || null,
-        }
+    const tx: TransacaoCompleta = {
+      ...transaction,
+      links: {
+        investmentId: transaction.links.investmentId || null,
+        loanId: transaction.links.loanId || null,
+        transferGroupId: transaction.links.transferGroupId || null,
+        parcelaId: transaction.links.parcelaId || null,
+        vehicleTransactionId: transaction.links.vehicleTransactionId || null
+      }
     };
-
     if (editingTransaction) {
       const linkedGroupId = editingTransaction.links?.transferGroupId;
-      
+
       // --- Lógica de Reversão de Vínculos Antigos (Edição) ---
-      
+
       // 1. Reversão de Seguro Antigo
       if (editingTransaction.links?.vehicleTransactionId && editingTransaction.links.vehicleTransactionId !== tx.links.vehicleTransactionId) {
-          const [oldSeguroIdStr, oldParcelaNumStr] = editingTransaction.links.vehicleTransactionId.split('_');
-          const oldSeguroId = parseInt(oldSeguroIdStr);
-          const oldParcelaNumero = parseInt(oldParcelaNumStr);
-          if (!isNaN(oldSeguroId) && !isNaN(oldParcelaNumero)) {
-              unmarkSeguroParcelPaid(oldSeguroId, oldParcelaNumero);
-          }
+        const [oldSeguroIdStr, oldParcelaNumStr] = editingTransaction.links.vehicleTransactionId.split('_');
+        const oldSeguroId = parseInt(oldSeguroIdStr);
+        const oldParcelaNumero = parseInt(oldParcelaNumStr);
+        if (!isNaN(oldSeguroId) && !isNaN(oldParcelaNumero)) {
+          unmarkSeguroParcelPaid(oldSeguroId, oldParcelaNumero);
+        }
       }
-      
+
       // 2. Reversão de Empréstimo Antigo
       if (editingTransaction.links?.loanId && editingTransaction.links.loanId !== tx.links.loanId) {
-          const oldLoanIdNum = parseInt(editingTransaction.links.loanId.replace('loan_', ''));
-          if (!isNaN(oldLoanIdNum)) {
-              unmarkLoanParcelPaid(oldLoanIdNum);
-          }
+        const oldLoanIdNum = parseInt(editingTransaction.links.loanId.replace('loan_', ''));
+        if (!isNaN(oldLoanIdNum)) {
+          unmarkLoanParcelPaid(oldLoanIdNum);
+        }
       }
-      
+
       // --- Fim da Reversão ---
-      
+
       // --- Aplicação de Novos Vínculos (Edição) ---
-      
+
       // 3. Marcação de Seguro Novo
       if (tx.links?.vehicleTransactionId && tx.flow === 'out') {
-          const [seguroIdStr, parcelaNumeroStr] = tx.links.vehicleTransactionId.split('_');
-          const seguroId = parseInt(seguroIdStr);
-          const parcelaNumero = parseInt(parcelaNumeroStr);
-          
-          if (!isNaN(seguroId) && !isNaN(parcelaNumero)) {
-              markSeguroParcelPaid(seguroId, parcelaNumero, tx.id);
-          }
+        const [seguroIdStr, parcelaNumeroStr] = tx.links.vehicleTransactionId.split('_');
+        const seguroId = parseInt(seguroIdStr);
+        const parcelaNumero = parseInt(parcelaNumeroStr);
+        if (!isNaN(seguroId) && !isNaN(parcelaNumero)) {
+          markSeguroParcelPaid(seguroId, parcelaNumero, tx.id);
+        }
       }
-      
+
       // 4. Marcação de Empréstimo Novo
       if (tx.operationType === 'pagamento_emprestimo' && tx.links?.loanId) {
-          const loanIdNum = parseInt(tx.links.loanId.replace('loan_', ''));
-          const parcelaNum = tx.links.parcelaId ? parseInt(tx.links.parcelaId) : undefined;
-          if (!isNaN(loanIdNum)) {
-              markLoanParcelPaid(loanIdNum, tx.amount, tx.date, parcelaNum);
-          }
+        const loanIdNum = parseInt(tx.links.loanId.replace('loan_', ''));
+        const parcelaNum = tx.links.parcelaId ? parseInt(tx.links.parcelaId) : undefined;
+        if (!isNaN(loanIdNum)) {
+          markLoanParcelPaid(loanIdNum, tx.amount, tx.date, parcelaNum);
+        }
       }
-      
+
       // --- Fim da Aplicação ---
-      
+
       if (linkedGroupId) {
         setTransacoesV2(prev => prev.map(t => {
           if (t.id === tx.id) {
@@ -306,30 +286,26 @@ const ReceitasDespesas = () => {
           if (t.links?.transferGroupId === linkedGroupId && t.id !== tx.id) {
             const otherAccount = accounts.find(a => a.id === t.accountId);
             const isCreditCard = otherAccount?.accountType === 'cartao_credito';
-
             let newFlow: 'in' | 'out' | 'transfer_in' | 'transfer_out';
-
             if (isCreditCard) {
               newFlow = t.accountId === transferGroup?.fromAccountId ? 'transfer_out' : 'transfer_in';
             } else {
               newFlow = t.accountId === transferGroup?.fromAccountId ? 'transfer_out' : 'transfer_in';
             }
-
             const updatedLinks: TransactionLinks = {
               investmentId: t.links.investmentId || null,
               loanId: t.links.loanId || null,
               transferGroupId: t.links.transferGroupId || null,
               parcelaId: t.links.parcelaId || null,
-              vehicleTransactionId: t.links.vehicleTransactionId || null,
+              vehicleTransactionId: t.links.vehicleTransactionId || null
             };
-
             return {
               ...t,
               amount: tx.amount,
               date: tx.date,
               description: tx.description,
               flow: newFlow,
-              links: updatedLinks,
+              links: updatedLinks
             } as TransacaoCompleta;
           }
           return t;
@@ -340,16 +316,18 @@ const ReceitasDespesas = () => {
       }
       return;
     }
-
     const newTransactions: TransacaoCompleta[] = [];
-    const baseTx = { ...tx, links: { ...(tx.links || {}) } };
-
+    const baseTx = {
+      ...tx,
+      links: {
+        ...(tx.links || {})
+      }
+    };
     if (transferGroup) {
       const tg = transferGroup;
       const fromAccount = accounts.find(a => a.id === tg.fromAccountId);
       const toAccount = accounts.find(a => a.id === tg.toAccountId);
       const isCreditCard = toAccount?.accountType === 'cartao_credito';
-
       const originalTx: TransacaoCompleta = {
         ...baseTx,
         id: generateTransactionId(),
@@ -358,11 +336,11 @@ const ReceitasDespesas = () => {
           loanId: baseTx.links.loanId || null,
           transferGroupId: tg.id,
           parcelaId: baseTx.links.parcelaId || null,
-          vehicleTransactionId: baseTx.links.vehicleTransactionId || null,
-        },
+          vehicleTransactionId: baseTx.links.vehicleTransactionId || null
+        }
       };
-
-      if (isCreditCard) { // Corrected from isToCreditCard
+      if (isCreditCard) {
+        // Corrected from isToCreditCard
         const ccTx: TransacaoCompleta = {
           ...originalTx,
           accountId: tg.toAccountId,
@@ -374,10 +352,9 @@ const ReceitasDespesas = () => {
             loanId: originalTx.links.loanId || null,
             transferGroupId: tg.id,
             parcelaId: originalTx.links.parcelaId || null,
-            vehicleTransactionId: originalTx.links.vehicleTransactionId || null,
+            vehicleTransactionId: originalTx.links.vehicleTransactionId || null
           }
         };
-
         const fromTx: TransacaoCompleta = {
           ...originalTx,
           id: generateTransactionId(),
@@ -390,10 +367,9 @@ const ReceitasDespesas = () => {
             loanId: originalTx.links.loanId || null,
             transferGroupId: tg.id,
             parcelaId: originalTx.links.parcelaId || null,
-            vehicleTransactionId: originalTx.links.vehicleTransactionId || null,
+            vehicleTransactionId: originalTx.links.vehicleTransactionId || null
           }
         };
-
         newTransactions.push(fromTx, ccTx);
       } else {
         const outTx: TransacaoCompleta = {
@@ -408,10 +384,9 @@ const ReceitasDespesas = () => {
             loanId: originalTx.links.loanId || null,
             transferGroupId: tg.id,
             parcelaId: originalTx.links.parcelaId || null,
-            vehicleTransactionId: originalTx.links.vehicleTransactionId || null,
+            vehicleTransactionId: originalTx.links.vehicleTransactionId || null
           }
         };
-
         const inTx: TransacaoCompleta = {
           ...originalTx,
           id: generateTransactionId(),
@@ -424,40 +399,34 @@ const ReceitasDespesas = () => {
             loanId: originalTx.links.loanId || null,
             transferGroupId: tg.id,
             parcelaId: originalTx.links.parcelaId || null,
-            vehicleTransactionId: originalTx.links.vehicleTransactionId || null,
+            vehicleTransactionId: originalTx.links.vehicleTransactionId || null
           }
         };
-
         newTransactions.push(outTx, inTx);
       }
     } else {
-      const simpleTx: TransacaoCompleta = { 
-        ...baseTx, 
+      const simpleTx: TransacaoCompleta = {
+        ...baseTx,
         id: tx.id || generateTransactionId(),
         links: {
           investmentId: baseTx.links.investmentId || null,
           loanId: baseTx.links.loanId || null,
           transferGroupId: baseTx.links.transferGroupId || null,
           parcelaId: baseTx.links.parcelaId || null,
-          vehicleTransactionId: baseTx.links.vehicleTransactionId || null,
+          vehicleTransactionId: baseTx.links.vehicleTransactionId || null
         }
       };
       newTransactions.push(simpleTx);
     }
-
     const isInvestmentFlow = (baseTx.operationType === 'aplicacao' || baseTx.operationType === 'resgate') && baseTx.links?.investmentId;
-
     if (isInvestmentFlow) {
       const isAplicacao = baseTx.operationType === 'aplicacao';
       const groupId = isAplicacao ? `app_${Date.now()}` : `res_${Date.now()}`;
-      
       const primaryTx = newTransactions.find(t => t.id === baseTx.id) || newTransactions[0];
-      
       primaryTx.links.transferGroupId = groupId;
       primaryTx.flow = isAplicacao ? 'out' : 'in';
       primaryTx.operationType = isAplicacao ? 'aplicacao' : 'resgate';
       primaryTx.domain = 'investment';
-
       const secondaryTx: TransacaoCompleta = {
         ...primaryTx,
         id: generateTransactionId(),
@@ -465,27 +434,24 @@ const ReceitasDespesas = () => {
         flow: isAplicacao ? 'in' : 'out',
         operationType: isAplicacao ? 'aplicacao' : 'resgate',
         domain: 'investment',
-        description: isAplicacao ? (baseTx.description || `Aplicação recebida de conta corrente`) : (baseTx.description || `Resgate enviado para conta corrente`),
+        description: isAplicacao ? baseTx.description || `Aplicação recebida de conta corrente` : baseTx.description || `Resgate enviado para conta corrente`,
         links: {
           investmentId: primaryTx.accountId,
           loanId: primaryTx.links.loanId || null,
           transferGroupId: groupId,
           parcelaId: primaryTx.links.parcelaId || null,
-          vehicleTransactionId: primaryTx.links.vehicleTransactionId || null,
+          vehicleTransactionId: primaryTx.links.vehicleTransactionId || null
         },
         meta: {
           ...primaryTx.meta,
-          createdBy: 'system',
+          createdBy: 'system'
         }
       };
-      
       if (!newTransactions.some(t => t.id === secondaryTx.id)) {
         newTransactions.push(secondaryTx);
       }
     }
-
     const finalTx = newTransactions.find(t => t.id === tx.id) || newTransactions[0];
-
     if (finalTx.operationType === 'liberacao_emprestimo' && finalTx.meta?.numeroContrato) {
       addEmprestimo({
         contrato: finalTx.meta.numeroContrato,
@@ -496,10 +462,9 @@ const ReceitasDespesas = () => {
         status: 'pendente_config',
         liberacaoTransactionId: finalTx.id,
         contaCorrenteId: finalTx.accountId,
-        dataInicio: finalTx.date,
+        dataInicio: finalTx.date
       });
     }
-
     if (finalTx.operationType === 'pagamento_emprestimo' && finalTx.links?.loanId) {
       const loanIdNum = parseInt(finalTx.links.loanId.replace('loan_', ''));
       const parcelaNum = finalTx.links.parcelaId ? parseInt(finalTx.links.parcelaId) : undefined;
@@ -507,84 +472,73 @@ const ReceitasDespesas = () => {
         markLoanParcelPaid(loanIdNum, finalTx.amount, finalTx.date, parcelaNum);
       }
     }
-    
+
     // --- NEW: Handle Insurance Payment Submission ---
     if (finalTx.links?.vehicleTransactionId && finalTx.flow === 'out') {
-        const [seguroIdStr, parcelaNumeroStr] = finalTx.links.vehicleTransactionId.split('_');
-        const seguroId = parseInt(seguroIdStr);
-        const parcelaNumero = parseInt(parcelaNumeroStr);
-        
-        if (!isNaN(seguroId) && !isNaN(parcelaNumero)) {
-            markSeguroParcelPaid(seguroId, parcelaNumero, finalTx.id);
-        }
+      const [seguroIdStr, parcelaNumeroStr] = finalTx.links.vehicleTransactionId.split('_');
+      const seguroId = parseInt(seguroIdStr);
+      const parcelaNumero = parseInt(parcelaNumeroStr);
+      if (!isNaN(seguroId) && !isNaN(parcelaNumero)) {
+        markSeguroParcelPaid(seguroId, parcelaNumero, finalTx.id);
+      }
     }
-    
     if (finalTx.operationType === 'veiculo' && finalTx.meta?.vehicleOperation === 'compra') {
-        addVeiculo({
-            modelo: finalTx.description,
-            marca: '',
-            tipo: finalTx.meta.tipoVeiculo || 'carro',
-            ano: 0,
-            dataCompra: finalTx.date,
-            valorVeiculo: finalTx.amount,
-            valorSeguro: 0,
-            vencimentoSeguro: "",
-            parcelaSeguro: 0,
-            valorFipe: 0,
-            compraTransactionId: finalTx.id,
-            status: 'pendente_cadastro',
-        });
+      addVeiculo({
+        modelo: finalTx.description,
+        marca: '',
+        tipo: finalTx.meta.tipoVeiculo || 'carro',
+        ano: 0,
+        dataCompra: finalTx.date,
+        valorVeiculo: finalTx.amount,
+        valorSeguro: 0,
+        vencimentoSeguro: "",
+        parcelaSeguro: 0,
+        valorFipe: 0,
+        compraTransactionId: finalTx.id,
+        status: 'pendente_cadastro'
+      });
     }
-    
     newTransactions.forEach(t => addTransacaoV2(t));
   };
-
   const handleEditTransaction = (transaction: TransacaoCompleta) => {
     setEditingTransaction(transaction);
     setSelectedAccountForModal(transaction.accountId);
     setShowMovimentarModal(true);
   };
-
   const handleDeleteTransaction = (id: string) => {
     if (!window.confirm("Tem certeza que deseja excluir esta transação?")) return;
-
     const transactionToDelete = transactions.find(t => t.id === id);
-
     if (transactionToDelete?.operationType === 'pagamento_emprestimo' && transactionToDelete.links?.loanId) {
       const loanIdNum = parseInt(transactionToDelete.links.loanId.replace('loan_', ''));
       if (!isNaN(loanIdNum)) {
         unmarkLoanParcelPaid(loanIdNum);
       }
     }
-    
+
     // --- NEW: Handle Insurance Payment Unmark on Delete ---
     if (transactionToDelete?.links?.vehicleTransactionId && transactionToDelete.flow === 'out') {
-        const [seguroIdStr, parcelaNumeroStr] = transactionToDelete.links.vehicleTransactionId.split('_');
-        const seguroId = parseInt(seguroIdStr);
-        const parcelaNumero = parseInt(parcelaNumeroStr);
-        
-        if (!isNaN(seguroId) && !isNaN(parcelaNumero)) {
-            unmarkSeguroParcelPaid(seguroId, parcelaNumero);
-        }
+      const [seguroIdStr, parcelaNumeroStr] = transactionToDelete.links.vehicleTransactionId.split('_');
+      const seguroId = parseInt(seguroIdStr);
+      const parcelaNumero = parseInt(parcelaNumeroStr);
+      if (!isNaN(seguroId) && !isNaN(parcelaNumero)) {
+        unmarkSeguroParcelPaid(seguroId, parcelaNumero);
+      }
     }
-    
     if (transactionToDelete?.operationType === 'veiculo' && transactionToDelete.meta?.vehicleOperation === 'compra') {
-        const vehicleId = veiculos.find(v => v.compraTransactionId === id)?.id;
-        if (vehicleId) {
-            const vehicle = veiculos.find(v => v.id === vehicleId);
-            if (vehicle?.status === 'pendente_cadastro') {
-                deleteVeiculo(vehicleId);
-            }
+      const vehicleId = veiculos.find(v => v.compraTransactionId === id)?.id;
+      if (vehicleId) {
+        const vehicle = veiculos.find(v => v.id === vehicleId);
+        if (vehicle?.status === 'pendente_cadastro') {
+          deleteVeiculo(vehicleId);
         }
+      }
     }
-    
+
     // NOVO: Reverter status de contabilização se a transação veio de importação
     if (transactionToDelete?.meta.source === 'import') {
-        uncontabilizeImportedTransaction(id);
+      uncontabilizeImportedTransaction(id);
     }
-
     const linkedGroupId = transactionToDelete?.links?.transferGroupId;
-
     if (linkedGroupId) {
       setTransacoesV2(prev => prev.filter(t => t.links?.transferGroupId !== linkedGroupId));
       toast.success("Transações vinculadas excluídas");
@@ -593,15 +547,17 @@ const ReceitasDespesas = () => {
       toast.success("Transação excluída");
     }
   };
-
   const handleToggleConciliated = (id: string, value: boolean) => {
-    setTransacoesV2(prev => prev.map(t => t.id === id ? { ...t, conciliated: value } : t));
+    setTransacoesV2(prev => prev.map(t => t.id === id ? {
+      ...t,
+      conciliated: value
+    } : t));
   };
-
   const handleReconcile = (accountId: string) => {
-    setTransacoesV2(prev => prev.map(t => 
-      t.accountId === accountId ? { ...t, conciliated: true } : t
-    ));
+    setTransacoesV2(prev => prev.map(t => t.accountId === accountId ? {
+      ...t,
+      conciliated: true
+    } : t));
     toast.success("Conta conciliada!");
   };
 
@@ -609,15 +565,14 @@ const ReceitasDespesas = () => {
   const handleAccountSubmit = (account: ContaCorrente, initialBalanceValue: number) => {
     const isNewAccount = !editingAccount;
     const initialBalanceAmount = initialBalanceValue ?? 0;
-    
-    const newAccount: ContaCorrente = { ...account, initialBalance: 0 };
-
+    const newAccount: ContaCorrente = {
+      ...account,
+      initialBalance: 0
+    };
     if (isNewAccount) {
       setContasMovimento(prev => [...prev, newAccount]);
-
       if (initialBalanceAmount !== 0) {
         const txId = generateTransactionId();
-        
         const userTx: TransacaoCompleta = {
           id: txId,
           date: account.startDate!,
@@ -633,7 +588,7 @@ const ReceitasDespesas = () => {
             loanId: null,
             transferGroupId: null,
             parcelaId: null,
-            vehicleTransactionId: null,
+            vehicleTransactionId: null
           },
           conciliated: true,
           attachments: [],
@@ -644,19 +599,13 @@ const ReceitasDespesas = () => {
             notes: `Saldo inicial de ${formatCurrency(initialBalanceAmount)} em ${account.startDate}`
           }
         };
-        
         addTransacaoV2(userTx);
       }
     } else {
       setContasMovimento(prev => prev.map(a => a.id === newAccount.id ? newAccount : a));
-
-      const existingInitialTx = transactions.find(t => 
-          t.accountId === newAccount.id && t.operationType === 'initial_balance'
-      );
-
+      const existingInitialTx = transactions.find(t => t.accountId === newAccount.id && t.operationType === 'initial_balance');
       if (initialBalanceAmount !== 0) {
         const txId = existingInitialTx?.id || generateTransactionId();
-        
         const userTx: TransacaoCompleta = {
           id: txId,
           date: newAccount.startDate!,
@@ -672,7 +621,7 @@ const ReceitasDespesas = () => {
             loanId: null,
             transferGroupId: null,
             parcelaId: null,
-            vehicleTransactionId: null,
+            vehicleTransactionId: null
           },
           conciliated: true,
           attachments: [],
@@ -683,11 +632,10 @@ const ReceitasDespesas = () => {
             notes: `Saldo inicial de ${formatCurrency(initialBalanceAmount)} em ${account.startDate}`
           }
         };
-
         setTransacoesV2(prev => {
-            let newTxs = prev.filter(t => t.id !== txId);
-            newTxs.push(userTx);
-            return newTxs;
+          let newTxs = prev.filter(t => t.id !== txId);
+          newTxs.push(userTx);
+          return newTxs;
         });
       } else {
         if (existingInitialTx) {
@@ -695,38 +643,31 @@ const ReceitasDespesas = () => {
         }
       }
     }
-
     setEditingAccount(undefined);
   };
-
   const handleAccountDelete = (accountId: string) => {
     const hasTransactions = transactions.some(t => t.accountId === accountId);
     if (hasTransactions) {
       toast.error("Não é possível excluir conta com transações vinculadas");
       return;
     }
-    
     setContasMovimento(prev => prev.filter(a => a.id !== accountId));
     setTransacoesV2(prev => prev.filter(t => t.accountId !== accountId));
   };
-
   const handleEditAccount = (accountId: string) => {
     const account = accounts.find(a => a.id === accountId);
     if (account) {
-      const initialTx = transactions.find(t => 
-          t.accountId === accountId && t.operationType === 'initial_balance'
-      );
-      
+      const initialTx = transactions.find(t => t.accountId === accountId && t.operationType === 'initial_balance');
       let initialBalanceValue = 0;
       if (initialTx) {
-          initialBalanceValue = initialTx.flow === 'in' ? initialTx.amount : -initialTx.amount;
+        initialBalanceValue = initialTx.flow === 'in' ? initialTx.amount : -initialTx.amount;
       }
-      
-      const accountForEdit: ContaCorrente & { initialBalanceValue?: number } = {
-          ...account,
-          initialBalanceValue: initialBalanceValue, 
+      const accountForEdit: ContaCorrente & {
+        initialBalanceValue?: number;
+      } = {
+        ...account,
+        initialBalanceValue: initialBalanceValue
       };
-      
       setEditingAccount(accountForEdit);
       setShowAccountModal(true);
     }
@@ -741,7 +682,6 @@ const ReceitasDespesas = () => {
     }
     setEditingCategory(undefined);
   };
-
   const handleCategoryDelete = (categoryId: string) => {
     const hasTransactions = transactions.some(t => t.categoryId === categoryId);
     if (hasTransactions) {
@@ -753,57 +693,44 @@ const ReceitasDespesas = () => {
 
   // Get investments and loans from context for linking (V2 entities)
   const investments = useMemo(() => {
-    return accounts
-      .filter(c => 
-        c.accountType === 'renda_fixa' || 
-        c.accountType === 'poupanca' ||
-        c.accountType === 'cripto' ||
-        c.accountType === 'reserva' ||
-        c.accountType === 'objetivo'
-      )
-      .map(i => ({ id: i.id, name: i.name }));
+    return accounts.filter(c => c.accountType === 'renda_fixa' || c.accountType === 'poupanca' || c.accountType === 'cripto' || c.accountType === 'reserva' || c.accountType === 'objetivo').map(i => ({
+      id: i.id,
+      name: i.name
+    }));
   }, [accounts]);
-
   const loans = useMemo(() => {
-    return emprestimos
-      .filter(e => e.status !== 'pendente_config')
-      .map(e => {
-        const startDate = parseDateLocal(e.dataInicio || new Date().toISOString().split('T')[0]);
-        
-        const parcelas = e.meses > 0 ? Array.from({ length: e.meses }, (_, i) => {
-          const vencimento = addMonths(startDate, i);
-          
-          const paymentTx = transactions.find(t => 
-            t.operationType === 'pagamento_emprestimo' && 
-            t.links?.loanId === `loan_${e.id}` &&
-            t.links?.parcelaId === (i + 1).toString()
-          );
-
-          return {
-            numero: i + 1,
-            vencimento: format(vencimento, 'yyyy-MM-dd'),
-            valor: e.parcela,
-            paga: !!paymentTx, // Alterado de 'pago' para 'paga'
-            transactionId: paymentTx?.id,
-          };
-        }) : [];
-
+    return emprestimos.filter(e => e.status !== 'pendente_config').map(e => {
+      const startDate = parseDateLocal(e.dataInicio || new Date().toISOString().split('T')[0]);
+      const parcelas = e.meses > 0 ? Array.from({
+        length: e.meses
+      }, (_, i) => {
+        const vencimento = addMonths(startDate, i);
+        const paymentTx = transactions.find(t => t.operationType === 'pagamento_emprestimo' && t.links?.loanId === `loan_${e.id}` && t.links?.parcelaId === (i + 1).toString());
         return {
-          id: `loan_${e.id}`,
-          institution: e.contrato,
-          numeroContrato: e.contrato,
-          parcelas,
-          valorParcela: e.parcela,
-          totalParcelas: e.meses,
+          numero: i + 1,
+          vencimento: format(vencimento, 'yyyy-MM-dd'),
+          valor: e.parcela,
+          paga: !!paymentTx,
+          // Alterado de 'pago' para 'paga'
+          transactionId: paymentTx?.id
         };
-      });
+      }) : [];
+      return {
+        id: `loan_${e.id}`,
+        institution: e.contrato,
+        numeroContrato: e.contrato,
+        parcelas,
+        valorParcela: e.parcela,
+        totalParcelas: e.meses
+      };
+    });
   }, [emprestimos, transactions]);
 
   // Get viewing account data
   const viewingAccount = viewingAccountId ? accounts.find(a => a.id === viewingAccountId) : null;
   const viewingSummary = viewingAccountId ? accountSummaries.find(s => s.accountId === viewingAccountId) : null;
   const viewingTransactions = viewingAccountId ? transactions.filter(t => t.accountId === viewingAccountId) : [];
-  
+
   // Calculate transaction count by category for CategoryListModal
   const transactionCountByCategory = useMemo(() => {
     const counts: Record<string, number> = {};
@@ -814,9 +741,7 @@ const ReceitasDespesas = () => {
     });
     return counts;
   }, [transactions]);
-
-  return (
-    <MainLayout>
+  return <MainLayout>
       <div className="space-y-6">
         {/* Top section: page header + period controls */}
         <section className="space-y-3 animate-fade-in">
@@ -831,27 +756,13 @@ const ReceitasDespesas = () => {
           </div>
 
           {/* Filtros em formato de chips */}
-          <div className="inline-flex flex-wrap items-center gap-2 rounded-full bg-card px-3 py-2 border border-border/60">
-            <PeriodSelector
-              initialRanges={dateRanges}
-              onDateRangeChange={handlePeriodChange}
-              className="h-8 rounded-full border-none bg-muted px-4 text-xs font-medium text-foreground shadow-xs"
-            />
-            <Button
-              variant="tonal"
-              size="sm"
-              onClick={() => setShowBillsTrackerModal(true)}
-              className="h-8 rounded-full gap-2 px-4 text-xs font-medium text-foreground"
-            >
+          <div className="inline-flex flex-wrap items-center gap-2 rounded-full bg-card border border-border/60 px-0 py-0">
+            <PeriodSelector initialRanges={dateRanges} onDateRangeChange={handlePeriodChange} className="h-8 rounded-full border-none bg-muted px-4 text-xs font-medium text-foreground shadow-xs" />
+            <Button variant="tonal" size="sm" onClick={() => setShowBillsTrackerModal(true)} className="h-8 rounded-full gap-2 px-4 text-xs font-medium text-foreground">
               <CalendarCheck className="h-4 w-4" />
               <span>Contas a Pagar</span>
             </Button>
-            <Button
-              variant="tonal"
-              size="sm"
-              onClick={() => setShowCategoryListModal(true)}
-              className="h-8 rounded-full gap-2 px-4 text-xs font-medium text-foreground"
-            >
+            <Button variant="tonal" size="sm" onClick={() => setShowCategoryListModal(true)} className="h-8 rounded-full gap-2 px-4 text-xs font-medium text-foreground">
               <Tags className="h-4 w-4" />
               <span>Categorias</span>
             </Button>
@@ -865,29 +776,16 @@ const ReceitasDespesas = () => {
             <div className="flex items-center justify-between px-1">
               <h2 className="text-sm font-semibold text-foreground">Contas Movimento</h2>
               <div className="flex items-center gap-1 text-muted-foreground">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-7 w-7 rounded-full"
-                  onClick={() => setShowAccountModal(true)}
-                >
+                <Button variant="ghost" size="icon" className="h-7 w-7 rounded-full" onClick={() => setShowAccountModal(true)}>
                   <Plus className="h-4 w-4" />
                 </Button>
               </div>
             </div>
             <div className="p-1">
-              <AccountsCarousel
-                accounts={accountSummaries}
-                onMovimentar={handleMovimentar}
-                onViewHistory={handleViewStatement}
-                onAddAccount={() => {
-                  setEditingAccount(undefined);
-                  setShowAccountModal(true);
-                }}
-                onEditAccount={handleEditAccount}
-                onImportAccount={handleImportExtrato}
-                showHeader={false}
-              />
+              <AccountsCarousel accounts={accountSummaries} onMovimentar={handleMovimentar} onViewHistory={handleViewStatement} onAddAccount={() => {
+              setEditingAccount(undefined);
+              setShowAccountModal(true);
+            }} onEditAccount={handleEditAccount} onImportAccount={handleImportExtrato} showHeader={false} />
             </div>
           </div>
 
@@ -904,104 +802,29 @@ const ReceitasDespesas = () => {
       </div>
 
       {/* Modais e diálogos abaixo mantêm a mesma lógica */}
-      <MovimentarContaModal
-        open={showMovimentarModal}
-        onOpenChange={setShowMovimentarModal}
-        accounts={accounts}
-        categories={categories}
-        investments={investments}
-        loans={loans}
-        segurosVeiculo={segurosVeiculo}
-        veiculos={veiculos}
-        selectedAccountId={selectedAccountForModal}
-        onSubmit={handleTransactionSubmit}
-        editingTransaction={editingTransaction}
-      />
+      <MovimentarContaModal open={showMovimentarModal} onOpenChange={setShowMovimentarModal} accounts={accounts} categories={categories} investments={investments} loans={loans} segurosVeiculo={segurosVeiculo} veiculos={veiculos} selectedAccountId={selectedAccountForModal} onSubmit={handleTransactionSubmit} editingTransaction={editingTransaction} />
 
-      <AccountFormModal
-        open={showAccountModal}
-        onOpenChange={setShowAccountModal}
-        account={editingAccount}
-        onSubmit={handleAccountSubmit}
-        onDelete={handleAccountDelete}
-        hasTransactions={editingAccount ? transactions.some((t) => t.accountId === editingAccount.id) : false}
-      />
+      <AccountFormModal open={showAccountModal} onOpenChange={setShowAccountModal} account={editingAccount} onSubmit={handleAccountSubmit} onDelete={handleAccountDelete} hasTransactions={editingAccount ? transactions.some(t => t.accountId === editingAccount.id) : false} />
 
-      <CategoryFormModal
-        open={showCategoryModal}
-        onOpenChange={setShowCategoryModal}
-        category={editingCategory}
-        onSubmit={handleCategorySubmit}
-        onDelete={handleCategoryDelete}
-        hasTransactions={editingCategory ? transactions.some((t) => t.categoryId === editingCategory.id) : false}
-      />
+      <CategoryFormModal open={showCategoryModal} onOpenChange={setShowCategoryModal} category={editingCategory} onSubmit={handleCategorySubmit} onDelete={handleCategoryDelete} hasTransactions={editingCategory ? transactions.some(t => t.categoryId === editingCategory.id) : false} />
 
-      <CategoryListModal
-        open={showCategoryListModal}
-        onOpenChange={setShowCategoryListModal}
-        categories={categories}
-        onAddCategory={() => {
-          setEditingCategory(undefined);
-          setShowCategoryModal(true);
-        }}
-        onEditCategory={(cat) => {
-          setEditingCategory(cat);
-          setShowCategoryModal(true);
-        }}
-        onDeleteCategory={handleCategoryDelete}
-        transactionCountByCategory={transactionCountByCategory}
-      />
+      <CategoryListModal open={showCategoryListModal} onOpenChange={setShowCategoryListModal} categories={categories} onAddCategory={() => {
+      setEditingCategory(undefined);
+      setShowCategoryModal(true);
+    }} onEditCategory={cat => {
+      setEditingCategory(cat);
+      setShowCategoryModal(true);
+    }} onDeleteCategory={handleCategoryDelete} transactionCountByCategory={transactionCountByCategory} />
 
-      {viewingAccount && viewingSummary && (
-        <AccountStatementDialog
-          open={showStatementDialog}
-          onOpenChange={setShowStatementDialog}
-          account={viewingAccount}
-          accountSummary={viewingSummary}
-          transactions={viewingTransactions}
-          categories={categories}
-          onEditTransaction={handleEditTransaction}
-          onDeleteTransaction={handleDeleteTransaction}
-          onToggleConciliated={handleToggleConciliated}
-          onReconcileAll={() => handleReconcile(viewingAccountId!)}
-        />
-      )}
+      {viewingAccount && viewingSummary && <AccountStatementDialog open={showStatementDialog} onOpenChange={setShowStatementDialog} account={viewingAccount} accountSummary={viewingSummary} transactions={viewingTransactions} categories={categories} onEditTransaction={handleEditTransaction} onDeleteTransaction={handleDeleteTransaction} onToggleConciliated={handleToggleConciliated} onReconcileAll={() => handleReconcile(viewingAccountId!)} />}
 
       <BillsTrackerModal open={showBillsTrackerModal} onOpenChange={setShowBillsTrackerModal} />
 
-      {accountToManage && (
-        <StatementManagerDialog
-          open={showStatementManagerModal}
-          onOpenChange={setShowStatementManagerModal}
-          account={accountToManage}
-          investments={investments}
-          loans={loans}
-          onStartConsolidatedReview={handleStartConsolidatedReview}
-          onManageRules={handleManageRules}
-        />
-      )}
+      {accountToManage && <StatementManagerDialog open={showStatementManagerModal} onOpenChange={setShowStatementManagerModal} account={accountToManage} investments={investments} loans={loans} onStartConsolidatedReview={handleStartConsolidatedReview} onManageRules={handleManageRules} />}
 
-      {accountForConsolidatedReview && (
-        <ConsolidatedReviewDialog
-          open={showConsolidatedReview}
-          onOpenChange={setShowConsolidatedReview}
-          accountId={accountForConsolidatedReview}
-          accounts={accounts}
-          categories={categories}
-          investments={investments}
-          loans={loans}
-        />
-      )}
+      {accountForConsolidatedReview && <ConsolidatedReviewDialog open={showConsolidatedReview} onOpenChange={setShowConsolidatedReview} accountId={accountForConsolidatedReview} accounts={accounts} categories={categories} investments={investments} loans={loans} />}
 
-      <StandardizationRuleManagerModal
-        open={showRuleManagerModal}
-        onOpenChange={setShowRuleManagerModal}
-        rules={standardizationRules}
-        onDeleteRule={deleteStandardizationRule}
-        categories={categories}
-      />
-    </MainLayout>
-  );
+      <StandardizationRuleManagerModal open={showRuleManagerModal} onOpenChange={setShowRuleManagerModal} rules={standardizationRules} onDeleteRule={deleteStandardizationRule} categories={categories} />
+    </MainLayout>;
 };
-
 export default ReceitasDespesas;
