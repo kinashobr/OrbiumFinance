@@ -303,13 +303,13 @@ export function Sidebar() {
       {/* Footer actions + Theme selector */}
       <div className="border-t sidebar-border px-3 py-3 space-y-3 mt-auto">
         {/* Theme selector */}
-        <div className="flex items-center justify-between gap-2 mb-1">
+        <div className="flex flex-col gap-1 mb-1">
           {!collapsed && (
             <span className="text-[11px] font-semibold uppercase tracking-wide sidebar-section-label">
               Aparência
             </span>
           )}
-          <div className="flex items-center gap-1 ml-auto">
+          <div className="flex flex-wrap items-center justify-end gap-1">
             {themes.map((t) => {
               const isActive = theme === t.id;
               return (
@@ -318,16 +318,20 @@ export function Sidebar() {
                   type="button"
                   onClick={() => setTheme(t.id)}
                   className={cn(
-                    "inline-flex items-center justify-center rounded-full border px-2 py-1 text-[10px] font-medium transition-colors",
+                    "inline-flex max-w-full items-center justify-center rounded-full border px-2 py-1 text-[10px] font-medium transition-colors overflow-hidden",
                     collapsed ? "w-8 h-8 p-0" : "gap-1",
                     isActive
                       ? "bg-primary/10 border-primary text-primary"
                       : "bg-muted/60 border-border text-muted-foreground hover:text-foreground hover:bg-muted",
                   )}
                   aria-label={t.name}
-               >
-                  <span className="text-xs leading-none">{t.icon}</span>
-                  {!collapsed && <span className="leading-none">{t.id === "system" ? "Sistema" : t.id === "brown-light" ? "Claro" : "Escuro"}</span>}
+                >
+                  <span className="text-xs leading-none flex-shrink-0">{t.icon}</span>
+                  {!collapsed && (
+                    <span className="leading-none truncate max-w-[80px]">
+                      {t.id === "system" ? "Sistema" : t.id === "brown-light" ? "Claro" : "Escuro"}
+                    </span>
+                  )}
                 </button>
               );
             })}
