@@ -45,11 +45,11 @@ const CustomPieLabel = ({ cx, cy, midAngle, outerRadius, percent, name }: any) =
 };
 
 const pieColors = [
-  "hsl(142, 76%, 36%)",
-  "hsl(199, 89%, 48%)",
-  "hsl(270, 100%, 65%)",
-  "hsl(38, 92%, 50%)",
-  "hsl(0, 72%, 51%)",
+  "hsl(var(--primary))",
+  "hsl(var(--success))",
+  "hsl(var(--warning))",
+  "hsl(var(--secondary))",
+  "hsl(var(--md-sys-color-tertiary))",
 ];
 
 const formatCurrency = (value: number) => `R$ ${value.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`;
@@ -271,7 +271,8 @@ const Investimentos = () => {
           </div>
           <PeriodSelector 
             initialRanges={dateRanges}
-            onDateRangeChange={handlePeriodChange} 
+            onDateRangeChange={handlePeriodChange}
+            className="h-8 md:h-9 rounded-full border-none bg-card px-3 text-[11px] md:text-xs font-medium text-secondary shadow-xs"
           />
         </div>
 
