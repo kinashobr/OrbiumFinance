@@ -24,6 +24,7 @@ import {
 import { useRef, useState } from "react";
 import { useTheme } from "@/contexts/ThemeContext";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Drawer, DrawerClose, DrawerContent, DrawerHeader, DrawerTitle } from "@/components/ui/drawer";
 import { SidebarAlertas } from "@/components/dashboard/SidebarAlertas";
 
 const NAV_ITEMS = [
@@ -40,6 +41,7 @@ export function BottomNav() {
   const { theme, setTheme, themes } = useTheme();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [showAlerts, setShowAlerts] = useState(false);
+  const [showNavDrawer, setShowNavDrawer] = useState(false);
 
   const isPathActive = (path: string) => location.pathname === path;
 
@@ -149,6 +151,105 @@ export function BottomNav() {
           </div>
         </div>
       </div>
+
+      <Drawer open={showNavDrawer} onOpenChange={setShowNavDrawer}>
+        <DrawerContent className="max-h-[75vh]">
+          <DrawerHeader className="pb-2">
+            <DrawerTitle className="text-sm font-semibold">Navegação avançada</DrawerTitle>
+          </DrawerHeader>
+          <div className="px-4 pb-4 space-y-4 text-sm">
+            <div>
+              <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground mb-1">
+                Financeiro
+              </p>
+              <div className="flex flex-col gap-1">
+                <button
+                  type="button"
+                  className="text-left rounded-lg px-3 py-1.5 hover:bg-muted transition-colors"
+                  onClick={() => {
+                    navigate("/");
+                    setShowNavDrawer(false);
+                  }}
+                >
+                  Dashboard
+                </button>
+                <button
+                  type="button"
+                  className="text-left rounded-lg px-3 py-1.5 hover:bg-muted transition-colors"
+                  onClick={() => {
+                    navigate("/receitas-despesas");
+                    setShowNavDrawer(false);
+                  }}
+                >
+                  Receitas &amp; Despesas
+                </button>
+                <button
+                  type="button"
+                  className="text-left rounded-lg px-3 py-1.5 hover:bg-muted transition-colors"
+                  onClick={() => {
+                    navigate("/emprestimos");
+                    setShowNavDrawer(false);
+                  }}
+                >
+                  Empréstimos
+                </button>
+                <button
+                  type="button"
+                  className="text-left rounded-lg px-3 py-1.5 hover:bg-muted transition-colors"
+                  onClick={() => {
+                    navigate("/relatorios");
+                    setShowNavDrawer(false);
+                  }}
+                >
+                  Relatórios
+                </button>
+              </div>
+            </div>
+
+            <div>
+              <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground mb-1">
+                Investimentos
+              </p>
+              <button
+                type="button"
+                className="w-full text-left rounded-lg px-3 py-1.5 hover:bg-muted transition-colors"
+                onClick={() => {
+                  navigate("/investimentos");
+                  setShowNavDrawer(false);
+                }}
+              >
+                Carteira Geral
+              </button>
+            </div>
+
+            <div>
+              <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground mb-1">
+                Patrimônio
+              </p>
+              <button
+                type="button"
+                className="w-full text-left rounded-lg px-3 py-1.5 hover:bg-muted transition-colors"
+                onClick={() => {
+                  navigate("/veiculos");
+                  setShowNavDrawer(false);
+                }}
+              >
+                Veículos
+              </button>
+            </div>
+
+            <DrawerClose asChild>
+              <button
+                type="button"
+                className="mt-1 w-full rounded-full border border-border bg-background px-3 py-2 text-sm font-medium hover:bg-muted transition-colors"
+              >
+                Fechar
+              </button>
+            </DrawerClose>
+          </div>
+        </DrawerContent>
+      </Drawer>
     </nav>
   );
 }
+
