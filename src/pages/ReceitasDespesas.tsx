@@ -820,64 +820,47 @@ const ReceitasDespesas = () => {
       <div className="space-y-6">
         {/* Top section: page header + period controls */}
         <section className="space-y-3 animate-fade-in">
-          {/* Mini app bar inside page */}
+          {/* Top app bar for this section */}
           <div className="flex items-center justify-between text-xs text-muted-foreground">
-            <div className="inline-flex items-center gap-2">
-              <Menu className="h-4 w-4" />
-              <span className="font-medium uppercase tracking-wide">Receitas e Despesas</span>
-            </div>
             <div className="inline-flex items-center gap-3">
               <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full">
-                <RefreshCw className="h-4 w-4" />
+                <Menu className="h-4 w-4" />
               </Button>
-              <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full">
-                <Bell className="h-4 w-4" />
-              </Button>
+              <div className="flex flex-col">
+                <span className="text-sm font-semibold text-foreground">Receitas e Despesas</span>
+                <span className="text-[11px]">Visão Geral</span>
+              </div>
             </div>
+            <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full">
+              <Bell className="h-4 w-4" />
+            </Button>
           </div>
 
-          {/* Main header card */}
-          <div className="rounded-2xl border border-border/70 bg-card px-4 py-3 md:px-5 md:py-4 shadow-sm">
-            <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-              <div className="flex items-start gap-3">
-                <div className="mt-0.5 flex h-9 w-9 items-center justify-center rounded-xl bg-primary/10 text-primary">
-                  <CalendarDays className="h-4 w-4" />
-                </div>
-                <div className="space-y-0.5">
-                  <h1 className="text-base md:text-lg font-semibold leading-tight">Visão geral de receitas e despesas</h1>
-                  <p className="text-xs md:text-sm text-muted-foreground">
-                    Acompanhe contas movimento, conciliação bancária e indicadores do período.
-                  </p>
-                </div>
-              </div>
-
-              <div className="flex flex-col gap-2 md:items-end">
-                <div className="flex flex-wrap items-center gap-2 justify-start md:justify-end">
-                  <PeriodSelector
-                    initialRanges={dateRanges}
-                    onDateRangeChange={handlePeriodChange}
-                  />
-                  <Button
-                    variant="tonal"
-                    size="sm"
-                    onClick={() => setShowBillsTrackerModal(true)}
-                    className="gap-2 h-8 md:h-9 px-3"
-                  >
-                    <CalendarCheck className="h-4 w-4" />
-                    <span className="text-xs font-medium">Contas a pagar</span>
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setShowCategoryListModal(true)}
-                    className="gap-2 h-8 md:h-9 px-3"
-                  >
-                    <Tags className="h-4 w-4" />
-                    <span className="text-xs font-medium">Categorias</span>
-                  </Button>
-                </div>
-              </div>
-            </div>
+          {/* Filtros em formato de chips */}
+          <div className="flex flex-wrap items-center gap-2 rounded-full bg-muted/40 px-2 py-2">
+            <PeriodSelector
+              initialRanges={dateRanges}
+              onDateRangeChange={handlePeriodChange}
+              className="h-8 rounded-full border-none bg-card px-4 text-xs font-medium shadow-xs"
+            />
+            <Button
+              variant="tonal"
+              size="sm"
+              onClick={() => setShowBillsTrackerModal(true)}
+              className="h-8 rounded-full gap-2 px-4 text-xs font-medium"
+            >
+              <CalendarCheck className="h-4 w-4" />
+              <span>Contas a Pagar</span>
+            </Button>
+            <Button
+              variant="tonal"
+              size="sm"
+              onClick={() => setShowCategoryListModal(true)}
+              className="h-8 rounded-full gap-2 px-4 text-xs font-medium"
+            >
+              <Tags className="h-4 w-4" />
+              <span>Categorias</span>
+            </Button>
           </div>
         </section>
 
