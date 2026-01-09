@@ -159,15 +159,15 @@ export function BottomNav() {
           </span>
         </div>
 
-        <div className="flex items-center justify-between gap-2">
+        <div className="grid grid-cols-2 xs:grid-cols-4 gap-2 px-1">
           {section.items.map(item => {
           const Icon = item.icon;
           const active = isPathActive(item.to);
-          return <NavLink key={item.to} to={item.to} onClick={() => setLevel("root")} className={cn("flex flex-1 flex-col items-center justify-center gap-0.5 rounded-full px-2 py-1 text-[11px] font-medium transition-colors", active ? "text-primary" : "text-muted-foreground hover:text-foreground")}>
+          return <NavLink key={item.to} to={item.to} onClick={() => setLevel("root")} className={cn("flex flex-col items-center justify-center gap-0.5 rounded-full px-2 py-1 text-[10px] font-medium transition-colors", active ? "text-primary" : "text-muted-foreground hover:text-foreground")}>
                 <div className={cn("flex h-8 w-8 items-center justify-center rounded-full text-current transition-colors", active && "bg-primary/10")}>
                   <Icon className="h-4 w-4" />
                 </div>
-                <span className="leading-none truncate">{item.label}</span>
+                <span className="leading-none text-center truncate max-w-[80px]">{item.label}</span>
               </NavLink>;
         })}
         </div>
