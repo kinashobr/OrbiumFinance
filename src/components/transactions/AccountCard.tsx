@@ -43,20 +43,22 @@ export function AccountCard({ summary, onMovimentar, onViewHistory, onEdit, onIm
   return (
     <Card
       className={cn(
-        "glass-card min-w-[80vw] xs:min-w-[75vw] sm:min-w-[260px] max-w-[300px] p-4 md:p-5 transition-all hover:shadow-md rounded-[1.75rem] border border-border/40 bg-card",
+        "glass-card min-w-[78vw] xs:min-w-[72vw] sm:min-w-[250px] max-w-[290px] p-3 md:p-5 transition-all hover:shadow-md rounded-[1.75rem] border border-border/40 bg-card",
         statusClasses[reconciliationStatus],
       )}
     >
-      <div className="flex items-start justify-between mb-4">
+      <div className="flex items-start justify-between mb-3">
         <div className="flex items-center gap-3">
           <div className="h-10 w-10 rounded-2xl bg-primary/10 flex items-center justify-center">
             <Building2 className="w-5 h-5 text-primary" />
           </div>
           <div className="space-y-1">
-            <h4 className="font-semibold text-sm text-foreground truncate max-w-[170px]">{accountName}</h4>
+            <h4 className="font-semibold text-xs sm:text-sm text-foreground truncate max-w-[150px] sm:max-w-[170px]">
+              {accountName}
+            </h4>
             <span
               className={cn(
-                "inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium",
+                "inline-flex items-center rounded-full px-2 py-0.5 text-[10px] sm:text-[11px] font-medium",
                 statusBadgeColors[reconciliationStatus],
               )}
             >
@@ -96,19 +98,19 @@ export function AccountCard({ summary, onMovimentar, onViewHistory, onEdit, onIm
         </DropdownMenu>
       </div>
 
-      <div className="space-y-2 mb-4">
-        <div className="flex items-center justify-between text-xs text-muted-foreground">
+      <div className="space-y-2 mb-3">
+        <div className="flex items-center justify-between pt-1 border-t border-border/30">
+          <span className="text-xs font-medium text-muted-foreground">Saldo Atual</span>
+          <span className="text-lg sm:text-xl font-extrabold text-foreground">{formatCurrency(currentBalance)}</span>
+        </div>
+
+        <div className="flex items-center justify-between text-[11px] text-muted-foreground">
           <span>Saldo Inicial</span>
           <span>{formatCurrency(initialBalance)}</span>
         </div>
-
-        <div className="flex items-center justify-between pt-2 border-t border-border/30">
-          <span className="text-sm font-medium text-muted-foreground">Saldo Atual</span>
-          <span className="text-xl font-extrabold text-foreground">{formatCurrency(currentBalance)}</span>
-        </div>
       </div>
 
-      <div className="flex items-center justify-between mb-4 text-[11px]">
+      <div className="flex items-center justify-between mb-3 text-[10px] sm:text-[11px]">
         <div className="flex items-center gap-1 text-success">
           <ArrowUpRight className="w-3 h-3" />
           <span className="font-semibold">{formatCurrency(totalIn)}</span>
@@ -121,7 +123,7 @@ export function AccountCard({ summary, onMovimentar, onViewHistory, onEdit, onIm
 
         <div className="flex items-center gap-1 text-muted-foreground font-medium">
           <span>{transactionCount}</span>
-          <span className="text-[10px]">transações</span>
+          <span className="text-[9px] sm:text-[10px]">transações</span>
         </div>
       </div>
 
