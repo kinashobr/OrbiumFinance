@@ -776,9 +776,7 @@ const ReceitasDespesas = () => {
             <div className="flex items-center justify-between px-1">
               <h2 className="text-sm font-semibold text-foreground">Contas Movimento</h2>
               <div className="flex items-center gap-1 text-muted-foreground">
-                <Button variant="ghost" size="icon" className="h-7 w-7 rounded-full" onClick={() => setShowAccountModal(true)}>
-                  <Plus className="h-4 w-4" />
-                </Button>
+                
               </div>
             </div>
             <div className="p-1">
