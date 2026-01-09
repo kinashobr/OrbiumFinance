@@ -37,6 +37,7 @@ import { FipeConsultaDialog } from "@/components/vehicles/FipeConsultaDialog";
 import { TransacaoCompleta, generateTransactionId, OperationType, getFlowTypeFromOperation, getDomainFromOperation, formatCurrency } from "@/types/finance";
 import { useNavigate } from "react-router-dom";
 import { differenceInMonths, addMonths, parseISO, format } from "date-fns";
+import { KpiCard } from "@/components/ui/KpiCard";
 
 const Veiculos = () => {
   const navigate = useNavigate();
@@ -467,78 +468,47 @@ const Veiculos = () => {
 
         {/* Summary Cards */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <Card className="glass-card stat-card-neutral animate-fade-in-up">
-            <CardContent className="p-5">
-              <div className="flex items-start justify-between">
-                <div>
-                  <p className="text-sm text-muted-foreground font-medium">Valor dos Veículos</p>
-                  <p className="text-2xl font-bold text-primary mt-1">
-                    {formatCurrency(totalVeiculos)}
-                  </p>
-                </div>
-                <div className="p-3 rounded-xl bg-primary/10 text-primary">
-                  <Car className="w-6 h-6" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+          <KpiCard
+            title="Valor dos Veículos"
+            value={formatCurrency(totalVeiculos)}
+            status="neutral"
+            icon={<Car className="w-6 h-6" />}
+          />
 
-          <Card className="glass-card stat-card-neutral animate-fade-in-up" style={{ animationDelay: "50ms" }}>
-            <CardContent className="p-5">
-              <div className="flex items-start justify-between">
-                <div>
-                  <p className="text-sm text-muted-foreground font-medium">Total Seguros</p>
-                  <p className="text-2xl font-bold text-primary mt-1">
-                    {formatCurrency(totalSeguros)}
-                  </p>
-                </div>
-                <div className="p-3 rounded-xl bg-primary/10 text-primary">
-                  <Shield className="w-6 h-6" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+          <KpiCard
+            title="Total Seguros"
+            value={formatCurrency(totalSeguros)}
+            status="neutral"
+            icon={<Shield className="w-6 h-6" />}
+            delay={50}
+          />
 
-          <Card className="glass-card stat-card-positive animate-fade-in-up" style={{ animationDelay: "100ms" }}>
-            <CardContent className="p-5">
-              <div className="flex items-start justify-between">
-                <div>
-                  <p className="text-sm text-muted-foreground font-medium">Valor FIPE Atual</p>
-                  <p className="text-2xl font-bold text-success mt-1">
-                    {formatCurrency(totalFipe)}
-                  </p>
-                </div>
-                <div className="p-3 rounded-xl bg-success/10 text-success">
-                  <DollarSign className="w-6 h-6" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+          <KpiCard
+            title="Valor FIPE Atual"
+            value={formatCurrency(totalFipe)}
+            status="success"
+            icon={<DollarSign className="w-6 h-6" />}
+            delay={100}
+          />
 
-          <Card className={cn(
-            "glass-card animate-fade-in-up",
-            veiculosComSeguroVencendo.length > 0 ? "stat-card-negative" : "stat-card-positive"
-          )} style={{ animationDelay: "150ms" }}>
-            <CardContent className="p-5">
-              <div className="flex items-start justify-between">
-                <div>
-                  <p className="text-sm text-muted-foreground font-medium">Custo Total</p>
-                  <p className="text-2xl font-bold text-foreground mt-1">
-                    {formatCurrency(getCustoVeiculos())}
-                  </p>
-                  {veiculosComSeguroVencendo.length > 0 && (
-                    <p className="text-xs text-destructive mt-1">{veiculosComSeguroVencendo.length} seguro(s) vencendo</p>
-                  )}
-                </div>
-                <div className={cn(
-                  "p-3 rounded-xl",
-                  veiculosComSeguroVencendo.length > 0 ? "bg-destructive/10 text-destructive" : "bg-success/10 text-success"
-                )}>
-                  {veiculosComSeguroVencendo.length > 0 ? <AlertTriangle className="w-6 h-6" /> : <Car className="w-6 h-6" />}
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+          <KpiCard
+            title="Custo Total"
+            value={formatCurrency(getCustoVeiculos())}
+            subtitle={
+              veiculosComSeguroVencendo.length > 0
+                ? `${veiculosComSeguroVencendo.length} seguro(s) vencendo`
+                : undefined
+            }
+            status={veiculosComSeguroVencendo.length > 0 ? "danger" : "success"}
+            icon={
+              veiculosComSeguroVencendo.length > 0 ? (
+                <AlertTriangle className="w-6 h-6" />
+              ) : (
+                <Car className="w-6 h-6" />
+              )
+            }
+            delay={150}
+          />
         </div>
 
         {/* Tabs */}
