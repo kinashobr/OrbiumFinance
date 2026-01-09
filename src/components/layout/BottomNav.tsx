@@ -44,6 +44,7 @@ export function BottomNav() {
   const [showNavDrawer, setShowNavDrawer] = useState(false);
 
   const isPathActive = (path: string) => location.pathname === path;
+  const isFinanceActive = FINANCE_ITEMS.some((item) => isPathActive(item.to));
 
   const handleExport = () => {
     exportData();
@@ -120,22 +121,21 @@ export function BottomNav() {
               </span>
             </NavLink>
 
-            {/* Financeiro (acessa visão Receitas & Despesas diretamente) */}
-            <NavLink
-              to="/receitas-despesas"
-              className={({ isActive }) =>
-                cn(
-                  "group flex flex-col items-center justify-center gap-0.5 rounded-full px-2.5 py-1.5 text-[11px] font-medium transition-colors min-w-[72px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 focus-visible:ring-offset-background",
-                  isActive
-                    ? "text-primary"
-                    : "text-muted-foreground hover:text-foreground",
-                )
-              }
+            {/* Financeiro: abre drawer com as abas internas (Receitas & Despesas, Empréstimos, Relatórios) */}
+            <button
+              type="button"
+              onClick={() => setShowNavDrawer(true)}
+              className={cn(
+                "group flex flex-col items-center justify-center gap-0.5 rounded-full px-2.5 py-1.5 text-[11px] font-medium transition-colors min-w-[72px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 focus-visible:ring-offset-background",
+                isFinanceActive
+                  ? "text-primary"
+                  : "text-muted-foreground hover:text-foreground",
+              )}
             >
               <div
                 className={cn(
                   "flex h-8 w-8 items-center justify-center rounded-full text-current transition-colors transition-transform group-hover:-translate-y-0.5",
-                  isPathActive("/receitas-despesas") && "bg-primary/10",
+                  isFinanceActive && "bg-primary/10",
                 )}
               >
                 <Receipt className="h-4 w-4" />
@@ -143,7 +143,7 @@ export function BottomNav() {
               <span className="leading-none text-center truncate max-w-[80px]">
                 Financeiro
               </span>
-            </NavLink>
+            </button>
 
             {/* Investimentos */}
             <NavLink
