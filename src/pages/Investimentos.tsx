@@ -22,6 +22,7 @@ import { DateRange, ComparisonDateRanges } from "@/types/finance";
 import { startOfMonth, endOfMonth, subDays, startOfDay, endOfDay, isWithinInterval } from "date-fns";
 import { ContaCorrente, TransacaoCompleta } from "@/types/finance";
 import { InvestmentEvolutionChart } from "@/components/investments/InvestmentEvolutionChart";
+import { KpiCard } from "@/components/ui/KpiCard";
 
 // Custom label component for PieChart to prevent truncation
 const CustomPieLabel = ({ cx, cy, midAngle, outerRadius, percent, name }: any) => {
