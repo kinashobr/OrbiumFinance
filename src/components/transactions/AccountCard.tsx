@@ -128,7 +128,7 @@ export function AccountCard({ summary, onMovimentar, onViewHistory, onEdit, onIm
       <div className="flex justify-end">
         <Button
           size="sm"
-          className="h-8 rounded-full px-5 bg-primary text-primary-foreground hover:bg-primary/90 text-xs font-semibold"
+          className="h-8 rounded-full px-4 bg-muted text-foreground hover:bg-muted/80 text-xs font-medium"
           onClick={() => onMovimentar(accountId)}
         >
           Movimentar
