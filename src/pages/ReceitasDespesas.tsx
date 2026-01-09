@@ -1,7 +1,7 @@
 import { useState, useMemo, useCallback, useEffect } from "react";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
-import { RefreshCw, Tags, Plus, CalendarCheck } from "lucide-react";
+import { RefreshCw, Tags, Plus, CalendarCheck, Menu, Bell, CalendarDays } from "lucide-react";
 import { toast } from "sonner";
 import { isWithinInterval, startOfMonth, endOfMonth, subDays, startOfDay, endOfDay, addMonths, format } from "date-fns";
 
@@ -818,46 +818,110 @@ const ReceitasDespesas = () => {
   return (
     <MainLayout>
       <div className="space-y-6">
-        {/* Header */}
-        <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between animate-fade-in">
-          <div>
-            <h1 className="text-xl md:text-3xl font-bold text-foreground">Receitas e Despesas</h1>
-            <p className="text-xs md:text-base text-muted-foreground mt-1">Contas Movimento e conciliação bancária</p>
+        {/* Top section: page header + period controls */}
+        <section className="space-y-3 animate-fade-in">
+          {/* Mini app bar inside page */}
+          <div className="flex items-center justify-between text-xs text-muted-foreground">
+            <div className="inline-flex items-center gap-2">
+              <Menu className="h-4 w-4" />
+              <span className="font-medium uppercase tracking-wide">Receitas e Despesas</span>
+            </div>
+            <div className="inline-flex items-center gap-3">
+              <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full">
+                <RefreshCw className="h-4 w-4" />
+              </Button>
+              <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full">
+                <Bell className="h-4 w-4" />
+              </Button>
+            </div>
           </div>
-          <div className="flex items-center gap-2 flex-wrap">
-            <PeriodSelector 
-              initialRanges={dateRanges}
-              onDateRangeChange={handlePeriodChange} 
-            />
-            <Button variant="outline" size="sm" onClick={() => setShowBillsTrackerModal(true)} className="gap-2 text-xs md:text-sm h-8 md:h-9 px-2 md:px-3">
-              <CalendarCheck className="w-4 h-4" />
-              <span className="hidden sm:inline">Contas a Pagar</span><span className="sm:hidden">Contas</span>
-            </Button>
-            <Button variant="outline" size="sm" onClick={() => setShowCategoryListModal(true)} className="text-xs md:text-sm h-8 md:h-9 px-2 md:px-3">
-              <Tags className="w-4 h-4 mr-1 md:mr-2" /><span className="hidden sm:inline">Categorias</span><span className="sm:hidden">Cat.</span>
-            </Button>
+
+          {/* Main header card */}
+          <div className="rounded-2xl border border-border/70 bg-card px-4 py-3 md:px-5 md:py-4 shadow-sm">
+            <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+              <div className="flex items-start gap-3">
+                <div className="mt-0.5 flex h-9 w-9 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                  <CalendarDays className="h-4 w-4" />
+                </div>
+                <div className="space-y-0.5">
+                  <h1 className="text-base md:text-lg font-semibold leading-tight">Visão geral de receitas e despesas</h1>
+                  <p className="text-xs md:text-sm text-muted-foreground">
+                    Acompanhe contas movimento, conciliação bancária e indicadores do período.
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex flex-col gap-2 md:items-end">
+                <div className="flex flex-wrap items-center gap-2 justify-start md:justify-end">
+                  <PeriodSelector
+                    initialRanges={dateRanges}
+                    onDateRangeChange={handlePeriodChange}
+                  />
+                  <Button
+                    variant="tonal"
+                    size="sm"
+                    onClick={() => setShowBillsTrackerModal(true)}
+                    className="gap-2 h-8 md:h-9 px-3"
+                  >
+                    <CalendarCheck className="h-4 w-4" />
+                    <span className="text-xs font-medium">Contas a pagar</span>
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setShowCategoryListModal(true)}
+                    className="gap-2 h-8 md:h-9 px-3"
+                  >
+                    <Tags className="h-4 w-4" />
+                    <span className="text-xs font-medium">Categorias</span>
+                  </Button>
+                </div>
+              </div>
+            </div>
           </div>
-        </div>
+        </section>
 
-        {/* Accounts Carousel */}
-        <div className="glass-card p-4">
-          <AccountsCarousel
-            accounts={accountSummaries}
-            onMovimentar={handleMovimentar}
-            onViewHistory={handleViewStatement}
-            onAddAccount={() => { setEditingAccount(undefined); setShowAccountModal(true); }}
-            onEditAccount={handleEditAccount}
-            onImportAccount={handleImportExtrato}
-          />
-        </div>
+        {/* Main content: accounts on the left, KPIs on the right */}
+        <section className="grid gap-4 md:grid-cols-[minmax(0,1.6fr)_minmax(0,1.2fr)] lg:gap-6 animate-fade-in-up">
+          {/* Contas Movimento */}
+          <div className="space-y-3">
+            <div className="flex items-center justify-between px-1">
+              <div className="flex items-center gap-2 text-xs md:text-sm font-medium text-muted-foreground">
+                <span className="material-symbols-rounded text-base md:text-lg">account_balance_wallet</span>
+                <span>Contas movimento</span>
+              </div>
+            </div>
+            <div className="rounded-2xl border border-border/70 bg-card p-3 md:p-4 shadow-sm">
+              <AccountsCarousel
+                accounts={accountSummaries}
+                onMovimentar={handleMovimentar}
+                onViewHistory={handleViewStatement}
+                onAddAccount={() => {
+                  setEditingAccount(undefined);
+                  setShowAccountModal(true);
+                }}
+                onEditAccount={handleEditAccount}
+                onImportAccount={handleImportExtrato}
+              />
+            </div>
+          </div>
 
-        {/* KPI Sidebar - full width */}
-        <div className="glass-card p-4">
-          <KPISidebar transactions={transacoesPeriodo1} categories={categories} />
-        </div>
+          {/* Indicadores do Período */}
+          <div className="space-y-3">
+            <div className="flex items-center justify-between px-1">
+              <div className="flex items-center gap-2 text-xs md:text-sm font-medium text-muted-foreground">
+                <span className="material-symbols-rounded text-base md:text-lg">bar_chart</span>
+                <span>Indicadores do período</span>
+              </div>
+            </div>
+            <div className="rounded-2xl border border-border/70 bg-card p-3 md:p-4 shadow-sm">
+              <KPISidebar transactions={transacoesPeriodo1} categories={categories} />
+            </div>
+          </div>
+        </section>
       </div>
 
-      {/* Modals */}
+      {/* Modais e diálogos abaixo mantêm a mesma lógica */}
       <MovimentarContaModal
         open={showMovimentarModal}
         onOpenChange={setShowMovimentarModal}
@@ -865,8 +929,8 @@ const ReceitasDespesas = () => {
         categories={categories}
         investments={investments}
         loans={loans}
-        segurosVeiculo={segurosVeiculo} // <-- NEW PROP
-        veiculos={veiculos} // <-- NEW PROP
+        segurosVeiculo={segurosVeiculo}
+        veiculos={veiculos}
         selectedAccountId={selectedAccountForModal}
         onSubmit={handleTransactionSubmit}
         editingTransaction={editingTransaction}
@@ -878,7 +942,7 @@ const ReceitasDespesas = () => {
         account={editingAccount}
         onSubmit={handleAccountSubmit}
         onDelete={handleAccountDelete}
-        hasTransactions={editingAccount ? transactions.some(t => t.accountId === editingAccount.id) : false}
+        hasTransactions={editingAccount ? transactions.some((t) => t.accountId === editingAccount.id) : false}
       />
 
       <CategoryFormModal
@@ -887,15 +951,21 @@ const ReceitasDespesas = () => {
         category={editingCategory}
         onSubmit={handleCategorySubmit}
         onDelete={handleCategoryDelete}
-        hasTransactions={editingCategory ? transactions.some(t => t.categoryId === editingCategory.id) : false}
+        hasTransactions={editingCategory ? transactions.some((t) => t.categoryId === editingCategory.id) : false}
       />
 
       <CategoryListModal
         open={showCategoryListModal}
         onOpenChange={setShowCategoryListModal}
         categories={categories}
-        onAddCategory={() => { setEditingCategory(undefined); setShowCategoryModal(true); }}
-        onEditCategory={(cat) => { setEditingCategory(cat); setShowCategoryModal(true); }}
+        onAddCategory={() => {
+          setEditingCategory(undefined);
+          setShowCategoryModal(true);
+        }}
+        onEditCategory={(cat) => {
+          setEditingCategory(cat);
+          setShowCategoryModal(true);
+        }}
         onDeleteCategory={handleCategoryDelete}
         transactionCountByCategory={transactionCountByCategory}
       />
@@ -914,14 +984,9 @@ const ReceitasDespesas = () => {
           onReconcileAll={() => handleReconcile(viewingAccountId!)}
         />
       )}
-      
-      {/* Bills Tracker Modal */}
-      <BillsTrackerModal
-        open={showBillsTrackerModal}
-        onOpenChange={setShowBillsTrackerModal}
-      />
-      
-      {/* Statement Manager Dialog (Fase 1) */}
+
+      <BillsTrackerModal open={showBillsTrackerModal} onOpenChange={setShowBillsTrackerModal} />
+
       {accountToManage && (
         <StatementManagerDialog
           open={showStatementManagerModal}
@@ -933,8 +998,7 @@ const ReceitasDespesas = () => {
           onManageRules={handleManageRules}
         />
       )}
-      
-      {/* Consolidated Review Dialog (Fase 2) */}
+
       {accountForConsolidatedReview && (
         <ConsolidatedReviewDialog
           open={showConsolidatedReview}
@@ -946,8 +1010,7 @@ const ReceitasDespesas = () => {
           loans={loans}
         />
       )}
-      
-      {/* Standardization Rule Manager Modal (NEW) */}
+
       <StandardizationRuleManagerModal
         open={showRuleManagerModal}
         onOpenChange={setShowRuleManagerModal}
