@@ -7,7 +7,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Plus, CalendarCheck, Repeat, Shield, Building2, DollarSign, Info, Settings, ShoppingCart, ChevronLeft, ChevronRight, X } from "lucide-react";
+import { Plus, CalendarCheck, Repeat, Shield, Building2, DollarSign, Info, Settings, ShoppingCart, ChevronLeft, ChevronRight, X, CheckCircle2 } from "lucide-react";
 import { useFinance } from "@/contexts/FinanceContext";
 import { BillTracker, PotentialFixedBill, BillSourceType, formatCurrency, generateBillId, TransactionLinks, OperationType, BillDisplayItem, ExternalPaidBill } from "@/types/finance";
 import { BillsTrackerList } from "./BillsTrackerList";
@@ -389,11 +389,11 @@ export function BillsTrackerModal({ open, onOpenChange }: BillsTrackerModalProps
             <ChevronLeft className="w-4 h-4" />
           </Button>
           <div className="px-2 min-w-[90px] text-center">
-            <p className="text-[10px] uppercase tracking-wide text-muted-foreground leading-tight">
+            <p className="text-[11px] font-semibold text-foreground leading-tight">
               {format(currentDate, "MMMM yyyy", { locale: ptBR })}
             </p>
-            <p className="text-[11px] font-semibold text-foreground leading-tight">
-              Contas do mês
+            <p className="text-[10px] uppercase tracking-wide text-muted-foreground leading-tight">
+              Contas a pagar
             </p>
           </div>
           <Button
@@ -424,7 +424,7 @@ export function BillsTrackerModal({ open, onOpenChange }: BillsTrackerModalProps
 
               <div className="rounded-2xl bg-card shadow-lg shadow-success/5 border border-border/60 px-3 py-2.5 flex flex-col justify-between">
                 <p className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground mb-0.5">
-                  Pago no mês
+                  Resistir programação
                 </p>
                 <p className="text-lg font-extrabold text-success leading-snug">
                   {formatCurrency(totalPaidBills)}
@@ -590,7 +590,7 @@ export function BillsTrackerModal({ open, onOpenChange }: BillsTrackerModalProps
 
                         <div className="flex items-center gap-2">
                           {bill.type === "external_paid" ? (
-                            <Shield className="w-4 h-4 text-success" />
+                            <CheckCircle2 className="w-4 h-4 text-success" />
                           ) : (
                             <Checkbox
                               className="h-4 w-4"
@@ -713,23 +713,8 @@ export function BillsTrackerModal({ open, onOpenChange }: BillsTrackerModalProps
     </>
   );
 
-  // Mobile: KPIs em cards horizontais
-  const renderMobileKPIs = () => (
-    <div className="flex gap-2 px-4 py-3 overflow-x-auto hide-scrollbar-mobile border-b border-border/50 bg-muted/30">
-      <div className="shrink-0 px-3 py-2 rounded-lg bg-destructive/10 border border-destructive/20">
-        <p className="text-[10px] text-destructive/70 font-medium">Pendente</p>
-        <p className="text-sm font-bold text-destructive">{formatCurrency(totalUnpaidBills)}</p>
-      </div>
-      <div className="shrink-0 px-3 py-2 rounded-lg bg-success/10 border border-success/20">
-        <p className="text-[10px] text-success/70 font-medium">Pago</p>
-        <p className="text-sm font-bold text-success">{formatCurrency(totalPaidBills)}</p>
-      </div>
-      <div className="shrink-0 px-3 py-2 rounded-lg bg-primary/10 border border-primary/20">
-        <p className="text-[10px] text-primary/70 font-medium">Total</p>
-        <p className="text-sm font-bold text-primary">{formatCurrency(totalUnpaidBills + totalPaidBills)}</p>
-      </div>
-    </div>
-  );
+  // Mobile: KPIs em cards horizontais (mantido para possíveis usos futuros, não exibido neste layout)
+  const renderMobileKPIs = () => null;
 
   return (
     <>
