@@ -8,6 +8,7 @@ import { Plus, CalendarCheck, Repeat, Shield, Building2, DollarSign, Info, Setti
 import { useFinance } from "@/contexts/FinanceContext";
 import { BillTracker, PotentialFixedBill, BillSourceType, formatCurrency, generateBillId, TransactionLinks, OperationType, BillDisplayItem, ExternalPaidBill } from "@/types/finance";
 import { BillsTrackerList } from "./BillsTrackerList";
+import { BillsTrackerMobileList } from "./BillsTrackerMobileList";
 import { FixedBillsList } from "./FixedBillsList";
 import { BillsSidebarKPIs } from "./BillsSidebarKPIs";
 import { FixedBillSelectorModal } from "./FixedBillSelectorModal";
@@ -189,47 +190,156 @@ export function BillsTrackerModal({ open, onOpenChange }: BillsTrackerModalProps
     }
   }, [setBillsTracker, billsTracker, contasMovimento, categoriasV2, currentDate, addTransacaoV2, markLoanParcelPaid, markSeguroParcelPaid, unmarkLoanParcelPaid, unmarkSeguroParcelPaid, setTransacoesV2, transacoesV2]);
 
-  // Conteúdo compartilhado entre Desktop e Mobile
-  const renderContent = () => (
+  // Desktop: conteúdo com tabela detalhada
+  const renderDesktopContent = () => (
     <>
       {/* Header com navegação de mês */}
       <div className="flex items-center justify-between mb-4 shrink-0 gap-2 flex-wrap">
         <div className="flex items-center bg-muted/50 rounded-lg p-1 border border-border/50">
-          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleMonthChange('prev')}>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8"
+            onClick={() => handleMonthChange("prev")}
+          >
             <ChevronLeft className="w-4 h-4" />
           </Button>
           <div className="px-2 sm:px-4 min-w-[100px] sm:min-w-[120px] text-center">
             <span className="text-xs sm:text-sm font-bold text-foreground capitalize">
-              {format(currentDate, 'MMMM', { locale: ptBR })}
+              {format(currentDate, "MMMM", { locale: ptBR })}
             </span>
           </div>
-          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleMonthChange('next')}>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8"
+            onClick={() => handleMonthChange("next")}
+          >
             <ChevronRight className="w-4 h-4" />
           </Button>
         </div>
 
         <div className="flex items-center gap-1 sm:gap-2 flex-wrap">
-          <Button variant="outline" size="sm" onClick={() => setShowAddPurchaseDialog(true)} className="text-[10px] sm:text-xs h-8 px-2 sm:px-3">
-            <ShoppingCart className="w-3 h-3 mr-1" /> 
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setShowAddPurchaseDialog(true)}
+            className="text-[10px] sm:text-xs h-8 px-2 sm:px-3"
+          >
+            <ShoppingCart className="w-3 h-3 mr-1" />
             <span className="hidden sm:inline">Compra Parcelada</span>
             <span className="sm:hidden">+ Parcela</span>
           </Button>
-          <Button variant="outline" size="sm" onClick={() => { setFixedBillSelectorMode('current'); setShowFixedBillSelector(true); }} className="text-[10px] sm:text-xs h-8 px-2 sm:px-3">
-            <Settings className="w-3 h-3 mr-1" /> 
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              setFixedBillSelectorMode("current");
+              setShowFixedBillSelector(true);
+            }}
+            className="text-[10px] sm:text-xs h-8 px-2 sm:px-3"
+          >
+            <Settings className="w-3 h-3 mr-1" />
             <span className="hidden sm:inline">Gerenciar Fixas</span>
             <span className="sm:hidden">Fixas</span>
           </Button>
-          <Button variant="outline" size="sm" onClick={() => { setFixedBillSelectorMode('future'); setShowFixedBillSelector(true); }} className="text-[10px] sm:text-xs h-8 px-2 sm:px-3">
-            <Plus className="w-3 h-3 mr-1" /> 
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              setFixedBillSelectorMode("future");
+              setShowFixedBillSelector(true);
+            }}
+            className="text-[10px] sm:text-xs h-8 px-2 sm:px-3"
+          >
+            <Plus className="w-3 h-3 mr-1" />
             <span className="hidden sm:inline">Adiantar</span>
             <span className="sm:hidden">Adiant.</span>
           </Button>
         </div>
       </div>
 
-      {/* Lista de contas */}
+      {/* Lista de contas - tabela desktop */}
       <div className="flex-1 overflow-hidden flex flex-col">
         <BillsTrackerList
+          bills={combinedBills}
+          onUpdateBill={handleUpdateBill}
+          onDeleteBill={handleDeleteBill}
+          onAddBill={handleAddBill}
+          onTogglePaid={handleTogglePaid}
+          currentDate={currentDate}
+        />
+      </div>
+    </>
+  );
+
+  // Mobile: conteúdo em cards verticais (Pixel Style)
+  const renderMobileContent = () => (
+    <>
+      <div className="flex items-center justify-between mb-3 shrink-0 gap-2 flex-wrap">
+        <div className="flex items-center bg-muted/50 rounded-lg p-1 border border-border/50">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8"
+            onClick={() => handleMonthChange("prev")}
+          >
+            <ChevronLeft className="w-4 h-4" />
+          </Button>
+          <div className="px-2 min-w-[90px] text-center">
+            <span className="text-[11px] font-bold text-foreground capitalize">
+              {format(currentDate, "MMMM", { locale: ptBR })}
+            </span>
+          </div>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8"
+            onClick={() => handleMonthChange("next")}
+          >
+            <ChevronRight className="w-4 h-4" />
+          </Button>
+        </div>
+
+        <div className="flex items-center gap-1 flex-wrap">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setShowAddPurchaseDialog(true)}
+            className="text-[10px] h-8 px-2"
+          >
+            <ShoppingCart className="w-3 h-3 mr-1" />
+            <span>+ Parcela</span>
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              setFixedBillSelectorMode("current");
+              setShowFixedBillSelector(true);
+            }}
+            className="text-[10px] h-8 px-2"
+          >
+            <Settings className="w-3 h-3 mr-1" />
+            <span>Fixas</span>
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              setFixedBillSelectorMode("future");
+              setShowFixedBillSelector(true);
+            }}
+            className="text-[10px] h-8 px-2"
+          >
+            <Plus className="w-3 h-3 mr-1" />
+            <span>Adiant.</span>
+          </Button>
+        </div>
+      </div>
+
+      <div className="flex-1 overflow-hidden flex flex-col">
+        <BillsTrackerMobileList
           bills={combinedBills}
           onUpdateBill={handleUpdateBill}
           onDeleteBill={handleDeleteBill}
@@ -291,7 +401,7 @@ export function BillsTrackerModal({ open, onOpenChange }: BillsTrackerModalProps
 
             {/* Conteúdo Principal */}
             <div className="flex-1 flex flex-col p-4 overflow-hidden bg-background">
-              {renderContent()}
+              {renderMobileContent()}
             </div>
           </SheetContent>
         </Sheet>
@@ -338,7 +448,7 @@ export function BillsTrackerModal({ open, onOpenChange }: BillsTrackerModalProps
 
                 {/* Conteúdo Principal Flexível */}
                 <div className="flex-1 flex flex-col cq-p-md overflow-hidden bg-background">
-                  {renderContent()}
+                  {renderDesktopContent()}
                 </div>
               </div>
             </div>
