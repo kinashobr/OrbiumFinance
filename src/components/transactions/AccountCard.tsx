@@ -43,7 +43,7 @@ export function AccountCard({ summary, onMovimentar, onViewHistory, onEdit, onIm
   return (
     <Card
       className={cn(
-        "glass-card min-w-[88vw] sm:min-w-[280px] max-w-[320px] p-4 md:p-5 transition-all hover:shadow-md rounded-[1.75rem] border border-border/40 bg-card",
+        "glass-card min-w-[80vw] xs:min-w-[75vw] sm:min-w-[260px] max-w-[300px] p-4 md:p-5 transition-all hover:shadow-md rounded-[1.75rem] border border-border/40 bg-card",
         statusClasses[reconciliationStatus],
       )}
     >

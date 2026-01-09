@@ -99,8 +99,8 @@ export function AccountsCarousel({
           {/* Usando div com overflow direto para garantir que o ref funcione com scrollBy */}
           <div ref={scrollContainerRef} className="flex gap-4 pb-4 overflow-x-auto hide-scrollbar-mobile scroll-smooth">
             {orderedSummaries.map(summary => <SortableAccountCard key={summary.accountId} summary={summary} onMovimentar={onMovimentar} onViewHistory={onViewHistory} onEdit={onEditAccount} onImport={onImportAccount} />)}
-
-            {orderedSummaries.length === 0 && <div className="min-w-[85vw] sm:min-w-[280px] p-6 md:p-8 border-2 border-dashed border-border rounded-xl flex flex-col items-center justify-center gap-3 text-muted-foreground">
+ 
+            {orderedSummaries.length === 0 && <div className="min-w-[80vw] sm:min-w-[260px] p-6 md:p-8 border-2 border-dashed border-border rounded-xl flex flex-col items-center justify-center gap-3 text-muted-foreground">
                 <p className="text-sm">Nenhuma conta cadastrada</p>
                 {onAddAccount && <Button variant="outline" size="sm" onClick={onAddAccount}>
                     <Plus className="w-4 h-4 mr-1" />
