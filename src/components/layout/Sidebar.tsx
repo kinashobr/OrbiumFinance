@@ -228,41 +228,23 @@ export function Sidebar() {
 
       {/* Navigation - Scrollable */}
       <div className="flex-1 overflow-y-auto scrollbar-thin py-4 px-2">
-        <nav className="flex flex-col gap-1">
-          {navSections.map((section) => (
-            <div key={section.id} className="mb-1">
-              {!collapsed && (
-                <div className="px-3 pb-1 flex items-center gap-2">
-                  <section.icon className="w-3.5 h-3.5 text-muted-foreground" />
-                  <span className="text-[11px] font-semibold uppercase tracking-wide sidebar-section-label">
-                    {section.title}
-                  </span>
-                </div>
-              )}
-              <div className="flex flex-col gap-0.5">
-                {section.items.map((item) => (
-                  <NavItem
-                    key={item.path}
-                    item={item}
-                    isActive={isPathActive(item.path)}
-                  />
-                ))}
-              </div>
-            </div>
+        <nav className="flex flex-col gap-0.5">
+          {[...navSections[0].items, ...navSections[1].items, ...navSections[2].items].map((item) => (
+            <NavItem
+              key={item.path}
+              item={item}
+              isActive={isPathActive(item.path)}
+            />
           ))}
         </nav>
       </div>
 
       {/* Footer actions + Theme selector + Alerts */}
       <div className="border-t sidebar-border px-3 py-3 space-y-3 mt-auto">
-        {/* Alerts bell */}
-        <div className="flex items-center justify-between gap-2 mb-1">
-          {!collapsed && (
-            <span className="text-[11px] font-semibold uppercase tracking-wide sidebar-section-label">
-              Atalhos
-            </span>
-          )}
-          <div className="flex items-center gap-1 ml-auto">
+        {/* Alerts bell + settings */}
+        <div className="flex items-center justify-end gap-2 mb-1">
+          <div className="flex items-center gap-1">
+
             <Dialog>
               <DialogTrigger asChild>
                 <button
