@@ -43,17 +43,17 @@ export function AccountCard({ summary, onMovimentar, onViewHistory, onEdit, onIm
   return (
     <Card
       className={cn(
-        "glass-card min-w-[78vw] xs:min-w-[72vw] sm:min-w-[250px] max-w-[290px] p-3 md:p-5 transition-all hover:shadow-md rounded-[1.75rem] border border-border/40 bg-card",
+        "glass-card min-w-[72vw] xs:min-w-[68vw] sm:min-w-[240px] max-w-[280px] p-2.5 md:p-5 transition-all hover:shadow-md rounded-[1.75rem] border border-border/40 bg-card",
         statusClasses[reconciliationStatus],
       )}
     >
-      <div className="flex items-start justify-between mb-3">
-        <div className="flex items-center gap-3">
-          <div className="h-10 w-10 rounded-2xl bg-primary/10 flex items-center justify-center">
+      <div className="flex items-start justify-between mb-2.5">
+        <div className="flex items-center gap-3 min-w-0">
+          <div className="h-10 w-10 rounded-2xl bg-primary/10 flex items-center justify-center flex-shrink-0">
             <Building2 className="w-5 h-5 text-primary" />
           </div>
-          <div className="space-y-1">
-            <h4 className="font-semibold text-xs sm:text-sm text-foreground truncate max-w-[150px] sm:max-w-[170px]">
+          <div className="space-y-1 min-w-0">
+            <h4 className="font-semibold text-[11px] sm:text-sm text-foreground truncate max-w-[150px] sm:max-w-[170px]">
               {accountName}
             </h4>
             <span
@@ -73,7 +73,7 @@ export function AccountCard({ summary, onMovimentar, onViewHistory, onEdit, onIm
 
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon" className="h-7 w-7">
+            <Button variant="ghost" size="icon" className="h-7 w-7 flex-shrink-0">
               <MoreVertical className="w-4 h-4" />
             </Button>
           </DropdownMenuTrigger>
@@ -99,9 +99,11 @@ export function AccountCard({ summary, onMovimentar, onViewHistory, onEdit, onIm
       </div>
 
       <div className="space-y-2 mb-3">
-        <div className="flex items-center justify-between gap-2 pt-1 border-t border-border/30">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-0.5 sm:gap-2 pt-1 border-t border-border/30">
           <span className="text-[11px] sm:text-xs font-medium text-muted-foreground">Saldo Atual</span>
-          <span className="text-base sm:text-lg font-extrabold text-foreground">{formatCurrency(currentBalance)}</span>
+          <span className="text-base sm:text-lg font-extrabold text-foreground leading-tight">
+            {formatCurrency(currentBalance)}
+          </span>
         </div>
 
         <div className="flex items-center justify-between gap-2 text-[10px] sm:text-[11px] text-muted-foreground">
