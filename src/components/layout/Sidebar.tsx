@@ -236,6 +236,112 @@ export function Sidebar() {
               isActive={isPathActive(item.path)}
             />
           ))}
+
+          {/* Alertas e aparncia dentro da lista principal */}
+          <div className="mt-2 flex flex-col gap-1 px-1">
+            <Dialog>
+              <DialogTrigger asChild>
+                <button
+                  type="button"
+                  className="flex items-center gap-3 px-3 py-2 rounded-lg transition-all duration-200 sidebar-nav-item hover:bg-sidebar-accent/70 hover:text-sidebar-foreground"
+                  aria-label="Ver alertas"
+                >
+                  <Bell className="w-4 h-4 flex-shrink-0" />
+                  {!collapsed && <span className="font-medium text-sm truncate">Alertas</span>}
+                </button>
+              </DialogTrigger>
+              <DialogContent className="max-w-sm p-0 overflow-hidden">
+                <DialogHeader className="px-4 pt-4 pb-2">
+                  <DialogTitle className="flex items-center gap-2 text-sm">
+                    <Bell className="w-4 h-4" />
+                    Alertas financeiros
+                  </DialogTitle>
+                </DialogHeader>
+                <div className="px-3 pb-4">
+                  <SidebarAlertas collapsed={false} />
+                </div>
+              </DialogContent>
+            </Dialog>
+
+            <Dialog>
+              <DialogTrigger asChild>
+                <button
+                  type="button"
+                  className="flex items-center gap-3 px-3 py-2 rounded-lg transition-all duration-200 sidebar-nav-item hover:bg-sidebar-accent/70 hover:text-sidebar-foreground"
+                  aria-label="Aparncia e dados"
+                >
+                  <Settings className="w-4 h-4 flex-shrink-0" />
+                  {!collapsed && <span className="font-medium text-sm truncate">Aparncia & dados</span>}
+                </button>
+              </DialogTrigger>
+              <DialogContent className="max-w-sm p-0 overflow-hidden">
+                <DialogHeader className="px-4 pt-4 pb-2">
+                  <DialogTitle className="text-sm">Aparncia</DialogTitle>
+                </DialogHeader>
+                <div className="px-4 pb-4 space-y-4">
+                  <div className="space-y-2">
+                    <p className="text-[11px] text-muted-foreground uppercase tracking-wide">Tema</p>
+                    <div className="flex flex-wrap gap-1">
+                      {themes.map((t) => {
+                        const isActive = theme === t.id;
+                        return (
+                          <button
+                            key={t.id}
+                            type="button"
+                            onClick={() => setTheme(t.id)}
+                            className={cn(
+                              "inline-flex max-w-full items-center justify-center rounded-full border px-2.5 py-1.5 text-[11px] font-medium transition-colors overflow-hidden gap-1",
+                              isActive
+                                ? "bg-primary/10 border-primary text-primary"
+                                : "bg-muted/60 border-border text-muted-foreground hover:text-foreground hover:bg-muted",
+                            )}
+                          >
+                            <span className="text-xs leading-none flex-shrink-0">{t.icon}</span>
+                            <span className="leading-none truncate max-w-[96px]">
+                              {t.id === "system" ? "Sistema" : t.id === "brown-light" ? "Claro" : "Escuro"}
+                            </span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  <div className="space-y-2 border-t border-border pt-3">
+                    <p className="text-[11px] text-muted-foreground uppercase tracking-wide">Dados</p>
+                    <div className="flex flex-col gap-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="w-full justify-start gap-2 text-xs"
+                        onClick={handleExport}
+                      >
+                        <Download className="w-4 h-4" />
+                        Exportar dados
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="w-full justify-start gap-2 text-xs"
+                        onClick={handleImportClick}
+                      >
+                        <Upload className="w-4 h-4" />
+                        Importar JSON
+                      </Button>
+                      <input
+                        ref={fileInputRef}
+                        type="file"
+                        accept="application/json"
+                        className="hidden"
+                        onChange={handleFileChange}
+                      />
+                    </div>
+                  </div>
+                </div>
+              </DialogContent>
+            </Dialog>
+          </div>
         </nav>
       </div>
 
