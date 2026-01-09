@@ -335,39 +335,7 @@ export function Sidebar() {
           />
         </div>
 
-        {/* Tema */}
-        <div className="flex items-center justify-between gap-2">
-          {!collapsed && (
-            <span className="text-[11px] font-medium text-muted-foreground">
-              Tema
-            </span>
-          )}
-
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button
-                type="button"
-                size="icon"
-                variant="ghost"
-                className="h-8 w-8 rounded-full border border-border/60"
-              >
-                <Palette className="w-4 h-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-40">
-              {themes.map((t) => (
-                <DropdownMenuItem
-                  key={t.id}
-                  className="flex items-center justify-between gap-2 text-xs"
-                  onClick={() => setTheme(t.id)}
-                >
-                  <span>{t.name}</span>
-                  {theme === t.id && <Check className="w-4 h-4 text-primary" />}
-                </DropdownMenuItem>
-              ))}
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
+        {/* Tema removido a pedido: mantemos apenas ações de dados e collapse */}
 
         {/* Collapse Toggle */}
         <div className="pt-1">
