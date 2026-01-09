@@ -439,128 +439,127 @@ export function BillsTrackerModal({
         </div>
       </div>
 
-      {/* Conteúdo scrollável */}
-      <div className="flex-1 flex flex-col overflow-hidden gap-3">
-        <ScrollArea className="flex-1 overflow-y-auto pb-24 pr-1 animate-fade-in">
-          <div className="space-y-3">
-            {/* Cards-resumo principais */}
-            <div className="grid grid-cols-2 gap-3">
-              <div className="rounded-2xl bg-card shadow-lg shadow-primary/5 border border-border/60 px-3 py-2.5 flex flex-col justify-between">
-                <p className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground mb-0.5">
-                  Total a pagar
-                </p>
-                <p className="text-lg font-extrabold text-destructive leading-snug">
-                  {formatCurrency(totalUnpaidBills)}
-                </p>
-              </div>
-
-              <div className="rounded-2xl bg-card shadow-lg shadow-success/5 border border-border/60 px-3 py-2.5 flex flex-col justify-between">
-                <p className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground mb-0.5">
-                  Resistir programação
-                </p>
-                <p className="text-lg font-extrabold text-success leading-snug">
-                  {formatCurrency(totalPaidBills)}
-                </p>
-              </div>
-
-              <div className="col-span-2 rounded-2xl bg-card shadow-lg shadow-primary/5 border border-border/60 px-3 py-2.5 flex items-center justify-between">
-                <div>
-                  <p className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground mb-0.5">
-                    Próximos vencimentos
-                  </p>
-                  <p className="text-base font-extrabold text-primary leading-snug">
-                    {formatCurrency(upcomingInfo.total)}
-                  </p>
-                </div>
-                <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
-                  <CalendarCheck className="w-3.5 h-3.5 text-primary" />
-                  <span>
-                    {upcomingInfo.nextDate ? format(upcomingInfo.nextDate, "dd/MM", {
-                    locale: ptBR
-                  }) : "Sem contas"}
-                  </span>
-                </div>
-              </div>
+      {/* Conteúdo scrollável - agora usando scroll da própria página, sem ScrollArea interna */}
+      <div className="flex-1 flex flex-col gap-3 pb-24 pr-1 animate-fade-in">
+        <div className="space-y-3">
+          {/* Cards-resumo principais */}
+          <div className="grid grid-cols-2 gap-3">
+            <div className="rounded-2xl bg-card shadow-lg shadow-primary/5 border border-border/60 px-3 py-2.5 flex flex-col justify-between">
+              <p className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground mb-0.5">
+                Total a pagar
+              </p>
+              <p className="text-lg font-extrabold text-destructive leading-snug">
+                {formatCurrency(totalUnpaidBills)}
+              </p>
             </div>
 
-            {/* Nova Conta / Nova despesa (compacto inline, não modal) */}
-            <div
-              ref={newBillCardRef}
-              className="glass-card p-3 rounded-2xl bg-muted/30 border border-border/60 shrink-0"
-            >
-              {showNewBillForm && (
-                <div className="space-y-3">
-                  <p className="text-[11px] font-semibold text-muted-foreground">
-                    Nova despesa do mês
-                  </p>
+            <div className="rounded-2xl bg-card shadow-lg shadow-success/5 border border-border/60 px-3 py-2.5 flex flex-col justify-between">
+              <p className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground mb-0.5">
+                Resistir programação
+              </p>
+              <p className="text-lg font-extrabold text-success leading-snug">
+                {formatCurrency(totalPaidBills)}
+              </p>
+            </div>
 
+            <div className="col-span-2 rounded-2xl bg-card shadow-lg shadow-primary/5 border border-border/60 px-3 py-2.5 flex items-center justify-between">
+              <div>
+                <p className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground mb-0.5">
+                  Próximos vencimentos
+                </p>
+                <p className="text-base font-extrabold text-primary leading-snug">
+                  {formatCurrency(upcomingInfo.total)}
+                </p>
+              </div>
+              <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+                <CalendarCheck className="w-3.5 h-3.5 text-primary" />
+                <span>
+                  {upcomingInfo.nextDate
+                    ? format(upcomingInfo.nextDate, "dd/MM", { locale: ptBR })
+                    : "Sem contas"}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* Nova Conta / Nova despesa (compacto inline, não modal) */}
+          <div
+            ref={newBillCardRef}
+            className="glass-card p-3 rounded-2xl bg-muted/30 border border-border/60 shrink-0"
+          >
+            {showNewBillForm && (
+              <div className="space-y-3">
+                <p className="text-[11px] font-semibold text-muted-foreground">
+                  Nova despesa do mês
+                </p>
+
+                <div className="space-y-2">
+                  <p className="text-[11px] font-medium text-muted-foreground">Descrição</p>
+                  <Input
+                    value={newBillDescription}
+                    onChange={e => setNewBillDescription(e.target.value)}
+                    placeholder="Ex.: assinatura, boleto, conta pontual..."
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-2">
-                    <p className="text-[11px] font-medium text-muted-foreground">Descrição</p>
+                    <p className="text-[11px] font-medium text-muted-foreground">Valor</p>
                     <Input
-                      value={newBillDescription}
-                      onChange={e => setNewBillDescription(e.target.value)}
-                      placeholder="Ex.: assinatura, boleto, conta pontual..."
+                      value={newBillAmount}
+                      onChange={e => setNewBillAmount(formatAmountInput(e.target.value))}
+                      placeholder="0,00"
+                      inputMode="decimal"
                     />
                   </div>
-
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="space-y-2">
-                      <p className="text-[11px] font-medium text-muted-foreground">Valor</p>
-                      <Input
-                        value={newBillAmount}
-                        onChange={e => setNewBillAmount(formatAmountInput(e.target.value))}
-                        placeholder="0,00"
-                        inputMode="decimal"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <p className="text-[11px] font-medium text-muted-foreground">Vencimento</p>
-                      <Input
-                        type="date"
-                        value={newBillDueDate}
-                        onChange={e => setNewBillDueDate(e.target.value)}
-                      />
-                    </div>
-                  </div>
-
-                  <div className="flex justify-end gap-2 pt-1">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setShowNewBillForm(false)}
-                    >
-                      Cancelar
-                    </Button>
-                    <Button
-                      size="sm"
-                      className="rounded-full"
-                      onClick={() => {
-                        const ok = handleAddAdHocBill();
-                        if (ok) setShowNewBillForm(false);
-                      }}
-                    >
-                      <Plus className="w-4 h-4 mr-1" />
-                      Salvar despesa
-                    </Button>
+                  <div className="space-y-2">
+                    <p className="text-[11px] font-medium text-muted-foreground">Vencimento</p>
+                    <Input
+                      type="date"
+                      value={newBillDueDate}
+                      onChange={e => setNewBillDueDate(e.target.value)}
+                    />
                   </div>
                 </div>
-              )}
-            </div>
 
-            {/* Contas do mês - lista principal */}
-            <div className="space-y-2">
-              <div className="flex items-center justify-between px-1">
-                <p className="text-[10px] font-semibold uppercase tracking-tight text-muted-foreground">
-                  Contas do mês
-                </p>
-                <div className="flex items-center gap-1 text-[10px] text-muted-foreground/80">
-                  <Info className="w-3 h-3" />
-                  <span>{mobileBills.length} itens</span>
+                <div className="flex justify-end gap-2 pt-1">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setShowNewBillForm(false)}
+                  >
+                    Cancelar
+                  </Button>
+                  <Button
+                    size="sm"
+                    className="rounded-full"
+                    onClick={() => {
+                      const ok = handleAddAdHocBill();
+                      if (ok) setShowNewBillForm(false);
+                    }}
+                  >
+                    <Plus className="w-4 h-4 mr-1" />
+                    Salvar despesa
+                  </Button>
                 </div>
               </div>
+            )}
+          </div>
 
-              <div className="space-y-2">
-                {mobileBills.map(bill => {
+          {/* Contas do mês - lista principal */}
+          <div className="space-y-2">
+            <div className="flex items-center justify-between px-1">
+              <p className="text-[10px] font-semibold uppercase tracking-tight text-muted-foreground">
+                Contas do mês
+              </p>
+              <div className="flex items-center gap-1 text-[10px] text-muted-foreground/80">
+                <Info className="w-3 h-3" />
+                <span>{mobileBills.length} itens</span>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              {mobileBills.map(bill => {
                 const status = getBillStatus(bill);
                 const isTracker = bill.type === "tracker";
                 const isPaid = bill.isPaid || bill.type === "external_paid";
@@ -583,142 +582,154 @@ export function BillsTrackerModal({
                   Icon = Info;
                   label = "Avulsa";
                 }
-                return <div key={bill.id} className={cn("rounded-2xl border px-3 py-2.5 flex gap-3 items-center bg-card/95 shadow-sm", "border-border/60", status === "atrasado" && "border-destructive/40 bg-destructive/5", status === "pago" && "border-success/40 bg-success/5", bill.type === "external_paid" && "opacity-80")}>
-                      <div className="flex flex-col items-center gap-1">
-                        <div className="w-9 h-9 rounded-xl bg-muted/70 flex items-center justify-center">
-                          <Icon className="w-4 h-4 text-primary" />
-                        </div>
-                        <Badge variant="outline" className="px-1.5 py-0 h-5 text-[9px] border-0 font-semibold text-muted-foreground">
-                          {label}
+                return (
+                  <div
+                    key={bill.id}
+                    className={cn(
+                      "rounded-2xl border px-3 py-2.5 flex gap-3 items-center bg-card/95 shadow-sm",
+                      "border-border/60",
+                      status === "atrasado" && "border-destructive/40 bg-destructive/5",
+                      status === "pago" && "border-success/40 bg-success/5",
+                      bill.type === "external_paid" && "opacity-80"
+                    )}
+                  >
+                    <div className="flex flex-col items-center gap-1">
+                      <div className="w-9 h-9 rounded-xl bg-muted/70 flex items-center justify-center">
+                        <Icon className="w-4 h-4 text-primary" />
+                      </div>
+                      <Badge
+                        variant="outline"
+                        className="px-1.5 py-0 h-5 text-[9px] border-0 font-semibold text-muted-foreground"
+                      >
+                        {label}
+                      </Badge>
+                    </div>
+
+                    <div className="flex-1 min-w-0 space-y-0.5">
+                      <p className="text-xs font-semibold text-foreground truncate">
+                        {bill.description}
+                      </p>
+                      <p className="text-[10px] text-muted-foreground truncate">
+                        {isTracker && bill.suggestedCategoryId
+                          ? categoriasV2.find(c => c.id === bill.suggestedCategoryId)?.label || "Sem categoria"
+                          : "Despesa do mês"}
+                      </p>
+                      <p className="text-[10px] text-muted-foreground/80">
+                        {status === "pago" ? "Pago em " : "Vence em "}
+                        {bill.paymentDate
+                          ? format(parseDateLocal(bill.paymentDate), "dd/MM", { locale: ptBR })
+                          : format(dueDate, "dd/MM", { locale: ptBR })}
+                      </p>
+                    </div>
+
+                    <div className="flex flex-col items-end justify-between gap-1 self-stretch">
+                      <p
+                        className={cn(
+                          "text-xs font-extrabold",
+                          status === "pago" || bill.type === "external_paid"
+                            ? "text-success"
+                            : status === "atrasado"
+                              ? "text-destructive"
+                              : "text-foreground"
+                        )}
+                      >
+                        {formatCurrency(bill.expectedAmount)}
+                      </p>
+
+                      <div className="flex items-center gap-2">
+                        {bill.type === "external_paid" ? (
+                          <CheckCircle2 className="w-4 h-4 text-success" />
+                        ) : (
+                          <Checkbox
+                            className="h-4 w-4"
+                            checked={isPaid}
+                            onCheckedChange={checked =>
+                              handleTogglePaid(bill, checked as boolean)
+                            }
+                          />
+                        )}
+
+                        <Badge
+                          variant="outline"
+                          className={cn(
+                            "h-5 px-1.5 text-[9px] font-semibold border-0",
+                            getBillStatusClasses(status)
+                          )}
+                        >
+                          {status === "pago"
+                            ? "Concluído"
+                            : status === "atrasado"
+                              ? "Vencido"
+                              : "Pendente"}
                         </Badge>
                       </div>
-
-                      <div className="flex-1 min-w-0 space-y-0.5">
-                        <p className="text-xs font-semibold text-foreground truncate">
-                          {bill.description}
-                        </p>
-                        <p className="text-[10px] text-muted-foreground truncate">
-                          {isTracker && bill.suggestedCategoryId ? categoriasV2.find(c => c.id === bill.suggestedCategoryId)?.label || "Sem categoria" : "Despesa do mês"}
-                        </p>
-                        <p className="text-[10px] text-muted-foreground/80">
-                          {status === "pago" ? "Pago em " : "Vence em "}
-                          {bill.paymentDate ? format(parseDateLocal(bill.paymentDate), "dd/MM", {
-                        locale: ptBR
-                      }) : format(dueDate, "dd/MM", {
-                        locale: ptBR
-                      })}
-                        </p>
-                      </div>
-
-                      <div className="flex flex-col items-end justify-between gap-1 self-stretch">
-                        <p className={cn("text-xs font-extrabold", status === "pago" || bill.type === "external_paid" ? "text-success" : status === "atrasado" ? "text-destructive" : "text-foreground")}>
-                          {formatCurrency(bill.expectedAmount)}
-                        </p>
-
-                        <div className="flex items-center gap-2">
-                          {bill.type === "external_paid" ? <CheckCircle2 className="w-4 h-4 text-success" /> : <Checkbox className="h-4 w-4" checked={isPaid} onCheckedChange={checked => handleTogglePaid(bill, checked as boolean)} />}
-
-                          <Badge variant="outline" className={cn("h-5 px-1.5 text-[9px] font-semibold border-0", getBillStatusClasses(status))}>
-                            {status === "pago" ? "Concluído" : status === "atrasado" ? "Vencido" : "Pendente"}
-                          </Badge>
-                        </div>
-                      </div>
-                    </div>;
+                    </div>
+                  </div>
+                );
               })}
-              </div>
+            </div>
+          </div>
+
+          {/* Procedimentos */}
+          <div className="space-y-2">
+            <div className="flex items-center justify-between px-1">
+              <p className="text-[10px] font-semibold uppercase tracking-tight text-muted-foreground">
+                Procedimentos
+              </p>
             </div>
 
-            {/* Procedimentos */}
-            <div className="space-y-2">
-              <div className="flex items-center justify-between px-1">
-                <p className="text-[10px] font-semibold uppercase tracking-tight text-muted-foreground">
-                  Procedimentos
-                </p>
-              </div>
-
-              <div className="rounded-2xl bg-muted/40 border border-border/60 p-3 space-y-2 shadow-sm">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
-                      <Settings className="w-4 h-4 text-primary" />
-                    </div>
-                    <div>
-                      <p className="text-xs font-semibold text-foreground">Contas fixas</p>
-                      <p className="text-[10px] text-muted-foreground">Gerenciadas automaticamente</p>
-                    </div>
-                  </div>
-                  <Badge variant="outline" className="text-[10px] px-2 py-0 h-5">
-                    {potentialFixedBills.length + futureFixedBills.length} itens
-                  </Badge>
-                </div>
-
-                <div className="grid grid-cols-3 gap-2 text-[10px]">
-                  <div className="rounded-xl bg-card/60 border border-border/60 p-2 flex flex-col gap-0.5">
-                    <span className="text-[9px] text-muted-foreground uppercase tracking-wide">
-                      Pendentes
-                    </span>
-                    <span className="text-xs font-semibold">
-                      {formatCurrency(totalUnpaidBills)}
-                    </span>
-                  </div>
-                  <div className="rounded-xl bg-card/60 border border-border/60 p-2 flex flex-col gap-0.5">
-                    <span className="text-[9px] text-muted-foreground uppercase tracking-wide">
-                      Pagas
-                    </span>
-                    <span className="text-xs font-semibold">
-                      {formatCurrency(totalPaidBills)}
-                    </span>
-                  </div>
-                  <div className="rounded-xl bg-card/60 border border-border/60 p-2 flex flex-col gap-0.5">
-                    <span className="text-[9px] text-muted-foreground uppercase tracking-wide">
-                      Fixas
-                    </span>
-                    <span className="text-xs font-semibold">
-                      {potentialFixedBills.length}
-                    </span>
+            <div className="rounded-2xl bg-muted/40 border border-border/60 p-3 space-y-2 shadow-sm">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Settings className="w-4 h-4 text-muted-foreground" />
+                  <div className="text-[11px]">
+                    <p className="font-semibold text-foreground">Ajustar contas do mês</p>
+                    <p className="text-[10px] text-muted-foreground">
+                      Revise e categorize todas as contas pendentes deste mês.
+                    </p>
                   </div>
                 </div>
               </div>
             </div>
           </div>
-        </ScrollArea>
+        </div>
+      </div>
 
-        {/* Rodapé com ações principais */}
-        <div className="pt-2 pb-3 border-t border-border/60 bg-background/95 flex items-center justify-between gap-3 px-[10px] py-px">
+      {/* Rodapé com ações principais */}
+      <div className="pt-2 pb-3 border-t border-border/60 bg-background/95 flex items-center justify-between gap-3 px-[10px] py-px">
+        <Button
+          className="flex-1 h-10 rounded-full text-sm font-semibold shadow-expressive bg-primary text-primary-foreground hover:bg-primary/90"
+          onClick={() => {
+            setShowNewBillForm(true);
+            if (newBillCardRef.current) {
+              newBillCardRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
+            }
+          }}
+        >
+          <Plus className="w-4 h-4 mr-1" />
+          Nova despesa
+        </Button>
+
+        <div className="flex items-center gap-2">
           <Button
-            className="flex-1 h-10 rounded-full text-sm font-semibold shadow-expressive bg-primary text-primary-foreground hover:bg-primary/90"
+            variant="outline"
+            size="icon"
+            className="h-9 w-9 rounded-full"
             onClick={() => {
-              setShowNewBillForm(true);
-              if (newBillCardRef.current) {
-                newBillCardRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
-              }
+              setFixedBillSelectorMode("current");
+              setShowFixedBillSelector(true);
             }}
           >
-            <Plus className="w-4 h-4 mr-1" />
-            Nova despesa
+            <Repeat className="w-4 h-4" />
           </Button>
-
-          <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="icon"
-              className="h-9 w-9 rounded-full"
-              onClick={() => {
-                setFixedBillSelectorMode("current");
-                setShowFixedBillSelector(true);
-              }}
-            >
-              <Repeat className="w-4 h-4" />
-            </Button>
-            <Button
-              variant="outline"
-              size="icon"
-              className="h-9 w-9 rounded-full"
-              onClick={() => setShowAddPurchaseDialog(true)}
-            >
-              <ShoppingCart className="w-4 h-4" />
-            </Button>
-          </div>
+          <Button
+            variant="outline"
+            size="icon"
+            className="h-9 w-9 rounded-full"
+            onClick={() => setShowAddPurchaseDialog(true)}
+          >
+            <ShoppingCart className="w-4 h-4" />
+          </Button>
         </div>
       </div>
     </>;
@@ -744,7 +755,7 @@ export function BillsTrackerModal({
             </header>
 
             {/* Conteúdo principal em tela cheia */}
-            <main className="flex-1 flex flex-col p-4 overflow-hidden bg-background">
+            <main className="flex-1 flex flex-col p-4 overflow-y-auto bg-background">
               {renderMobileContent()}
             </main>
           </div> : null : (/* Desktop: Dialog com ResizableDialogContent */
