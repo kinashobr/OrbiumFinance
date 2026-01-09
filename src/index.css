@@ -85,39 +85,52 @@
 
   .dark,
   .theme-dark-neon {
-    /* Paleta escura correspondente – fundo quase preto com acentos dourados/verde */
-    --md-sys-color-primary: 26 72% 68%;
-    --md-sys-color-on-primary: 26 40% 16%;
-    --md-sys-color-primary-container: 26 45% 26%;
-    --md-sys-color-on-primary-container: 32 40% 92%;
+    /* Material Expressive 3 – Dark theme focado em dashboard financeiro */
+    /* Primary */
+    --md-sys-color-primary: 262 100% 88%; /* #D0BCFF */
+    --md-sys-color-on-primary: 262 60% 28%; /* #381E72 */
+    --md-sys-color-primary-container: 262 43% 39%; /* #4F378B */
+    --md-sys-color-on-primary-container: 267 100% 94%; /* #EADDFF */
 
-    --md-sys-color-secondary: 32 15% 70%;
-    --md-sys-color-on-secondary: 28 35% 12%;
-    --md-sys-color-secondary-container: 28 20% 26%;
-    --md-sys-color-on-secondary-container: 35 25% 94%;
+    /* Secondary */
+    --md-sys-color-secondary: 263 24% 82%; /* #CCC2DC */
+    --md-sys-color-on-secondary: 267 18% 22%; /* #332D41 */
+    --md-sys-color-secondary-container: 267 14% 31%; /* #4A4458 */
+    --md-sys-color-on-secondary-container: 267 52% 92%; /* #E8DEF8 */
 
-    --md-sys-color-surface: 210 18% 9%;
-    --md-sys-color-on-surface: 32 35% 96%;
-    --md-sys-color-surface-variant: 215 16% 16%;
-    --md-sys-color-on-surface-variant: 35 18% 75%;
+    /* Tertiary – destaques/insights */
+    --md-sys-color-tertiary: 341 63% 82%; /* #EFB8C8 */
+    --md-sys-color-on-tertiary: 338 36% 23%; /* #492532 */
+    --md-sys-color-tertiary-container: 338 26% 34%; /* #633B48 */
+    --md-sys-color-on-tertiary-container: 338 100% 92%; /* #FFD8E4 */
 
-    --md-sys-color-outline: 220 12% 36%;
-    --md-sys-color-outline-variant: 215 16% 22%;
+    /* Superfícies */
+    --md-sys-color-surface: 270 7% 12%; /* #1C1B1F aproximado */
+    --md-sys-color-on-surface: 270 14% 89%; /* #E6E1E5 */
+    --md-sys-color-surface-variant: 270 6% 30%; /* #49454F */
+    --md-sys-color-on-surface-variant: 270 11% 80%; /* #CAC4D0 */
 
-    --md-sys-color-error: 4 73% 60%;
-    --md-sys-color-on-error: 0 0% 100%;
+    /* Outline / divisores */
+    --md-sys-color-outline: 270 7% 58%; /* #938F99 */
+    --md-sys-color-outline-variant: 24 11% 25%; /* #44403C */
 
-    --md-sys-color-success: 142 50% 50%;
-    --md-sys-color-warning: 37 92% 58%;
-    --md-sys-color-info: 204 82% 55%;
+    /* Estados semânticos */
+    --md-sys-color-error: 7 76% 83%; /* #F2B8B5 */
+    --md-sys-color-on-error: 10 63% 22%; /* #601410 aproximado */
 
+    --md-sys-color-success: 154 58% 66%; /* #7DDBB0 */
+    --md-sys-color-warning: 35 100% 65%; /* #FFB74D */
+    --md-sys-color-info: 204 82% 55%; /* mantém azul atual para info */
+
+    /* Mapeamento para tokens da aplicação */
     --background: var(--md-sys-color-surface);
     --foreground: var(--md-sys-color-on-surface);
 
-    --card: 215 20% 11%;
+    /* Cards levemente elevados em relação ao background */
+    --card: 270 7% 14%;
     --card-foreground: var(--md-sys-color-on-surface);
 
-    --popover: 210 18% 9%;
+    --popover: var(--md-sys-color-surface);
     --popover-foreground: var(--md-sys-color-on-surface);
 
     --primary: var(--md-sys-color-primary);
@@ -139,7 +152,7 @@
     --success-foreground: 0 0% 0%;
 
     --warning: var(--md-sys-color-warning);
-    --warning-foreground: 0 0% 0%;
+    --warning-foreground: 33 39% 15%;
 
     --info: var(--md-sys-color-info);
 
@@ -149,6 +162,7 @@
 
     --radius: 0.9rem;
 
+    /* Sidebar acompanhando superfícies do dark M3 */
     --sidebar-background: var(--md-sys-color-surface);
     --sidebar-foreground: var(--md-sys-color-on-surface);
     --sidebar-primary: var(--md-sys-color-primary);
