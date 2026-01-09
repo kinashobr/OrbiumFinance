@@ -1,12 +1,11 @@
 import { ReactNode } from "react";
-import { cn } from "@/lib/utils";
-import { TrendingUp, TrendingDown, Minus } from "lucide-react";
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { KpiCard, type KpiStatus, type KpiSize } from "@/components/ui/KpiCard";
 
 interface LoanCardProps {
   title: string;
@@ -14,12 +13,12 @@ interface LoanCardProps {
   subtitle?: string;
   trend?: number;
   trendLabel?: string;
-  status?: "success" | "warning" | "danger" | "neutral" | "info";
+  status?: KpiStatus;
   icon?: ReactNode;
   tooltip?: string;
   className?: string;
   delay?: number;
-  size?: "sm" | "md" | "lg";
+  size?: KpiSize;
 }
 
 export function LoanCard({
@@ -35,96 +34,19 @@ export function LoanCard({
   delay = 0,
   size = "md",
 }: LoanCardProps) {
-  const statusClasses = {
-    success: "stat-card-positive",
-    warning: "stat-card-warning",
-    danger: "stat-card-negative",
-    neutral: "stat-card-neutral",
-    info: "stat-card-info",
-  };
-
-  const statusTextColors = {
-    success: "text-success",
-    warning: "text-warning",
-    danger: "text-destructive",
-    neutral: "text-primary",
-    info: "text-neon-cyan",
-  };
-
-  const sizeClasses = {
-    sm: "p-3",
-    md: "p-4",
-    lg: "p-5",
-  };
-
-  const valueSizes = {
-    sm: "text-lg",
-    md: "text-xl",
-    lg: "text-2xl",
-  };
-  
-  const iconSizes = {
-    sm: "w-4 h-4",
-    md: "w-5 h-5",
-    lg: "w-6 h-6",
-  };
-
-  const TrendIcon = trend && trend > 0 ? TrendingUp : trend && trend < 0 ? TrendingDown : Minus;
-
   const content = (
-    <div
-      className={cn(
-        "glass-card animate-fade-in-up transition-all hover:scale-[1.02]",
-        statusClasses[status as keyof typeof statusClasses], // Aplica a classe de borda (que já define border-left: 4px)
-        sizeClasses[size],
-        className
-      )}
-      style={{ animationDelay: `${delay}ms` }}
-    >
-      <div className="flex items-start justify-between gap-2">
-        <div className="flex-1 min-w-0">
-          <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground truncate">
-            {title}
-          </p>
-          <p className={cn("font-bold mt-1", valueSizes[size], statusTextColors[status])}>
-            {value}
-          </p>
-          {subtitle && (
-            <p className="text-xs text-muted-foreground mt-1 truncate">{subtitle}</p>
-          )}
-          {trend !== undefined && (
-            <div className={cn(
-              "flex items-center gap-1 mt-1.5 text-xs font-medium",
-              trend > 0 ? "text-success" : trend < 0 ? "text-destructive" : "text-muted-foreground"
-            )}>
-              <TrendIcon className="w-3 h-3" />
-              <span>{trend > 0 ? '+' : ''}{trend.toFixed(1)}%</span>
-              {trendLabel && <span className="text-muted-foreground">vs {trendLabel}</span>}
-            </div>
-          )}
-        </div>
-        {icon && (
-          <div className={cn(
-            "p-2 rounded-lg shrink-0",
-            status === "success" && "bg-success/10 text-success",
-            status === "warning" && "bg-warning/10 text-warning",
-            status === "danger" && "bg-destructive/10 text-destructive",
-            status === "neutral" && "bg-primary/10 text-primary",
-            status === "info" && "bg-neon-cyan/10 text-neon-cyan"
-          )}>
-            {/* Ensure icon size is correct */}
-            {/* Assuming the icon passed is a Lucide icon component */}
-            {typeof icon === 'object' && 'type' in icon && (icon.type as any).displayName === 'Icon' ? (
-              <span className={iconSizes[size]}>
-                {icon}
-              </span>
-            ) : (
-              icon
-            )}
-          </div>
-        )}
-      </div>
-    </div>
+    <KpiCard
+      title={title}
+      value={value}
+      subtitle={subtitle}
+      trend={trend}
+      trendLabel={trendLabel}
+      status={status}
+      icon={icon}
+      className={className}
+      delay={delay}
+      size={size}
+    />
   );
 
   if (tooltip) {
