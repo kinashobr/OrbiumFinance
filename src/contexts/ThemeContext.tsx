@@ -61,8 +61,16 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
 
 export function useTheme() {
   const context = useContext(ThemeContext);
+
   if (!context) {
-    throw new Error("useTheme must be used within a ThemeProvider");
+    // Fallback seguro para ambientes fora da árvore principal
+    console.warn("useTheme chamado fora de um ThemeProvider. Aplicando tema padrão 'brown-light'.");
+    return {
+      theme: "brown-light" as ThemeType,
+      setTheme: () => {},
+      themes: THEMES,
+    };
   }
+
   return context;
 }
