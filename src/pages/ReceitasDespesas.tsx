@@ -744,7 +744,7 @@ const ReceitasDespesas = () => {
   return <MainLayout>
       <div className="space-y-6">
         {/* Top section: page header + period controls */}
-        <section className="space-y-3 animate-fade-in">
+        <section className="space-y-3 animate-fade-in border-0">
           {/* Top app bar for this section */}
           <div className="flex items-center justify-between text-xs text-muted-foreground">
             <div className="inline-flex items-start gap-3">
@@ -756,7 +756,7 @@ const ReceitasDespesas = () => {
           </div>
 
           {/* Filtros em formato de chips */}
-          <div className="inline-flex flex-wrap items-center gap-2 rounded-full border border-border/60 px-0 py-0">
+          <div className="inline-flex flex-wrap items-center gap-2 border-border/60 py-px px-px rounded-full border-solid border-slate-50 border-0">
             <PeriodSelector initialRanges={dateRanges} onDateRangeChange={handlePeriodChange} className="h-8 rounded-full border-none bg-muted px-4 text-xs font-medium text-foreground shadow-xs" />
             <Button variant="tonal" size="sm" onClick={() => setShowBillsTrackerModal(true)} className="h-8 rounded-full gap-2 px-4 text-xs font-medium text-foreground">
               <CalendarCheck className="h-4 w-4" />
