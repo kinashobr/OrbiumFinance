@@ -54,7 +54,8 @@ const Relatorios = () => {
           </div>
           <PeriodSelector 
             initialRanges={dateRanges}
-            onDateRangeChange={handlePeriodChange} 
+            onDateRangeChange={handlePeriodChange}
+            className="h-8 md:h-9 rounded-full border-none bg-card px-3 text-[11px] md:text-xs font-medium text-secondary shadow-xs"
           />
         </div>
 

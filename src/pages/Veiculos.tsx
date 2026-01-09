@@ -578,9 +578,9 @@ const Veiculos = () => {
                           }}
                           formatter={(value: number) => [formatCurrency(value), ""]}
                         />
-                        <Bar dataKey="valorCompra" fill="hsl(199, 89%, 48%)" radius={[4, 4, 0, 0]} name="Valor Compra" />
-                        <Bar dataKey="valorFipe" fill="hsl(142, 76%, 36%)" radius={[4, 4, 0, 0]} name="Valor FIPE" />
-                        <Bar dataKey="seguro" fill="hsl(270, 100%, 65%)" radius={[4, 4, 0, 0]} name="Seguro" />
+                        <Bar dataKey="valorCompra" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} name="Valor Compra" />
+                        <Bar dataKey="valorFipe" fill="hsl(var(--success))" radius={[4, 4, 0, 0]} name="Valor FIPE" />
+                        <Bar dataKey="seguro" fill="hsl(var(--warning))" radius={[4, 4, 0, 0]} name="Seguro" />
                       </BarChart>
                     </ResponsiveContainer>
                   </div>
