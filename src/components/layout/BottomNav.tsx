@@ -1,5 +1,5 @@
 import { useState, useRef } from "react";
-import { NavLink, useLocation } from "react-router-dom";
+import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import {
   LayoutDashboard,
   Receipt,
@@ -12,11 +12,17 @@ import {
   ArrowLeft,
   Download,
   Upload,
+  MoreVertical,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { Button } from "@/components/ui/button";
 import { useFinance } from "@/contexts/FinanceContext";
 import { toast } from "@/hooks/use-toast";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 const NAV_SECTIONS = {
   financeiro: {
@@ -53,11 +59,24 @@ type Level = "root" | SectionId;
 
 export function BottomNav() {
   const location = useLocation();
+  const navigate = useNavigate();
   const { exportData, importData } = useFinance();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [level, setLevel] = useState<Level>("root");
 
   const isPathActive = (path: string) => location.pathname === path;
+
+  const handleRootClick = (id: SectionId) => {
+    if (id === "investimentos") {
+      navigate("/investimentos");
+      return;
+    }
+    if (id === "patrimonio") {
+      navigate("/veiculos");
+      return;
+    }
+    setLevel(id);
+  };
 
   const handleExport = () => {
     exportData();
@@ -109,7 +128,7 @@ export function BottomNav() {
           <button
             key={item.id}
             type="button"
-            onClick={() => setLevel(item.id)}
+            onClick={() => handleRootClick(item.id)}
             className={cn(
               "flex flex-1 flex-col items-center justify-center gap-0.5 rounded-full px-2 py-1 text-[11px] font-medium transition-colors",
               hasActiveChild
@@ -188,34 +207,36 @@ export function BottomNav() {
   return (
     <nav className="fixed bottom-4 inset-x-0 z-40 flex justify-center md:hidden pointer-events-none">
       <div className="pointer-events-auto glass-card rounded-[1.75rem] border border-border/60 bg-card/95 shadow-lg max-w-[480px] w-[calc(100%-2rem)] flex flex-col">
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="application/json"
+          className="hidden"
+          onChange={handleFileChange}
+        />
+
         {level === "root" ? renderRoot() : renderSection(level)}
 
-        <div className="flex items-center justify-end gap-2 px-2 pb-1 pt-1 border-t border-border/40 text-[10px] text-muted-foreground">
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept="application/json"
-            className="hidden"
-            onChange={handleFileChange}
-          />
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            className="h-7 w-7 rounded-full"
-            onClick={handleExport}
-          >
-            <Download className="h-3.5 w-3.5" />
-          </Button>
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            className="h-7 w-7 rounded-full"
-            onClick={handleImportClick}
-          >
-            <Upload className="h-3.5 w-3.5" />
-          </Button>
+        <div className="flex items-center justify-end px-1 pb-1 pt-0.5">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button
+                type="button"
+                className="inline-flex h-8 w-8 items-center justify-center rounded-full text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors"
+                aria-label="Mais opções"
+              >
+                <MoreVertical className="h-4 w-4" />
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent side="top" align="end" className="text-xs">
+              <DropdownMenuItem onClick={handleExport}>
+                <Download className="mr-2 h-3.5 w-3.5" /> Exportar backup
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={handleImportClick}>
+                <Upload className="mr-2 h-3.5 w-3.5" /> Importar JSON
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
     </nav>
