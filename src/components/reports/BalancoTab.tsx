@@ -758,72 +758,66 @@ export function BalancoTab({ dateRanges }: BalancoTabProps) {
         subtitle="Métricas de saúde financeira"
         icon={<Landmark className="w-4 h-4" />}
       >
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          <DetailedIndicatorBadge
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">
+          <ReportCard
             title="PL / Total de Ativos"
             value={formatPercent(metricas.plAtivos.valor)}
             status={metricas.plAtivos.status}
-            trend={getTrend(variacoes.patrimonioLiquido || 0)}
-            trendLabel={range2.from ? `${(variacoes.patrimonioLiquido || 0).toFixed(1)}% vs anterior` : undefined}
-            descricao="Indica quanto do patrimônio é efetivamente seu. Ideal: acima de 50%"
-            formula="(Patrimônio Líquido / Ativo Total) × 100"
-            sparklineData={generateSparkline(metricas.plAtivos.valor, getTrend(variacoes.patrimonioLiquido || 0))}
-            icon={<Scale className="w-4 h-4" />}
+            trend={range2.from ? variacoes.patrimonioLiquido || 0 : undefined}
+            trendLabel={range2.from ? "período anterior" : undefined}
+            tooltip="Indica quanto do patrimônio é efetivamente seu. Ideal: acima de 50%. Fórmula: (Patrimônio Líquido / Ativo Total) × 100."
+            icon={<Scale className="w-6 h-6" />}
+            size="sm"
           />
-          <DetailedIndicatorBadge
+          <ReportCard
             title="Liquidez Geral"
             value={formatRatio(metricas.liquidezGeral.valor)}
             status={metricas.liquidezGeral.status}
-            trend={getTrend(variacoes.ativosTotal || 0)}
-            trendLabel={range2.from ? `${(variacoes.ativosTotal || 0).toFixed(1)}% vs anterior` : undefined}
-            descricao="Capacidade de pagar todas as dívidas. Ideal: acima de 2x"
-            formula="Ativo Total / Passivo Total"
-            sparklineData={generateSparkline(metricas.liquidezGeral.valor, getTrend(variacoes.ativosTotal || 0))}
-            icon={<Droplets className="w-4 h-4" />}
+            trend={range2.from ? variacoes.ativosTotal || 0 : undefined}
+            trendLabel={range2.from ? "período anterior" : undefined}
+            tooltip="Capacidade de pagar todas as dívidas. Ideal: acima de 2x. Fórmula: Ativo Total / Passivo Total."
+            icon={<Droplets className="w-6 h-6" />}
+            size="sm"
           />
-          <DetailedIndicatorBadge
+          <ReportCard
             title="Liquidez Corrente"
             value={formatRatio(metricas.liquidezCorrente.valor)}
             status={metricas.liquidezCorrente.status}
-            trend={getTrend(variacoes.circulantes || 0)}
-            trendLabel={range2.from ? `${(variacoes.circulantes || 0).toFixed(1)}% vs anterior` : undefined}
-            descricao="Capacidade de pagar dívidas de curto prazo. Ideal: acima de 1.5x"
-            formula="Ativo Circulante / Passivo Circulante (12 meses)"
-            sparklineData={generateSparkline(metricas.liquidezCorrente.valor, getTrend(variacoes.circulantes || 0))}
-            icon={<Banknote className="w-4 h-4" />}
+            trend={range2.from ? variacoes.circulantes || 0 : undefined}
+            trendLabel={range2.from ? "período anterior" : undefined}
+            tooltip="Capacidade de pagar dívidas de curto prazo. Ideal: acima de 1.5x. Fórmula: Ativo Circulante / Passivo Circulante (12 meses)."
+            icon={<Banknote className="w-6 h-6" />}
+            size="sm"
           />
-          <DetailedIndicatorBadge
+          <ReportCard
             title="Endividamento"
             value={formatPercent(metricas.endividamento.valor)}
             status={metricas.endividamento.status}
-            trend={getTrend(variacoes.passivosTotal || 0, true)}
-            trendLabel={range2.from ? `${(variacoes.passivosTotal || 0).toFixed(1)}% vs anterior` : undefined}
-            descricao="Percentual dos ativos comprometidos com dívidas. Quanto menor, melhor. Ideal: abaixo de 30%"
-            formula="(Passivo Total / Ativo Total) × 100"
-            sparklineData={generateSparkline(metricas.endividamento.valor, getTrend(variacoes.passivosTotal || 0, true))}
-            icon={<CreditCard className="w-4 h-4" />}
+            trend={range2.from ? variacoes.passivosTotal || 0 : undefined}
+            trendLabel={range2.from ? "período anterior" : undefined}
+            tooltip="Percentual dos ativos comprometidos com dívidas. Ideal: abaixo de 30%. Fórmula: (Passivo Total / Ativo Total) × 100."
+            icon={<CreditCard className="w-6 h-6" />}
+            size="sm"
           />
-          <DetailedIndicatorBadge
+          <ReportCard
             title="Cobertura de Ativos"
             value={formatRatio(metricas.coberturaAtivos.valor)}
             status={metricas.coberturaAtivos.status}
-            trend={getTrend(variacoes.ativosTotal || 0)}
-            trendLabel={range2.from ? `${(variacoes.ativosTotal || 0).toFixed(1)}% vs anterior` : undefined}
-            descricao="Quantas vezes os ativos cobrem os passivos. Ideal: acima de 2x"
-            formula="Ativo Total / Passivo Total"
-            sparklineData={generateSparkline(metricas.coberturaAtivos.valor, getTrend(variacoes.ativosTotal || 0))}
-            icon={<ShieldCheck className="w-4 h-4" />}
+            trend={range2.from ? variacoes.ativosTotal || 0 : undefined}
+            trendLabel={range2.from ? "período anterior" : undefined}
+            tooltip="Quantas vezes os ativos cobrem os passivos. Ideal: acima de 2x. Fórmula: Ativo Total / Passivo Total."
+            icon={<ShieldCheck className="w-6 h-6" />}
+            size="sm"
           />
-          <DetailedIndicatorBadge
+          <ReportCard
             title="Imobilização do PL"
             value={formatPercent(metricas.imobilizacao.valor)}
             status={metricas.imobilizacao.status}
-            trend={getTrend(variacoes.patrimonioLiquido || 0, true)}
-            trendLabel={range2.from ? `${(variacoes.patrimonioLiquido || 0).toFixed(1)}% vs anterior` : undefined}
-            descricao="Quanto do patrimônio está investido em bens imobilizados (veículos). Ideal: abaixo de 30%"
-            formula="(Ativo Imobilizado / Patrimônio Líquido) × 100"
-            sparklineData={generateSparkline(metricas.imobilizacao.valor, getTrend(variacoes.patrimonioLiquido || 0, true))}
-            icon={<Car className="w-4 h-4" />}
+            trend={range2.from ? variacoes.patrimonioLiquido || 0 : undefined}
+            trendLabel={range2.from ? "período anterior" : undefined}
+            tooltip="Quanto do patrimônio está investido em bens imobilizados (veículos). Ideal: abaixo de 30%. Fórmula: (Ativo Imobilizado / Patrimônio Líquido) × 100."
+            icon={<Car className="w-6 h-6" />}
+            size="sm"
           />
         </div>
       </ExpandablePanel>
