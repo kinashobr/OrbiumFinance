@@ -1,6 +1,6 @@
 import { useState, useMemo, useCallback, useRef } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetClose } from "@/components/ui/sheet";
+// Sheet removido no mobile: tela passa a ocupar a tela inteira
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -718,40 +718,29 @@ export function BillsTrackerModal({ open, onOpenChange }: BillsTrackerModalProps
 
   return (
     <>
-      {/* Mobile: Sheet full-screen */}
       {isMobile ? (
-        <Sheet open={open} onOpenChange={onOpenChange}>
-          <SheetContent side="bottom" className="h-[95vh] p-0 flex flex-col">
-            <SheetHeader className="px-4 pt-3 pb-2 border-b shrink-0 bg-muted/20">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 bg-primary/10 rounded-lg">
-                    <CalendarCheck className="w-5 h-5 text-primary" />
-                  </div>
-                  <div>
-                    <SheetTitle className="text-base font-bold">Contas a Pagar</SheetTitle>
-                    <p className="text-[10px] text-muted-foreground">
-                      {format(currentDate, 'MMMM yyyy', { locale: ptBR })}
-                    </p>
-                  </div>
+        open ? (
+          <div className="fixed inset-0 z-40 bg-background flex flex-col">
+            <header className="px-4 pt-3 pb-2 border-b shrink-0 bg-muted/20">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-primary/10 rounded-lg">
+                  <CalendarCheck className="w-5 h-5 text-primary" />
                 </div>
-                <SheetClose asChild>
-                  <Button variant="ghost" size="icon" className="h-8 w-8">
-                    <X className="w-4 h-4" />
-                  </Button>
-                </SheetClose>
+                <div>
+                  <p className="text-sm font-bold">Contas a Pagar</p>
+                  <p className="text-[10px] text-muted-foreground">
+                    {format(currentDate, 'MMMM yyyy', { locale: ptBR })}
+                  </p>
+                </div>
               </div>
-            </SheetHeader>
+            </header>
 
-            {/* KPIs Mobile */}
-            {renderMobileKPIs()}
-
-            {/* Conteúdo Principal */}
-            <div className="flex-1 flex flex-col p-4 overflow-hidden bg-background">
+            {/* Conteúdo principal em tela cheia */}
+            <main className="flex-1 flex flex-col p-4 overflow-hidden bg-background">
               {renderMobileContent()}
-            </div>
-          </SheetContent>
-        </Sheet>
+            </main>
+          </div>
+        ) : null
       ) : (
         /* Desktop: Dialog com ResizableDialogContent */
         <Dialog open={open} onOpenChange={onOpenChange}>
