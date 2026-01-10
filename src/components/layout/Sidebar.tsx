@@ -42,12 +42,12 @@ interface NavItemData {
 }
 
 const mainNavItems: NavItemData[] = [
-  { title: "Dashboard", path: "/", icon: LayoutDashboard },
+  { title: "Início", path: "/", icon: LayoutDashboard },
   { title: "Financeiro", path: "/receitas-despesas", icon: Receipt },
-  { title: "Empréstimos", path: "/emprestimos", icon: CreditCard },
-  { title: "Relatórios", path: "/relatorios", icon: BarChart3 },
-  { title: "Investimentos", path: "/investimentos", icon: PieChart },
-  { title: "Veículos", path: "/veiculos", icon: Car },
+  { title: "Dívidas", path: "/emprestimos", icon: CreditCard },
+  { title: "Análise", path: "/relatorios", icon: BarChart3 },
+  { title: "Investir", path: "/investimentos", icon: PieChart },
+  { title: "Bens", path: "/veiculos", icon: Car },
 ];
 
 export function Sidebar() {
@@ -96,30 +96,27 @@ export function Sidebar() {
       <NavLink
         to={item.path}
         className={cn(
-          "relative group flex items-center h-12 transition-all duration-300 outline-none",
-          collapsed ? "justify-center w-full" : "px-3 gap-4"
+          "relative group flex items-center h-11 transition-all duration-300 outline-none",
+          collapsed ? "justify-center w-full" : "px-3 gap-3"
         )}
       >
-        {/* Active Indicator (Pill) */}
         <div className={cn(
           "absolute inset-y-1 rounded-full transition-all duration-300 ease-in-out",
           isActive ? "bg-primary/20 opacity-100" : "bg-transparent opacity-0 group-hover:bg-muted/50 group-hover:opacity-100",
           collapsed ? "left-2 right-2" : "left-0 right-0"
         )} />
         
-        {/* Icon with active color */}
         <div className={cn(
           "relative z-10 flex items-center justify-center shrink-0 transition-colors duration-300",
-          collapsed ? "w-10 h-10" : "w-6 h-6",
+          collapsed ? "w-10 h-10" : "w-5 h-5",
           isActive ? "text-primary" : "text-muted-foreground group-hover:text-foreground"
         )}>
-          <Icon className={cn("transition-transform duration-300", isActive ? "scale-110" : "scale-100")} size={collapsed ? 22 : 20} />
+          <Icon className={cn("transition-transform duration-300", isActive ? "scale-110" : "scale-100")} size={collapsed ? 20 : 18} />
         </div>
 
-        {/* Label (Hidden when collapsed) */}
         {!collapsed && (
           <span className={cn(
-            "relative z-10 text-sm font-bold tracking-wide transition-colors duration-300",
+            "relative z-10 text-[13px] font-bold tracking-tight transition-colors duration-300 truncate",
             isActive ? "text-primary" : "text-muted-foreground group-hover:text-foreground"
           )}>
             {item.title}
@@ -142,46 +139,45 @@ export function Sidebar() {
 
   return (
     <aside className={cn(
-      "hidden md:flex fixed left-4 top-4 bottom-4 z-40 bg-card/95 backdrop-blur-xl border border-border/40 shadow-2xl transition-all duration-500 ease-in-out flex-col rounded-[2.5rem] overflow-hidden",
-      collapsed ? "w-20" : "w-64"
+      "hidden md:flex fixed left-4 top-4 bottom-4 z-40 bg-card/95 backdrop-blur-xl border border-border/40 shadow-2xl transition-all duration-500 ease-in-out flex-col rounded-[2rem] overflow-hidden",
+      collapsed ? "w-20" : "w-44"
     )}>
       {/* Header / Logo */}
       <div className={cn(
-        "h-20 flex items-center shrink-0 transition-all duration-500",
-        collapsed ? "justify-center" : "px-6 gap-3"
+        "h-16 flex items-center shrink-0 transition-all duration-500",
+        collapsed ? "justify-center" : "px-5 gap-2.5"
       )}>
-        <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-primary to-primary-dark flex items-center justify-center text-white shadow-lg shadow-primary/20 shrink-0">
-          <Wallet size={24} />
+        <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-primary to-primary-dark flex items-center justify-center text-white shadow-lg shadow-primary/20 shrink-0">
+          <Wallet size={18} />
         </div>
         {!collapsed && (
-          <div className="flex flex-col min-w-0 animate-in fade-in slide-in-from-left-4 duration-500">
-            <span className="font-black text-lg leading-tight tracking-tighter">ORBIUM</span>
-            <span className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground opacity-60">Finance</span>
+          <div className="flex flex-col min-w-0 animate-in fade-in slide-in-from-left-2 duration-500">
+            <span className="font-black text-base leading-tight tracking-tighter">ORBIUM</span>
+            <span className="text-[8px] font-black uppercase tracking-[0.2em] text-muted-foreground opacity-60">Finance</span>
           </div>
         )}
       </div>
 
       {/* Main Nav */}
-      <div className="flex-1 overflow-y-auto no-scrollbar py-4 px-3 space-y-1">
+      <div className="flex-1 overflow-y-auto no-scrollbar py-2 px-2.5 space-y-0.5">
         {mainNavItems.map(item => <NavItem key={item.path} item={item} />)}
       </div>
 
       {/* System Actions Area */}
-      <div className="px-3 pb-6 space-y-2 mt-auto shrink-0">
-        <Separator className="mx-3 mb-4 opacity-40" />
+      <div className="px-2.5 pb-4 space-y-1.5 mt-auto shrink-0">
+        <Separator className="mx-2.5 mb-3 opacity-30" />
         
-        {/* Alertas - Material 3 Style */}
         <Dialog>
           <DialogTrigger asChild>
             <button className={cn(
-              "relative flex items-center h-12 rounded-full transition-all duration-300 group hover:bg-muted/50",
-              collapsed ? "justify-center w-full" : "px-3 gap-4 w-full"
+              "relative flex items-center h-10 rounded-full transition-all duration-300 group hover:bg-muted/50",
+              collapsed ? "justify-center w-full" : "px-3 gap-3 w-full"
             )}>
-              <div className="relative flex items-center justify-center w-6 h-6 text-muted-foreground group-hover:text-primary transition-colors">
-                <Bell size={20} />
-                <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-destructive rounded-full border-2 border-card" />
+              <div className="relative flex items-center justify-center w-5 h-5 text-muted-foreground group-hover:text-primary transition-colors">
+                <Bell size={18} />
+                <span className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-destructive rounded-full border-2 border-card" />
               </div>
-              {!collapsed && <span className="text-sm font-bold text-muted-foreground group-hover:text-foreground">Alertas</span>}
+              {!collapsed && <span className="text-[13px] font-bold text-muted-foreground group-hover:text-foreground">Alertas</span>}
             </button>
           </DialogTrigger>
           <DialogContent className="rounded-[2rem] max-w-sm p-0 overflow-hidden border-border/40 shadow-2xl">
@@ -196,17 +192,16 @@ export function Sidebar() {
           </DialogContent>
         </Dialog>
 
-        {/* Configurações & Dados */}
         <Dialog>
           <DialogTrigger asChild>
             <button className={cn(
-              "relative flex items-center h-12 rounded-full transition-all duration-300 group hover:bg-muted/50",
-              collapsed ? "justify-center w-full" : "px-3 gap-4 w-full"
+              "relative flex items-center h-10 rounded-full transition-all duration-300 group hover:bg-muted/50",
+              collapsed ? "justify-center w-full" : "px-3 gap-3 w-full"
             )}>
-              <div className="flex items-center justify-center w-6 h-6 text-muted-foreground group-hover:text-primary transition-colors">
-                <Settings size={20} />
+              <div className="flex items-center justify-center w-5 h-5 text-muted-foreground group-hover:text-primary transition-colors">
+                <Settings size={18} />
               </div>
-              {!collapsed && <span className="text-sm font-bold text-muted-foreground group-hover:text-foreground">Configurações</span>}
+              {!collapsed && <span className="text-[13px] font-bold text-muted-foreground group-hover:text-foreground">Ajustes</span>}
             </button>
           </DialogTrigger>
           <DialogContent className="rounded-[2.5rem] max-w-md p-0 overflow-hidden border-border/40 shadow-2xl">
@@ -220,7 +215,6 @@ export function Sidebar() {
             </DialogHeader>
             
             <div className="px-8 py-4 space-y-8 pb-10 overflow-y-auto max-h-[70vh]">
-              {/* Tema Visual */}
               <div className="space-y-4">
                 <div className="flex items-center gap-2">
                   <Palette className="w-4 h-4 text-muted-foreground" />
@@ -247,7 +241,6 @@ export function Sidebar() {
 
               <Separator className="opacity-40" />
 
-              {/* Dados e Backup */}
               <div className="space-y-4">
                 <div className="flex items-center gap-2">
                   <Database className="w-4 h-4 text-muted-foreground" />
@@ -288,14 +281,13 @@ export function Sidebar() {
           </DialogContent>
         </Dialog>
 
-        {/* Botão de Colapso */}
         <button
           onClick={() => setCollapsed(!collapsed)}
           className={cn(
-            "flex items-center justify-center w-full h-10 rounded-full bg-muted/30 text-muted-foreground hover:bg-muted hover:text-foreground transition-all duration-300 mt-4",
+            "flex items-center justify-center w-full h-9 rounded-full bg-muted/30 text-muted-foreground hover:bg-muted hover:text-foreground transition-all duration-300 mt-2",
           )}
         >
-          {collapsed ? <ChevronRight size={18} /> : <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest"><ChevronLeft size={16} /> Recolher</div>}
+          {collapsed ? <ChevronRight size={16} /> : <div className="flex items-center gap-2 text-[9px] font-black uppercase tracking-widest"><ChevronLeft size={14} /> Recolher</div>}
         </button>
       </div>
     </aside>
