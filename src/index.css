@@ -267,6 +267,14 @@
   .scrollbar-thin::-webkit-scrollbar-thumb { background: hsl(var(--muted)); border-radius: 3px; }
   .hide-scrollbar-mobile { -webkit-overflow-scrolling: touch; }
   @media (max-width: 768px) { .hide-scrollbar-mobile { scrollbar-width: none; -ms-overflow-style: none; } .hide-scrollbar-mobile::-webkit-scrollbar { display: none; } }
+  
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
 }
 
 @media (max-width: 768px) {
