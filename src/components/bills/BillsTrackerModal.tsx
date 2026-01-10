@@ -1,10 +1,11 @@
 "use client";
 
 import { useState, useMemo, useCallback, useRef } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { 
   Plus, 
   CalendarCheck, 
@@ -37,7 +38,7 @@ import { BillsTrackerList } from "./BillsTrackerList";
 import { BillsSidebarKPIs } from "./BillsSidebarKPIs";
 import { FixedBillSelectorModal } from "./FixedBillSelectorModal";
 import { AddPurchaseInstallmentDialog } from "./AddPurchaseInstallmentDialog";
-import { format, startOfMonth, endOfMonth, subMonths, addMonths } from "date-fns";
+import { format, startOfMonth, endOfMonth, subMonths, addMonths, startOfDay } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { toast } from "sonner";
 import { cn, parseDateLocal } from "@/lib/utils";
@@ -80,6 +81,11 @@ export function BillsTrackerModal({ open, onOpenChange }: BillsTrackerModalProps
   const [fixedBillSelectorMode, setFixedBillSelectorMode] = useState<'current' | 'future'>('current');
   const [showAddPurchaseDialog, setShowAddPurchaseDialog] = useState(false);
   const [showNewBillModal, setShowNewBillModal] = useState(false);
+
+  // Helper para adicionar conta avulsa
+  const [newBillDescription, setNewBillDescription] = useState("");
+  const [newBillAmount, setNewBillAmount] = useState("");
+  const [newBillDueDate, setNewBillDueDate] = useState(format(currentDate, "yyyy-MM-dd"));
 
   const trackerManagedBills = useMemo(() => getBillsForMonth(currentDate), [getBillsForMonth, currentDate]);
   const externalPaidBills = useMemo(() => getOtherPaidExpensesForMonth(currentDate), [getOtherPaidExpensesForMonth, currentDate]);
@@ -516,35 +522,6 @@ export function BillsTrackerModal({ open, onOpenChange }: BillsTrackerModalProps
       </Dialog>
     </>
   );
-
-  // Helper para adicionar conta avulsa
-  const [newBillDescription, setNewBillDescription] = useState("");
-  const [newBillAmount, setNewBillAmount] = useState("");
-  const [newBillDueDate, setNewBillDueDate] = useState(format(currentDate, "yyyy-MM-dd"));
-
-  const handleAddAdHocBill = (): boolean => {
-    const amount = parseAmount(newBillAmount);
-    if (!newBillDescription || amount <= 0 || !newBillDueDate) {
-      toast.error("Preencha todos os campos.");
-      return false;
-    }
-    setBillsTracker(prev => [...prev, {
-      id: generateBillId(),
-      type: 'tracker',
-      description: newBillDescription,
-      dueDate: newBillDueDate,
-      expectedAmount: amount,
-      sourceType: "ad_hoc",
-      suggestedAccountId: contasMovimento.find(c => c.accountType === "corrente")?.id,
-      suggestedCategoryId: null,
-      isPaid: false,
-      isExcluded: false
-    }]);
-    setNewBillDescription("");
-    setNewBillAmount("");
-    toast.success("Despesa adicionada.");
-    return true;
-  };
 
   const parseAmount = (value: string): number => {
     const parsed = parseFloat(value.replace(".", "").replace(",", "."));
