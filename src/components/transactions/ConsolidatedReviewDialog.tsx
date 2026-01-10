@@ -142,7 +142,7 @@ export function ConsolidatedReviewDialog({
       const baseTx: TransacaoCompleta = {
         id: transactionId, date: tx.date, accountId: tx.accountId, flow, operationType: tx.operationType!, domain: getDomainFromOperation(tx.operationType!),
         amount: tx.amount, categoryId: tx.categoryId || null, description: tx.description, links: { investmentId: tx.tempInvestmentId || null, loanId: tx.tempLoanId || null, transferGroupId: null, parcelaId: tx.tempParcelaId || null, vehicleTransactionId: null },
-        conciliated: true, attachments: [], meta: { createdBy: 'system', source: 'import', createdAt: editingTransaction?.meta.createdAt || new Date().toISOString(), originalDescription: tx.originalDescription, vehicleOperation: tx.operationType === 'veiculo' ? tx.tempVehicleOperation || undefined : undefined }
+        conciliated: true, attachments: [], meta: { createdBy: 'system', source: 'import', createdAt: new Date().toISOString(), originalDescription: tx.originalDescription, vehicleOperation: tx.operationType === 'veiculo' ? tx.tempVehicleOperation || undefined : undefined }
       };
       
       if (tx.isTransfer && tx.destinationAccountId) {
@@ -186,7 +186,7 @@ export function ConsolidatedReviewDialog({
     <div className="flex flex-1 overflow-hidden">
       {!isMobile && (
         <ResizableSidebar initialWidth={340} minWidth={280} maxWidth={420} storageKey="review_sidebar_width">
-          <div className="h-full bg-card border-r border-border/40">
+          <div className="h-full bg-surface-light dark:bg-surface-dark border-r border-border/40">
             <ReviewContextSidebar
               accountId={accountId} statements={importedStatements.filter(s => s.accountId === accountId)}
               pendingCount={pendingCount} readyToContabilizeCount={readyCount} totalCount={transactionsToReview.length}
