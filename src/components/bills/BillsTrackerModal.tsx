@@ -387,20 +387,18 @@ export function BillsTrackerModal({ open, onOpenChange }: BillsTrackerModalProps
       {isMobile && open ? (
         <div className="fixed inset-0 z-[100] bg-background flex flex-col animate-in fade-in slide-in-from-bottom-4 duration-300">
           <header className="px-6 pt-8 pb-4 border-b shrink-0 bg-card">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-4">
-                <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center text-primary">
-                  <CalendarCheck className="w-6 h-6" />
-                </div>
-                <div>
-                  <h2 className="text-xl font-black tracking-tight">Contas a Pagar</h2>
-                  <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Gestão de Fluxo</p>
-                </div>
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center text-primary">
+                <CalendarCheck className="w-6 h-6" />
               </div>
-              <Button variant="ghost" size="icon" className="rounded-full h-12 w-12" onClick={() => onOpenChange(false)}>
-                <X className="w-6 h-6" />
-              </Button>
+              <div>
+                <h2 className="text-xl font-black tracking-tight">Contas a Pagar</h2>
+                <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Gestão de Fluxo</p>
+              </div>
             </div>
+            <Button variant="ghost" size="icon" className="rounded-full h-12 w-12" onClick={() => onOpenChange(false)}>
+              <X className="w-6 h-6" />
+            </Button>
           </header>
           <main className="flex-1 p-6 overflow-hidden">
             {renderMobileContent()}
@@ -522,6 +520,30 @@ export function BillsTrackerModal({ open, onOpenChange }: BillsTrackerModalProps
       </Dialog>
     </>
   );
+
+  const handleAddAdHocBill = (): boolean => {
+    const amount = parseAmount(newBillAmount);
+    if (!newBillDescription || amount <= 0 || !newBillDueDate) {
+      toast.error("Preencha todos os campos.");
+      return false;
+    }
+    setBillsTracker(prev => [...prev, {
+      id: generateBillId(),
+      type: 'tracker',
+      description: newBillDescription,
+      dueDate: newBillDueDate,
+      expectedAmount: amount,
+      sourceType: "ad_hoc",
+      suggestedAccountId: contasMovimento.find(c => c.accountType === "corrente")?.id,
+      suggestedCategoryId: null,
+      isPaid: false,
+      isExcluded: false
+    }]);
+    setNewBillDescription("");
+    setNewBillAmount("");
+    toast.success("Despesa adicionada.");
+    return true;
+  };
 
   const parseAmount = (value: string): number => {
     const parsed = parseFloat(value.replace(".", "").replace(",", "."));
