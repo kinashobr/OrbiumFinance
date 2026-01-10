@@ -120,7 +120,10 @@ export function ConsolidatedReviewDialog({
     setTransactionsToReview(prev => prev.map(tx => tx.id === id ? { ...tx, ...updates } : tx));
   }, []);
   
-  const handleCreateRule = (tx: ImportedTransaction) => { setTxForRule(tx); setShowRuleModal(true); };
+  const handleCreateRule = (tx: ImportedTransaction) => { 
+    setTxForRule(tx); 
+    setShowRuleModal(true); 
+  };
   
   const handleSaveRule = (rule: Omit<StandardizationRule, "id">) => {
     addStandardizationRule(rule);
@@ -273,9 +276,9 @@ export function ConsolidatedReviewDialog({
     </div>
   );
 
-  if (isMobile && open) {
-    return (
-      <>
+  return (
+    <>
+      {isMobile && open ? (
         <div className="fixed inset-0 z-[100] bg-background flex flex-col animate-in fade-in slide-in-from-bottom-4 duration-300">
           <header className="px-6 pt-6 pb-4 border-b shrink-0 bg-card">
             <div className="flex items-center justify-between">
@@ -309,50 +312,55 @@ export function ConsolidatedReviewDialog({
             </div>
           ) : renderContent()}
         </div>
-        
-        {/* Modais de Regras renderizados fora da condicional de filtros para garantir funcionamento */}
-        <StandardizationRuleFormModal open={showRuleModal} onOpenChange={setShowRuleModal} initialTransaction={txForRule} categories={categories} onSave={handleSaveRule} />
-        <StandardizationRuleManagerModal open={showRuleManagerModal} onOpenChange={setShowRuleManagerModal} rules={standardizationRules} onDeleteRule={deleteStandardizationRule} categories={categories} />
-      </>
-    );
-  }
-
-  return (
-    <>
-      <Dialog open={open} onOpenChange={onOpenChange}>
-        <ResizableDialogContent 
-          storageKey="consolidated_review_modal"
-          initialWidth={1400} initialHeight={900} minWidth={1000} minHeight={700} hideCloseButton={true}
-          className="rounded-[3rem] bg-background border-none shadow-2xl p-0 overflow-hidden"
-        >
-          <div className="modal-viewport">
-            <DialogHeader className="px-10 pt-10 pb-6 bg-background shrink-0">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-5">
-                  <div className="w-16 h-16 rounded-[1.5rem] bg-primary/10 flex items-center justify-center text-primary shadow-lg shadow-primary/5">
-                    <FileText className="w-8 h-8" />
+      ) : (
+        <Dialog open={open} onOpenChange={onOpenChange}>
+          <ResizableDialogContent 
+            storageKey="consolidated_review_modal"
+            initialWidth={1400} initialHeight={900} minWidth={1000} minHeight={700} hideCloseButton={true}
+            className="rounded-[3rem] bg-background border-none shadow-2xl p-0 overflow-hidden"
+          >
+            <div className="modal-viewport">
+              <DialogHeader className="px-10 pt-10 pb-6 bg-background shrink-0">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-5">
+                    <div className="w-16 h-16 rounded-[1.5rem] bg-primary/10 flex items-center justify-center text-primary shadow-lg shadow-primary/5">
+                      <FileText className="w-8 h-8" />
+                    </div>
+                    <div>
+                      <DialogTitle className="text-3xl font-black tracking-tighter">Painel de Revisão</DialogTitle>
+                      <DialogDescription className="text-sm font-bold text-muted-foreground flex items-center gap-2 mt-1">
+                        <Sparkles className="w-4 h-4 text-accent" />
+                        {account?.name} • Inteligência de Extratos
+                      </DialogDescription>
+                    </div>
                   </div>
-                  <div>
-                    <DialogTitle className="text-3xl font-black tracking-tighter">Painel de Revisão</DialogTitle>
-                    <DialogDescription className="text-sm font-bold text-muted-foreground flex items-center gap-2 mt-1">
-                      <Sparkles className="w-4 h-4 text-accent" />
-                      {account?.name} • Inteligência de Extratos
-                    </DialogDescription>
-                  </div>
+                  <Button variant="ghost" size="icon" className="h-12 w-12 rounded-full hover:bg-black/5 transition-colors" onClick={() => onOpenChange(false)}>
+                    <X className="w-6 h-6" />
+                  </Button>
                 </div>
-                <Button variant="ghost" size="icon" className="h-12 w-12 rounded-full hover:bg-black/5 transition-colors" onClick={() => onOpenChange(false)}>
-                  <X className="w-6 h-6" />
-                </Button>
-              </div>
-            </DialogHeader>
+              </DialogHeader>
 
-            {renderContent()}
-          </div>
-        </ResizableDialogContent>
-      </Dialog>
+              {renderContent()}
+            </div>
+          </ResizableDialogContent>
+        </Dialog>
+      )}
       
-      <StandardizationRuleFormModal open={showRuleModal} onOpenChange={setShowRuleModal} initialTransaction={txForRule} categories={categories} onSave={handleSaveRule} />
-      <StandardizationRuleManagerModal open={showRuleManagerModal} onOpenChange={setShowRuleManagerModal} rules={standardizationRules} onDeleteRule={deleteStandardizationRule} categories={categories} />
+      {/* Modais de Regras renderizados fora para evitar travamentos e garantir z-index */}
+      <StandardizationRuleFormModal 
+        open={showRuleModal} 
+        onOpenChange={setShowRuleModal} 
+        initialTransaction={txForRule} 
+        categories={categories} 
+        onSave={handleSaveRule} 
+      />
+      <StandardizationRuleManagerModal 
+        open={showRuleManagerModal} 
+        onOpenChange={setShowRuleManagerModal} 
+        rules={standardizationRules} 
+        onDeleteRule={deleteStandardizationRule} 
+        categories={categories} 
+      />
     </>
   );
 }
