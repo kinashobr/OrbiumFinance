@@ -3,11 +3,9 @@ import { MainLayout } from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Trash2, CreditCard, Calculator, TrendingDown, Percent, Calendar, DollarSign, Eye, Clock, Award, PiggyBank, Target, ChevronRight, AlertTriangle, Building2 } from "lucide-react";
+import { Plus, CreditCard, TrendingDown, Eye, Building2, Wallet } from "lucide-react";
 import { useFinance } from "@/contexts/FinanceContext";
 import { Emprestimo } from "@/types/finance";
-import { EditableCell } from "@/components/EditableCell";
 import { LoanCard } from "@/components/loans/LoanCard";
 import { LoanForm } from "@/components/loans/LoanForm";
 import { LoanAlerts } from "@/components/loans/LoanAlerts";
@@ -15,320 +13,142 @@ import { LoanCharts } from "@/components/loans/LoanCharts";
 import { LoanDetailDialog } from "@/components/loans/LoanDetailDialog";
 import { LoanSimulator } from "@/components/loans/LoanSimulator";
 import { PeriodSelector } from "@/components/dashboard/PeriodSelector";
-import { DateRange, ComparisonDateRanges } from "@/types/finance";
-import { cn, parseDateLocal, getDueDate } from "@/lib/utils";
-import { startOfMonth, endOfMonth, isWithinInterval, format, subDays } from "date-fns";
-import { useLocation } from "react-router-dom"; // <-- IMPORTADO
+import { ComparisonDateRanges } from "@/types/finance";
+import { parseDateLocal } from "@/lib/utils";
+import { useLocation } from "react-router-dom";
 
 const Emprestimos = () => {
   const { 
     emprestimos, 
     addEmprestimo, 
-    updateEmprestimo, 
-    deleteEmprestimo, 
-    getTotalDividas,
     getPendingLoans,
     getContasCorrentesTipo,
-    transacoesV2,
     dateRanges,
     setDateRanges,
-    getSaldoDevedor,
-    getLoanPrincipalRemaining, // <-- NEW
-    getCreditCardDebt, // <-- NEW
-    calculatePaidInstallmentsUpToDate, // <-- ADDED
+    getLoanPrincipalRemaining,
+    getCreditCardDebt,
+    calculatePaidInstallmentsUpToDate,
   } = useFinance();
   
-  const location = useLocation(); // <-- USANDO useLocation
-  
+  const location = useLocation();
   const [selectedLoan, setSelectedLoan] = useState<Emprestimo | null>(null);
   const [detailDialogOpen, setDetailDialogOpen] = useState(false);
-  
-  // NOVO: Ref para rastrear se a abertura automática já foi tratada
   const autoOpenHandledRef = useRef(false);
   
   const handlePeriodChange = useCallback((ranges: ComparisonDateRanges) => {
     setDateRanges(ranges);
   }, [setDateRanges]);
 
-  // Get pending loans list
   const pendingLoans = getPendingLoans(); 
 
-  // Handler para abrir o modal de configuração a partir do alerta local
-  const handleOpenPendingConfigFromAlert = useCallback(() => {
-    if (pendingLoans.length > 0) {
-      setSelectedLoan(pendingLoans[0]);
-      setDetailDialogOpen(true);
-    }
-  }, [pendingLoans]);
-
-  // Effect para abrir o modal se a navegação veio do alerta (Sidebar)
   useEffect(() => {
     const state = location.state as { openLoanConfig?: boolean } | null;
-    
-    // Verifica se o estado de navegação indica abertura E se ainda não foi tratado
     if (state?.openLoanConfig && pendingLoans.length > 0 && !autoOpenHandledRef.current) {
-      
-      // Marca como tratado
       autoOpenHandledRef.current = true;
-      
-      // Abre o modal para o primeiro empréstimo pendente
       setSelectedLoan(pendingLoans[0]);
       setDetailDialogOpen(true);
-      
-      // Limpa o estado de navegação para evitar reabertura ao voltar
-      // Nota: Substituir o estado atual na história do navegador
       window.history.replaceState({}, document.title, location.pathname);
     }
-    
-    // Se o modal for fechado, resetamos o ref para permitir que uma nova navegação o abra novamente.
-    // No entanto, o ref deve ser resetado apenas se o modal for fechado E o estado de navegação não estiver mais presente.
-    // A maneira mais simples de garantir que o ref não cause problemas é deixá-lo ser reavaliado apenas na montagem/navegação.
-    // A limpeza do location.state já garante que o useEffect não será re-executado com a flag 'openLoanConfig'.
-    
-  }, [location.state, pendingLoans]);
+  }, [location.state, pendingLoans, location.pathname]);
 
-  // Helper function to calculate the next due date for a loan
-  const getNextDueDate = useCallback((loan: Emprestimo, targetDate: Date | undefined): Date | null => {
-    if (!loan.dataInicio || loan.meses === 0) return null;
-    
-    // Use the dynamically calculated paid installments up to the target date
-    const paidUpToDate = calculatePaidInstallmentsUpToDate(loan.id, targetDate || new Date());
-    
-    const nextParcela = paidUpToDate + 1;
-    if (nextParcela > loan.meses) return null;
-
-    // Usa parseDateLocal para garantir que a data de início seja interpretada localmente
-    const startDate = parseDateLocal(loan.dataInicio);
-    const dueDate = new Date(startDate);
-    
-    // Ajuste: Se nextParcela = 1, offset é 0 meses.
-    dueDate.setMonth(dueDate.getMonth() + nextParcela - 1);
-    
-    return dueDate;
-  }, [calculatePaidInstallmentsUpToDate]); // Removido dateRanges.range1.to da dependência, pois é passado como argumento
-
-  // Cálculos principais
   const calculos = useMemo(() => {
     const targetDate = dateRanges.range1.to;
-    
-    // Saldo Devedor Total (Apenas Empréstimos)
-    const principalEmprestimos = getLoanPrincipalRemaining(targetDate);
-    
-    // Dívida Cartões (Mantida para referência, mas não exibida no card principal)
-    const dividaCartoes = getCreditCardDebt(targetDate);
-    
-    const totalContratado = emprestimos.reduce((acc, e) => acc + e.valorTotal, 0);
-    
-    // Calculate total paid based on transactions up to the period end date
-    const totalPaid = emprestimos.reduce((acc, e) => {
-        if (e.status === 'quitado' || e.status === 'pendente_config') return acc;
-        
-        const paidCount = calculatePaidInstallmentsUpToDate(e.id, targetDate || new Date());
-        // Simplificação: Multiplica o número de parcelas pagas pelo valor da parcela fixa
-        return acc + (paidCount * e.parcela);
-    }, 0);
-    
-    const parcelaMensalTotal = emprestimos.reduce((acc, e) => acc + e.parcela, 0);
-    const jurosTotais = emprestimos.reduce((acc, e) => acc + (e.parcela * e.meses - e.valorTotal), 0);
-    
     return {
-      totalContratado,
-      totalPago: totalPaid, // Use calculated total paid
-      saldoDevedorTotal: principalEmprestimos, // FIXED: Only show loan principal here
-      dividaCartoes, 
-      parcelaMensalTotal,
-      jurosTotais,
+      saldoDevedorTotal: getLoanPrincipalRemaining(targetDate),
+      dividaCartoes: getCreditCardDebt(targetDate),
+      parcelaMensalTotal: emprestimos.reduce((acc, e) => acc + e.parcela, 0),
+      jurosTotais: emprestimos.reduce((acc, e) => acc + (e.parcela * e.meses - e.valorTotal), 0),
     };
-  }, [emprestimos, getLoanPrincipalRemaining, getCreditCardDebt, dateRanges.range1.to, calculatePaidInstallmentsUpToDate]);
+  }, [emprestimos, getLoanPrincipalRemaining, getCreditCardDebt, dateRanges.range1.to]);
 
-  // Filtra empréstimos ativos
-  const emprestimosAtivos = useMemo(() => {
-    return emprestimos.filter(e => e.status === 'ativo' || e.status === 'pendente_config');
-  }, [emprestimos]);
-
-  const contasCorrentes = getContasCorrentesTipo();
-
-  const handleAddLoan = (data: Parameters<typeof addEmprestimo>[0]) => {
-    addEmprestimo(data);
-  };
-
-  const handleEditLoan = (loan: Emprestimo) => {
-    setSelectedLoan(loan);
-    setDetailDialogOpen(true);
-  };
-
-  const handleDeleteLoan = (id: number) => {
-    if (confirm("Tem certeza que deseja excluir este empréstimo?")) {
-      deleteEmprestimo(id);
-    }
-  };
-
-  const formatCurrency = (value: number) => 
-    `R$ ${value.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`;
+  const formatCurrency = (value: number) => `R$ ${value.toLocaleString("pt-BR", { minimumFractionDigits: 0 })}`;
 
   return (
     <MainLayout>
       <div className="space-y-6">
-        {/* Header */}
-        <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between animate-fade-in">
-          <div>
-            <h1 className="text-xl md:text-3xl font-bold text-foreground">Empréstimos & Financiamentos</h1>
-            <p className="text-xs md:text-base text-muted-foreground mt-1">Gerencie seus passivos de longo prazo e simule cenários de quitação</p>
+        <header className="space-y-3 animate-fade-in border-0">
+          <div className="flex items-center justify-between text-xs text-muted-foreground">
+            <div className="inline-flex items-start gap-3">
+              <div className="flex flex-col">
+                <span className="text-sm font-semibold text-foreground">Passivos e Financiamentos</span>
+                <span className="text-[11px]">Gestão de Dívidas</span>
+              </div>
+            </div>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-stretch gap-2 max-w-full">
             <PeriodSelector 
               initialRanges={dateRanges}
               onDateRangeChange={handlePeriodChange}
-              className="h-8 md:h-9 rounded-full border-none bg-card px-3 text-[11px] md:text-xs font-medium text-secondary shadow-xs"
+              className="h-8 rounded-full border-none bg-card px-3 text-[11px] font-medium text-secondary shadow-xs"
             />
-            {/* Ocultando o botão Novo Empréstimo, mas mantendo a funcionalidade */}
-            <div className="hidden">
-              <LoanForm onSubmit={handleAddLoan} contasCorrentes={contasCorrentes} />
-            </div>
+            <LoanForm 
+              onSubmit={addEmprestimo} 
+              contasCorrentes={getContasCorrentesTipo()} 
+              className="h-8 rounded-full bg-primary/10 text-primary border-none shadow-xs hover:bg-primary/20"
+            />
           </div>
-        </div>
+        </header>
 
-        {/* Summary Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          <LoanCard
-            title="Saldo Devedor Principal"
-            value={formatCurrency(calculos.saldoDevedorTotal)}
-            icon={<TrendingDown className="w-5 h-5" />}
-            status="danger"
-            tooltip="Valor total que resta a pagar em todos os empréstimos e financiamentos (apenas principal restante)."
-            delay={0}
-          />
-          
-          {/* Dívida Cartões de Crédito (Mantido para referência, mas com título ajustado) */}
-          <LoanCard
-            title="Dívida Cartões de Crédito"
-            value={formatCurrency(calculos.dividaCartoes)}
-            icon={<CreditCard className="w-5 h-5" />}
-            status={calculos.dividaCartoes > 0 ? "warning" : "success"}
-            tooltip="Saldo negativo total das contas de Cartão de Crédito (fatura pendente). Esta é uma dívida operacional."
-            delay={50}
-          />
-          
-          <LoanCard
-            title="Parcela Mensal Total"
-            value={formatCurrency(calculos.parcelaMensalTotal)}
-            icon={<Calendar className="w-5 h-5" />}
-            status="warning"
-            tooltip="Soma de todas as parcelas mensais de empréstimos."
-            delay={100}
-          />
-          
-          {/* Juros Totais (Contrato) */}
-          <LoanCard
-            title="Juros Totais (Contrato)"
-            value={formatCurrency(calculos.jurosTotais)}
-            icon={<Percent className="w-5 h-5" />}
-            status="warning"
-            tooltip="Custo total em juros se os empréstimos forem pagos até o final."
-            delay={150}
-          />
+          <LoanCard title="Saldo Principal" value={formatCurrency(calculos.saldoDevedorTotal)} status="danger" icon={<TrendingDown className="w-5 h-5" />} delay={0} />
+          <LoanCard title="Parcela Total" value={formatCurrency(calculos.parcelaMensalTotal)} status="warning" icon={<CreditCard className="w-5 h-5" />} delay={50} />
+          <LoanCard title="Cartão Crédito" value={formatCurrency(calculos.dividaCartoes)} status="info" icon={<Wallet className="w-5 h-5" />} delay={100} />
+          <LoanCard title="Juros Contrato" value={formatCurrency(calculos.jurosTotais)} status="warning" icon={<Building2 className="w-5 h-5" />} delay={150} />
         </div>
 
-        {/* Alerts and Simulator */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2 space-y-6">
-            <LoanAlerts 
-              emprestimos={emprestimosAtivos} 
-              onOpenPendingConfig={handleOpenPendingConfigFromAlert}
-            />
-            <LoanCharts emprestimos={emprestimosAtivos} />
+            <LoanAlerts emprestimos={emprestimos} onOpenPendingConfig={() => { setSelectedLoan(pendingLoans[0]); setDetailDialogOpen(true); }} />
+            <LoanCharts emprestimos={emprestimos.filter(e => e.status !== 'pendente_config')} />
           </div>
-          <div className="space-y-6">
-            <LoanSimulator emprestimos={emprestimosAtivos} />
-          </div>
+          <LoanSimulator emprestimos={emprestimos.filter(e => e.status !== 'pendente_config')} className="bg-secondary-container/30 border-secondary/20" />
         </div>
 
-        {/* Loans Table */}
-        <div className="glass-card p-5">
-          <h3 className="text-lg font-semibold text-foreground mb-4">Contratos Detalhados</h3>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Contrato</TableHead>
-                <TableHead>Valor Total</TableHead>
-                <TableHead>Parcela</TableHead>
-                <TableHead>Taxa Mensal</TableHead>
-                <TableHead>Progresso</TableHead>
-                <TableHead>Próx. Vencimento</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className="w-24">Ações</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {emprestimos.map((loan) => {
-                // Calculate paid installments dynamically based on transactions
-                const paidCount = calculatePaidInstallmentsUpToDate(loan.id, dateRanges.range1.to || new Date());
-                const percentual = loan.meses > 0 ? (paidCount / loan.meses) * 100 : 0;
-                
-                // Use paidCount for next due date calculation
-                const nextDueDate = getNextDueDate(loan, dateRanges.range1.to);
-                const isPending = loan.status === 'pendente_config';
-                
-                return (
-                  <TableRow key={loan.id} className="hover:bg-muted/30">
-                    <TableCell className="font-medium">
-                      <div className="flex items-center gap-2">
-                        <Building2 className="w-4 h-4 text-primary" />
-                        {loan.contrato}
-                      </div>
-                    </TableCell>
-                    <TableCell>{formatCurrency(loan.valorTotal)}</TableCell>
-                    <TableCell>{formatCurrency(loan.parcela)}</TableCell>
-                    <TableCell>{loan.taxaMensal.toFixed(2)}%</TableCell>
-                    <TableCell>
-                      <Badge variant="outline" className={cn(percentual >= 100 && "border-success text-success")}>
-                        {percentual.toFixed(0)}% ({paidCount}/{loan.meses})
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      {isPending ? (
-                        <Badge variant="outline" className="border-warning text-warning">Configurar</Badge>
-                      ) : nextDueDate ? (
-                        nextDueDate.toLocaleDateString("pt-BR")
-                      ) : (
-                        <Badge variant="outline" className="border-success text-success">Quitado</Badge>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      <Badge 
-                        variant="outline" 
-                        className={cn(
-                          loan.status === 'ativo' && "border-primary text-primary",
-                          loan.status === 'quitado' && "border-success text-success",
-                          loan.status === 'pendente_config' && "border-warning text-warning"
-                        )}
-                      >
-                        {loan.status === 'ativo' ? 'Ativo' : loan.status === 'quitado' ? 'Quitado' : 'Pendente'}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-1">
-                        <Button variant="ghost" size="icon" onClick={() => handleEditLoan(loan)} className="h-8 w-8">
+        <div className="glass-card p-5 rounded-[1.75rem] border-border/40">
+          <h3 className="text-base font-bold text-foreground mb-4">Contratos Ativos</h3>
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow className="border-none hover:bg-transparent">
+                  <TableHead className="text-[11px] uppercase font-bold text-muted-foreground">Instituição</TableHead>
+                  <TableHead className="text-[11px] uppercase font-bold text-muted-foreground">Parcela</TableHead>
+                  <TableHead className="text-[11px] uppercase font-bold text-muted-foreground">Progresso</TableHead>
+                  <TableHead className="text-[11px] uppercase font-bold text-muted-foreground text-center">Ações</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {emprestimos.map((loan) => {
+                  const paidCount = calculatePaidInstallmentsUpToDate(loan.id, dateRanges.range1.to || new Date());
+                  return (
+                    <TableRow key={loan.id} className="border-none hover:bg-muted/30 transition-colors odd:bg-muted/10">
+                      <TableCell className="py-4">
+                        <p className="font-bold text-sm text-foreground">{loan.contrato}</p>
+                        <p className="text-[10px] text-muted-foreground">{loan.meses} meses • {loan.taxaMensal}% am</p>
+                      </TableCell>
+                      <TableCell className="font-black text-sm">{formatCurrency(loan.parcela)}</TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          <div className="flex-1 h-1.5 bg-muted rounded-full overflow-hidden w-20">
+                            <div className="h-full bg-primary" style={{ width: `${(paidCount/loan.meses)*100}%` }} />
+                          </div>
+                          <span className="text-[10px] font-bold text-muted-foreground">{paidCount}/{loan.meses}</span>
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-center">
+                        <Button variant="ghost" size="icon" onClick={() => { setSelectedLoan(loan); setDetailDialogOpen(true); }} className="w-8 h-8 rounded-full bg-primary/10 text-primary">
                           <Eye className="w-4 h-4" />
                         </Button>
-                        <Button variant="ghost" size="icon" onClick={() => handleDeleteLoan(loan.id)} className="h-8 w-8 text-destructive hover:text-destructive">
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                );
-              })}
-            </TableBody>
-          </Table>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          </div>
         </div>
       </div>
 
-      <LoanDetailDialog
-        emprestimo={selectedLoan}
-        open={detailDialogOpen}
-        onOpenChange={setDetailDialogOpen}
-      />
+      <LoanDetailDialog emprestimo={selectedLoan} open={detailDialogOpen} onOpenChange={setDetailDialogOpen} />
     </MainLayout>
   );
 };

@@ -1,975 +1,178 @@
 import { useState, useMemo } from "react";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Checkbox } from "@/components/ui/checkbox";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-} from "recharts";
-import { Plus, Trash2, Car, Shield, AlertTriangle, DollarSign, FileText, Search, ArrowRight, CheckCircle2, Clock, RefreshCw } from "lucide-react";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Car, Shield, AlertTriangle, DollarSign, Search, CheckCircle2, Clock, Eye, Trash2, ArrowRight } from "lucide-react";
 import { useFinance } from "@/contexts/FinanceContext";
-import { Veiculo, SeguroVeiculo } from "@/types/finance";
-import { EditableCell } from "@/components/EditableCell";
 import { cn, parseDateLocal } from "@/lib/utils";
-import { toast } from "sonner";
-import { FipeConsultaDialog } from "@/components/vehicles/FipeConsultaDialog";
-import { TransacaoCompleta, generateTransactionId, OperationType, getFlowTypeFromOperation, getDomainFromOperation, formatCurrency } from "@/types/finance";
-import { useNavigate } from "react-router-dom";
-import { differenceInMonths, addMonths, parseISO, format } from "date-fns";
+import { PeriodSelector } from "@/components/dashboard/PeriodSelector";
 import { KpiCard } from "@/components/ui/KpiCard";
+import { FipeConsultaDialog } from "@/components/vehicles/FipeConsultaDialog";
 
 const Veiculos = () => {
-  const navigate = useNavigate();
   const { 
     veiculos, 
-    addVeiculo, 
-    updateVeiculo, 
     deleteVeiculo, 
-    getCustoVeiculos,
     getPendingVehicles,
     segurosVeiculo,
-    addSeguroVeiculo,
-    updateSeguroVeiculo,
-    deleteSeguroVeiculo,
-    unmarkSeguroParcelPaid, // <-- FIXED
-    setTransacoesV2, // <-- ADDED
     getValorFipeTotal,
     transacoesV2,
+    dateRanges,
+    setDateRanges
   } = useFinance();
   
   const [activeTab, setActiveTab] = useState("veiculos");
-  const [showAddVeiculo, setShowAddVeiculo] = useState(false);
-  const [showAddSeguro, setShowAddSeguro] = useState(false);
-  const [pendingVehicleId, setPendingVehicleId] = useState<number | null>(null);
   const [showFipeDialog, setShowFipeDialog] = useState(false);
-  const [selectedVeiculoFipe, setSelectedVeiculoFipe] = useState<Veiculo | undefined>(undefined);
   
-  // Forms
-  const [formData, setFormData] = useState({
-    modelo: "",
-    marca: "",
-    tipo: "carro" as 'carro' | 'moto' | 'caminhao',
-    ano: "",
-    dataCompra: "",
-    valorVeiculo: "",
-    valorFipe: "",
-  });
-
-  const [formSeguro, setFormSeguro] = useState({
-    veiculoId: "",
-    numeroApolice: "",
-    seguradora: "",
-    vigenciaInicio: "",
-    vigenciaFim: "",
-    dataPrimeiraParcela: "", // NOVO CAMPO
-    dataUltimaParcela: "", // NOVO CAMPO
-    valorTotal: "",
-    numeroParcelas: "",
-    // Removidos: diaVencimentoParcela, meiaParcela
-  });
-
-  const handleOpenFipeConsulta = (veiculo?: Veiculo) => {
-    setSelectedVeiculoFipe(veiculo);
-    setShowFipeDialog(true);
-  };
-  
-  const handleUpdateFipe = (veiculoId: number, valorFipe: number) => {
-    updateVeiculo(veiculoId, { valorFipe });
-    toast.success("Valor FIPE atualizado!");
-  };
-  
-  const handleSubmitVeiculo = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!formData.modelo || !formData.ano || !formData.dataCompra || !formData.valorVeiculo) return;
-    
-    if (pendingVehicleId) {
-      updateVeiculo(pendingVehicleId, {
-        modelo: formData.modelo,
-        marca: formData.marca,
-        tipo: formData.tipo,
-        ano: Number(formData.ano),
-        valorFipe: Number(formData.valorFipe) || Number(formData.valorVeiculo),
-        status: 'ativo',
-      });
-      setPendingVehicleId(null);
-    } else {
-      addVeiculo({
-        modelo: formData.modelo,
-        marca: formData.marca,
-        tipo: formData.tipo,
-        ano: Number(formData.ano),
-        dataCompra: formData.dataCompra,
-        valorVeiculo: Number(formData.valorVeiculo),
-        valorSeguro: 0,
-        vencimentoSeguro: "",
-        parcelaSeguro: 0,
-        valorFipe: Number(formData.valorFipe) || Number(formData.valorVeiculo),
-        status: 'ativo',
-      });
-    }
-    
-    setFormData({ modelo: "", marca: "", tipo: "carro", ano: "", dataCompra: "", valorVeiculo: "", valorFipe: "" });
-    setShowAddVeiculo(false);
-    toast.success(pendingVehicleId ? "Veículo configurado!" : "Veículo adicionado!");
-  };
-
-  const handleSubmitSeguro = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!formSeguro.veiculoId || !formSeguro.numeroApolice || !formSeguro.seguradora || 
-        !formSeguro.vigenciaInicio || !formSeguro.vigenciaFim || !formSeguro.valorTotal || 
-        !formSeguro.numeroParcelas || !formSeguro.dataPrimeiraParcela || !formSeguro.dataUltimaParcela) {
-          toast.error("Preencha todos os campos obrigatórios.");
-          return;
-        }
-    
-    const numParcelas = Number(formSeguro.numeroParcelas);
-    const valorTotal = Number(formSeguro.valorTotal);
-    const valorParcela = valorTotal / numParcelas;
-    
-    // Usar parseDateLocal para garantir que as datas sejam interpretadas corretamente
-    const primeiraParcelaDate = parseDateLocal(formSeguro.dataPrimeiraParcela);
-    const ultimaParcelaDate = parseDateLocal(formSeguro.dataUltimaParcela);
-    
-    // Calculate the number of months between the first and last installment dates
-    const diffMonths = differenceInMonths(ultimaParcelaDate, primeiraParcelaDate);
-    
-    if (diffMonths !== numParcelas - 1) {
-        toast.error(`O número de parcelas (${numParcelas}) não corresponde ao intervalo de datas (${diffMonths + 1} meses).`);
-        return;
-    }
-    
-    // Generate installment dates based on first and last dates
-    const parcelas = [];
-    for (let i = 0; i < numParcelas; i++) {
-      // Usar addMonths com a data pura local
-      const dataVencimento = addMonths(primeiraParcelaDate, i);
-      
-      parcelas.push({
-        numero: i + 1,
-        // Salvar como string YYYY-MM-DD
-        vencimento: format(dataVencimento, 'yyyy-MM-dd'),
-        valor: valorParcela, // Sem meia parcela
-        paga: false,
-      });
-    }
-    
-    addSeguroVeiculo({
-      veiculoId: Number(formSeguro.veiculoId),
-      numeroApolice: formSeguro.numeroApolice,
-      seguradora: formSeguro.seguradora,
-      vigenciaInicio: formSeguro.vigenciaInicio,
-      vigenciaFim: formSeguro.vigenciaFim,
-      valorTotal: valorTotal,
-      numeroParcelas: numParcelas,
-      meiaParcela: false, // Removido
-      parcelas,
-    });
-    
-    // Update vehicle with insurance info
-    updateVeiculo(Number(formSeguro.veiculoId), {
-      valorSeguro: valorTotal,
-      vencimentoSeguro: formSeguro.vigenciaFim,
-      parcelaSeguro: valorParcela,
-    });
-    
-    setFormSeguro({ 
-      veiculoId: "", 
-      numeroApolice: "", 
-      seguradora: "", 
-      vigenciaInicio: "", 
-      vigenciaFim: "", 
-      dataPrimeiraParcela: "",
-      dataUltimaParcela: "",
-      valorTotal: "", 
-      numeroParcelas: "",
-    });
-    setShowAddSeguro(false);
-    toast.success("Seguro cadastrado!");
-  };
-
-  const handleConfigurePendingVehicle = (vehicle: Veiculo) => {
-    setPendingVehicleId(vehicle.id);
-    setFormData({
-      modelo: vehicle.modelo || "",
-      marca: vehicle.marca || "",
-      tipo: vehicle.tipo || "carro",
-      ano: vehicle.ano.toString(),
-      dataCompra: vehicle.dataCompra,
-      valorVeiculo: vehicle.valorVeiculo.toString(),
-      valorFipe: vehicle.valorFipe.toString(),
-    });
-    setShowAddVeiculo(true);
-  };
-
-  const handleUnmarkSeguroParcelPaid = (seguroId: number, parcelaNumero: number, transactionId: string | undefined) => {
-    if (!window.confirm("Tem certeza que deseja estornar este pagamento? A transação será excluída.")) return;
-    
-    unmarkSeguroParcelPaid(seguroId, parcelaNumero);
-    
-    if (transactionId) {
-      setTransacoesV2(prev => prev.filter(t => t.id !== transactionId));
-      toast.success("Pagamento estornado e transação excluída.");
-    } else {
-      toast.success("Pagamento estornado.");
-    }
-  };
-
-  // Cálculos
   const pendingVehicles = getPendingVehicles();
-  const totalVeiculos = veiculos.filter(v => v.status !== 'vendido').reduce((acc, v) => acc + v.valorVeiculo, 0);
-  const totalSeguros = veiculos.filter(v => v.status !== 'vendido').reduce((acc, v) => acc + v.valorSeguro, 0);
-  const totalFipe = getValorFipeTotal();
-  
-  // Verificar vencimento de seguros
-  const hoje = new Date();
-  const veiculosComSeguroVencendo = veiculos.filter(v => {
-    if (!v.vencimentoSeguro || v.status === 'vendido') return false;
-    // Usar parseDateLocal para a comparação
-    const venc = parseDateLocal(v.vencimentoSeguro);
-    const dias = Math.ceil((venc.getTime() - hoje.getTime()) / (1000 * 60 * 60 * 24));
-    return dias > 0 && dias <= 30;
-  });
+  const totalFipe = getValorFipeTotal(dateRanges.range1.to);
 
-  // Chart data
-  const chartData = veiculos.filter(v => v.status !== 'vendido').map(v => ({
-    modelo: v.modelo.split(" ")[0] || "Pendente",
-    valorCompra: v.valorVeiculo,
-    valorFipe: v.valorFipe,
-    seguro: v.valorSeguro,
-  }));
-
-  const getDiasVencimento = (data: string) => {
-    if (!data) return null;
-    // Usar parseDateLocal para a comparação
-    const venc = parseDateLocal(data);
-    const dias = Math.ceil((venc.getTime() - hoje.getTime()) / (1000 * 60 * 60 * 24));
-    return dias;
-  };
-
-  // Get all insurance payments (paid and pending)
-  const allParcelas = useMemo(() => {
-    const all: { seguro: SeguroVeiculo; parcela: typeof segurosVeiculo[0]['parcelas'][0]; veiculo: Veiculo | undefined; transaction?: TransacaoCompleta }[] = [];
-    
-    segurosVeiculo.forEach(seguro => {
-      const veiculo = veiculos.find(v => v.id === seguro.veiculoId);
-      seguro.parcelas.forEach(parcela => {
-        const transaction = parcela.transactionId ? transacoesV2.find(t => t.id === parcela.transactionId) : undefined;
-        all.push({ seguro, parcela, veiculo, transaction });
-      });
-    });
-    
-    // Usar parseDateLocal para garantir a ordenação correta
-    return all.sort((a, b) => parseDateLocal(a.parcela.vencimento).getTime() - parseDateLocal(b.parcela.vencimento).getTime());
-  }, [segurosVeiculo, veiculos, transacoesV2]);
-
-  const parcelasPendentes = allParcelas.filter(p => !p.parcela.paga);
+  const formatCurrency = (value: number) => `R$ ${value.toLocaleString("pt-BR", { minimumFractionDigits: 0 })}`;
 
   return (
     <MainLayout>
       <div className="space-y-6">
-        {/* Header */}
-        <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between animate-fade-in">
-          <div>
-            <h1 className="text-xl md:text-3xl font-bold text-foreground">Imobilizado - Veículos</h1>
-            <p className="text-xs md:text-base text-muted-foreground mt-1">Controle seus veículos, seguros e custos associados</p>
+        <header className="space-y-3 animate-fade-in border-0">
+          <div className="flex items-center justify-between text-xs text-muted-foreground">
+            <div className="inline-flex items-start gap-3">
+              <div className="flex flex-col">
+                <span className="text-sm font-semibold text-foreground">Imobilizado e Veículos</span>
+                <span className="text-[11px]">Gestão Patrimonial</span>
+              </div>
+            </div>
           </div>
-          {/* Botões de Ação */}
-          <div className="flex items-center gap-2 flex-wrap">
-            {/* Botão Novo Seguro (RESTAURADO) */}
-            <Dialog open={showAddSeguro} onOpenChange={setShowAddSeguro}>
-              <DialogTrigger asChild>
-                <Button variant="outline" className="gap-2">
-                  <Shield className="w-4 h-4" />
-                  Novo Seguro
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="bg-card border-border max-w-lg">
-                <DialogHeader>
-                  <DialogTitle>Cadastrar Seguro de Veículo</DialogTitle>
-                </DialogHeader>
-                <form onSubmit={handleSubmitSeguro} className="space-y-4">
-                  <div>
-                    <Label>Veículo *</Label>
-                    <Select 
-                      value={formSeguro.veiculoId} 
-                      onValueChange={(v) => setFormSeguro(prev => ({ ...prev, veiculoId: v }))}
-                    >
-                      <SelectTrigger className="mt-1 bg-muted border-border">
-                        <SelectValue placeholder="Selecione o veículo" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {veiculos.filter(v => v.status === 'ativo').map(v => (
-                          <SelectItem key={v.id.toString()} value={v.id.toString()}>
-                            {v.modelo} ({v.ano})
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  
-                  {/* Layout 2 colunas */}
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <Label>Número da Apólice *</Label>
-                      <Input
-                        value={formSeguro.numeroApolice}
-                        onChange={(e) => setFormSeguro(prev => ({ ...prev, numeroApolice: e.target.value }))}
-                        className="mt-1 bg-muted border-border"
-                      />
-                    </div>
-                    <div>
-                      <Label>Seguradora *</Label>
-                      <Input
-                        value={formSeguro.seguradora}
-                        onChange={(e) => setFormSeguro(prev => ({ ...prev, seguradora: e.target.value }))}
-                        className="mt-1 bg-muted border-border"
-                      />
-                    </div>
-                  </div>
-                  
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <Label>Vigência Início *</Label>
-                      <Input
-                        type="date"
-                        value={formSeguro.vigenciaInicio}
-                        onChange={(e) => setFormSeguro(prev => ({ ...prev, vigenciaInicio: e.target.value }))}
-                        className="mt-1 bg-muted border-border"
-                      />
-                    </div>
-                    <div>
-                      <Label>Vigência Fim *</Label>
-                      <Input
-                        type="date"
-                        value={formSeguro.vigenciaFim}
-                        onChange={(e) => setFormSeguro(prev => ({ ...prev, vigenciaFim: e.target.value }))}
-                        className="mt-1 bg-muted border-border"
-                      />
-                    </div>
-                  </div>
-                  
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <Label>Data Primeira Parcela *</Label>
-                      <Input
-                        type="date"
-                        value={formSeguro.dataPrimeiraParcela}
-                        onChange={(e) => setFormSeguro(prev => ({ ...prev, dataPrimeiraParcela: e.target.value }))}
-                        className="mt-1 bg-muted border-border"
-                      />
-                    </div>
-                    <div>
-                      <Label>Data Última Parcela *</Label>
-                      <Input
-                        type="date"
-                        value={formSeguro.dataUltimaParcela}
-                        onChange={(e) => setFormSeguro(prev => ({ ...prev, dataUltimaParcela: e.target.value }))}
-                        className="mt-1 bg-muted border-border"
-                      />
-                    </div>
-                  </div>
-                  
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <Label>Valor Total (R$) *</Label>
-                      <Input
-                        type="number"
-                        step="0.01"
-                        value={formSeguro.valorTotal}
-                        onChange={(e) => setFormSeguro(prev => ({ ...prev, valorTotal: e.target.value }))}
-                        placeholder="0,00"
-                        className="mt-1 bg-muted border-border"
-                      />
-                    </div>
-                    <div>
-                      <Label>Número de Parcelas *</Label>
-                      <Input
-                        type="number"
-                        value={formSeguro.numeroParcelas}
-                        onChange={(e) => setFormSeguro(prev => ({ ...prev, numeroParcelas: e.target.value }))}
-                        className="mt-1 bg-muted border-border"
-                      />
-                    </div>
-                  </div>
-                  
-                  {/* Checkbox de meia parcela removido */}
-                  
-                  <Button type="submit" className="w-full">
-                    <Plus className="w-4 h-4 mr-2" />
-                    Cadastrar Seguro
-                  </Button>
-                </form>
-              </DialogContent>
-            </Dialog>
-            
-            {/* Botão Novo Veículo (OCULTADO) */}
+          <div className="flex flex-wrap items-stretch gap-2 max-w-full">
+            <PeriodSelector 
+              initialRanges={dateRanges}
+              onDateRangeChange={setDateRanges}
+              className="h-8 rounded-full border-none bg-card px-3 text-[11px] font-medium text-secondary shadow-xs"
+            />
             <Button 
-              variant="default" 
-              className="gap-2 bg-neon-gradient hover:opacity-90 hidden"
-              onClick={() => {
-                setPendingVehicleId(null);
-                setFormData({ modelo: "", marca: "", tipo: "carro", ano: "", dataCompra: "", valorVeiculo: "", valorFipe: "" });
-                setShowAddVeiculo(true);
-              }}
+              variant="tonal" 
+              size="sm" 
+              onClick={() => setShowFipeDialog(true)}
+              className="h-8 rounded-full gap-1.5 px-3 text-[11px] font-medium bg-card text-secondary border-none shadow-xs hover:bg-card/90"
             >
-              <Car className="w-4 h-4" />
-              Novo Veículo
+              <Search className="h-3.5 w-3.5" />
+              <span>Consulta FIPE</span>
             </Button>
           </div>
-        </div>
+        </header>
 
-        {/* Pending Vehicles Alert */}
         {pendingVehicles.length > 0 && (
-          <Alert className="border-warning bg-warning/10">
-            <AlertTriangle className="h-4 w-4 text-warning" />
-            <AlertTitle className="text-warning">Veículos Pendentes de Cadastro</AlertTitle>
-            <AlertDescription className="space-y-2">
-              <p className="text-sm text-muted-foreground">
-                Existem {pendingVehicles.length} veículo(s) comprado(s) aguardando configuração completa.
-              </p>
-              <div className="flex flex-wrap gap-2 mt-2">
-                {pendingVehicles.map(vehicle => (
-                  <Button
-                    key={vehicle.id}
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleConfigurePendingVehicle(vehicle)}
-                    className="gap-2 border-warning/50 hover:bg-warning/20"
-                  >
-                    <Car className="w-4 h-4" />
-                    Compra em {parseDateLocal(vehicle.dataCompra).toLocaleDateString("pt-BR")} - {formatCurrency(vehicle.valorVeiculo)}
-                  </Button>
+          <div className="space-y-3">
+             <div className="flex items-center gap-2 px-1">
+                <AlertTriangle className="w-3.5 h-3.5 text-warning" />
+                <p className="text-[11px] font-bold uppercase tracking-widest text-warning">Cadastros Pendentes</p>
+             </div>
+             <div className="flex gap-4 overflow-x-auto pb-2 hide-scrollbar-mobile">
+                {pendingVehicles.map(v => (
+                  <div key={v.id} className="min-w-[280px] p-4 rounded-2xl border-2 border-dashed border-warning/30 bg-warning/5 flex items-center justify-between group">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-xl bg-warning/20 flex items-center justify-center text-warning">
+                        <Car className="w-5 h-5" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-bold text-warning-foreground leading-tight">Configurar Compra</p>
+                        <p className="text-[10px] opacity-70">Em {parseDateLocal(v.dataCompra).toLocaleDateString("pt-BR")}</p>
+                      </div>
+                    </div>
+                    <Button size="icon" variant="ghost" className="rounded-full bg-warning/20 text-warning group-hover:scale-110 transition-transform">
+                      <ArrowRight className="w-4 h-4" />
+                    </Button>
+                  </div>
                 ))}
-              </div>
-            </AlertDescription>
-          </Alert>
+             </div>
+          </div>
         )}
 
-        {/* Summary Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <KpiCard
-            title="Valor dos Veículos"
-            value={formatCurrency(totalVeiculos)}
-            status="neutral"
-            icon={<Car className="w-6 h-6" />}
-          />
-
-          <KpiCard
-            title="Total Seguros"
-            value={formatCurrency(totalSeguros)}
-            status="neutral"
-            icon={<Shield className="w-6 h-6" />}
-            delay={50}
-          />
-
-          <KpiCard
-            title="Valor FIPE Atual"
-            value={formatCurrency(totalFipe)}
-            status="success"
-            icon={<DollarSign className="w-6 h-6" />}
-            delay={100}
-          />
-
-          <KpiCard
-            title="Custo Total"
-            value={formatCurrency(getCustoVeiculos())}
-            subtitle={
-              veiculosComSeguroVencendo.length > 0
-                ? `${veiculosComSeguroVencendo.length} seguro(s) vencendo`
-                : undefined
-            }
-            status={veiculosComSeguroVencendo.length > 0 ? "danger" : "success"}
-            icon={
-              veiculosComSeguroVencendo.length > 0 ? (
-                <AlertTriangle className="w-6 h-6" />
-              ) : (
-                <Car className="w-6 h-6" />
-              )
-            }
-            delay={150}
-          />
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <KpiCard title="Avaliação FIPE" value={formatCurrency(totalFipe)} status="success" icon={<DollarSign className="w-6 h-6" />} />
+          <KpiCard title="Veículos" value={veiculos.filter(v => v.status === 'ativo').length.toString()} status="neutral" icon={<Car className="w-6 h-6" />} delay={50} />
+          <KpiCard title="Seguros Ativos" value={segurosVeiculo.length.toString()} status="info" icon={<Shield className="w-6 h-6" />} delay={100} />
         </div>
 
-        {/* Tabs */}
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-          <TabsList className="bg-muted/50 h-auto flex flex-wrap gap-1 p-1">
-            <TabsTrigger value="veiculos" className="flex-1 min-w-[30%] sm:min-w-0 sm:flex-none text-xs sm:text-sm h-9 sm:h-10">
-              Veículos
-            </TabsTrigger>
-            <TabsTrigger value="seguros" className="flex-1 min-w-[30%] sm:min-w-0 sm:flex-none text-xs sm:text-sm h-9 sm:h-10">
-              Seguros
-            </TabsTrigger>
-            <TabsTrigger value="parcelas" className="flex-1 min-w-[30%] sm:min-w-0 sm:flex-none text-xs sm:text-sm h-9 sm:h-10">
-              Parcelas
-            </TabsTrigger>
-          </TabsList>
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+          <div className="border-b border-border/40 px-1">
+            <TabsList className="bg-transparent h-auto p-0 gap-8">
+              <TabsTrigger value="veiculos" className="bg-transparent rounded-none border-b-2 border-transparent data-[state=active]:border-primary px-0 py-3 text-xs font-bold uppercase">Meus Carros</TabsTrigger>
+              <TabsTrigger value="parcelas" className="bg-transparent rounded-none border-b-2 border-transparent data-[state=active]:border-primary px-0 py-3 text-xs font-bold uppercase">Parcelas Seguro</TabsTrigger>
+            </TabsList>
+          </div>
 
-          {/* Tab Veículos */}
-          <TabsContent value="veiculos" className="space-y-6">
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              {/* Chart */}
-              <Card className="lg:col-span-2 glass-card">
-                <CardHeader>
-                  <CardTitle>Comparativo de Valores</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="h-[320px]">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <BarChart data={chartData}>
-                        <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
-                        <XAxis dataKey="modelo" axisLine={false} tickLine={false} tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 12 }} />
-                        <YAxis axisLine={false} tickLine={false} tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 12 }} tickFormatter={(v) => `${(v/1000).toFixed(0)}k`} />
-                        <Tooltip
-                          contentStyle={{
-                            backgroundColor: "hsl(var(--card))",
-                            border: "1px solid hsl(var(--border))",
-                            borderRadius: "12px"
-                          }}
-                          formatter={(value: number) => [formatCurrency(value), ""]}
-                        />
-                        <Bar dataKey="valorCompra" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} name="Valor Compra" />
-                        <Bar dataKey="valorFipe" fill="hsl(var(--success))" radius={[4, 4, 0, 0]} name="Valor FIPE" />
-                        <Bar dataKey="seguro" fill="hsl(var(--warning))" radius={[4, 4, 0, 0]} name="Seguro" />
-                      </BarChart>
-                    </ResponsiveContainer>
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Quick Stats */}
-              <Card className="glass-card">
-                <CardHeader>
-                  <CardTitle>Resumo</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="flex justify-between items-center p-3 rounded-lg bg-muted/50">
-                    <span className="text-sm">Total de Veículos</span>
-                    <Badge>{veiculos.filter(v => v.status === 'ativo').length}</Badge>
-                  </div>
-                  <div className="flex justify-between items-center p-3 rounded-lg bg-muted/50">
-                    <span className="text-sm">Pendentes Cadastro</span>
-                    <Badge variant="outline" className="border-warning text-warning">{pendingVehicles.length}</Badge>
-                  </div>
-                  <div className="flex justify-between items-center p-3 rounded-lg bg-muted/50">
-                    <span className="text-sm">Seguros Ativos</span>
-                    <Badge variant="outline" className="border-success text-success">{segurosVeiculo.length}</Badge>
-                  </div>
-                  <div className="flex justify-between items-center p-3 rounded-lg bg-muted/50">
-                    <span className="text-sm">Parcelas Pendentes</span>
-                    <Badge variant="outline" className="border-warning text-warning">{parcelasPendentes.length}</Badge>
-                  </div>
-                </CardContent>
-              </Card>
+          <TabsContent value="veiculos" className="animate-fade-in-up">
+            <div className="glass-card p-5 rounded-[1.75rem] border-border/40 overflow-hidden">
+               <Table>
+                <TableHeader>
+                  <TableRow className="border-none hover:bg-transparent">
+                    <TableHead className="text-[10px] font-black uppercase text-muted-foreground">Veículo</TableHead>
+                    <TableHead className="text-[10px] font-black uppercase text-muted-foreground">Ano</TableHead>
+                    <TableHead className="text-[10px] font-black uppercase text-muted-foreground text-right">Avaliação FIPE</TableHead>
+                    <TableHead className="text-[10px] font-black uppercase text-muted-foreground text-center">Ações</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {veiculos.filter(v => v.status === 'ativo').map(v => (
+                    <TableRow key={v.id} className="border-none hover:bg-muted/30 transition-colors odd:bg-muted/10">
+                      <TableCell className="py-4">
+                        <p className="font-bold text-sm text-foreground">{v.modelo}</p>
+                        <p className="text-[10px] text-muted-foreground">{v.marca}</p>
+                      </TableCell>
+                      <TableCell className="font-bold text-sm">{v.ano}</TableCell>
+                      <TableCell className="text-right font-black text-sm text-success">{formatCurrency(v.valorFipe)}</TableCell>
+                      <TableCell className="text-center">
+                        <Button variant="ghost" size="icon" onClick={() => deleteVeiculo(v.id)} className="w-8 h-8 rounded-full text-destructive hover:bg-destructive/10">
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+               </Table>
             </div>
-
-            {/* Table */}
-            <Card className="glass-card">
-              <CardHeader>
-                <CardTitle>Seus Veículos</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Modelo</TableHead>
-                      <TableHead>Tipo</TableHead>
-                      <TableHead>Ano</TableHead>
-                      <TableHead>Data Compra</TableHead>
-                      <TableHead className="text-right">Valor Compra</TableHead>
-                      <TableHead className="text-right">Valor FIPE</TableHead>
-                      <TableHead className="text-right">Seguro</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Ações</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {veiculos.map((item) => {
-                      const diasVenc = getDiasVencimento(item.vencimentoSeguro);
-                      return (
-                        <TableRow key={item.id}>
-                          <TableCell className="font-medium">
-                            <div className="flex items-center gap-2">
-                              <Car className="w-4 h-4 text-primary" />
-                              <EditableCell value={item.modelo || "Pendente"} onSave={(v) => updateVeiculo(item.id, { modelo: String(v) })} />
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            <Badge variant="outline">{item.tipo || "carro"}</Badge>
-                          </TableCell>
-                          <TableCell>
-                            <EditableCell value={item.ano} type="number" onSave={(v) => updateVeiculo(item.id, { ano: Number(v) })} />
-                          </TableCell>
-                          <TableCell>{parseDateLocal(item.dataCompra).toLocaleDateString("pt-BR")}</TableCell>
-                          <TableCell className="text-right">
-                            <EditableCell value={item.valorVeiculo} type="currency" onSave={(v) => updateVeiculo(item.id, { valorVeiculo: Number(v) })} />
-                          </TableCell>
-                          <TableCell className="text-right text-success">
-                            <EditableCell value={item.valorFipe} type="currency" onSave={(v) => updateVeiculo(item.id, { valorFipe: Number(v) })} className="text-success" />
-                          </TableCell>
-                          <TableCell className="text-right">
-                            {formatCurrency(item.valorSeguro)}
-                          </TableCell>
-                          <TableCell>
-                            <Badge 
-                              variant="outline" 
-                              className={cn(
-                                item.status === 'ativo' && "border-success text-success",
-                                item.status === 'pendente_cadastro' && "border-warning text-warning",
-                                item.status === 'vendido' && "border-muted-foreground text-muted-foreground"
-                              )}
-                            >
-                              {item.status === 'ativo' ? 'Ativo' : item.status === 'pendente_cadastro' ? 'Pendente' : 'Vendido'}
-                            </Badge>
-                          </TableCell>
-                          <TableCell>
-                            <div className="flex items-center gap-1">
-                              {item.status === 'pendente_cadastro' && (
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => handleConfigurePendingVehicle(item)}
-                                  className="h-8 px-2 hover:bg-warning/10 hover:text-warning"
-                                >
-                                  Configurar
-                                </Button>
-                              )}
-                              {item.status === 'ativo' && item.marca && item.modelo && (
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => handleOpenFipeConsulta(item)}
-                                  className="h-8 px-2 hover:bg-primary/10 hover:text-primary"
-                                >
-                                  <Search className="w-4 h-4 mr-1" />
-                                  FIPE
-                                </Button>
-                              )}
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => deleteVeiculo(item.id)}
-                                className="h-8 w-8 hover:bg-destructive/10 hover:text-destructive"
-                              >
-                                <Trash2 className="w-4 h-4" />
-                              </Button>
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      );
-                    })}
-                  </TableBody>
-                </Table>
-              </CardContent>
-            </Card>
           </TabsContent>
 
-          {/* Tab Seguros */}
-          <TabsContent value="seguros" className="space-y-6">
-            <Card className="glass-card">
-              <CardHeader className="flex flex-row items-center justify-between">
-                <CardTitle className="text-lg">Seguros Cadastrados</CardTitle>
-                <Badge variant="outline">{segurosVeiculo.length} seguros</Badge>
-              </CardHeader>
-              <CardContent>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Veículo</TableHead>
-                      <TableHead>Apólice</TableHead>
-                      <TableHead>Seguradora</TableHead>
-                      <TableHead>Vigência</TableHead>
-                      <TableHead className="text-right">Valor Total</TableHead>
-                      <TableHead className="text-right">Parcelas</TableHead>
-                      <TableHead>Ações</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {segurosVeiculo.map((seguro) => {
-                      const veiculo = veiculos.find(v => v.id === seguro.veiculoId);
-                      const parcelasPagas = seguro.parcelas.filter(p => p.paga).length;
-                      return (
-                        <TableRow key={seguro.id}>
-                          <TableCell className="flex items-center gap-2">
-                            <Shield className="w-4 h-4 text-primary" />
-                            {veiculo?.modelo || "N/A"}
-                          </TableCell>
-                          <TableCell>{seguro.numeroApolice}</TableCell>
-                          <TableCell>{seguro.seguradora}</TableCell>
-                          <TableCell>
-                            {parseDateLocal(seguro.vigenciaInicio).toLocaleDateString("pt-BR")} - {parseDateLocal(seguro.vigenciaFim).toLocaleDateString("pt-BR")}
-                          </TableCell>
-                          <TableCell className="text-right">
-                            {formatCurrency(seguro.valorTotal)}
-                          </TableCell>
-                          <TableCell className="text-right">
-                            <Badge variant="outline">
-                              {parcelasPagas}/{seguro.numeroParcelas}
-                            </Badge>
-                          </TableCell>
-                          <TableCell>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => deleteSeguroVeiculo(seguro.id)}
-                              className="h-8 w-8 hover:bg-destructive/10 hover:text-destructive"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </Button>
-                          </TableCell>
-                        </TableRow>
-                      );
-                    })}
-                    {segurosVeiculo.length === 0 && (
-                      <TableRow>
-                        <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
-                          Nenhum seguro cadastrado. Clique em "Novo Seguro" para adicionar.
+          <TabsContent value="parcelas" className="animate-fade-in-up">
+            <div className="glass-card p-5 rounded-[1.75rem] border-border/40">
+              <Table>
+                <TableHeader>
+                  <TableRow className="border-none">
+                    <TableHead className="text-[10px] font-black uppercase">Seguro/Veículo</TableHead>
+                    <TableHead className="text-[10px] font-black uppercase">Vencimento</TableHead>
+                    <TableHead className="text-[10px] font-black uppercase text-right">Valor</TableHead>
+                    <TableHead className="text-[10px] font-black uppercase text-center">Status</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {segurosVeiculo.flatMap(s => s.parcelas.map(p => ({ ...p, seguro: s }))).map((p, idx) => {
+                    const statusClass = p.paga ? "bg-success/10 text-success" : "bg-warning/10 text-warning";
+                    return (
+                      <TableRow key={idx} className="border-none hover:bg-muted/30">
+                        <TableCell>
+                          <p className="text-xs font-bold">{p.seguro.seguradora}</p>
+                          <p className="text-[9px] opacity-60">Parcela {p.numero}/{p.seguro.numeroParcelas}</p>
+                        </TableCell>
+                        <TableCell className="text-xs font-medium">{new Date(p.vencimento).toLocaleDateString("pt-BR")}</TableCell>
+                        <TableCell className="text-right font-black text-xs">{formatCurrency(p.valor)}</TableCell>
+                        <TableCell className="text-center">
+                          <Badge className={cn("text-[9px] border-none font-black", statusClass)}>
+                            {p.paga ? <CheckCircle2 className="w-3 h-3 mr-1" /> : <Clock className="w-3 h-3 mr-1" />}
+                            {p.paga ? "Paga" : "Pendente"}
+                          </Badge>
                         </TableCell>
                       </TableRow>
-                    )}
-                  </TableBody>
-                </Table>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          {/* Tab Parcelas (Todas) */}
-          <TabsContent value="parcelas" className="space-y-6">
-            <Card className="glass-card">
-              <CardHeader className="flex flex-row items-center justify-between">
-                <CardTitle className="text-lg">Controle de Parcelas de Seguro</CardTitle>
-                <Badge variant="outline" className="border-primary text-primary">{allParcelas.length} parcelas</Badge>
-              </CardHeader>
-              <CardContent>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Veículo</TableHead>
-                      <TableHead>Seguradora</TableHead>
-                      <TableHead>Parcela</TableHead>
-                      <TableHead>Vencimento</TableHead>
-                      <TableHead className="text-right">Valor Devido</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Data Pagamento</TableHead>
-                      <TableHead className="text-right">Valor Pago</TableHead>
-                      <TableHead>Ações</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {allParcelas.map((item, index) => {
-                      const diasVenc = getDiasVencimento(item.parcela.vencimento);
-                      const vencida = diasVenc !== null && diasVenc < 0 && !item.parcela.paga;
-                      const proximaVencer = diasVenc !== null && diasVenc >= 0 && diasVenc <= 7 && !item.parcela.paga;
-                      
-                      return (
-                        <TableRow 
-                          key={`${item.seguro.id}-${item.parcela.numero}`}
-                          className={cn(
-                            item.parcela.paga ? "bg-success/5 hover:bg-success/10" : "hover:bg-muted/30",
-                            vencida && "bg-destructive/5 hover:bg-destructive/10"
-                          )}
-                        >
-                          <TableCell className="flex items-center gap-2">
-                            <Car className="w-4 h-4 text-primary" />
-                            {item.veiculo?.modelo || "N/A"}
-                          </TableCell>
-                          <TableCell>{item.seguro.seguradora}</TableCell>
-                          <TableCell>
-                            <Badge variant="outline">{item.parcela.numero}/{item.seguro.numeroParcelas}</Badge>
-                          </TableCell>
-                          <TableCell>
-                            <div className="flex items-center gap-2">
-                              {parseDateLocal(item.parcela.vencimento).toLocaleDateString("pt-BR")}
-                              {vencida && (
-                                <Badge variant="destructive" className="text-xs">Vencida</Badge>
-                              )}
-                              {proximaVencer && (
-                                <Badge variant="outline" className="text-xs border-warning text-warning">
-                                  {diasVenc}d
-                                </Badge>
-                              )}
-                            </div>
-                          </TableCell>
-                          <TableCell className="text-right">
-                            {formatCurrency(item.parcela.valor)}
-                          </TableCell>
-                          <TableCell>
-                            <Badge 
-                              variant="outline" 
-                              className={cn(
-                                item.parcela.paga ? "border-success text-success" : "border-warning text-warning"
-                              )}
-                            >
-                              {item.parcela.paga ? <CheckCircle2 className="w-3 h-3 mr-1" /> : <Clock className="w-3 h-3 mr-1" />}
-                              {item.parcela.paga ? 'Paga' : 'Pendente'}
-                            </Badge>
-                          </TableCell>
-                          <TableCell>
-                            {item.transaction?.date ? parseDateLocal(item.transaction.date).toLocaleDateString("pt-BR") : '—'}
-                          </TableCell>
-                          <TableCell className="text-right font-medium text-success">
-                            {item.transaction?.amount ? formatCurrency(item.transaction.amount) : '—'}
-                          </TableCell>
-                          <TableCell>
-                            {!item.parcela.paga ? (
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => navigate('/receitas-despesas')}
-                                className="h-8 px-3 hover:bg-primary/10 hover:text-primary gap-1"
-                              >
-                                Pagar <ArrowRight className="w-3 h-3" />
-                              </Button>
-                            ) : (
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => handleUnmarkSeguroParcelPaid(item.seguro.id, item.parcela.numero, item.transaction?.id)}
-                                className="h-8 w-8 text-muted-foreground"
-                                title="Estornar pagamento"
-                              >
-                                <RefreshCw className="w-4 h-4" />
-                              </Button>
-                            )}
-                          </TableCell>
-                        </TableRow>
-                      );
-                    })}
-                    {allParcelas.length === 0 && (
-                      <TableRow>
-                        <TableCell colSpan={9} className="text-center text-muted-foreground py-8">
-                          Nenhuma parcela de seguro cadastrada.
-                        </TableCell>
-                      </TableRow>
-                    )}
-                  </TableBody>
-                </Table>
-              </CardContent>
-            </Card>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            </div>
           </TabsContent>
         </Tabs>
-        
-        {/* Dialog Adicionar/Configurar Veículo */}
-        <Dialog open={showAddVeiculo} onOpenChange={setShowAddVeiculo}>
-          <DialogContent className="bg-card border-border max-w-lg">
-            <DialogHeader>
-              <DialogTitle>
-                {pendingVehicleId ? "Configurar Veículo Pendente" : "Cadastrar Novo Veículo"}
-              </DialogTitle>
-            </DialogHeader>
-            <form onSubmit={handleSubmitVeiculo} className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label>Marca *</Label>
-                  <Input
-                    value={formData.marca}
-                    onChange={(e) => setFormData(prev => ({ ...prev, marca: e.target.value }))}
-                    className="mt-1 bg-muted border-border"
-                  />
-                </div>
-                <div>
-                  <Label>Modelo *</Label>
-                  <Input
-                    value={formData.modelo}
-                    onChange={(e) => setFormData(prev => ({ ...prev, modelo: e.target.value }))}
-                    className="mt-1 bg-muted border-border"
-                  />
-                </div>
-              </div>
-              <div className="grid grid-cols-3 gap-4">
-                <div>
-                  <Label>Tipo *</Label>
-                  <Select 
-                    value={formData.tipo} 
-                    onValueChange={(v) => setFormData(prev => ({ ...prev, tipo: v as 'carro' | 'moto' | 'caminhao' }))}
-                  >
-                    <SelectTrigger className="mt-1 bg-muted border-border">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="carro">Carro</SelectItem>
-                      <SelectItem value="moto">Moto</SelectItem>
-                      <SelectItem value="caminhao">Caminhão</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <Label>Ano *</Label>
-                  <Input
-                    type="number"
-                    value={formData.ano}
-                    onChange={(e) => setFormData(prev => ({ ...prev, ano: e.target.value }))}
-                    className="mt-1 bg-muted border-border"
-                  />
-                </div>
-                <div>
-                  <Label>Data Compra *</Label>
-                  <Input
-                    type="date"
-                    value={formData.dataCompra}
-                    onChange={(e) => setFormData(prev => ({ ...prev, dataCompra: e.target.value }))}
-                    className="mt-1 bg-muted border-border"
-                  />
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label>Valor Compra (R$) *</Label>
-                  <Input
-                    type="number"
-                    step="0.01"
-                    value={formData.valorVeiculo}
-                    onChange={(e) => setFormData(prev => ({ ...prev, valorVeiculo: e.target.value }))}
-                    className="mt-1 bg-muted border-border"
-                  />
-                </div>
-                <div>
-                  <Label>Valor FIPE (R$)</Label>
-                  <Input
-                    type="number"
-                    step="0.01"
-                    value={formData.valorFipe}
-                    onChange={(e) => setFormData(prev => ({ ...prev, valorFipe: e.target.value }))}
-                    placeholder="Opcional"
-                    className="mt-1 bg-muted border-border"
-                  />
-                </div>
-              </div>
-              <Button type="submit" className="w-full">
-                {pendingVehicleId ? "Salvar Configuração" : "Adicionar Veículo"}
-              </Button>
-            </form>
-          </DialogContent>
-        </Dialog>
-        
-        {/* FIPE Consulta Dialog */}
-        <FipeConsultaDialog 
-          open={showFipeDialog} 
-          onOpenChange={setShowFipeDialog}
-          veiculo={selectedVeiculoFipe}
-          onUpdateFipe={handleUpdateFipe}
-        />
       </div>
+
+      <FipeConsultaDialog open={showFipeDialog} onOpenChange={setShowFipeDialog} />
     </MainLayout>
   );
 };

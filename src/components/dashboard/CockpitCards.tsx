@@ -1,6 +1,7 @@
 import { Target, TrendingUp, TrendingDown, CalendarClock, ArrowUpRight, ArrowDownRight, Droplets } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { KpiCard, type KpiStatus } from "@/components/ui/KpiCard";
+import { cn } from "@/lib/utils";
 
 interface CockpitData {
   patrimonioTotal: number;
@@ -20,8 +21,8 @@ export function CockpitCards({ data }: CockpitCardsProps) {
     return new Intl.NumberFormat("pt-BR", {
       style: "currency",
       currency: "BRL",
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
     }).format(value);
   };
 
@@ -33,87 +34,94 @@ export function CockpitCards({ data }: CockpitCardsProps) {
     title: string;
     value: string;
     status: KpiStatus;
-    icon: React.ReactNode;
+    icon: React.ElementType;
     subtitle?: string;
-    trend?: number;
     tooltip: string;
+    color: string;
   }> = [
     {
       id: "patrimonio",
-      title: "Patrimônio Total",
+      title: "Patrimônio",
       value: formatCurrency(data.patrimonioTotal),
-      status: data.patrimonioTotal >= 0 ? "neutral" : "danger",
-      icon: <Target className="w-6 h-6" />,
-      tooltip:
-        "Valor total dos ativos (contas, investimentos, veículos) menos o total dos passivos (dívidas, cartões, seguros a pagar).",
+      status: "neutral",
+      icon: Target,
+      tooltip: "Valor total dos ativos menos passivos.",
+      color: "text-primary",
     },
     {
       id: "variacao",
-      title: "Variação do Período",
+      title: "Variação",
       value: formatCurrency(Math.abs(data.variacaoPatrimonio)),
       subtitle: `${isPositiveVariation ? "+" : ""}${data.variacaoPercentual.toFixed(1)}%`,
       status: isPositiveVariation ? "success" : "danger",
-      icon: isPositiveVariation ? (
-        <TrendingUp className="w-6 h-6" />
-      ) : (
-        <TrendingDown className="w-6 h-6" />
-      ),
-      tooltip:
-        "Mudança líquida no patrimônio (Receitas - Despesas) comparada ao período anterior.",
+      icon: isPositiveVariation ? TrendingUp : TrendingDown,
+      tooltip: "Mudança no patrimônio comparada ao período anterior.",
+      color: isPositiveVariation ? "text-success" : "text-destructive",
     },
     {
       id: "liquidez",
-      title: "Liquidez Imediata",
+      title: "Liquidez",
       value: formatCurrency(data.liquidezImediata),
-      status: data.liquidezImediata > 0 ? "info" : "danger",
-      icon: <Droplets className="w-6 h-6" />,
-      tooltip:
-        "Soma dos saldos em contas correntes, poupança, reserva de emergência e renda fixa de alta liquidez.",
+      status: "info",
+      icon: Droplets,
+      tooltip: "Recursos disponíveis em contas de alta liquidez.",
+      color: "text-info",
     },
     {
       id: "compromissos",
-      title: "Compromissos do Mês",
+      title: "Compromissos",
       value: formatCurrency(data.compromissosMes),
       status: "warning",
-      icon: <CalendarClock className="w-6 h-6" />,
-      tooltip: "Total de despesas e parcelas de empréstimos registradas no período atual.",
+      icon: CalendarClock,
+      tooltip: "Despesas e parcelas no período atual.",
+      color: "text-warning",
     },
     {
       id: "projecao",
-      title: "Projeção 30 Dias",
+      title: "Projeção",
       value: formatCurrency(Math.abs(data.projecao30Dias)),
       status: isPositiveProjection ? "success" : "danger",
-      icon: isPositiveProjection ? (
-        <ArrowUpRight className="w-6 h-6" />
-      ) : (
-        <ArrowDownRight className="w-6 h-6" />
-      ),
-      tooltip:
-        "Estimativa do saldo líquido (Receitas - Despesas) projetado para os próximos 30 dias, baseada na média do período atual.",
+      icon: isPositiveProjection ? ArrowUpRight : ArrowDownRight,
+      tooltip: "Saldo líquido projetado para 30 dias.",
+      color: isPositiveProjection ? "text-success" : "text-destructive",
     },
   ];
 
   return (
     <TooltipProvider>
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 md:gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 md:gap-4">
         {cards.map((card, index) => (
           <Tooltip key={card.id}>
             <TooltipTrigger asChild>
-              <div>
-                <KpiCard
-                  title={card.title}
-                  value={card.value}
-                  subtitle={card.subtitle}
-                  status={card.status}
-                  icon={card.icon}
-                  tooltip={card.tooltip}
-                  delay={index * 40}
-                  size="sm"
-                />
+              <div className={cn(
+                "glass-card p-4 md:p-5 rounded-[1.75rem] flex flex-col justify-between h-full transition-all hover:scale-[1.02] border-border/40",
+                card.status === "success" && "stat-card-positive",
+                card.status === "danger" && "stat-card-negative",
+                card.status === "warning" && "stat-card-warning",
+                card.status === "info" && "stat-card-info"
+              )}>
+                <div className="flex items-center justify-between mb-4">
+                  <div className={cn("p-2.5 rounded-2xl bg-primary/10", card.color)}>
+                    <card.icon className="w-5 h-5 md:w-6 md:h-6" />
+                  </div>
+                  {card.subtitle && (
+                    <Badge variant="outline" className={cn("text-[10px] border-none font-bold", card.color)}>
+                      {card.subtitle}
+                    </Badge>
+                  )}
+                </div>
+                <div>
+                  <p className="text-[10px] md:text-xs font-bold text-muted-foreground uppercase tracking-wider mb-1">
+                    {card.title}
+                  </p>
+                  <p className="text-base md:text-xl font-black text-foreground truncate">
+                    {card.value}
+                  </p>
+                </div>
               </div>
             </TooltipTrigger>
-            <TooltipContent className="max-w-xs bg-popover border-border">
-              <p className="text-sm">{card.tooltip}</p>
+            <TooltipContent className="bg-popover border-border">
+              <p className="text-xs">{card.tooltip}</p>
             </TooltipContent>
           </Tooltip>
         ))}

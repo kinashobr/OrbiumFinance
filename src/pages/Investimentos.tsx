@@ -3,691 +3,188 @@
 import { useState, useMemo, useCallback } from "react";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { PieChart, Pie, Cell, AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
-import { Plus, Trash2, TrendingUp, Wallet, Target, Shield, Bitcoin, DollarSign, ArrowUpRight, ArrowDownRight, Coins, CircleDollarSign, Landmark, History, Calendar } from "lucide-react";
-import { cn, parseDateLocal } from "@/lib/utils";
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
+import { TrendingUp, Wallet, Target, CircleDollarSign, Landmark, Coins, Bitcoin, ArrowUpRight, ArrowDownRight, MoreVertical } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { useFinance } from "@/contexts/FinanceContext";
-import { EditableCell } from "@/components/EditableCell";
-import { toast } from "sonner";
 import { PeriodSelector } from "@/components/dashboard/PeriodSelector";
-import { DateRange, ComparisonDateRanges } from "@/types/finance";
-import { startOfMonth, endOfMonth, subDays, startOfDay, endOfDay, isWithinInterval } from "date-fns";
-import { ContaCorrente, TransacaoCompleta } from "@/types/finance";
+import { ComparisonDateRanges } from "@/types/finance";
 import { InvestmentEvolutionChart } from "@/components/investments/InvestmentEvolutionChart";
-import { KpiCard } from "@/components/ui/KpiCard";
 
-// Custom label component for PieChart to prevent truncation
-const CustomPieLabel = ({ cx, cy, midAngle, outerRadius, percent, name }: any) => {
-  const RADIAN = Math.PI / 180;
-  const radius = outerRadius * 1.1; // Position label slightly outside
-  const x = cx + radius * Math.cos(-midAngle * RADIAN);
-  const y = cy + radius * Math.sin(-midAngle * RADIAN);
-  
-  return (
-    <text 
-      x={x} 
-      y={y} 
-      fill="hsl(var(--foreground))" 
-      textAnchor={x > cx ? 'start' : 'end'} 
-      dominantBaseline="central"
-      fontSize={12}
-    >
-      {`${name} (${(percent * 100).toFixed(0)}%)`}
-    </text>
-  );
-};
+const STABLECOIN_NAMES = ['usdt', 'usdc', 'dai', 'busd', 'tusd'];
 
-const pieColors = [
-  "hsl(var(--primary))",
-  "hsl(var(--success))",
-  "hsl(var(--warning))",
-  "hsl(var(--secondary))",
-  "hsl(var(--md-sys-color-tertiary))",
-];
-
-const formatCurrency = (value: number) => `R$ ${value.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`;
-
-// List of stablecoin identifiers
-const STABLECOIN_NAMES = ['usdt', 'usdc', 'dai', 'busd', 'tusd', 'usdp', 'gusd', 'frax', 'lusd', 'susd'];
-
-const isStablecoin = (name: string): boolean => {
-  return STABLECOIN_NAMES.some(s => name.toLowerCase().includes(s));
-};
-
-const Investimentos = () => {
+export default function Investimentos() {
   const { 
     contasMovimento,
-    transacoesV2,
     getValorFipeTotal,
-    getTotalReceitas,
-    getTotalDespesas,
-    categoriasV2,
-    addTransacaoV2,
     calculateBalanceUpToDate,
     dateRanges,
     setDateRanges,
     calculateTotalInvestmentBalanceAtDate,
+    transacoesV2,
   } = useFinance();
   
   const [activeTab, setActiveTab] = useState("carteira");
-  
-  // --- ESTADOS FALTANTES ---
-  const [showAddRendimento, setShowAddRendimento] = useState<string | null>(null);
-  const [formRendimento, setFormRendimento] = useState({
-    data: new Date().toISOString().split('T')[0],
-    valor: "",
-    descricao: "",
-  });
-  // -------------------------
 
   const handlePeriodChange = useCallback((ranges: ComparisonDateRanges) => {
     setDateRanges(ranges);
   }, [setDateRanges]);
 
-  // Helper para filtrar transações por um range específico
-  const filterTransactionsByRange = useCallback((range: DateRange) => {
-    if (!range.from || !range.to) return transacoesV2;
-    
-    // Normaliza os limites do período para garantir que o dia inteiro seja incluído
-    const rangeFrom = startOfDay(range.from);
-    const rangeTo = endOfDay(range.to);
-    
-    return transacoesV2.filter(t => {
-      const transactionDate = parseDateLocal(t.date);
-      return isWithinInterval(transactionDate, { start: rangeFrom, end: rangeTo });
-    });
-  }, [transacoesV2]);
-
-  // Transações do Período 1 (Principal)
-  const transacoesPeriodo1 = useMemo(() => filterTransactionsByRange(dateRanges.range1), [filterTransactionsByRange, dateRanges.range1]);
-
-  // Helper para calcular saldo atual de uma conta (usando a data final do período P1)
   const calculateAccountBalance = useCallback((accountId: string, targetDate: Date | undefined): number => {
     return calculateBalanceUpToDate(accountId, targetDate, transacoesV2, contasMovimento);
   }, [calculateBalanceUpToDate, transacoesV2, contasMovimento]);
 
-  // Separate accounts by type for tab filtering
   const investmentAccounts = useMemo(() => {
-    return contasMovimento.filter(c => 
-      c.accountType === 'renda_fixa' || 
-      c.accountType === 'poupanca' ||
-      c.accountType === 'cripto' ||
-      c.accountType === 'reserva' ||
-      c.accountType === 'objetivo'
-    );
+    return contasMovimento.filter(c => ['renda_fixa', 'poupanca', 'cripto', 'reserva', 'objetivo'].includes(c.accountType));
   }, [contasMovimento]);
 
-  const rfAccounts = useMemo(() => {
-    return investmentAccounts.filter(c => 
-      c.accountType === 'renda_fixa' || c.accountType === 'poupanca'
-    );
-  }, [investmentAccounts]);
-
-  const cryptoAccounts = useMemo(() => {
-    return investmentAccounts.filter(c => 
-      c.accountType === 'cripto' && !isStablecoin(c.name)
-    );
-  }, [investmentAccounts]);
-
-  const stablecoinAccounts = useMemo(() => {
-    return investmentAccounts.filter(c => 
-      c.accountType === 'cripto' && isStablecoin(c.name)
-    );
-  }, [investmentAccounts]);
-
-  const objetivosAccounts = useMemo(() => {
-    return investmentAccounts.filter(c => 
-      c.accountType === 'objetivo' || c.accountType === 'reserva'
-    );
-  }, [investmentAccounts]);
-
-  // Cálculos padronizados
-  const calculosPatrimonio = useMemo(() => {
+  const calculos = useMemo(() => {
     const targetDate = dateRanges.range1.to;
-    const periodStart = dateRanges.range1.from;
-
-    // Totais das Contas Movimento (V2)
-    const totalRF = rfAccounts.reduce((acc, c) => acc + calculateAccountBalance(c.id, targetDate), 0);
-    const totalCripto = cryptoAccounts.reduce((acc, c) => acc + calculateAccountBalance(c.id, targetDate), 0);
-    const totalStables = stablecoinAccounts.reduce((acc, c) => acc + calculateAccountBalance(c.id, targetDate), 0);
-    const totalObjetivos = objetivosAccounts.reduce((acc, c) => acc + calculateAccountBalance(c.id, targetDate), 0);
-
+    const patrimonioInvestimentos = calculateTotalInvestmentBalanceAtDate(targetDate);
     const valorVeiculos = getValorFipeTotal(targetDate);
-    
-    const patrimonioInvestimentos = totalRF + totalCripto + totalStables + totalObjetivos;
     const patrimonioTotal = patrimonioInvestimentos + valorVeiculos;
     
-    const exposicaoCripto = patrimonioInvestimentos > 0 ? (totalCripto / patrimonioInvestimentos) * 100 : 0;
-    
-    // 1. Calcular Rendimentos no Período 1
-    const totalRendimentosPeriodo1 = transacoesPeriodo1
-        .filter(t => t.operationType === 'rendimento')
-        .reduce((acc, t) => acc + t.amount, 0);
-        
-    // 2. Calcular Patrimônio Inicial Investido (dia anterior ao início do período)
-    let patrimonioInicialInvestido = 0;
-    if (periodStart) {
-        const dayBeforeStart = subDays(periodStart, 1);
-        patrimonioInicialInvestido = calculateTotalInvestmentBalanceAtDate(dayBeforeStart);
-    }
-    
-    // 3. Calcular Rentabilidade Média (simplificada: Rendimentos / Saldo Inicial)
-    let rentabilidadeMedia = 0;
-    if (patrimonioInicialInvestido > 0) {
-        rentabilidadeMedia = (totalRendimentosPeriodo1 / patrimonioInicialInvestido) * 100;
-    } else if (patrimonioInvestimentos > 0 && totalRendimentosPeriodo1 > 0) {
-        // Fallback: Se o saldo inicial for zero, mas houver rendimentos e saldo final, usa o saldo final como proxy.
-        rentabilidadeMedia = (totalRendimentosPeriodo1 / patrimonioInvestimentos) * 100;
-    }
-    
-    // Nota: getTotalReceitas e getTotalDespesas não são period-aware por padrão, mas são usados aqui
-    // para métricas mensais. Se o PeriodSelector for usado para filtrar o mês, eles devem ser ajustados.
-    const receitasMes = getTotalReceitas();
-    const despesasMes = getTotalDespesas();
-    const variacaoMensal = receitasMes > 0 ? ((receitasMes - despesasMes) / receitasMes) * 100 : 0;
-    
-    return {
-      patrimonioTotal,
-      totalRF,
-      totalCripto,
-      totalStables,
-      totalObjetivos,
-      valorVeiculos,
-      exposicaoCripto,
-      rentabilidadeMedia,
-      variacaoMensal,
-      patrimonioInvestimentos,
-    };
-  }, [contasMovimento, transacoesV2, rfAccounts, cryptoAccounts, stablecoinAccounts, objetivosAccounts, calculateAccountBalance, getValorFipeTotal, getTotalReceitas, getTotalDespesas, dateRanges.range1.to, dateRanges.range1.from, transacoesPeriodo1, calculateTotalInvestmentBalanceAtDate]);
+    return { patrimonioTotal, patrimonioInvestimentos };
+  }, [calculateTotalInvestmentBalanceAtDate, getValorFipeTotal, dateRanges.range1.to]);
 
-  const distribuicaoCarteira = useMemo(() => [
-    { name: "Renda Fixa", value: calculosPatrimonio.totalRF },
-    { name: "Criptomoedas", value: calculosPatrimonio.totalCripto },
-    { name: "Stablecoins", value: calculosPatrimonio.totalStables },
-    { name: "Objetivos", value: calculosPatrimonio.totalObjetivos },
-  ], [calculosPatrimonio]);
+  const formatCurrency = (value: number) => `R$ ${value.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`;
 
-  const handleAddRendimento = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!formRendimento.data || !formRendimento.valor || !showAddRendimento) return;
+  const AssetListItem = ({ account }: { account: any }) => {
+    const saldo = calculateAccountBalance(account.id, dateRanges.range1.to);
+    const Icon = account.accountType === 'cripto' ? Bitcoin : (account.accountType === 'poupanca' ? Coins : Landmark);
     
-    // Simular a adição de rendimento como uma transação de 'rendimento' na conta de investimento
-    const accountId = showAddRendimento;
-    const parsedAmount = Number(formRendimento.valor);
-
-    const transaction: TransacaoCompleta = {
-      id: `tx_${Date.now()}`,
-      date: formRendimento.data,
-      accountId,
-      flow: 'in',
-      operationType: 'rendimento',
-      domain: 'investment',
-      amount: parsedAmount,
-      categoryId: categoriasV2.find(c => c.label === 'Rendimentos sobre Investimentos')?.id || null,
-      description: formRendimento.descricao || "Rendimento de Aplicação",
-      links: {
-        investmentId: accountId,
-        loanId: null,
-        transferGroupId: null,
-        parcelaId: null,
-        vehicleTransactionId: null,
-      },
-      conciliated: false,
-      attachments: [],
-      meta: {
-        createdBy: 'user',
-        source: 'manual',
-        createdAt: new Date().toISOString(),
-      }
-    };
-    
-    // Adicionar transação (o contexto se encarrega de atualizar o saldo)
-    addTransacaoV2(transaction);
-    
-    setFormRendimento({ data: new Date().toISOString().split('T')[0], valor: "", descricao: "" });
-    setShowAddRendimento(null);
-    toast.success("Rendimento registrado!");
+    return (
+      <div className="flex items-center justify-between p-4 rounded-2xl bg-muted/20 hover:bg-muted/40 transition-colors group">
+        <div className="flex items-center gap-4">
+          <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary group-hover:scale-110 transition-transform">
+            <Icon className="w-5 h-5" />
+          </div>
+          <div>
+            <p className="font-bold text-sm text-foreground leading-tight">{account.name}</p>
+            <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider">{account.institution || account.accountType}</p>
+          </div>
+        </div>
+        <div className="text-right">
+          <p className="font-black text-sm text-foreground leading-tight">{formatCurrency(saldo)}</p>
+          <div className="flex items-center justify-end gap-1 text-[10px] text-success font-bold">
+            <ArrowUpRight className="w-3 h-3" /> 0.8%
+          </div>
+        </div>
+      </div>
+    );
   };
 
   return (
     <MainLayout>
       <div className="space-y-6">
-        {/* Header */}
-        <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between animate-fade-in">
-          <div>
-            <h1 className="text-xl md:text-3xl font-bold text-foreground">
-              Investimentos & Patrimônio
-            </h1>
-            <p className="text-xs md:text-base text-muted-foreground mt-1">
-              Visão consolidada da sua carteira de ativos
-            </p>
-          </div>
-          <PeriodSelector 
-            initialRanges={dateRanges}
-            onDateRangeChange={handlePeriodChange}
-            className="h-8 md:h-9 rounded-full border-none bg-card px-3 text-[11px] md:text-xs font-medium text-secondary shadow-xs"
-          />
-        </div>
-
-        {/* Summary Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          <KpiCard
-            title="Patrimônio Total"
-            value={formatCurrency(calculosPatrimonio.patrimonioTotal)}
-            status="success"
-            icon={<CircleDollarSign className="w-6 h-6" />}
-          />
-
-          <KpiCard
-            title="Total Investido"
-            value={formatCurrency(calculosPatrimonio.patrimonioInvestimentos)}
-            status="neutral"
-            icon={<Landmark className="w-6 h-6" />}
-            delay={50}
-          />
-
-          <KpiCard
-            title="Rentabilidade Média"
-            value={`${calculosPatrimonio.rentabilidadeMedia.toFixed(1)}%`}
-            status="success"
-            icon={<TrendingUp className="w-6 h-6" />}
-            delay={100}
-          />
-
-          <KpiCard
-            title="Exposição Cripto"
-            value={`${calculosPatrimonio.exposicaoCripto.toFixed(1)}%`}
-            status="warning"
-            icon={<Bitcoin className="w-6 h-6" />}
-            delay={150}
-          />
-        </div>
-
-        {/* Tabs */}
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-          <TabsList className="bg-muted/50 h-auto flex flex-wrap gap-1 p-1">
-            <TabsTrigger value="carteira" className="flex-1 min-w-[48%] sm:min-w-0 sm:flex-none text-xs sm:text-sm h-9 sm:h-10">
-              Carteira Geral
-            </TabsTrigger>
-            <TabsTrigger value="rf" className="flex-1 min-w-[48%] sm:min-w-0 sm:flex-none text-xs sm:text-sm h-9 sm:h-10">
-              Renda Fixa
-            </TabsTrigger>
-            <TabsTrigger value="cripto" className="flex-1 min-w-[48%] sm:min-w-0 sm:flex-none text-xs sm:text-sm h-9 sm:h-10">
-              Criptoativos
-            </TabsTrigger>
-            <TabsTrigger value="objetivos" className="flex-1 min-w-[48%] sm:min-w-0 sm:flex-none text-xs sm:text-sm h-9 sm:h-10">
-              Reserva
-            </TabsTrigger>
-          </TabsList>
-
-          {/* Tab Carteira Geral */}
-          <TabsContent value="carteira" className="space-y-6">
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              {/* Distribuição */}
-              <Card className="lg:col-span-1 glass-card">
-                <CardHeader>
-                  <CardTitle>Distribuição da Carteira</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="h-[300px]">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <PieChart>
-                        <Pie
-                          data={distribuicaoCarteira.filter(d => d.value > 0)}
-                          dataKey="value"
-                          nameKey="name"
-                          cx="50%"
-                          cy="50%"
-                          outerRadius={100}
-                          fill="#8884d8"
-                          label={CustomPieLabel} // Use CustomPieLabel for better positioning
-                          labelLine
-                        >
-                          {distribuicaoCarteira.filter(d => d.value > 0).map((entry, index) => (
-                            <Cell key={`cell-${index}`} fill={pieColors[index % pieColors.length]} />
-                          ))}
-                        </Pie>
-                        <Tooltip formatter={(value: number) => [formatCurrency(value), "Valor"]} />
-                      </PieChart>
-                    </ResponsiveContainer>
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Evolução */}
-              <Card className="lg:col-span-2 glass-card">
-                <CardHeader>
-                  <CardTitle>Evolução Patrimonial (Últimos 12 meses)</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <InvestmentEvolutionChart />
-                </CardContent>
-              </Card>
+        <header className="space-y-3 animate-fade-in border-0">
+          <div className="flex items-center justify-between text-xs text-muted-foreground">
+            <div className="inline-flex items-start gap-3">
+              <div className="flex flex-col">
+                <span className="text-sm font-semibold text-foreground">Gestão de Ativos</span>
+                <span className="text-[11px]">Performance de Carteira</span>
+              </div>
             </div>
+          </div>
+          <div className="flex flex-wrap items-stretch gap-2 max-w-full">
+            <PeriodSelector 
+              initialRanges={dateRanges}
+              onDateRangeChange={handlePeriodChange}
+              className="h-8 rounded-full border-none bg-card px-3 text-[11px] font-medium text-secondary shadow-xs"
+            />
+          </div>
+        </header>
 
-            {/* Tabela de Ativos */}
-            <Card className="glass-card">
-              <CardHeader>
-                <CardTitle>Ativos por Conta</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Conta</TableHead>
-                      <TableHead>Tipo</TableHead>
-                      <TableHead className="text-right">Saldo Atual</TableHead>
-                      <TableHead className="text-right">Rentabilidade (Mês)</TableHead>
-                      <TableHead className="w-32">Ações</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {investmentAccounts.map((account) => {
-                      const saldo = calculateAccountBalance(account.id, dateRanges.range1.to);
-                      const isPositive = saldo >= 0;
-                      
-                      return (
-                        <TableRow key={account.id}>
-                          <TableCell className="font-medium">{account.name}</TableCell>
-                          <TableCell>
-                            <Badge variant="outline">{account.accountType}</Badge>
-                          </TableCell>
-                          <TableCell className={cn("text-right font-semibold", isPositive ? "text-success" : "text-destructive")}>
-                            {formatCurrency(saldo)}
-                          </TableCell>
-                          <TableCell className="text-right text-success">
-                            +0.5%
-                          </TableCell>
-                          <TableCell>
-                            <div className="flex gap-2">
-                              <Button 
-                                variant="outline" 
-                                size="sm" 
-                                className="h-8 px-2"
-                                onClick={() => setShowAddRendimento(account.id)}
-                              >
-                                <DollarSign className="w-4 h-4" />
-                              </Button>
-                              <Button variant="ghost" size="icon" className="h-8 w-8">
-                                <History className="w-4 h-4" />
-                              </Button>
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      );
-                    })}
-                  </TableBody>
-                </Table>
-              </CardContent>
-            </Card>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {/* Patrimônio Total Card - Estilo conta */}
+          <div className="glass-card p-6 rounded-[1.75rem] border-l-4 border-l-primary flex flex-col justify-between h-40">
+            <div className="flex items-center justify-between">
+              <div className="w-10 h-10 rounded-2xl bg-primary/10 flex items-center justify-center text-primary">
+                <CircleDollarSign className="w-6 h-6" />
+              </div>
+              <Badge variant="outline" className="bg-success/10 text-success border-none text-[10px] font-bold">+2.4%</Badge>
+            </div>
+            <div>
+              <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-1">Patrimônio Líquido</p>
+              <p className="text-2xl font-black text-foreground">{formatCurrency(calculos.patrimonioTotal)}</p>
+            </div>
+          </div>
+
+          <div className="glass-card p-6 rounded-[1.75rem] border-l-4 border-l-success flex flex-col justify-between h-40">
+            <div className="flex items-center justify-between">
+              <div className="w-10 h-10 rounded-2xl bg-success/10 flex items-center justify-center text-success">
+                <Landmark className="w-6 h-6" />
+              </div>
+              <Badge variant="outline" className="bg-success/10 text-success border-none text-[10px] font-bold">+1.2k</Badge>
+            </div>
+            <div>
+              <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-1">Total em Investimentos</p>
+              <p className="text-2xl font-black text-foreground">{formatCurrency(calculos.patrimonioInvestimentos)}</p>
+            </div>
+          </div>
+        </div>
+
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+          <div className="border-b border-border/40">
+            <TabsList className="bg-transparent h-auto p-0 gap-6">
+              <TabsTrigger value="carteira" className="bg-transparent rounded-none border-b-2 border-transparent data-[state=active]:border-primary px-0 py-3 text-xs font-bold uppercase">Visão Geral</TabsTrigger>
+              <TabsTrigger value="ativos" className="bg-transparent rounded-none border-b-2 border-transparent data-[state=active]:border-primary px-0 py-3 text-xs font-bold uppercase">Meus Ativos</TabsTrigger>
+            </TabsList>
+          </div>
+
+          <TabsContent value="carteira" className="space-y-6 animate-fade-in-up">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              <div className="lg:col-span-2 glass-card p-5 rounded-[1.75rem]">
+                <h4 className="text-sm font-bold text-foreground mb-4">Evolução Histórica</h4>
+                <InvestmentEvolutionChart />
+              </div>
+              <div className="glass-card p-5 rounded-[1.75rem] flex flex-col items-center justify-center">
+                <h4 className="text-sm font-bold text-foreground mb-4 w-full">Distribuição</h4>
+                <div className="h-48 w-full">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie 
+                        data={[
+                          { name: 'RF', value: 70 },
+                          { name: 'Cripto', value: 20 },
+                          { name: 'Liquidez', value: 10 }
+                        ]} 
+                        innerRadius={60} 
+                        outerRadius={80} 
+                        paddingAngle={5} 
+                        dataKey="value"
+                      >
+                        <Cell fill="hsl(var(--primary))" />
+                        <Cell fill="hsl(var(--success))" />
+                        <Cell fill="hsl(var(--warning))" />
+                      </Pie>
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
+                <div className="grid grid-cols-3 gap-2 mt-4">
+                   <Badge className="bg-primary/10 text-primary border-none text-[9px]">Renda Fixa</Badge>
+                   <Badge className="bg-success/10 text-success border-none text-[9px]">Cripto</Badge>
+                   <Badge className="bg-warning/10 text-warning border-none text-[9px]">Outros</Badge>
+                </div>
+              </div>
+            </div>
           </TabsContent>
 
-          {/* Tab Renda Fixa */}
-          <TabsContent value="rf" className="space-y-6">
-            <Card className="glass-card">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Landmark className="w-5 h-5 text-primary" />
-                  Renda Fixa & Poupança
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Conta</TableHead>
-                      <TableHead>Tipo</TableHead>
-                      <TableHead className="text-right">Saldo</TableHead>
-                      <TableHead className="text-right">Rentabilidade (Mês)</TableHead>
-                      <TableHead className="w-20">Ações</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {rfAccounts.map((account) => {
-                      const saldo = calculateAccountBalance(account.id, dateRanges.range1.to);
-                      return (
-                        <TableRow key={account.id}>
-                          <TableCell className="font-medium">{account.name}</TableCell>
-                          <TableCell>
-                            <Badge variant="outline">{account.accountType === 'poupanca' ? 'Poupança' : 'Renda Fixa'}</Badge>
-                          </TableCell>
-                          <TableCell className="text-right font-semibold text-success">
-                            {formatCurrency(saldo)}
-                          </TableCell>
-                          <TableCell className="text-right text-success">
-                            +0.5%
-                          </TableCell>
-                          <TableCell>
-                            <Button 
-                              variant="outline" 
-                              size="sm" 
-                              className="h-8 px-2"
-                              onClick={() => setShowAddRendimento(account.id)}
-                            >
-                              <DollarSign className="w-4 h-4" />
-                            </Button>
-                          </TableCell>
-                        </TableRow>
-                      );
-                    })}
-                  </TableBody>
-                </Table>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          {/* Tab Criptoativos */}
-          <TabsContent value="cripto" className="space-y-6">
-            <Card className="glass-card">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Bitcoin className="w-5 h-5 text-warning" />
-                  Criptoativos & Stablecoins
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Conta</TableHead>
-                      <TableHead>Tipo</TableHead>
-                      <TableHead className="text-right">Saldo</TableHead>
-                      <TableHead className="text-right">Variação (24h)</TableHead>
-                      <TableHead className="w-20">Ações</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {cryptoAccounts.map((account) => {
-                      const saldo = calculateAccountBalance(account.id, dateRanges.range1.to);
-                      return (
-                        <TableRow key={account.id}>
-                          <TableCell className="font-medium">{account.name}</TableCell>
-                          <TableCell>
-                            <Badge variant="outline">Cripto</Badge>
-                          </TableCell>
-                          <TableCell className="text-right font-semibold text-warning">
-                            {formatCurrency(saldo)}
-                          </TableCell>
-                          <TableCell className="text-right text-destructive">
-                            -2.5%
-                          </TableCell>
-                          <TableCell>
-                            <Button 
-                              variant="outline" 
-                              size="sm" 
-                              className="h-8 px-2"
-                              onClick={() => setShowAddRendimento(account.id)}
-                            >
-                              <DollarSign className="w-4 h-4" />
-                            </Button>
-                          </TableCell>
-                        </TableRow>
-                      );
-                    })}
-                    {stablecoinAccounts.map((account) => {
-                      const saldo = calculateAccountBalance(account.id, dateRanges.range1.to);
-                      return (
-                        <TableRow key={account.id}>
-                          <TableCell className="font-medium">{account.name}</TableCell>
-                          <TableCell>
-                            <Badge variant="outline" className="border-success text-success">Stablecoin</Badge>
-                          </TableCell>
-                          <TableCell className="text-right font-semibold text-success">
-                            {formatCurrency(saldo)}
-                          </TableCell>
-                          <TableCell className="text-right text-success">
-                            +0.0%
-                          </TableCell>
-                          <TableCell>
-                            <Button 
-                              variant="outline" 
-                              size="sm" 
-                              className="h-8 px-2"
-                              onClick={() => setShowAddRendimento(account.id)}
-                            >
-                              <DollarSign className="w-4 h-4" />
-                            </Button>
-                          </TableCell>
-                        </TableRow>
-                      );
-                    })}
-                  </TableBody>
-                </Table>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          {/* Tab Objetivos */}
-          <TabsContent value="objetivos" className="space-y-6">
-            <Card className="glass-card">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Target className="w-5 h-5 text-accent" />
-                  Reserva de Emergência & Objetivos
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Conta</TableHead>
-                      <TableHead>Tipo</TableHead>
-                      <TableHead className="text-right">Saldo Atual</TableHead>
-                      <TableHead className="text-right">Meta</TableHead>
-                      <TableHead className="text-right">Progresso</TableHead>
-                      <TableHead className="w-20">Ações</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {objetivosAccounts.map((account) => {
-                      const saldo = calculateAccountBalance(account.id, dateRanges.range1.to);
-                      const meta = 10000; // Placeholder
-                      const progresso = (saldo / meta) * 100;
-                      
-                      return (
-                        <TableRow key={account.id}>
-                          <TableCell className="font-medium">{account.name}</TableCell>
-                          <TableCell>
-                            <Badge variant="outline">{account.accountType === 'reserva' ? 'Reserva' : 'Objetivo'}</Badge>
-                          </TableCell>
-                          <TableCell className="text-right font-semibold text-success">
-                            {formatCurrency(saldo)}
-                          </TableCell>
-                          <TableCell className="text-right text-muted-foreground">
-                            {formatCurrency(meta)}
-                          </TableCell>
-                          <TableCell className="text-right">
-                            <Badge variant="outline" className={cn(progresso >= 100 && "border-success text-success")}>
-                              {Math.min(100, progresso).toFixed(0)}%
-                            </Badge>
-                          </TableCell>
-                          <TableCell>
-                            <Button 
-                              variant="outline" 
-                              size="sm" 
-                              className="h-8 px-2"
-                              onClick={() => setShowAddRendimento(account.id)}
-                            >
-                              <DollarSign className="w-4 h-4" />
-                            </Button>
-                          </TableCell>
-                        </TableRow>
-                      );
-                    })}
-                  </TableBody>
-                </Table>
-              </CardContent>
-            </Card>
+          <TabsContent value="ativos" className="animate-fade-in-up">
+            <div className="glass-card p-5 rounded-[1.75rem] space-y-3">
+              <h4 className="text-sm font-bold text-foreground mb-4">Portfólio Detalhado</h4>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                {investmentAccounts.map(account => (
+                  <AssetListItem key={account.id} account={account} />
+                ))}
+              </div>
+            </div>
           </TabsContent>
         </Tabs>
       </div>
-
-      {/* Dialog Adicionar Rendimento */}
-      <Dialog open={!!showAddRendimento} onOpenChange={() => setShowAddRendimento(null)}>
-        <DialogContent className="max-w-[min(95vw,28rem)]">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <DollarSign className="w-5 h-5 text-success" />
-              Registrar Rendimento
-            </DialogTitle>
-          </DialogHeader>
-          <form onSubmit={handleAddRendimento} className="space-y-4">
-            <div className="space-y-2">
-              <Label>Conta</Label>
-              <Input 
-                value={contasMovimento.find(c => c.id === showAddRendimento)?.name || ''} 
-                disabled 
-                className="bg-muted"
-              />
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="data">Data *</Label>
-                <Input
-                  id="data"
-                  type="date"
-                  value={formRendimento.data}
-                  onChange={(e) => setFormRendimento(prev => ({ ...prev, data: e.target.value }))}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="valor">Valor (R$) *</Label>
-                <Input
-                  id="valor"
-                  type="number"
-                  step="0.01"
-                  placeholder="0,00"
-                  value={formRendimento.valor}
-                  onChange={(e) => setFormRendimento(prev => ({ ...prev, valor: e.target.value }))}
-                />
-              </div>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="descricao">Descrição (Opcional)</Label>
-              <Input
-                id="descricao"
-                placeholder="Ex: Juros recebidos"
-                value={formRendimento.descricao}
-                onChange={(e) => setFormRendimento(prev => ({ ...prev, descricao: e.target.value }))}
-              />
-            </div>
-            <Button type="submit" className="w-full">
-              <Plus className="w-4 h-4 mr-2" />
-              Registrar Rendimento
-            </Button>
-          </form>
-        </DialogContent>
-      </Dialog>
     </MainLayout>
   );
-};
-
-export default Investimentos;
+}

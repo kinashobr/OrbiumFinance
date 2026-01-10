@@ -4,11 +4,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { BalancoTab } from "@/components/reports/BalancoTab";
 import { DRETab } from "@/components/reports/DRETab";
 import { IndicadoresTab } from "@/components/reports/IndicadoresTab";
-import { Scale, Receipt, Activity } from "lucide-react";
+import { Scale, Receipt, Activity, BarChart3 } from "lucide-react";
 import { PeriodSelector } from "@/components/dashboard/PeriodSelector";
-import { DateRange, ComparisonDateRanges } from "@/types/finance";
-import { startOfMonth, endOfMonth, subDays, format } from "date-fns"; // Import format
-import { ptBR } from "date-fns/locale"; // Import ptBR locale
+import { ComparisonDateRanges } from "@/types/finance";
 import { useFinance } from "@/contexts/FinanceContext";
 
 const Relatorios = () => {
@@ -18,82 +16,61 @@ const Relatorios = () => {
     setDateRanges(ranges);
   }, [setDateRanges]);
 
-  const formatRange = (range: DateRange) => {
-    if (!range.from && !range.to) return "Todo o período";
-    if (!range.from || !range.to) return "Período incompleto";
-    
-    const from = format(range.from, 'dd/MM/yyyy', { locale: ptBR });
-    const to = format(range.to, 'dd/MM/yyyy', { locale: ptBR });
-    
-    if (from === to) return from;
-    return `${from} - ${to}`;
-  };
-
   return (
     <MainLayout>
       <div className="space-y-6">
-        {/* Header */}
-        <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between animate-fade-in">
-          <div>
-            <h1 className="text-xl md:text-3xl font-bold text-foreground">
-              Relatórios Financeiros
-            </h1>
-            <p className="text-xs md:text-base text-muted-foreground mt-1">
-              Análise contábil profissional • Balanço, DRE e Indicadores
-            </p>
-            <p className="text-xs md:text-sm text-muted-foreground mt-2">
-              Período Principal: <span className="font-medium text-foreground">{formatRange(dateRanges.range1)}</span>
-              {dateRanges.range2.from && (
-                <>
-                  <span className="mx-2 hidden md:inline">|</span>
-                  <br className="md:hidden" />
-                  Período Comparativo: <span className="font-medium text-foreground">{formatRange(dateRanges.range2)}</span>
-                </>
-              )}
-            </p>
+        <header className="space-y-3 animate-fade-in border-0">
+          <div className="flex items-center justify-between text-xs text-muted-foreground">
+            <div className="inline-flex items-start gap-3">
+              <div className="flex flex-col">
+                <span className="text-sm font-semibold text-foreground">Relatórios Gerenciais</span>
+                <span className="text-[11px]">Balanço e Demonstrações</span>
+              </div>
+            </div>
           </div>
-          <PeriodSelector 
-            initialRanges={dateRanges}
-            onDateRangeChange={handlePeriodChange}
-            className="h-8 md:h-9 rounded-full border-none bg-card px-3 text-[11px] md:text-xs font-medium text-secondary shadow-xs"
-          />
-        </div>
+          <div className="flex flex-wrap items-stretch gap-2 max-w-full">
+            <PeriodSelector 
+              initialRanges={dateRanges}
+              onDateRangeChange={handlePeriodChange}
+              className="h-8 rounded-full border-none bg-card px-3 text-[11px] font-medium text-secondary shadow-xs"
+            />
+          </div>
+        </header>
 
-        {/* Navigation Tabs */}
         <Tabs defaultValue="balanco" className="space-y-6">
-          <TabsList className="bg-muted/50 p-1 h-auto flex-wrap">
-            <TabsTrigger
-              value="balanco"
-              className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground gap-2 py-2.5 px-4"
-            >
-              <Scale className="w-4 h-4" />
-              <span className="hidden sm:inline">Balanço Patrimonial</span>
-              <span className="sm:hidden">Balanço</span>
-            </TabsTrigger>
-            <TabsTrigger
-              value="dre"
-              className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground gap-2 py-2.5 px-4"
-            >
-              <Receipt className="w-4 h-4" />
-              <span className="hidden sm:inline">Demonstração do Resultado</span>
-              <span className="sm:hidden">DRE</span>
-            </TabsTrigger>
-            <TabsTrigger
-              value="indicadores"
-              className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground gap-2 py-2.5 px-4"
-            >
-              <Activity className="w-4 h-4" />
-              <span className="hidden sm:inline">Indicadores Avançados</span>
-              <span className="sm:hidden">Indicadores</span>
-            </TabsTrigger>
-          </TabsList>
-          <TabsContent value="balanco" className="mt-6">
+          <div className="border-b border-border/40 px-1">
+            <TabsList className="bg-transparent h-auto p-0 gap-8">
+              <TabsTrigger
+                value="balanco"
+                className="bg-transparent rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent shadow-none px-0 py-3 text-xs font-bold uppercase tracking-wider text-muted-foreground data-[state=active]:text-foreground"
+              >
+                <Scale className="w-3.5 h-3.5 mr-2" />
+                Balanço
+              </TabsTrigger>
+              <TabsTrigger
+                value="dre"
+                className="bg-transparent rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent shadow-none px-0 py-3 text-xs font-bold uppercase tracking-wider text-muted-foreground data-[state=active]:text-foreground"
+              >
+                <Receipt className="w-3.5 h-3.5 mr-2" />
+                DRE
+              </TabsTrigger>
+              <TabsTrigger
+                value="indicadores"
+                className="bg-transparent rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent shadow-none px-0 py-3 text-xs font-bold uppercase tracking-wider text-muted-foreground data-[state=active]:text-foreground"
+              >
+                <Activity className="w-3.5 h-3.5 mr-2" />
+                Indicadores
+              </TabsTrigger>
+            </TabsList>
+          </div>
+
+          <TabsContent value="balanco" className="mt-0 animate-fade-in-up">
             <BalancoTab dateRanges={dateRanges} />
           </TabsContent>
-          <TabsContent value="dre" className="mt-6">
+          <TabsContent value="dre" className="mt-0 animate-fade-in-up">
             <DRETab dateRanges={dateRanges} />
           </TabsContent>
-          <TabsContent value="indicadores" className="mt-6">
+          <TabsContent value="indicadores" className="mt-0 animate-fade-in-up">
             <IndicadoresTab dateRanges={dateRanges} />
           </TabsContent>
         </Tabs>
