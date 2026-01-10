@@ -7,6 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Emprestimo } from "@/types/finance";
 import { cn } from "@/lib/utils";
 import { useFinance } from "@/contexts/FinanceContext";
+import { Badge } from "@/components/ui/badge";
 
 interface LoanSimulatorProps {
   emprestimos: Emprestimo[];

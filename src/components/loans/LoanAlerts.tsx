@@ -13,6 +13,7 @@ import { Emprestimo } from "@/types/finance";
 import { useFinance } from "@/contexts/FinanceContext";
 import { differenceInDays, isBefore, isToday, isPast } from "date-fns";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 
 interface AlertItem {
   id: string;
