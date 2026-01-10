@@ -5,9 +5,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Tags, TrendingUp, TrendingDown, Repeat } from "lucide-react";
+import { Tags, TrendingUp, TrendingDown, Repeat, Check, Sparkles } from "lucide-react";
 import { Categoria, CategoryNature, CATEGORY_NATURE_LABELS, generateCategoryId, getCategoryTypeFromNature } from "@/types/finance";
 import { toast } from "sonner";
+import { cn } from "@/lib/utils";
 
 interface CategoryFormModalProps {
   open: boolean;
@@ -18,28 +19,11 @@ interface CategoryFormModalProps {
   hasTransactions?: boolean;
 }
 
-// Organize os emojis por natureza/categoria
 const EMOJI_BY_CATEGORY = {
-  receita: [
-    "💰", "💳", "🏦", "📈", "💼", "🧑‍💻", "🎯", "🛠️", "📝"
-  ],
-  despesa_fixa: [
-    "🏠", "💊", "🛏️", "🔌", "📱", "🚗", "🦷", "🩺", "🧠",
-    "🧾", "🐶", "🐱", "🍼", "🎓", "⚖️", "🛡️", "👚", "🧳","🏋️"
-  ],
-  despesa_variavel: [
-    "🍽️", "🍕", "☕", "🎮", "🎬", "🎧", "🎨", "🎥", "✈️",
-    "🏍️", "⛽", "🛒", "👕", "📚", "🎁", "💡", "🧹",
-    "📦", "💎", "✂️", "🎵", "🙏", "💸", "👥"
-  ]
+  receita: ["💰", "💳", "🏦", "📈", "💼", "🧑‍💻", "🎯", "🛠️", "📝"],
+  despesa_fixa: ["🏠", "💊", "🛏️", "🔌", "📱", "🚗", "🧾", "🐶", "🍼", "🎓", "🛡️", "🏋️"],
+  despesa_variavel: ["🍽️", "🍕", "☕", "🎮", "🎬", "🎧", "🎨", "🎥", "✈️", "⛽", "🛒", "👕", "📚", "🎁", "📦", "💸"]
 };
-
-// Todos os emojis em uma lista única (para manter compatibilidade)
-const ALL_EMOJIS = [
-  ...EMOJI_BY_CATEGORY.receita,
-  ...EMOJI_BY_CATEGORY.despesa_fixa,
-  ...EMOJI_BY_CATEGORY.despesa_variavel
-];
 
 export function CategoryFormModal({
   open,
@@ -52,7 +36,6 @@ export function CategoryFormModal({
   const [label, setLabel] = useState("");
   const [icon, setIcon] = useState("📦");
   const [nature, setNature] = useState<CategoryNature>("despesa_variavel");
-  const [activeTab, setActiveTab] = useState("sugeridos");
 
   const isEditing = !!category;
 
@@ -61,23 +44,12 @@ export function CategoryFormModal({
       setLabel(category.label);
       setIcon(category.icon || "📦");
       setNature(category.nature || "despesa_variavel");
-      setActiveTab("sugeridos");
     } else if (open) {
       setLabel("");
       setIcon("📦");
       setNature("despesa_variavel");
-      setActiveTab("sugeridos");
     }
   }, [open, category]);
-
-  // Atualizar tab quando mudar a natureza
-  useEffect(() => {
-    setActiveTab("sugeridos");
-  }, [nature]);
-
-  const getSuggestedEmojis = () => {
-    return EMOJI_BY_CATEGORY[nature] || [];
-  };
 
   const handleSubmit = () => {
     if (!label.trim()) {
@@ -95,151 +67,89 @@ export function CategoryFormModal({
 
     onSubmit(newCategory);
     onOpenChange(false);
-    toast.success(isEditing ? "Categoria atualizada!" : "Categoria criada!");
   };
-
-  const handleDelete = () => {
-    if (!category) return;
-    
-    if (hasTransactions) {
-      toast.error("Não é possível excluir uma categoria em uso por transações");
-      return;
-    }
-
-    if (confirm("Tem certeza que deseja excluir esta categoria?")) {
-      onDelete?.(category.id);
-      onOpenChange(false);
-      toast.success("Categoria excluída!");
-    }
-  };
-
-  const renderEmojiGrid = (emojis: string[]) => (
-    <div className="flex flex-wrap gap-2 p-2">
-      {emojis.map((emoji) => (
-        <button
-          key={emoji}
-          type="button"
-          onClick={() => setIcon(emoji)}
-          className={`w-10 h-10 flex items-center justify-center text-xl rounded-lg transition-all ${
-            icon === emoji 
-              ? "bg-primary text-primary-foreground ring-2 ring-primary ring-offset-2" 
-              : "hover:bg-muted"
-          }`}
-        >
-          {emoji}
-        </button>
-      ))}
-    </div>
-  );
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Tags className="w-5 h-5 text-primary" />
-            {isEditing ? "Editar Categoria" : "Nova Categoria"}
-          </DialogTitle>
-          <DialogDescription>
-            {isEditing 
-              ? "Atualize os dados da categoria" 
-              : "Crie uma nova categoria para classificar suas transações"}
-          </DialogDescription>
+      <DialogContent className="max-w-[min(95vw,28rem)] p-0 overflow-hidden rounded-[3rem] border-none shadow-2xl bg-background z-[130]">
+        <DialogHeader className="px-8 pt-8 pb-6 bg-primary/5 shrink-0">
+          <div className="flex items-center gap-4">
+            <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center text-primary shadow-lg shadow-primary/5">
+              <Sparkles className="w-7 h-7" />
+            </div>
+            <div>
+              <DialogTitle className="text-2xl font-black tracking-tight">
+                {isEditing ? "Editar Categoria" : "Nova Categoria"}
+              </DialogTitle>
+              <DialogDescription className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mt-1">
+                Defina o Padrão Visual
+              </DialogDescription>
+            </div>
+          </div>
         </DialogHeader>
 
-        <div className="space-y-4 py-4">
+        <div className="p-8 space-y-8">
           <div className="space-y-2">
-            <Label htmlFor="label">Nome da Categoria *</Label>
+            <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground px-1">Nome da Categoria</Label>
             <Input
-              id="label"
               placeholder="Ex: Alimentação"
               value={label}
               onChange={(e) => setLabel(e.target.value)}
+              className="h-12 border-2 rounded-2xl bg-card font-bold"
             />
           </div>
 
           <div className="space-y-3">
-            <Label>Essa categoria representa o quê? *</Label>
-            <RadioGroup value={nature} onValueChange={(v) => setNature(v as CategoryNature)}>
-              <div className="flex items-center space-x-3 p-3 rounded-lg border hover:bg-muted/50 cursor-pointer">
-                <RadioGroupItem value="receita" id="receita" />
-                <Label htmlFor="receita" className="flex items-center gap-2 cursor-pointer flex-1">
-                  <TrendingUp className="w-4 h-4 text-success" />
-                  <div>
-                    <p className="font-medium">Receita</p>
-                    <p className="text-xs text-muted-foreground">Entradas de dinheiro (salário, vendas, etc.)</p>
+            <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground px-1">Natureza do Fluxo</Label>
+            <RadioGroup value={nature} onValueChange={(v) => setNature(v as CategoryNature)} className="grid grid-cols-1 gap-2">
+              {[
+                { id: 'receita', label: 'Receita', icon: TrendingUp, color: 'text-success', bg: 'bg-success/5' },
+                { id: 'despesa_fixa', label: 'Despesa Fixa', icon: Repeat, color: 'text-primary', bg: 'bg-primary/5' },
+                { id: 'despesa_variavel', label: 'Despesa Variável', icon: TrendingDown, color: 'text-destructive', bg: 'bg-destructive/5' }
+              ].map(opt => (
+                <Label key={opt.id} className={cn(
+                  "flex items-center gap-4 p-4 rounded-2xl border-2 transition-all cursor-pointer group",
+                  nature === opt.id ? "border-primary bg-primary/5" : "border-border/40 bg-card hover:border-primary/30"
+                )}>
+                  <RadioGroupItem value={opt.id} className="sr-only" />
+                  <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center", nature === opt.id ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground")}>
+                    <opt.icon className="w-5 h-5" />
                   </div>
+                  <span className={cn("font-black text-sm uppercase tracking-wider", nature === opt.id ? "text-primary" : "text-muted-foreground")}>
+                    {opt.label}
+                  </span>
+                  {nature === opt.id && <Check className="ml-auto w-5 h-5 text-primary" />}
                 </Label>
-              </div>
-
-              <div className="flex items-center space-x-3 p-3 rounded-lg border hover:bg-muted/50 cursor-pointer">
-                <RadioGroupItem value="despesa_fixa" id="despesa_fixa" />
-                <Label htmlFor="despesa_fixa" className="flex items-center gap-2 cursor-pointer flex-1">
-                  <Repeat className="w-4 h-4 text-orange-500" />
-                  <div>
-                    <p className="font-medium">Despesa Fixa</p>
-                    <p className="text-xs text-muted-foreground">Gastos recorrentes (aluguel, assinaturas, etc.)</p>
-                  </div>
-                </Label>
-              </div>
-
-              <div className="flex items-center space-x-3 p-3 rounded-lg border hover:bg-muted/50 cursor-pointer">
-                <RadioGroupItem value="despesa_variavel" id="despesa_variavel" />
-                <Label htmlFor="despesa_variavel" className="flex items-center gap-2 cursor-pointer flex-1">
-                  <TrendingDown className="w-4 h-4 text-destructive" />
-                  <div>
-                    <p className="font-medium">Despesa Variável</p>
-                    <p className="text-xs text-muted-foreground">Gastos que variam (alimentação, lazer, etc.)</p>
-                  </div>
-                </Label>
-              </div>
+              ))}
             </RadioGroup>
           </div>
 
-          <div className="space-y-2">
-            <Label>Ícone</Label>
-            <Tabs value={activeTab} onValueChange={setActiveTab}>
-              <TabsList className="grid grid-cols-2">
-                <TabsTrigger value="sugeridos">
-                  Sugeridos
-                </TabsTrigger>
-                <TabsTrigger value="todos">
-                  Todos
-                </TabsTrigger>
-              </TabsList>
-              <TabsContent value="sugeridos" className="mt-2">
-                <div className="border rounded-lg">
-                  {renderEmojiGrid(getSuggestedEmojis())}
-                </div>
-                <p className="text-xs text-muted-foreground mt-2">
-                  Ícones mais relevantes para {CATEGORY_NATURE_LABELS[nature].toLowerCase()}
-                </p>
-              </TabsContent>
-              <TabsContent value="todos" className="mt-2">
-                <div className="border rounded-lg max-h-60 overflow-y-auto">
-                  {renderEmojiGrid(ALL_EMOJIS)}
-                </div>
-              </TabsContent>
-            </Tabs>
+          <div className="space-y-4">
+            <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground px-1">Ícone (Emoji)</Label>
+            <div className="p-4 rounded-3xl bg-muted/20 border border-border/40 grid grid-cols-6 gap-2">
+              {(EMOJI_BY_CATEGORY[nature] || EMOJI_BY_CATEGORY.despesa_variavel).map(emoji => (
+                <button
+                  key={emoji}
+                  onClick={() => setIcon(emoji)}
+                  className={cn(
+                    "w-10 h-10 flex items-center justify-center text-xl rounded-xl transition-all",
+                    icon === emoji ? "bg-primary shadow-lg scale-110" : "hover:bg-card"
+                  )}
+                >
+                  {emoji}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
 
-        <DialogFooter className="flex gap-2">
-          {isEditing && onDelete && (
-            <Button 
-              variant="destructive" 
-              onClick={handleDelete}
-              disabled={hasTransactions}
-              className="mr-auto"
-            >
-              Excluir
-            </Button>
-          )}
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
+        <DialogFooter className="p-8 bg-muted/10 border-t flex gap-3">
+          <Button variant="ghost" onClick={() => onOpenChange(false)} className="rounded-full h-12 px-6 font-bold text-muted-foreground">
             Cancelar
           </Button>
-          <Button onClick={handleSubmit}>
-            {isEditing ? "Salvar" : "Criar Categoria"}
+          <Button onClick={handleSubmit} className="flex-1 rounded-full h-12 bg-primary text-primary-foreground font-black text-sm gap-2 shadow-xl shadow-primary/20 hover:scale-[1.02] active:scale-[0.98] transition-all">
+            <Check className="w-5 h-5" />
+            {isEditing ? "SALVAR ALTERAÇÕES" : "CRIAR CATEGORIA"}
           </Button>
         </DialogFooter>
       </DialogContent>
