@@ -1,14 +1,12 @@
 import { useMemo } from "react";
 import { 
   AlertTriangle, 
-  Bell, 
   Calendar, 
-  Trophy, 
   TrendingDown,
-  CheckCircle2,
   Sparkles,
   Settings,
-  ChevronRight
+  ChevronRight,
+  ArrowRight
 } from "lucide-react";
 import { cn, getDueDate } from "@/lib/utils";
 import { Emprestimo } from "@/types/finance";
@@ -67,39 +65,75 @@ export function LoanAlerts({ emprestimos, className, onOpenPendingConfig }: Loan
   }, [activeLoans, emprestimos, calculateLoanSchedule, calculatePaidInstallmentsUpToDate, onOpenPendingConfig]);
 
   const styles = {
-    warning: "bg-warning/10 text-warning",
-    info: "bg-primary/10 text-primary",
-    success: "bg-success/10 text-success",
-    danger: "bg-destructive/10 text-destructive",
+    warning: {
+      bg: "bg-warning/5 border-warning/20",
+      iconBg: "bg-warning/10 text-warning",
+      btn: "text-warning hover:bg-warning/10"
+    },
+    info: {
+      bg: "bg-primary/5 border-primary/20",
+      iconBg: "bg-primary/10 text-primary",
+      btn: "text-primary hover:bg-primary/10"
+    },
+    success: {
+      bg: "bg-success/5 border-success/20",
+      iconBg: "bg-success/10 text-success",
+      btn: "text-success hover:bg-success/10"
+    },
+    danger: {
+      bg: "bg-destructive/5 border-destructive/20",
+      iconBg: "bg-destructive/10 text-destructive",
+      btn: "text-destructive hover:bg-destructive/10"
+    },
   };
 
+  if (alerts.length === 0) return null;
+
   return (
-    <div className={cn("space-y-3", className)}>
+    <div className={cn("space-y-4", className)}>
       <div className="flex items-center gap-2 px-1">
         <Sparkles className="w-4 h-4 text-primary" />
-        <h3 className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Insights e Alertas</h3>
+        <h3 className="text-[11px] font-black uppercase tracking-[0.2em] text-muted-foreground">Inteligência e Alertas</h3>
       </div>
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        {alerts.map((alert) => (
-          <div
-            key={alert.id}
-            onClick={alert.action}
-            className={cn(
-              "flex items-center gap-3 p-3.5 rounded-2xl transition-all border border-transparent hover:border-border/40 group",
-              styles[alert.type],
-              alert.action && "cursor-pointer active:scale-95"
-            )}
-          >
-            <div className="p-2 rounded-xl bg-background/40">
-              <alert.icon className="w-4 h-4" />
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        {alerts.map((alert) => {
+          const style = styles[alert.type];
+          return (
+            <div
+              key={alert.id}
+              className={cn(
+                "flex flex-col p-5 rounded-[2rem] border transition-all duration-300 hover:-translate-y-1 hover:shadow-lg",
+                style.bg
+              )}
+            >
+              <div className="flex items-start justify-between mb-4">
+                <div className={cn("p-3 rounded-2xl shadow-sm", style.iconBg)}>
+                  <alert.icon className="w-5 h-5" />
+                </div>
+                <Badge variant="outline" className={cn("border-none font-black text-[9px] px-2 py-1 rounded-lg", style.iconBg)}>
+                  {alert.type.toUpperCase()}
+                </Badge>
+              </div>
+              
+              <div className="flex-1">
+                <p className="text-sm font-black text-foreground leading-tight">{alert.title}</p>
+                <p className="text-xs font-medium text-muted-foreground mt-1.5 leading-relaxed">{alert.description}</p>
+              </div>
+
+              {alert.action && (
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  onClick={alert.action}
+                  className={cn("mt-4 w-full justify-between rounded-xl font-bold text-[11px] uppercase tracking-wider h-10", style.btn)}
+                >
+                  Resolver Agora
+                  <ArrowRight className="w-3.5 h-3.5" />
+                </Button>
+              )}
             </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-xs font-bold leading-tight truncate">{alert.title}</p>
-              <p className="text-[10px] opacity-80 leading-tight mt-0.5 truncate">{alert.description}</p>
-            </div>
-            {alert.action && <ChevronRight className="w-3 h-3 opacity-40 group-hover:opacity-100 transition-opacity" />}
-          </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );
