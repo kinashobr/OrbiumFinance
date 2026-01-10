@@ -9,8 +9,9 @@ interface CockpitData {
   variacaoPercentual: number;
   liquidezImediata: number;
   compromissosMes: number;
-  projecao30Dias: number;
+  compromissosPercent: number; // NOVO
   totalAtivos: number;
+  projecao30Dias: number;
 }
 
 interface CockpitCardsProps {
@@ -21,13 +22,16 @@ export function CockpitCards({ data }: CockpitCardsProps) {
   const formatCompact = (value: number) => {
     if (value >= 1000000) return `${(value / 1000000).toFixed(1)}M`;
     if (value >= 1000) return `${(value / 1000).toFixed(0)}k`;
-    return value.toString();
+    return value.toLocaleString('pt-BR');
   };
 
   const liquidezPercent = useMemo(() => {
     if (data.totalAtivos === 0) return 0;
     return Math.min(100, (data.liquidezImediata / data.totalAtivos) * 100);
   }, [data.liquidezImediata, data.totalAtivos]);
+
+  // Constantes para o círculo SVG (Raio 54 -> Circunferência ~339.29)
+  const CIRCUMFERENCE = 339.29;
 
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 gap-6 h-full">
@@ -46,21 +50,29 @@ export function CockpitCards({ data }: CockpitCardsProps) {
         </div>
         <div className="relative w-32 h-32 flex items-center justify-center shrink-0">
           <svg className="transform -rotate-90 w-full h-full">
-            <circle className="text-neutral-100 dark:text-neutral-800" cx="64" cy="64" fill="transparent" r="54" stroke="currentColor" strokeWidth="10"></circle>
+            <circle 
+              className="text-neutral-100 dark:text-neutral-800" 
+              cx="64" cy="64" r="54" 
+              fill="transparent" 
+              stroke="currentColor" 
+              strokeWidth="10"
+            />
             <circle 
               className="text-primary transition-all duration-1000 ease-out" 
-              cx="64" cy="64" fill="transparent" r="54" stroke="currentColor" 
+              cx="64" cy="64" r="54" 
+              fill="transparent" 
+              stroke="currentColor" 
               strokeWidth="10"
-              strokeDasharray="339.29"
-              strokeDashoffset={339.29 - (339.29 * liquidezPercent / 100)}
+              strokeDasharray={CIRCUMFERENCE}
+              strokeDashoffset={CIRCUMFERENCE - (CIRCUMFERENCE * liquidezPercent / 100)}
               strokeLinecap="round"
-            ></circle>
+            />
           </svg>
           <span className="absolute text-2xl font-bold text-foreground">{liquidezPercent.toFixed(0)}%</span>
         </div>
       </div>
 
-      {/* Card de Carteira / Distribuição */}
+      {/* Card de Compromissos */}
       <div className="bg-surface-light dark:bg-surface-dark rounded-[32px] p-6 shadow-soft border border-white/60 dark:border-white/5 flex items-center justify-between relative overflow-hidden h-[200px] hover:shadow-lg transition-shadow group">
         <div className="flex flex-col h-full justify-between z-10">
           <div>
@@ -69,23 +81,42 @@ export function CockpitCards({ data }: CockpitCardsProps) {
             <p className="text-xs text-muted-foreground mt-1">Provisionado no mês</p>
           </div>
           <div className="flex items-center gap-2 mt-auto">
-            <span className="w-2 h-2 rounded-full bg-indigo-400"></span>
-            <span className="text-xs font-bold text-indigo-500">Saúde: Estável</span>
+            <span className={cn(
+              "w-2 h-2 rounded-full",
+              data.compromissosPercent <= 70 ? "bg-green-400" : "bg-red-400"
+            )}></span>
+            <span className={cn(
+              "text-xs font-bold",
+              data.compromissosPercent <= 70 ? "text-green-600" : "text-red-600"
+            )}>
+              {data.compromissosPercent <= 70 ? "Saúde: Estável" : "Saúde: Alerta"}
+            </span>
           </div>
         </div>
         <div className="relative w-32 h-32 flex items-center justify-center shrink-0">
           <svg className="transform -rotate-90 w-full h-full">
-            <circle className="text-neutral-100 dark:text-neutral-800" cx="64" cy="64" fill="transparent" r="54" stroke="currentColor" strokeWidth="10"></circle>
             <circle 
-              className="text-indigo-400 transition-all duration-1000 ease-out" 
-              cx="64" cy="64" fill="transparent" r="54" stroke="currentColor" 
+              className="text-neutral-100 dark:text-neutral-800" 
+              cx="64" cy="64" r="54" 
+              fill="transparent" 
+              stroke="currentColor" 
               strokeWidth="10"
-              strokeDasharray="339.29"
-              strokeDashoffset={339.29 - (339.29 * 65 / 100)}
+            />
+            <circle 
+              className={cn(
+                "transition-all duration-1000 ease-out",
+                data.compromissosPercent <= 70 ? "text-indigo-400" : "text-red-400"
+              )}
+              cx="64" cy="64" r="54" 
+              fill="transparent" 
+              stroke="currentColor" 
+              strokeWidth="10"
+              strokeDasharray={CIRCUMFERENCE}
+              strokeDashoffset={CIRCUMFERENCE - (CIRCUMFERENCE * Math.min(100, data.compromissosPercent) / 100)}
               strokeLinecap="round"
-            ></circle>
+            />
           </svg>
-          <span className="absolute text-2xl font-bold text-foreground">65%</span>
+          <span className="absolute text-2xl font-bold text-foreground">{data.compromissosPercent.toFixed(0)}%</span>
         </div>
       </div>
     </div>
