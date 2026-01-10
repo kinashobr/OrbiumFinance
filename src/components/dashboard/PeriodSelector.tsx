@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useMemo } from "react";
-import { ChevronDown, Calendar as CalendarIcon, Check } from "lucide-react";
+import { ChevronDown, Calendar as CalendarIcon, Check, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -20,9 +20,9 @@ interface PeriodSelectorProps {
 const presets = [
   { id: "thisMonth", label: "Este mês" },
   { id: "lastMonth", label: "Mês passado" },
-  { id: "last3Months", label: "Últimos 3" },
+  { id: "last3Months", label: "Últimos 3 meses" },
   { id: "thisYear", label: "Este ano" },
-  { id: "all", label: "Tudo" },
+  { id: "all", label: "Todo o período" },
 ];
 
 export function PeriodSelector({
@@ -148,10 +148,10 @@ export function PeriodSelector({
     const fromDate = r.from as Date;
     const toDate = r.to as Date;
 
-    const fromStr = format(fromDate, "dd/MM/yy", { locale: ptBR });
-    const toStr = format(toDate, "dd/MM/yy", { locale: ptBR });
+    const fromStr = format(fromDate, "dd MMM", { locale: ptBR });
+    const toStr = format(toDate, "dd MMM", { locale: ptBR });
 
-    if (isSameDay(fromDate, toDate)) return fromStr;
+    if (isSameDay(fromDate, toDate)) return format(fromDate, "dd 'de' MMMM", { locale: ptBR });
     return `${fromStr} - ${toStr}`;
   };
   
@@ -176,49 +176,56 @@ export function PeriodSelector({
         <Button
           variant="outline"
           className={cn(
-            "w-full sm:w-[220px] justify-start text-left h-8 md:h-9 px-3 border-border shadow-sm hover:bg-accent hover:text-accent-foreground transition-colors",
+            "w-full sm:w-auto justify-start text-left h-10 px-4 rounded-full border-border/40 bg-card/50 backdrop-blur-sm shadow-sm hover:shadow-md hover:bg-accent hover:text-accent-foreground transition-all duration-300 group",
             (!range.from && !range.to) && "text-muted-foreground",
             className
           )}
         >
-          <CalendarIcon className="mr-2 h-4 w-4 shrink-0 text-primary" />
-          <span className="text-xs md:text-sm font-medium truncate flex-1">
+          <CalendarIcon className="mr-2.5 h-4 w-4 shrink-0 text-primary transition-transform group-hover:scale-110" />
+          <span className="text-xs md:text-sm font-bold tracking-tight truncate flex-1 capitalize">
             {displayRange}
           </span>
-          <ChevronDown className="ml-auto h-4 w-4 opacity-50 shrink-0" />
+          <ChevronDown className={cn(
+            "ml-2 h-4 w-4 opacity-50 shrink-0 transition-transform duration-300",
+            isOpen && "rotate-180"
+          )} />
         </Button>
       </PopoverTrigger>
       
       <PopoverContent 
-        className="p-2 bg-popover text-popover-foreground border-border w-auto shadow-xl"
+        className="p-3 bg-popover/98 backdrop-blur-2xl text-popover-foreground border-border/40 w-auto shadow-[0_25px_50px_-12px_rgba(0,0,0,0.25)] rounded-[2rem]"
         side="bottom"
         align="end"
-        sideOffset={8}
+        sideOffset={12}
       >
-        <div className="flex flex-col sm:flex-row gap-3">
-          {/* Presets Column */}
-          <div className="sm:w-[110px] shrink-0 flex flex-col gap-1.5 border-b sm:border-b-0 sm:border-r border-border/50 pb-3 sm:pb-0 sm:pr-3">
-            <Label className="text-[10px] uppercase tracking-wider font-bold text-muted-foreground/70 mb-1 px-1">Atalhos</Label>
-            <div className="grid grid-cols-3 sm:grid-cols-1 gap-1">
+        <div className="flex flex-col sm:flex-row gap-4">
+          {/* Presets Column - Material 3 Navigation Drawer Style */}
+          <div className="sm:w-[160px] shrink-0 flex flex-col gap-1 sm:border-r border-border/40 pr-3">
+            <div className="flex items-center gap-2 px-3 py-2 mb-1">
+              <Clock className="w-3.5 h-3.5 text-muted-foreground" />
+              <Label className="text-[10px] uppercase tracking-[0.15em] font-black text-muted-foreground/80">Recentes</Label>
+            </div>
+            <div className="flex flex-col gap-1">
               {presets.map((preset) => (
-                <Button
+                <button
                   key={preset.id}
-                  variant={selectedPreset === preset.id ? "secondary" : "ghost"}
-                  size="sm"
-                  className={cn(
-                    "justify-start text-[10px] h-7 px-2 font-medium",
-                    selectedPreset === preset.id && "bg-primary/10 text-primary hover:bg-primary/20"
-                  )}
                   onClick={() => handleSelectPreset(preset.id)}
+                  className={cn(
+                    "flex items-center w-full px-3 py-2.5 rounded-2xl text-left text-xs font-bold transition-all duration-200",
+                    selectedPreset === preset.id 
+                      ? "bg-primary text-primary-foreground shadow-lg shadow-primary/20 scale-[1.02]" 
+                      : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                  )}
                 >
                   {preset.label}
-                </Button>
+                  {selectedPreset === preset.id && <Check className="ml-auto w-3.5 h-3.5" />}
+                </button>
               ))}
             </div>
           </div>
 
           {/* Calendar Area */}
-          <div className="space-y-3 flex flex-col items-center">
+          <div className="space-y-4 flex flex-col items-center pt-1">
             <Calendar
               mode="range"
               selected={{ from: tempRange.from, to: tempRange.to }}
@@ -226,50 +233,51 @@ export function PeriodSelector({
               numberOfMonths={1}
               locale={ptBR}
               initialFocus
-              className="p-0"
+              className="p-0 pointer-events-auto"
               classNames={{
                 months: "flex flex-col space-y-4",
-                month: "space-y-2",
-                caption: "flex justify-center pt-1 relative items-center",
-                caption_label: "text-xs font-bold text-foreground",
-                nav: "space-x-1 flex items-center",
+                month: "space-y-4",
+                caption: "flex justify-between items-center px-4 relative h-10 mb-2",
+                caption_label: "text-sm font-black text-foreground uppercase tracking-widest",
+                nav: "flex items-center gap-1",
                 nav_button: cn(
-                  "h-6 w-6 bg-transparent p-0 opacity-50 hover:opacity-100 text-foreground"
+                  "h-8 w-8 bg-muted/50 rounded-full flex items-center justify-center transition-colors hover:bg-primary/10 hover:text-primary"
                 ),
-                table: "w-full border-collapse space-y-1",
-                head_row: "flex",
-                head_cell: "text-muted-foreground rounded-md w-7 font-normal text-[10px]",
-                row: "flex w-full mt-1",
-                cell: "h-7 w-7 text-center text-xs p-0 relative focus-within:relative focus-within:z-20",
+                table: "w-full border-collapse",
+                head_row: "grid grid-cols-7 mb-2",
+                head_cell: "text-muted-foreground font-black text-[10px] uppercase tracking-tighter text-center",
+                row: "grid grid-cols-7 gap-y-1 w-full",
+                cell: "relative p-0 text-center text-sm focus-within:relative focus-within:z-20",
                 day: cn(
-                  "h-7 w-7 p-0 font-normal aria-selected:opacity-100 hover:bg-accent hover:text-accent-foreground rounded-md transition-colors"
+                  "h-9 w-9 p-0 font-bold rounded-xl transition-all duration-200 flex items-center justify-center mx-auto hover:bg-primary/10 hover:text-primary"
                 ),
-                day_range_middle: "aria-selected:bg-accent aria-selected:text-accent-foreground",
-                day_selected: "bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground focus:bg-primary focus:text-primary-foreground",
-                day_today: "bg-muted text-muted-foreground",
-                day_outside: "text-muted-foreground/30 opacity-50",
+                day_range_middle: "aria-selected:bg-primary/10 aria-selected:text-primary rounded-none",
+                day_selected: "bg-primary text-primary-foreground shadow-md shadow-primary/20 hover:bg-primary hover:text-primary-foreground focus:bg-primary focus:text-primary-foreground scale-110 z-10",
+                day_today: "bg-muted/50 text-foreground ring-1 ring-inset ring-border",
+                day_outside: "text-muted-foreground/20 opacity-30",
                 day_disabled: "text-muted-foreground opacity-50",
-                day_range_end: "day-range-end",
+                day_range_start: "rounded-l-xl day-range-start",
+                day_range_end: "rounded-r-xl day-range-end",
                 day_hidden: "invisible",
               }}
             />
             
-            <div className="flex items-center gap-2 w-full pt-2 border-t border-border/40">
+            <div className="flex items-center gap-2 w-full pt-4 border-t border-border/40">
               <Button
                 variant="ghost"
                 size="sm"
                 onClick={handleClearAll}
-                className="h-7 px-2 text-[10px] text-destructive hover:bg-destructive/10 hover:text-destructive"
+                className="h-9 px-4 rounded-full text-xs font-bold text-destructive hover:bg-destructive/10 active:scale-95 transition-all"
               >
                 Limpar
               </Button>
               <Button 
                 onClick={handleCalendarApply} 
-                className="flex-1 h-7 text-[10px] gap-1 font-semibold"
+                className="flex-1 h-9 rounded-full text-xs font-bold gap-2 shadow-lg shadow-primary/10 active:scale-95 transition-all"
                 disabled={!tempRange.from || !tempRange.to}
               >
-                <Check className="w-3 h-3" />
-                Aplicar
+                <Check className="w-4 h-4" />
+                Aplicar Período
               </Button>
             </div>
           </div>
