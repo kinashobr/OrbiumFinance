@@ -5,7 +5,9 @@ import {
   TrendingDown,
   Sparkles,
   Settings,
-  ArrowRight
+  ArrowRight,
+  ShieldCheck,
+  Zap
 } from "lucide-react";
 import { cn, getDueDate } from "@/lib/utils";
 import { Emprestimo } from "@/types/finance";
@@ -20,7 +22,8 @@ interface AlertItem {
   icon: React.ElementType;
   title: string;
   description: string;
-  value?: string; // Campo opcional para destacar valores
+  statusLabel: string;
+  value?: string; 
   action?: () => void;
 }
 
@@ -57,68 +60,86 @@ export function LoanAlerts({ emprestimos, className, onOpenPendingConfig }: Loan
     });
 
     const pendingLoans = emprestimos.filter(e => e.status === 'pendente_config');
-    if (pendingLoans.length > 0) items.push({ id: "pend", type: "info", icon: Settings, title: "Configuração Pendente", description: "Há novos contratos aguardando detalhes.", action: onOpenPendingConfig });
-    if (hasOverdue) items.push({ id: "over", type: "danger", icon: AlertTriangle, title: "Parcelas Atrasadas", description: "Verifique seu cronograma de pagamentos." });
-    if (nextDueDate && differenceInDays(nextDueDate, hoje) <= 7) items.push({ id: "next", type: "warning", icon: Calendar, title: "Vencimento Próximo", description: `Sua próxima fatura vence em ${differenceInDays(nextDueDate, hoje)} dias.` });
+    
+    if (pendingLoans.length > 0) items.push({ 
+        id: "pend", type: "info", icon: Settings, title: "CONFIGURAÇÃO", statusLabel: "PENDENTE", 
+        description: "Contratos novos detectados aguardando definição de prazos.", 
+        action: onOpenPendingConfig 
+    });
+    
+    if (hasOverdue) items.push({ 
+        id: "over", type: "danger", icon: AlertTriangle, title: "PAGAMENTOS", statusLabel: "CRÍTICO", 
+        description: "Há parcelas vencidas em seu portfólio de crédito. Revise o cronograma." 
+    });
+    
+    if (nextDueDate && differenceInDays(nextDueDate, hoje) <= 7) items.push({ 
+        id: "next", type: "warning", icon: Calendar, title: "VENCIMENTO", statusLabel: "ATENÇÃO", 
+        description: `Próxima fatura de empréstimo vence em ${differenceInDays(nextDueDate, hoje)} dias.` 
+    });
     
     if (totalJurosRestantes > 1000) {
       items.push({ 
-        id: "save", 
-        type: "success", 
-        icon: TrendingDown, 
-        title: "Economia de Juros", 
-        description: "Valor total de juros futuros que podem ser eliminados com a quitação antecipada.",
+        id: "save", type: "success", icon: Zap, title: "AMORTIZAÇÃO", statusLabel: "SAUDÁVEL", 
+        description: "Economia potencial ao quitar o principal antecipadamente.",
         value: `R$ ${totalJurosRestantes.toLocaleString('pt-BR', { maximumFractionDigits: 0 })}`
       });
+    }
+    
+    if (items.length === 0) {
+        items.push({
+            id: "ok", type: "success", icon: ShieldCheck, title: "PORTFÓLIO", statusLabel: "EXCELENTE",
+            description: "Todos os contratos de financiamento estão em dia e operando normalmente."
+        });
     }
     
     return items;
   }, [activeLoans, emprestimos, calculateLoanSchedule, calculatePaidInstallmentsUpToDate, onOpenPendingConfig]);
 
-  const styles = {
-    warning: { bg: "bg-warning/5 border-warning/20", iconBg: "bg-warning/10 text-warning", btn: "text-warning hover:bg-warning/10" },
-    info: { bg: "bg-primary/5 border-primary/20", iconBg: "bg-primary/10 text-primary", btn: "text-primary hover:bg-primary/10" },
-    success: { bg: "bg-success/5 border-success/20", iconBg: "bg-success/10 text-success", btn: "text-success hover:bg-success/10" },
-    danger: { bg: "bg-destructive/5 border-destructive/20", iconBg: "bg-destructive/10 text-destructive", btn: "text-destructive hover:bg-destructive/10" },
+  const statusStyles = {
+    danger: { color: "text-red-800", bg: "bg-red-50/80 dark:bg-red-900/10", border: "border-red-100 dark:border-red-900/20", badge: "bg-red-100 text-red-700" },
+    warning: { color: "text-orange-800", bg: "bg-orange-50/80 dark:bg-orange-900/10", border: "border-orange-100 dark:border-orange-900/20", badge: "bg-orange-100 text-orange-700" },
+    info: { color: "text-blue-800", bg: "bg-blue-50/80 dark:bg-blue-900/10", border: "border-blue-100 dark:border-blue-900/20", badge: "bg-blue-100 text-blue-700" },
+    success: { color: "text-green-800", bg: "bg-green-50/80 dark:bg-green-900/10", border: "border-green-100 dark:border-green-900/20", badge: "bg-green-100 text-green-700" },
   };
 
-  if (alerts.length === 0) return null;
-
   return (
-    <div className={cn("space-y-4", className)}>
-      <div className="flex items-center gap-2 px-1">
-        <Sparkles className="w-4 h-4 text-primary" />
-        <h3 className="text-[11px] font-black uppercase tracking-[0.2em] text-muted-foreground">Insights do Motor de Análise</h3>
+    <div className={cn("space-y-6", className)}>
+      <div className="flex items-center justify-between px-1">
+        <div className="flex items-center gap-3">
+          <Sparkles className="w-5 h-5 text-primary" />
+          <h3 className="font-display font-bold text-xl text-foreground">Motor de Análise</h3>
+        </div>
+        <Badge variant="outline" className="rounded-full px-4 py-1 font-bold text-[10px] uppercase tracking-widest border-primary/20 text-primary bg-primary/5">Insights Ativos</Badge>
       </div>
+
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         {alerts.map((alert) => {
-          const style = styles[alert.type];
-          const isSaveCard = alert.id === 'save';
+          const style = statusStyles[alert.type];
 
           return (
             <div
               key={alert.id}
               className={cn(
-                "flex flex-col p-6 rounded-[2.5rem] border transition-all duration-300 hover:-translate-y-1 hover:shadow-xl",
+                "rounded-[2.5rem] p-7 border transition-all duration-500 hover:scale-[1.02] group relative overflow-hidden",
                 style.bg,
-                isSaveCard && "sm:col-span-1"
+                style.border
               )}
             >
-              <div className="flex items-start justify-between mb-4">
-                <div className={cn("p-3 rounded-2xl shadow-sm", style.iconBg)}>
-                  <alert.icon className="w-6 h-6" />
+              <div className="flex justify-between items-start mb-6">
+                <div className="w-12 h-12 rounded-full bg-white dark:bg-black/20 flex items-center justify-center shadow-sm group-hover:scale-110 transition-transform duration-500">
+                  <alert.icon className={cn("w-6 h-6", style.color)} />
                 </div>
-                <Badge variant="outline" className={cn("border-none font-black text-[9px] px-2 py-1 rounded-lg", style.iconBg)}>
-                  {alert.type.toUpperCase()}
+                <Badge className={cn("text-[9px] font-black px-3 py-1 rounded-full border border-black/5 dark:border-white/5", style.badge)}>
+                  {alert.statusLabel}
                 </Badge>
               </div>
-              
-              <div className="flex-1 space-y-2">
-                <p className="text-xs font-black text-muted-foreground uppercase tracking-widest">{alert.title}</p>
+
+              <div className="space-y-2">
+                <p className="text-[10px] font-black uppercase tracking-[0.2em] opacity-40">{alert.title}</p>
                 {alert.value ? (
                   <div className="space-y-1">
-                    <p className="text-4xl font-black text-foreground tracking-tighter tabular-nums">{alert.value}</p>
-                    <p className="text-[11px] font-medium text-muted-foreground leading-relaxed max-w-[200px]">{alert.description}</p>
+                    <p className={cn("text-4xl font-display font-black tracking-tighter", style.color)}>{alert.value}</p>
+                    <p className="text-xs font-bold text-muted-foreground leading-relaxed max-w-[180px]">{alert.description}</p>
                   </div>
                 ) : (
                   <p className="text-sm font-bold text-foreground leading-tight">{alert.description}</p>
@@ -130,10 +151,10 @@ export function LoanAlerts({ emprestimos, className, onOpenPendingConfig }: Loan
                   variant="ghost" 
                   size="sm" 
                   onClick={alert.action}
-                  className={cn("mt-6 w-full justify-between rounded-xl font-black text-[10px] uppercase tracking-[0.15em] h-11 border border-current/10", style.btn)}
+                  className={cn("mt-8 w-full justify-between rounded-2xl font-black text-[10px] uppercase tracking-[0.2em] h-12 bg-white/50 dark:bg-black/20 hover:bg-white dark:hover:bg-black/40 border border-black/5", style.color)}
                 >
-                  Configurar Contrato
-                  <ArrowRight className="w-4 h-4" />
+                  Configurar Agora
+                  <ArrowRight className="w-5 h-5" />
                 </Button>
               )}
             </div>
