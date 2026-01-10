@@ -1,3 +1,5 @@
+"use client";
+
 import { useState, useEffect, useMemo } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -106,7 +108,7 @@ export function StandardizationRuleFormModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg p-0 overflow-hidden rounded-[2.5rem]">
+      <DialogContent className="max-w-lg p-0 overflow-hidden rounded-[2.5rem] z-[110]"> {/* Adicionado z-[110] */}
         <DialogHeader className="px-6 pt-6 pb-4 bg-primary/10">
           <div className="flex items-start gap-3">
             <div className="w-12 h-12 rounded-xl bg-primary/20 flex items-center justify-center">
@@ -173,7 +175,7 @@ export function StandardizationRuleFormModal({
                 </SelectTrigger>
                 <SelectContent className="max-h-60">
                   {getCategoryOptions.map(cat => (
-                    <SelectItem key={cat.id} value={cat.id}>
+                    <SelectItem key={cat.id} value={cat.id} className="text-xs font-medium">
                       {cat.icon} {cat.label}
                     </SelectItem>
                   ))}

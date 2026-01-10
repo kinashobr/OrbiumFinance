@@ -120,10 +120,7 @@ export function ConsolidatedReviewDialog({
     setTransactionsToReview(prev => prev.map(tx => tx.id === id ? { ...tx, ...updates } : tx));
   }, []);
   
-  const handleCreateRule = (tx: ImportedTransaction) => { 
-    setTxForRule(tx); 
-    setShowRuleModal(true); 
-  };
+  const handleCreateRule = (tx: ImportedTransaction) => { setTxForRule(tx); setShowRuleModal(true); };
   
   const handleSaveRule = (rule: Omit<StandardizationRule, "id">) => {
     addStandardizationRule(rule);
@@ -356,10 +353,16 @@ export function ConsolidatedReviewDialog({
       />
       <StandardizationRuleManagerModal 
         open={showRuleManagerModal} 
-        onOpenChange={setShowRuleManagerModal} 
+        onOpenChange={(openState) => {
+          setShowRuleManagerModal(openState);
+          if (!openState && isMobile) {
+            setMobileView('list'); // Volta para a lista de transações ao fechar o gerenciador de regras no mobile
+          }
+        }} 
         rules={standardizationRules} 
         onDeleteRule={deleteStandardizationRule} 
         categories={categories} 
+        onCloseAndReturn={() => setMobileView('list')} // Garante que volta para a lista
       />
     </>
   );

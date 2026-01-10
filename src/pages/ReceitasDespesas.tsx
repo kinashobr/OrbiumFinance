@@ -108,8 +108,8 @@ const ReceitasDespesas = () => {
   }, [setTransacoesV2]);
   
   const handleManageRules = useCallback(() => {
-    setShowStatementManagerModal(false);
-    setShowRuleManagerModal(true);
+    setShowStatementManagerModal(false); // Fecha o StatementManagerDialog
+    setShowRuleManagerModal(true); // Abre o StandardizationRuleManagerModal
   }, []);
 
   return (
@@ -140,7 +140,7 @@ const ReceitasDespesas = () => {
             </div>
 
             {/* Smart Conciliation Card Refined */}
-            <div className="bg-gradient-to-br from-neutral-800 to-neutral-900 text-white rounded-[32px] p-8 shadow-lg relative overflow-hidden flex items-center justify-between group">
+            <div className="bg-gradient-to-r from-neutral-800 to-neutral-900 text-white rounded-[32px] p-8 shadow-lg relative overflow-hidden flex items-center justify-between group">
               <div className="absolute right-0 bottom-0 opacity-10 scale-150 translate-x-10 translate-y-10 group-hover:rotate-12 transition-transform duration-700"><Sparkles className="w-[180px] h-[180px]" /></div>
               <div className="z-10">
                 <div className="flex items-center gap-2 mb-2"><Badge variant="outline" className="border-primary/50 text-primary-foreground text-[9px] font-black tracking-widest px-2">POWERED BY AI</Badge></div>

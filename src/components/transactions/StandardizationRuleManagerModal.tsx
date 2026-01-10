@@ -17,6 +17,7 @@ interface StandardizationRuleManagerModalProps {
   rules: StandardizationRule[];
   onDeleteRule: (id: string) => void;
   categories: Categoria[];
+  onCloseAndReturn?: () => void; // Novo prop para retornar à tela anterior no mobile
 }
 
 export function StandardizationRuleManagerModal({
@@ -25,6 +26,7 @@ export function StandardizationRuleManagerModal({
   rules,
   onDeleteRule,
   categories,
+  onCloseAndReturn,
 }: StandardizationRuleManagerModalProps) {
   const { addStandardizationRule, updateStandardizationRule } = useFinance();
   const [searchTerm, setSearchTerm] = useState("");
@@ -77,7 +79,7 @@ export function StandardizationRuleManagerModal({
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-[min(95vw,56rem)] h-[min(90vh,800px)] p-0 overflow-hidden rounded-[2.5rem] overflow-x-hidden">
+        <DialogContent className="max-w-[min(95vw,56rem)] h-[min(90vh,800px)] p-0 overflow-hidden rounded-[2.5rem] overflow-x-hidden z-[110]"> {/* Adicionado z-[110] */}
           <DialogHeader className="px-4 sm:px-8 pt-8 pb-6 bg-surface-light dark:bg-surface-dark shrink-0">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
               <div className="flex items-center gap-4">
@@ -180,7 +182,7 @@ export function StandardizationRuleManagerModal({
           </ScrollArea>
 
           <DialogFooter className="p-4 bg-muted/10 border-t shrink-0">
-             <Button variant="ghost" onClick={() => onOpenChange(false)} className="rounded-full px-6 font-bold gap-2 w-full sm:w-auto">
+             <Button variant="ghost" onClick={() => { onOpenChange(false); onCloseAndReturn?.(); }} className="rounded-full px-6 font-bold gap-2 w-full sm:w-auto">
                 <X className="w-4 h-4" /> Fechar
              </Button>
           </DialogFooter>
