@@ -18,7 +18,8 @@ import {
   Bell, 
   Settings,
   Palette,
-  Database
+  Database,
+  Monitor
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useFinance } from "@/contexts/FinanceContext";
@@ -26,13 +27,6 @@ import { useTheme } from "@/contexts/ThemeContext";
 import { toast } from "@/hooks/use-toast";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { SidebarAlertas } from "@/components/dashboard/SidebarAlertas";
-import { 
-  Dialog, 
-  DialogContent, 
-  DialogHeader, 
-  DialogTitle, 
-  DialogTrigger 
-} from "@/components/ui/dialog";
 import { 
   Popover, 
   PopoverContent, 
@@ -65,13 +59,12 @@ export function Sidebar() {
     transacoesV2, 
     emprestimos, 
     segurosVeiculo,
-    categoriasV2,
     contasMovimento,
     getSaldoDevedor,
     alertStartDate,
     calculateBalanceUpToDate
   } = useFinance();
-  const { theme, setTheme, themes } = useTheme();
+  const { theme, setTheme, themes, resolvedTheme } = useTheme();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -86,12 +79,9 @@ export function Sidebar() {
     window.dispatchEvent(new CustomEvent("sidebar-toggle", { detail: collapsed }));
   }, [collapsed]);
 
-  // Lógica para contar alertas e controlar o badge (mesma lógica do SidebarAlertas)
   const alertCount = useMemo(() => {
     const parsedAlertStartDate = startOfDay(parseDateLocal(alertStartDate));
     const now = new Date();
-    
-    const totalDividas = getSaldoDevedor();
     const emprestimosPendentes = emprestimos.filter(e => e.status === 'pendente_config').length;
     
     const transacoesFluxo = transacoesV2.filter(t => {
@@ -104,11 +94,9 @@ export function Sidebar() {
     const receitasMes = transacoesFluxo
       .filter(t => t.operationType === "receita" || t.operationType === "rendimento")
       .reduce((acc, t) => acc + t.amount, 0);
-
     const despesasMes = transacoesFluxo
       .filter(t => t.operationType === "despesa" || t.operationType === "pagamento_emprestimo")
       .reduce((acc, t) => acc + t.amount, 0);
-
     const margemPoupanca = receitasMes > 0 ? ((receitasMes - despesasMes) / receitasMes) * 100 : 0;
     
     const dataLimiteSeguro = new Date();
@@ -120,7 +108,6 @@ export function Sidebar() {
       } catch { return false; }
     }).length;
 
-    // Contagem simplificada de alertas ativos baseada nas tolerâncias padrão
     let count = 0;
     if (emprestimosPendentes > 0) count++;
     if (margemPoupanca < 10 && receitasMes > 0) count++;
@@ -133,11 +120,11 @@ export function Sidebar() {
     if (saldoLiquidez < 0) count++;
 
     return count;
-  }, [transacoesV2, emprestimos, segurosVeiculo, alertStartDate, getSaldoDevedor, contasMovimento, calculateBalanceUpToDate]);
+  }, [transacoesV2, emprestimos, segurosVeiculo, alertStartDate, contasMovimento, calculateBalanceUpToDate]);
 
   const handleExport = () => {
     exportData();
-    toast({ title: "Exportação concluída", description: "Arquivo baixado com sucesso!" });
+    toast({ title: "Backup Gerado", description: "O arquivo de dados foi baixado." });
   };
 
   const handleImportClick = () => fileInputRef.current?.click();
@@ -147,7 +134,7 @@ export function Sidebar() {
     if (!file || !file.name.endsWith(".json")) return;
     const result = await importData(file);
     toast({ 
-      title: result.success ? "Sucesso" : "Erro", 
+      title: result.success ? "Restauração Completa" : "Erro", 
       description: result.message,
       variant: result.success ? "default" : "destructive"
     });
@@ -208,7 +195,7 @@ export function Sidebar() {
       "hidden md:flex fixed left-4 top-4 bottom-4 z-40 bg-card/95 backdrop-blur-xl border border-border/40 shadow-2xl transition-all duration-500 ease-in-out flex-col rounded-[2rem] overflow-hidden",
       collapsed ? "w-20" : "w-44"
     )}>
-      {/* Header / Logo */}
+      {/* Logo */}
       <div className={cn(
         "h-16 flex items-center shrink-0 transition-all duration-500",
         collapsed ? "justify-center" : "px-5 gap-2.5"
@@ -217,23 +204,23 @@ export function Sidebar() {
           <Wallet size={18} />
         </div>
         {!collapsed && (
-          <div className="flex flex-col min-w-0 animate-in fade-in slide-in-from-left-2 duration-500">
+          <div className="flex flex-col min-w-0">
             <span className="font-black text-base leading-tight tracking-tighter">ORBIUM</span>
             <span className="text-[8px] font-black uppercase tracking-[0.2em] text-muted-foreground opacity-60">Finance</span>
           </div>
         )}
       </div>
 
-      {/* Main Nav */}
+      {/* Nav */}
       <div className="flex-1 overflow-y-auto no-scrollbar py-2 px-2.5 space-y-0.5">
         {mainNavItems.map(item => <NavItem key={item.path} item={item} />)}
       </div>
 
-      {/* System Actions Area */}
+      {/* Actions */}
       <div className="px-2.5 pb-4 space-y-1.5 mt-auto shrink-0">
         <Separator className="mx-2.5 mb-3 opacity-30" />
         
-        {/* Alertas - Transformado em Popover (painel lateral) */}
+        {/* Alertas Popover */}
         <Popover>
           <PopoverTrigger asChild>
             <button className={cn(
@@ -261,9 +248,9 @@ export function Sidebar() {
           </PopoverContent>
         </Popover>
 
-        {/* Configurações */}
-        <Dialog>
-          <DialogTrigger asChild>
+        {/* Ajustes Popover */}
+        <Popover>
+          <PopoverTrigger asChild>
             <button className={cn(
               "relative flex items-center h-10 rounded-full transition-all duration-300 group hover:bg-muted/50",
               collapsed ? "justify-center w-full" : "px-3 gap-3 w-full"
@@ -273,37 +260,34 @@ export function Sidebar() {
               </div>
               {!collapsed && <span className="text-[13px] font-bold text-muted-foreground group-hover:text-foreground">Ajustes</span>}
             </button>
-          </DialogTrigger>
-          <DialogContent className="rounded-[2.5rem] max-w-md p-0 overflow-hidden border-border/40 shadow-2xl">
-            <DialogHeader className="px-8 pt-8 pb-4">
-              <DialogTitle className="text-xl font-black flex items-center gap-3">
-                <div className="p-2.5 rounded-2xl bg-primary/10">
-                  <Settings className="w-6 h-6 text-primary" />
-                </div>
-                Painel de Sistema
-              </DialogTitle>
-            </DialogHeader>
+          </PopoverTrigger>
+          <PopoverContent side="right" sideOffset={12} className="p-0 border-border/40 shadow-2xl rounded-[1.75rem] w-80 bg-card/98 backdrop-blur-xl">
+            <div className="px-5 pt-5 pb-3">
+              <h3 className="flex items-center gap-2 text-sm font-black uppercase tracking-widest text-foreground">
+                <Settings className="w-4 h-4 text-primary" /> Preferências
+              </h3>
+            </div>
             
-            <div className="px-8 py-4 space-y-8 pb-10 overflow-y-auto max-h-[70vh]">
-              <div className="space-y-4">
+            <div className="px-5 pb-6 space-y-6 max-h-[70vh] overflow-y-auto no-scrollbar">
+              <div className="space-y-3">
                 <div className="flex items-center gap-2">
-                  <Palette className="w-4 h-4 text-muted-foreground" />
-                  <p className="text-[11px] font-black uppercase text-muted-foreground tracking-widest">Tema Visual</p>
+                  <Palette className="w-3.5 h-3.5 text-muted-foreground" />
+                  <p className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Estilo Visual</p>
                 </div>
-                <div className="grid grid-cols-3 gap-3">
+                <div className="grid grid-cols-3 gap-2">
                   {themes.map((t) => (
                     <button
                       key={t.id}
                       onClick={() => setTheme(t.id)}
                       className={cn(
-                        "flex flex-col items-center justify-center gap-2 py-4 rounded-3xl border-2 transition-all active:scale-95",
+                        "flex flex-col items-center justify-center gap-1.5 py-3 rounded-2xl border-2 transition-all active:scale-95",
                         theme === t.id 
-                          ? "bg-primary/10 text-primary border-primary shadow-sm" 
+                          ? "bg-primary/10 text-primary border-primary" 
                           : "bg-muted/30 text-muted-foreground border-transparent hover:border-border/60"
                       )}
                     >
-                      <span className="text-xl">{t.icon}</span>
-                      <span className="text-[10px] font-bold uppercase tracking-wider">{t.id === 'system' ? 'Auto' : t.name.split(' ')[0]}</span>
+                      <span className="text-base">{t.icon}</span>
+                      <span className="text-[9px] font-bold uppercase">{t.id === 'system' ? 'Auto' : t.name.split(' ')[0]}</span>
                     </button>
                   ))}
                 </div>
@@ -311,45 +295,45 @@ export function Sidebar() {
 
               <Separator className="opacity-40" />
 
-              <div className="space-y-4">
+              <div className="space-y-3">
                 <div className="flex items-center gap-2">
-                  <Database className="w-4 h-4 text-muted-foreground" />
-                  <p className="text-[11px] font-black uppercase text-muted-foreground tracking-widest">Banco de Dados</p>
+                  <Database className="w-3.5 h-3.5 text-muted-foreground" />
+                  <p className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Dados & Backup</p>
                 </div>
-                <div className="flex flex-col gap-3">
+                <div className="flex flex-col gap-2">
                   <Button 
                     variant="outline" 
-                    className="h-14 rounded-2xl justify-start gap-4 border-border/60 group"
+                    className="h-12 rounded-xl justify-start gap-3 border-border/60 group px-3"
                     onClick={handleExport}
                   >
-                    <div className="p-2 rounded-xl bg-success/10 text-success group-hover:bg-success/20 transition-colors">
-                      <Download size={20} />
+                    <div className="p-1.5 rounded-lg bg-success/10 text-success">
+                      <Download size={16} />
                     </div>
                     <div className="text-left">
-                      <p className="text-sm font-bold">Exportar JSON</p>
-                      <p className="text-[10px] text-muted-foreground font-medium">Backup local dos dados</p>
+                      <p className="text-xs font-bold">Gerar Backup</p>
+                      <p className="text-[9px] text-muted-foreground">Exportar arquivo .json</p>
                     </div>
                   </Button>
                   
                   <Button 
                     variant="outline" 
-                    className="h-14 rounded-2xl justify-start gap-4 border-border/60 group"
+                    className="h-12 rounded-xl justify-start gap-3 border-border/60 group px-3"
                     onClick={handleImportClick}
                   >
-                    <div className="p-2 rounded-xl bg-info/10 text-info group-hover:bg-info/20 transition-colors">
-                      <Upload size={20} />
+                    <div className="p-1.5 rounded-lg bg-info/10 text-info">
+                      <Upload size={16} />
                     </div>
                     <div className="text-left">
-                      <p className="text-sm font-bold">Importar Dados</p>
-                      <p className="text-[10px] text-muted-foreground font-medium">Restaurar de arquivo .json</p>
+                      <p className="text-xs font-bold">Restaurar Backup</p>
+                      <p className="text-[9px] text-muted-foreground">Importar de um arquivo</p>
                     </div>
                   </Button>
                   <input ref={fileInputRef} type="file" accept="application/json" className="hidden" onChange={handleFileChange} />
                 </div>
               </div>
             </div>
-          </DialogContent>
-        </Dialog>
+          </PopoverContent>
+        </Popover>
 
         <button
           onClick={() => setCollapsed(!collapsed)}
