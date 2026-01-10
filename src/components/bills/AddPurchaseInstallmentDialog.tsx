@@ -4,10 +4,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ShoppingCart, Calendar, DollarSign, Hash, Wallet, Tags, FileText, Check, X } from "lucide-react";
+import { ShoppingCart, Calendar, DollarSign, Hash, Wallet, Tags, FileText, Check, ArrowRight } from "lucide-react";
 import { useFinance } from "@/contexts/FinanceContext";
-import { ACCOUNT_TYPE_LABELS, CATEGORY_NATURE_LABELS } from "@/types/finance";
-import { cn } from "@/lib/utils";
+import { ACCOUNT_TYPE_LABELS, formatCurrency } from "@/types/finance";
+import { cn, getDueDate } from "@/lib/utils";
 import { toast } from "sonner";
 import { format } from "date-fns";
 
@@ -52,7 +52,6 @@ export function AddPurchaseInstallmentDialog({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
     const amount = parseFloat(formData.totalAmount.replace('.', '').replace(',', '.'));
     const installmentsCount = parseInt(formData.installments);
 
@@ -70,7 +69,7 @@ export function AddPurchaseInstallmentDialog({
       suggestedCategoryId: formData.categoryId || undefined,
     });
 
-    toast.success(`${installmentsCount} parcelas geradas com sucesso!`);
+    toast.success(`${installmentsCount} parcelas geradas!`);
     onOpenChange(false);
     setFormData({
       description: "",
@@ -82,169 +81,144 @@ export function AddPurchaseInstallmentDialog({
     });
   };
 
+  const installmentPreview = useMemo(() => {
+    const amount = parseFloat(formData.totalAmount.replace('.', '').replace(',', '.')) || 0;
+    const count = parseInt(formData.installments) || 1;
+    return amount / count;
+  }, [formData.totalAmount, formData.installments]);
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-xl p-0 overflow-hidden">
-        {/* Cabeçalho no padrão Nova Movimentação */}
-        <DialogHeader className="px-6 pt-6 pb-4 bg-primary/10">
-          <div className="flex items-start gap-3">
-            <div className="w-12 h-12 rounded-xl bg-primary/20 flex items-center justify-center">
-              <ShoppingCart className="w-6 h-6 text-primary" />
+      <DialogContent className="max-w-2xl p-0 overflow-hidden rounded-[3rem] border-none shadow-2xl">
+        <DialogHeader className="px-8 pt-10 pb-6 bg-primary/5">
+          <div className="flex items-center gap-5">
+            <div className="w-16 h-16 rounded-[1.5rem] bg-primary/10 flex items-center justify-center text-primary shadow-lg shadow-primary/5">
+              <ShoppingCart className="w-8 h-8" />
             </div>
-            <div className="flex-1">
-              <DialogTitle className="text-xl font-bold text-foreground">
-                Nova Compra Parcelada
-              </DialogTitle>
-              <DialogDescription className="text-sm text-muted-foreground mt-1">
-                Registre uma compra e gere as parcelas automaticamente no Contas a Pagar
+            <div>
+              <DialogTitle className="text-3xl font-black tracking-tighter">Compra Parcelada</DialogTitle>
+              <DialogDescription className="text-sm font-bold text-muted-foreground uppercase tracking-widest mt-1">
+                Provisionamento Automático
               </DialogDescription>
             </div>
           </div>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="px-6 pb-6 space-y-6 mt-4">
-          {/* Seção 1: Dados da Compra */}
-          <div className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {/* Valor Total */}
+        <form onSubmit={handleSubmit} className="p-8 space-y-8">
+          {/* Valor Principal - Foco Total */}
+          <div className="text-center space-y-3">
+            <Label className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground">Valor Total da Compra</Label>
+            <div className="relative max-w-xs mx-auto">
+              <span className="absolute left-0 top-1/2 -translate-y-1/2 text-2xl font-black text-muted-foreground/30">R$</span>
+              <Input
+                type="text"
+                inputMode="decimal"
+                placeholder="0,00"
+                value={formData.totalAmount}
+                onChange={(e) => handleAmountChange(e.target.value)}
+                className="h-20 text-5xl font-black text-center border-none bg-transparent focus-visible:ring-0 p-0"
+              />
+              <div className="h-1 w-full bg-gradient-to-r from-transparent via-primary/20 to-transparent mt-2"></div>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <div className="space-y-6">
               <div className="space-y-2">
-                <Label className="text-xs font-medium text-muted-foreground flex items-center gap-1">
-                  <DollarSign className="w-3.5 h-3.5" /> Valor Total *
-                </Label>
-                <div className="relative">
-                  <DollarSign className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                  <Input
-                    type="text"
-                    inputMode="decimal"
-                    placeholder="0,00"
-                    value={formData.totalAmount}
-                    onChange={(e) => handleAmountChange(e.target.value)}
-                    className="h-12 pl-10 text-lg font-semibold border-2 rounded-xl"
-                  />
-                </div>
+                <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground px-1">Descrição do Item</Label>
+                <Input
+                  placeholder="Ex: iPhone 15 Pro Max"
+                  value={formData.description}
+                  onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
+                  className="h-12 border-2 rounded-xl font-bold"
+                />
               </div>
 
-              {/* Número de Parcelas */}
-              <div className="space-y-2">
-                <Label className="text-xs font-medium text-muted-foreground flex items-center gap-1">
-                  <Hash className="w-3.5 h-3.5" /> Qtd. Parcelas *
-                </Label>
-                <div className="relative">
-                  <Hash className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground px-1">Parcelas</Label>
                   <Input
                     type="number"
-                    min="1"
-                    max="120"
                     value={formData.installments}
                     onChange={(e) => setFormData(prev => ({ ...prev, installments: e.target.value }))}
-                    className="h-12 pl-10 border-2 rounded-xl"
+                    className="h-12 border-2 rounded-xl font-black text-lg"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground px-1">1º Vencimento</Label>
+                  <Input
+                    type="date"
+                    value={formData.firstDueDate}
+                    onChange={(e) => setFormData(prev => ({ ...prev, firstDueDate: e.target.value }))}
+                    className="h-12 border-2 rounded-xl font-bold"
                   />
                 </div>
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {/* Primeira Parcela */}
+            <div className="space-y-6">
               <div className="space-y-2">
-                <Label className="text-xs font-medium text-muted-foreground flex items-center gap-1">
-                  <Calendar className="w-3.5 h-3.5" /> 1º Vencimento *
-                </Label>
-                <div className="relative">
-                  <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                  <Input
-                    type="date"
-                    value={formData.firstDueDate}
-                    onChange={(e) => setFormData(prev => ({ ...prev, firstDueDate: e.target.value }))}
-                    className="h-12 pl-10 border-2 rounded-xl"
-                  />
-                </div>
-              </div>
-
-              {/* Conta Sugerida */}
-              <div className="space-y-2">
-                <Label className="text-xs font-medium text-muted-foreground flex items-center gap-1">
-                  <Wallet className="w-3.5 h-3.5" /> Conta Sugerida
-                </Label>
-                <Select 
-                  value={formData.accountId} 
-                  onValueChange={(v) => setFormData(prev => ({ ...prev, accountId: v }))}
-                >
-                  <SelectTrigger className="h-12 border-2 rounded-xl">
-                    <SelectValue placeholder="Selecione a conta" />
+                <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground px-1">Conta de Débito</Label>
+                <Select value={formData.accountId} onValueChange={(v) => setFormData(prev => ({ ...prev, accountId: v }))}>
+                  <SelectTrigger className="h-12 border-2 rounded-xl font-bold">
+                    <SelectValue placeholder="Selecione a conta..." />
                   </SelectTrigger>
                   <SelectContent>
                     {availableAccounts.map(a => (
-                      <SelectItem key={a.id} value={a.id}>
-                        {a.name} ({ACCOUNT_TYPE_LABELS[a.accountType]})
+                      <SelectItem key={a.id} value={a.id} className="font-medium">
+                        {a.name}
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
-            </div>
-          </div>
 
-          {/* Seção 2: Classificação */}
-          <div className="space-y-4">
-            <h4 className="font-semibold text-sm text-foreground flex items-center gap-2">
-              <Tags className="w-4 h-4 text-primary" /> Classificação e Detalhes
-            </h4>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {/* Categoria */}
               <div className="space-y-2">
-                <Label className="text-sm font-medium text-foreground">Categoria Sugerida</Label>
-                <Select 
-                  value={formData.categoryId} 
-                  onValueChange={(v) => setFormData(prev => ({ ...prev, categoryId: v }))}
-                >
-                  <SelectTrigger className="h-12 border-2 rounded-xl">
-                    <SelectValue placeholder="Selecione a categoria" />
+                <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground px-1">Categoria</Label>
+                <Select value={formData.categoryId} onValueChange={(v) => setFormData(prev => ({ ...prev, categoryId: v }))}>
+                  <SelectTrigger className="h-12 border-2 rounded-xl font-bold">
+                    <SelectValue placeholder="Selecione a categoria..." />
                   </SelectTrigger>
                   <SelectContent>
                     {expenseCategories.map(c => (
-                      <SelectItem key={c.id} value={c.id}>
+                      <SelectItem key={c.id} value={c.id} className="font-medium">
                         {c.icon} {c.label}
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
-
-              {/* Descrição */}
-              <div className="space-y-2">
-                <Label className="text-sm font-medium text-foreground">Descrição da Compra *</Label>
-                <div className="relative">
-                  <FileText className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                  <Input
-                    placeholder="Ex: Novo Smartphone"
-                    value={formData.description}
-                    onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
-                    className="h-12 pl-10 border-2 rounded-xl"
-                  />
-                </div>
-              </div>
             </div>
           </div>
 
-          <DialogFooter className="pt-4">
-            <div className="flex w-full gap-3">
-              <Button 
-                type="button" 
-                variant="outline" 
-                onClick={() => onOpenChange(false)}
-                className="flex-1 h-12 rounded-xl border-2"
-              >
-                Cancelar
-              </Button>
-              <Button 
-                type="submit"
-                className="flex-1 h-12 rounded-xl font-semibold bg-primary hover:bg-primary/90 text-white"
-              >
-                <Check className="w-5 h-5 mr-2" />
-                Gerar Parcelas
-              </Button>
+          {/* Preview de Parcelamento */}
+          {installmentPreview > 0 && (
+            <div className="p-6 rounded-[2rem] bg-muted/30 border border-border/40 flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 rounded-2xl bg-background flex items-center justify-center text-primary shadow-sm">
+                  <Calendar className="w-6 h-6" />
+                </div>
+                <div>
+                  <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Valor por Parcela</p>
+                  <p className="text-xl font-black text-foreground">{formatCurrency(installmentPreview)}</p>
+                </div>
+              </div>
+              <div className="text-right">
+                <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Término Previsto</p>
+                <p className="text-sm font-bold text-foreground">
+                  {format(getDueDate(formData.firstDueDate, parseInt(formData.installments) || 1), 'MMMM yyyy', { locale: ptBR })}
+                </p>
+              </div>
             </div>
+          )}
+
+          <DialogFooter className="pt-4">
+            <Button 
+              type="submit"
+              className="w-full h-16 rounded-[1.5rem] font-black text-lg shadow-2xl shadow-primary/20 gap-3 hover:scale-[1.02] active:scale-[0.98] transition-all"
+            >
+              GERAR {formData.installments} PARCELAS <ArrowRight className="w-6 h-6" />
+            </Button>
           </DialogFooter>
         </form>
       </DialogContent>

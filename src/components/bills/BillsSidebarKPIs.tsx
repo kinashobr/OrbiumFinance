@@ -3,8 +3,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { Badge } from "@/components/ui/badge";
-import { TrendingDown, Wallet, RefreshCw, Calculator, TrendingUp, AlertCircle, Save } from "lucide-react";
+import { TrendingUp, Wallet, RefreshCw, Calculator, TrendingDown, AlertCircle, ArrowUpRight, ArrowDownRight } from "lucide-react";
 import { useFinance } from "@/contexts/FinanceContext";
 import { formatCurrency } from "@/types/finance";
 import { cn } from "@/lib/utils";
@@ -40,7 +39,6 @@ export function BillsSidebarKPIs({ currentDate, totalPendingBills, totalPaidBill
   
   const [forecastInput, setForecastInput] = useState(() => formatToBR(currentForecast));
   
-  // Atualiza o input local quando o mês ou o valor no contexto muda
   useEffect(() => {
       setForecastInput(formatToBR(currentForecast));
   }, [currentForecast, monthKey]);
@@ -67,10 +65,6 @@ export function BillsSidebarKPIs({ currentDate, totalPendingBills, totalPaidBill
     return { initialBalance, projectedBalance, netFlowProjected, totalExpensesForMonth };
   }, [currentDate, highLiquidityAccountIds, calculateBalanceUpToDate, transacoesV2, contasMovimento, currentForecast, totalPendingBills, totalPaidBills]);
   
-  const handleInputChange = (value: string) => {
-    setForecastInput(value);
-  };
-
   const handleBlur = () => {
     const parsed = parseFromBR(forecastInput);
     if (parsed !== currentForecast) {
@@ -85,98 +79,93 @@ export function BillsSidebarKPIs({ currentDate, totalPendingBills, totalPaidBill
     toast.info(`Previsão sugerida com base no mês anterior.`);
   };
 
-  const monthLabel = format(currentDate, 'MMM', { locale: ptBR });
-
   return (
-    <div className="flex flex-col h-full space-y-2.5 overflow-hidden">
-      {/* HEADER COMPACTO */}
-      <div className="flex items-center gap-2 px-1 mb-1 shrink-0">
-        <Wallet className="w-3.5 h-3.5 text-primary shrink-0" />
-        <h3 className="cq-text-xs font-bold uppercase tracking-tight text-muted-foreground truncate">Projeção {monthLabel}</h3>
-      </div>
-
-      {/* DISPONIBILIDADE */}
-      <div className="glass-card p-3 flex justify-between items-center gap-2">
-        <span className="cq-text-xs text-muted-foreground font-medium truncate">Caixa Inicial</span>
-        <span className="cq-text-sm font-bold text-foreground truncate">{formatCurrency(calculos.initialBalance)}</span>
-      </div>
-
-      {/* PREVISÃO RECEITA */}
-      <div className="glass-card p-3 space-y-2">
-        <div className="flex justify-between items-center gap-2">
-          <Label className="cq-text-xs text-muted-foreground font-medium truncate">Prev. Entradas</Label>
-          <button 
-            onClick={handleSuggest}
-            className="text-[10px] font-bold text-primary hover:underline flex items-center gap-1 shrink-0"
-          >
-            <RefreshCw className="w-2.5 h-2.5" /> SUGERIR
-          </button>
-        </div>
-        <div className="relative">
-          <TrendingUp className="absolute left-2 top-1/2 -translate-y-1/2 w-3 h-3 text-success/70" />
-          <Input 
-            type="text"
-            value={forecastInput}
-            onChange={(e) => handleInputChange(e.target.value)}
-            onBlur={handleBlur}
-            placeholder="0,00"
-            className="h-8 pl-6 cq-text-xs bg-background/50 border-border/40 rounded-lg w-full"
-          />
-        </div>
-      </div>
-
-      {/* COMPROMISSOS */}
-      <div className="glass-card stat-card-negative p-3">
-        <div className="flex justify-between items-center mb-2 gap-2">
-          <span className="cq-text-xs font-bold text-destructive uppercase tracking-tighter truncate">Compromissos</span>
-          <span className="cq-text-base font-black text-destructive truncate">{formatCurrency(calculos.totalExpensesForMonth)}</span>
-        </div>
-        <div className="space-y-1 pt-1 border-t border-destructive/10">
-          <div className="flex justify-between text-[10px] md:cq-text-xs gap-2">
-            <span className="text-muted-foreground truncate">Pendentes + Cartão</span>
-            <span className="font-semibold text-destructive truncate">{formatCurrency(totalPendingBills)}</span>
-          </div>
-          <div className="flex justify-between text-[10px] md:cq-text-xs gap-2">
-            <span className="text-muted-foreground truncate">Já Pago (Débito)</span>
-            <span className="text-success font-semibold truncate">{formatCurrency(totalPaidBills)}</span>
-          </div>
-        </div>
-      </div>
-
-      {/* RESULTADO E SALDO FINAL */}
-      <div className={cn(
-        "glass-card p-3 space-y-2 border-l-4 transition-all duration-300",
-        calculos.projectedBalance >= 0 ? "stat-card-positive" : "stat-card-negative"
-      )}>
-        <div className="flex justify-between items-center cq-text-xs gap-2">
-          <span className="text-muted-foreground font-medium truncate">Fluxo Líquido</span>
-          <span className={cn("font-bold truncate", calculos.netFlowProjected >= 0 ? "text-success" : "text-destructive")}>
-            {calculos.netFlowProjected > 0 ? '+' : ''}{formatCurrency(calculos.netFlowProjected)}
-          </span>
-        </div>
-        
-        <Separator className="opacity-30" />
-        
-        <div className="flex justify-between items-center gap-2">
-          <div className="flex flex-col min-w-0">
-            <span className="cq-text-xs font-bold text-muted-foreground uppercase leading-none tracking-tighter truncate">Saldo Final</span>
-            <span className="text-[9px] text-muted-foreground opacity-70 truncate">Projetado</span>
-          </div>
-          <span className={cn(
-            "cq-text-lg font-black tracking-tight truncate",
+    <div className="flex flex-col h-full space-y-8">
+      {/* Saldo Projetado - O Grande KPI */}
+      <div className="space-y-2">
+        <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground px-1">Saldo Final Projetado</p>
+        <div className={cn(
+          "p-6 rounded-[2.5rem] border-2 transition-all",
+          calculos.projectedBalance >= 0 ? "bg-success/5 border-success/20" : "bg-destructive/5 border-destructive/20"
+        )}>
+          <p className={cn(
+            "text-3xl font-black tracking-tighter",
             calculos.projectedBalance >= 0 ? "text-success" : "text-destructive"
           )}>
             {formatCurrency(calculos.projectedBalance)}
-          </span>
+          </p>
+          <div className="flex items-center gap-1.5 mt-2">
+            <Calculator className="w-3.5 h-3.5 opacity-40" />
+            <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Cálculo de Fluxo</span>
+          </div>
         </div>
       </div>
 
-      {/* ALERTA DE ATENÇÃO */}
+      <div className="space-y-6">
+        {/* Caixa Inicial */}
+        <div className="flex items-center justify-between px-1">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-2xl bg-muted/50 flex items-center justify-center text-muted-foreground">
+              <Wallet className="w-5 h-5" />
+            </div>
+            <div>
+              <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Caixa Inicial</p>
+              <p className="text-sm font-black text-foreground">{formatCurrency(calculos.initialBalance)}</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Previsão de Entradas */}
+        <div className="space-y-3">
+          <div className="flex items-center justify-between px-1">
+            <div className="flex items-center gap-2">
+              <TrendingUp className="w-4 h-4 text-success" />
+              <Label className="text-[10px] font-black uppercase tracking-widest text-foreground">Prev. Entradas</Label>
+            </div>
+            <button onClick={handleSuggest} className="text-[9px] font-black text-primary hover:underline flex items-center gap-1">
+              <RefreshCw className="w-3 h-3" /> SUGERIR
+            </button>
+          </div>
+          <div className="relative group">
+            <Input 
+              type="text"
+              value={forecastInput}
+              onChange={(e) => setForecastInput(e.target.value)}
+              onBlur={handleBlur}
+              className="h-12 pl-4 pr-10 text-lg font-black border-2 rounded-xl bg-background focus:border-primary/50 transition-all"
+            />
+            <ArrowUpRight className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-success/40 group-focus-within:text-success transition-colors" />
+          </div>
+        </div>
+
+        <Separator className="opacity-40" />
+
+        {/* Compromissos */}
+        <div className="space-y-4">
+          <div className="flex items-center gap-2 px-1">
+            <TrendingDown className="w-4 h-4 text-destructive" />
+            <Label className="text-[10px] font-black uppercase tracking-widest text-foreground">Compromissos</Label>
+          </div>
+          
+          <div className="space-y-3">
+            <div className="flex items-center justify-between px-1">
+              <span className="text-xs font-bold text-muted-foreground">Pendentes + Cartão</span>
+              <span className="text-sm font-black text-destructive">{formatCurrency(totalPendingBills)}</span>
+            </div>
+            <div className="flex items-center justify-between px-1">
+              <span className="text-xs font-bold text-muted-foreground">Já Pago (Débito)</span>
+              <span className="text-sm font-black text-success">{formatCurrency(totalPaidBills)}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Alerta de Atenção */}
       {calculos.projectedBalance < 0 && (
-        <div className="p-2 rounded-lg bg-warning/10 border border-warning/20 flex gap-2 shrink-0">
-          <AlertCircle className="w-3.5 h-3.5 text-warning shrink-0" />
-          <p className="text-[9px] leading-tight text-warning-foreground font-medium">
-            Saldo projetado negativo. Revise seus custos.
+        <div className="mt-auto p-4 rounded-2xl bg-warning/10 border border-warning/20 flex gap-3">
+          <AlertCircle className="w-5 h-5 text-warning shrink-0" />
+          <p className="text-[11px] leading-tight text-warning-foreground font-bold uppercase tracking-tight">
+            Atenção: Saldo projetado negativo. Revise seus custos fixos.
           </p>
         </div>
       )}

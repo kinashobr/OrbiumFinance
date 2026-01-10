@@ -1,18 +1,39 @@
+"use client";
+
 import { useState, useMemo, useCallback, useRef } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-// Sheet removido no mobile: tela passa a ocupar a tela inteira
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Plus, CalendarCheck, Repeat, Shield, Building2, DollarSign, Info, Settings, ShoppingCart, ChevronLeft, ChevronRight, X, CheckCircle2 } from "lucide-react";
+import { 
+  Plus, 
+  CalendarCheck, 
+  Repeat, 
+  Shield, 
+  Building2, 
+  DollarSign, 
+  Info, 
+  Settings, 
+  ShoppingCart, 
+  ChevronLeft, 
+  ChevronRight, 
+  X, 
+  CheckCircle2,
+  ArrowRight,
+  Zap
+} from "lucide-react";
 import { useFinance } from "@/contexts/FinanceContext";
-import { BillTracker, PotentialFixedBill, BillSourceType, formatCurrency, generateBillId, TransactionLinks, OperationType, BillDisplayItem, ExternalPaidBill } from "@/types/finance";
+import { 
+  BillTracker, 
+  PotentialFixedBill, 
+  formatCurrency, 
+  generateBillId, 
+  TransactionLinks, 
+  OperationType, 
+  BillDisplayItem, 
+  ExternalPaidBill 
+} from "@/types/finance";
 import { BillsTrackerList } from "./BillsTrackerList";
-// import { BillsTrackerMobileList } from "./BillsTrackerMobileList";
-import { FixedBillsList } from "./FixedBillsList";
 import { BillsSidebarKPIs } from "./BillsSidebarKPIs";
 import { FixedBillSelectorModal } from "./FixedBillSelectorModal";
 import { AddPurchaseInstallmentDialog } from "./AddPurchaseInstallmentDialog";
@@ -22,18 +43,15 @@ import { toast } from "sonner";
 import { cn, parseDateLocal } from "@/lib/utils";
 import { ResizableDialogContent } from "../ui/ResizableDialogContent";
 import { useMediaQuery } from "@/hooks/useMediaQuery";
-type PartialTransactionLinks = Partial<TransactionLinks>;
-const isBillTracker = (bill: BillDisplayItem): bill is BillTracker => {
-  return bill.type === 'tracker';
-};
+
+const isBillTracker = (bill: BillDisplayItem): bill is BillTracker => bill.type === 'tracker';
+
 interface BillsTrackerModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
-export function BillsTrackerModal({
-  open,
-  onOpenChange
-}: BillsTrackerModalProps) {
+
+export function BillsTrackerModal({ open, onOpenChange }: BillsTrackerModalProps) {
   const {
     billsTracker,
     setBillsTracker,
@@ -48,7 +66,6 @@ export function BillsTrackerModal({
     setTransacoesV2,
     categoriasV2,
     emprestimos,
-    segurosVeiculo,
     calculateLoanAmortizationAndInterest,
     markSeguroParcelPaid,
     markLoanParcelPaid,
@@ -56,22 +73,27 @@ export function BillsTrackerModal({
     unmarkLoanParcelPaid,
     transacoesV2
   } = useFinance();
+
   const isMobile = useMediaQuery("(max-width: 768px)");
   const [currentDate, setCurrentDate] = useState(startOfMonth(new Date()));
   const [showFixedBillSelector, setShowFixedBillSelector] = useState(false);
   const [fixedBillSelectorMode, setFixedBillSelectorMode] = useState<'current' | 'future'>('current');
   const [showAddPurchaseDialog, setShowAddPurchaseDialog] = useState(false);
   const [showNewBillModal, setShowNewBillModal] = useState(false);
+
   const trackerManagedBills = useMemo(() => getBillsForMonth(currentDate), [getBillsForMonth, currentDate]);
   const externalPaidBills = useMemo(() => getOtherPaidExpensesForMonth(currentDate), [getOtherPaidExpensesForMonth, currentDate]);
+  
   const combinedBills: BillDisplayItem[] = useMemo(() => {
     const trackerPaidTxIds = new Set(trackerManagedBills.filter(b => b.isPaid && b.transactionId).map(b => b.transactionId!));
     const trackerBills: BillDisplayItem[] = trackerManagedBills;
-    const externalBills: BillDisplayItem[] = externalPaidBills.filter(externalBill => !trackerPaidTxIds.has(externalBill.id));
+    const externalBills: BillDisplayItem[] = externalPaidBills.filter(eb => !trackerPaidTxIds.has(eb.id));
     return [...trackerBills, ...externalBills];
   }, [trackerManagedBills, externalPaidBills]);
+
   const potentialFixedBills = useMemo(() => getPotentialFixedBillsForMonth(currentDate, trackerManagedBills), [getPotentialFixedBillsForMonth, currentDate, trackerManagedBills]);
   const futureFixedBills = useMemo(() => getFutureFixedBills(currentDate, trackerManagedBills), [getFutureFixedBills, currentDate, trackerManagedBills]);
+
   const totalUnpaidBills = useMemo(() => {
     const creditCardAccountIds = new Set(contasMovimento.filter(c => c.accountType === 'cartao_credito').map(c => c.id));
     return combinedBills.reduce((acc, b) => {
@@ -80,6 +102,7 @@ export function BillsTrackerModal({
       return acc;
     }, 0);
   }, [combinedBills, contasMovimento]);
+
   const totalPaidBills = useMemo(() => {
     const creditCardAccountIds = new Set(contasMovimento.filter(c => c.accountType === 'cartao_credito').map(c => c.id));
     return combinedBills.reduce((acc, b) => {
@@ -89,100 +112,10 @@ export function BillsTrackerModal({
     }, 0);
   }, [combinedBills, contasMovimento]);
 
-  // Helpers específicos para o layout mobile "Pixel Style"
-  const today = useMemo(() => new Date(), []);
-  const todayMid = useMemo(() => new Date(today.getFullYear(), today.getMonth(), today.getDate()), [today]);
-  const mobileBills = useMemo(() => {
-    // Mantém tracker e extrato, mas em lista única ordenada por data de vencimento / pagamento
-    const tracker = combinedBills.filter(b => b.type === 'tracker') as BillTracker[];
-    const external = combinedBills.filter(b => b.type === 'external_paid') as ExternalPaidBill[];
-    const pending = tracker.filter(b => !b.isExcluded && !b.isPaid).sort((a, b) => parseDateLocal(a.dueDate).getTime() - parseDateLocal(b.dueDate).getTime());
-    const paid = [...tracker.filter(b => b.isPaid && !b.isExcluded), ...external].sort((a, b) => parseDateLocal((b as BillTracker | ExternalPaidBill).paymentDate || b.dueDate).getTime() - parseDateLocal((a as BillTracker | ExternalPaidBill).paymentDate || a.dueDate).getTime());
-    return [...pending, ...paid];
-  }, [combinedBills]);
-  const upcomingInfo = useMemo(() => {
-    const unpaid = combinedBills.filter(b => !b.isPaid);
-    if (!unpaid.length) {
-      return {
-        total: 0,
-        nextDate: null as Date | null
-      };
-    }
-    const unpaidWithDates = unpaid.map(b => parseDateLocal(b.dueDate));
-    const futureOrToday = unpaidWithDates.filter(d => d >= todayMid);
-    const referenceDates = futureOrToday.length ? futureOrToday : unpaidWithDates;
-    const nextDate = referenceDates.reduce((min, d) => d < min ? d : min, referenceDates[0]);
-    const total = unpaid.reduce((acc, b) => parseDateLocal(b.dueDate) >= todayMid ? acc + b.expectedAmount : acc, 0);
-    return {
-      total,
-      nextDate
-    };
-  }, [combinedBills, todayMid]);
-  const [newBillDescription, setNewBillDescription] = useState("");
-  const [newBillAmount, setNewBillAmount] = useState("");
-  const [newBillDueDate, setNewBillDueDate] = useState(format(currentDate, "yyyy-MM-dd"));
-  const newBillCardRef = useRef<HTMLDivElement | null>(null);
-  const parseAmount = (value: string): number => {
-    const parsed = parseFloat(value.replace(".", "").replace(",", "."));
-    return isNaN(parsed) ? 0 : parsed;
-  };
-  const formatAmountInput = (value: string) => {
-    const cleaned = value.replace(/[^\d,]/g, "");
-    const parts = cleaned.split(",");
-    if (parts.length > 2) return value;
-    return cleaned;
-  };
-  const handleAddAdHocBill = (): boolean => {
-    const amount = parseAmount(newBillAmount);
-    if (!newBillDescription || amount <= 0 || !newBillDueDate) return false;
-    handleAddBill({
-      description: newBillDescription,
-      dueDate: newBillDueDate,
-      expectedAmount: amount,
-      sourceType: "ad_hoc",
-      suggestedAccountId: contasMovimento.find(c => c.accountType === "corrente")?.id,
-      suggestedCategoryId: null
-    });
-    setNewBillDescription("");
-    setNewBillAmount("");
-    setNewBillDueDate(format(currentDate, "yyyy-MM-dd"));
-    toast.success("Despesa adicionada ao Contas a Pagar.");
-    return true;
-  };
-  const getBillStatus = (bill: BillDisplayItem): "pago" | "atrasado" | "pendente" => {
-    if (bill.isPaid || bill.type === "external_paid") return "pago";
-    const due = parseDateLocal(bill.dueDate);
-    const dueMid = new Date(due.getFullYear(), due.getMonth(), due.getDate());
-    return dueMid < todayMid ? "atrasado" : "pendente";
-  };
-  const getBillStatusClasses = (status: "pago" | "atrasado" | "pendente") => {
-    switch (status) {
-      case "pago":
-        return "bg-success/10 text-success";
-      case "atrasado":
-        return "bg-destructive/10 text-destructive";
-      default:
-        return "bg-warning/10 text-warning";
-    }
-  };
   const handleMonthChange = (direction: 'prev' | 'next') => {
     setCurrentDate(prev => direction === 'prev' ? subMonths(prev, 1) : addMonths(prev, 1));
   };
-  const handleUpdateBill = useCallback((id: string, updates: Partial<BillTracker>) => {
-    updateBill(id, updates);
-  }, [updateBill]);
-  const handleDeleteBill = useCallback((id: string) => {
-    deleteBill(id);
-  }, [deleteBill]);
-  const handleAddBill = useCallback((bill: Omit<BillTracker, "id" | "isPaid" | "type">) => {
-    setBillsTracker(prev => [...prev, {
-      ...bill,
-      id: generateBillId(),
-      type: 'tracker',
-      isPaid: false,
-      isExcluded: false
-    }]);
-  }, [setBillsTracker]);
+
   const handleTogglePaid = useCallback((bill: BillDisplayItem, isChecked: boolean) => {
     if (!isBillTracker(bill)) {
       toast.error("Não é possível alterar o status de pagamento de transações do extrato.");
@@ -201,22 +134,21 @@ export function BillsTrackerModal({
       let description = trackerBill.description;
       const operationType: OperationType = trackerBill.sourceType === 'loan_installment' ? 'pagamento_emprestimo' : 'despesa';
       const domain = trackerBill.sourceType === 'loan_installment' ? 'financing' : 'operational';
+
       if (trackerBill.sourceType === 'loan_installment' && trackerBill.sourceRef && trackerBill.parcelaNumber) {
         const loanId = parseInt(trackerBill.sourceRef);
-        const scheduleItem = calculateLoanAmortizationAndInterest(loanId, trackerBill.parcelaNumber);
-        if (scheduleItem) {
-          baseLinks.loanId = `loan_${loanId}`;
-          baseLinks.parcelaId = String(trackerBill.parcelaNumber);
-          const loan = emprestimos.find(e => e.id === loanId);
-          description = `Pagamento Empréstimo ${loan?.contrato || 'N/A'} - P${trackerBill.parcelaNumber}/${loan?.meses || 'N/A'}`;
-          markLoanParcelPaid(loanId, trackerBill.expectedAmount, format(new Date(), 'yyyy-MM-dd'), trackerBill.parcelaNumber);
-        }
+        baseLinks.loanId = `loan_${loanId}`;
+        baseLinks.parcelaId = String(trackerBill.parcelaNumber);
+        const loan = emprestimos.find(e => e.id === loanId);
+        description = `Pagamento Empréstimo ${loan?.contrato || 'N/A'} - P${trackerBill.parcelaNumber}/${loan?.meses || 'N/A'}`;
+        markLoanParcelPaid(loanId, trackerBill.expectedAmount, format(new Date(), 'yyyy-MM-dd'), trackerBill.parcelaNumber);
       }
+
       if (trackerBill.sourceType === 'insurance_installment' && trackerBill.sourceRef && trackerBill.parcelaNumber) {
         baseLinks.vehicleTransactionId = `${trackerBill.sourceRef}_${trackerBill.parcelaNumber}`;
-        const seguroId = parseInt(trackerBill.sourceRef);
-        markSeguroParcelPaid(seguroId, trackerBill.parcelaNumber, transactionId);
+        markSeguroParcelPaid(parseInt(trackerBill.sourceRef), trackerBill.parcelaNumber, transactionId);
       }
+
       addTransacaoV2({
         id: transactionId,
         date: format(new Date(), 'yyyy-MM-dd'),
@@ -243,6 +175,7 @@ export function BillsTrackerModal({
           notes: `Gerado pelo Contas a Pagar. Bill ID: ${trackerBill.id}`
         }
       });
+
       updateBill(trackerBill.id, {
         isPaid: true,
         transactionId,
@@ -251,44 +184,29 @@ export function BillsTrackerModal({
       toast.success(`Conta "${trackerBill.description}" paga!`);
     } else {
       if (trackerBill.transactionId) {
-        if (trackerBill.sourceType === 'loan_installment' && trackerBill.sourceRef && trackerBill.parcelaNumber) {
+        if (trackerBill.sourceType === 'loan_installment' && trackerBill.sourceRef) {
           unmarkLoanParcelPaid(parseInt(trackerBill.sourceRef));
         }
         if (trackerBill.sourceType === 'insurance_installment' && trackerBill.sourceRef && trackerBill.parcelaNumber) {
           unmarkSeguroParcelPaid(parseInt(trackerBill.sourceRef), trackerBill.parcelaNumber);
         }
-        setBillsTracker(prev => prev.map(b => b.id === trackerBill.id ? {
-          ...b,
+        setTransacoesV2(prev => prev.filter(t => t.id !== trackerBill.transactionId));
+        updateBill(trackerBill.id, {
           isPaid: false,
           transactionId: undefined,
           paymentDate: undefined
-        } : b));
-        setTransacoesV2(prev => prev.filter(t => t.id !== trackerBill.transactionId));
+        });
         toast.info("Conta desmarcada e transação excluída.");
       } else {
-        updateBill(trackerBill.id, {
-          isPaid: false,
-          paymentDate: undefined
-        });
+        updateBill(trackerBill.id, { isPaid: false, paymentDate: undefined });
       }
     }
-  }, [updateBill, addTransacaoV2, contasMovimento, categoriasV2, emprestimos, segurosVeiculo, calculateLoanAmortizationAndInterest, setBillsTracker, markSeguroParcelPaid, markLoanParcelPaid, unmarkSeguroParcelPaid, unmarkLoanParcelPaid, setTransacoesV2]);
+  }, [updateBill, addTransacaoV2, contasMovimento, categoriasV2, emprestimos, markLoanParcelPaid, markSeguroParcelPaid, unmarkLoanParcelPaid, unmarkSeguroParcelPaid, setTransacoesV2]);
+
   const handleToggleFixedBill = useCallback((potentialBill: PotentialFixedBill, isChecked: boolean) => {
-    const {
-      sourceType,
-      sourceRef,
-      parcelaNumber,
-      dueDate,
-      expectedAmount,
-      description,
-      isPaid
-    } = potentialBill;
-    if (transacoesV2.some(t => sourceType === 'loan_installment' && t.links?.loanId === `loan_${sourceRef}` && t.links?.parcelaId === String(parcelaNumber) || sourceType === 'insurance_installment' && t.links?.vehicleTransactionId === `${sourceRef}_${parcelaNumber}`)) {
-      toast.info("Esta parcela já possui transação vinculada.");
-      return;
-    }
+    const { sourceType, sourceRef, parcelaNumber, dueDate, expectedAmount, description } = potentialBill;
+    
     if (isChecked) {
-      const isFutureBill = parseDateLocal(dueDate) > endOfMonth(currentDate);
       const newBill: BillTracker = {
         id: generateBillId(),
         type: 'tracker',
@@ -299,464 +217,230 @@ export function BillsTrackerModal({
         sourceRef,
         parcelaNumber,
         suggestedAccountId: contasMovimento.find(c => c.accountType === 'corrente')?.id,
-        suggestedCategoryId: categoriasV2.find(c => sourceType === 'loan_installment' && c.label.toLowerCase().includes('emprestimo') || sourceType === 'insurance_installment' && c.label.toLowerCase().includes('seguro'))?.id || null,
+        suggestedCategoryId: categoriasV2.find(c => 
+          (sourceType === 'loan_installment' && c.label.toLowerCase().includes('emprestimo')) || 
+          (sourceType === 'insurance_installment' && c.label.toLowerCase().includes('seguro'))
+        )?.id || null,
         isExcluded: false,
-        isPaid: isFutureBill && !isPaid,
-        paymentDate: isFutureBill && !isPaid ? format(new Date(), 'yyyy-MM-dd') : undefined,
-        transactionId: isFutureBill && !isPaid ? `bill_tx_temp_${generateBillId()}` : undefined
+        isPaid: false
       };
-      if (newBill.isPaid && newBill.transactionId) {
-        const account = contasMovimento.find(c => c.id === newBill.suggestedAccountId);
-        const category = categoriasV2.find(c => c.id === newBill.suggestedCategoryId);
-        if (!account || !category) return;
-        const transactionId = newBill.transactionId;
-        const baseLinks: Partial<TransactionLinks> = {};
-        if (newBill.sourceType === 'loan_installment' && newBill.sourceRef && newBill.parcelaNumber) {
-          const loanId = parseInt(newBill.sourceRef);
-          baseLinks.loanId = `loan_${loanId}`;
-          baseLinks.parcelaId = String(newBill.parcelaNumber);
-          markLoanParcelPaid(loanId, newBill.expectedAmount, newBill.paymentDate!, newBill.parcelaNumber);
-        }
-        if (newBill.sourceType === 'insurance_installment' && newBill.sourceRef && newBill.parcelaNumber) {
-          baseLinks.vehicleTransactionId = `${newBill.sourceRef}_${newBill.parcelaNumber}`;
-          markSeguroParcelPaid(parseInt(newBill.sourceRef), newBill.parcelaNumber, transactionId);
-        }
-        addTransacaoV2({
-          id: transactionId,
-          date: newBill.paymentDate!,
-          accountId: account.id,
-          flow: 'out',
-          operationType: newBill.sourceType === 'loan_installment' ? 'pagamento_emprestimo' : 'despesa',
-          domain: newBill.sourceType === 'loan_installment' ? 'financing' : 'operational',
-          amount: newBill.expectedAmount,
-          categoryId: category.id,
-          description: newBill.description,
-          links: {
-            investmentId: null,
-            transferGroupId: null,
-            vehicleTransactionId: baseLinks.vehicleTransactionId || null,
-            loanId: baseLinks.loanId || null,
-            parcelaId: baseLinks.parcelaId || null
-          },
-          conciliated: false,
-          attachments: [],
-          meta: {
-            createdBy: 'bill_tracker',
-            source: 'bill_tracker',
-            createdAt: new Date().toISOString(),
-            notes: `Adiantamento. Bill ID: ${newBill.id}`
-          }
-        });
-        setBillsTracker(prev => [...prev, newBill]);
-        toast.success(`Adiantamento registrado!`);
-      } else {
-        setBillsTracker(prev => [...prev, newBill]);
-        toast.success("Conta fixa incluída.");
-      }
+      setBillsTracker(prev => [...prev, newBill]);
+      toast.success("Conta fixa incluída.");
     } else {
       setBillsTracker(prev => prev.filter(b => !(b.sourceType === sourceType && b.sourceRef === sourceRef && b.parcelaNumber === parcelaNumber)));
-      const billToRemove = billsTracker.find(b => b.sourceType === sourceType && b.sourceRef === sourceRef && b.parcelaNumber === parcelaNumber);
-      if (billToRemove && billToRemove.isPaid && billToRemove.transactionId) {
-        if (billToRemove.sourceType === 'loan_installment' && billToRemove.sourceRef) unmarkLoanParcelPaid(parseInt(billToRemove.sourceRef));
-        if (billToRemove.sourceType === 'insurance_installment' && billToRemove.sourceRef && billToRemove.parcelaNumber) unmarkSeguroParcelPaid(parseInt(billToRemove.sourceRef), billToRemove.parcelaNumber);
-        setTransacoesV2(prev => prev.filter(t => t.id !== billToRemove.transactionId));
-      }
     }
-  }, [setBillsTracker, billsTracker, contasMovimento, categoriasV2, currentDate, addTransacaoV2, markLoanParcelPaid, markSeguroParcelPaid, unmarkLoanParcelPaid, unmarkSeguroParcelPaid, setTransacoesV2, transacoesV2]);
+  }, [setBillsTracker, contasMovimento, categoriasV2]);
 
-  // Desktop: conteúdo com tabela detalhada
-  const renderDesktopContent = () => <>
-      {/* Header com navegação de mês */}
-      <div className="flex items-center justify-between mb-4 shrink-0 gap-2 flex-wrap">
-        <div className="flex items-center bg-muted/50 rounded-lg p-1 border border-border/50">
-          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleMonthChange("prev")}>
-            <ChevronLeft className="w-4 h-4" />
+  const renderDesktopContent = () => (
+    <div className="flex flex-col h-full">
+      <div className="flex items-center justify-between mb-6 shrink-0">
+        <div className="flex items-center bg-muted/50 rounded-2xl p-1 border border-border/40 shadow-sm">
+          <Button variant="ghost" size="icon" className="h-9 w-9 rounded-xl" onClick={() => handleMonthChange("prev")}>
+            <ChevronLeft className="w-5 h-5" />
           </Button>
-          <div className="px-2 sm:px-4 min-w-[100px] sm:min-w-[120px] text-center">
-            <span className="text-xs sm:text-sm font-bold text-foreground capitalize">
-              {format(currentDate, "MMMM", {
-              locale: ptBR
-            })}
+          <div className="px-6 min-w-[160px] text-center">
+            <span className="text-sm font-black uppercase tracking-widest text-foreground">
+              {format(currentDate, "MMMM yyyy", { locale: ptBR })}
             </span>
           </div>
-          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleMonthChange("next")}>
-            <ChevronRight className="w-4 h-4" />
+          <Button variant="ghost" size="icon" className="h-9 w-9 rounded-xl" onClick={() => handleMonthChange("next")}>
+            <ChevronRight className="w-5 h-5" />
           </Button>
         </div>
 
-        <div className="flex items-center gap-1 sm:gap-2 flex-wrap">
-          <Button variant="outline" size="sm" onClick={() => setShowAddPurchaseDialog(true)} className="text-[10px] sm:text-xs h-8 px-2 sm:px-3">
-            <ShoppingCart className="w-3 h-3 mr-1" />
-            <span className="hidden sm:inline">Compra Parcelada</span>
-            <span className="sm:hidden">+ Parcela</span>
+        <div className="flex items-center gap-3">
+          <Button variant="outline" size="sm" onClick={() => setShowAddPurchaseDialog(true)} className="rounded-full h-10 px-5 font-bold gap-2">
+            <ShoppingCart className="w-4 h-4" /> Compra Parcelada
           </Button>
-          <Button variant="outline" size="sm" onClick={() => {
-          setFixedBillSelectorMode("current");
-          setShowFixedBillSelector(true);
-        }} className="text-[10px] sm:text-xs h-8 px-2 sm:px-3">
-            <Settings className="w-3 h-3 mr-1" />
-            <span className="hidden sm:inline">Gerenciar Fixas</span>
-            <span className="sm:hidden">Fixas</span>
+          <Button variant="outline" size="sm" onClick={() => { setFixedBillSelectorMode("current"); setShowFixedBillSelector(true); }} className="rounded-full h-10 px-5 font-bold gap-2">
+            <Settings className="w-4 h-4" /> Gerenciar Fixas
           </Button>
-          <Button variant="outline" size="sm" onClick={() => {
-          setFixedBillSelectorMode("future");
-          setShowFixedBillSelector(true);
-        }} className="text-[10px] sm:text-xs h-8 px-2 sm:px-3">
-            <Plus className="w-3 h-3 mr-1" />
-            <span className="hidden sm:inline">Adiantar</span>
-            <span className="sm:hidden">Adiant.</span>
+          <Button onClick={() => { setFixedBillSelectorMode("future"); setShowFixedBillSelector(true); }} className="rounded-full h-10 px-6 font-bold gap-2 shadow-lg shadow-primary/20">
+            <Plus className="w-4 h-4" /> Adiantar
           </Button>
         </div>
       </div>
 
-      {/* Lista de contas - tabela desktop */}
-      <div className="flex-1 overflow-hidden flex flex-col">
-        <BillsTrackerList bills={combinedBills} onUpdateBill={handleUpdateBill} onDeleteBill={handleDeleteBill} onAddBill={handleAddBill} onTogglePaid={handleTogglePaid} currentDate={currentDate} />
+      <div className="flex-1 overflow-hidden bg-card rounded-[2.5rem] border border-border/40 shadow-sm">
+        <BillsTrackerList 
+          bills={combinedBills} 
+          onUpdateBill={updateBill} 
+          onDeleteBill={deleteBill} 
+          onAddBill={(b) => setBillsTracker(prev => [...prev, { ...b, id: generateBillId(), type: 'tracker', isPaid: false, isExcluded: false }])} 
+          onTogglePaid={handleTogglePaid} 
+          currentDate={currentDate} 
+        />
       </div>
-    </>;
+    </div>
+  );
 
-  // Mobile: conteúdo em cards verticais (Pixel Style) – novo layout Contas a Pagar
-  const renderMobileContent = () => <>
-      {/* Cabeçalho de navegação de mês */}
-      <div className="flex items-center justify-between mb-3 shrink-0 gap-2 flex-wrap">
-        <div className="flex items-center bg-muted/50 rounded-2xl p-1 border border-border/50 shadow-sm">
-          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleMonthChange("prev")}>
-            <ChevronLeft className="w-4 h-4" />
-          </Button>
-          <div className="px-2 min-w-[90px] text-center">
-            <p className="text-[11px] font-semibold text-foreground leading-tight">
-              {format(currentDate, "MMMM yyyy", {
-              locale: ptBR
-            })}
-            </p>
-            <p className="text-[10px] uppercase tracking-wide text-muted-foreground leading-tight">
-              Contas a pagar
-            </p>
-          </div>
-          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleMonthChange("next")}>
-            <ChevronRight className="w-4 h-4" />
-          </Button>
+  const renderMobileContent = () => (
+    <div className="flex flex-col h-full space-y-6">
+      {/* Header Mobile Expressivo */}
+      <div className="flex items-center justify-between bg-muted/30 p-2 rounded-[2rem] border border-border/40">
+        <Button variant="ghost" size="icon" className="h-12 w-12 rounded-full" onClick={() => handleMonthChange("prev")}>
+          <ChevronLeft className="w-6 h-6" />
+        </Button>
+        <div className="text-center">
+          <p className="text-xs font-black uppercase tracking-widest text-muted-foreground">Período</p>
+          <p className="text-lg font-black text-foreground capitalize">
+            {format(currentDate, "MMMM yyyy", { locale: ptBR })}
+          </p>
+        </div>
+        <Button variant="ghost" size="icon" className="h-12 w-12 rounded-full" onClick={() => handleMonthChange("next")}>
+          <ChevronRight className="w-6 h-6" />
+        </Button>
+      </div>
+
+      {/* KPIs Mobile em Cards */}
+      <div className="grid grid-cols-2 gap-4">
+        <div className="p-5 rounded-[2rem] bg-destructive/5 border border-destructive/10">
+          <p className="text-[10px] font-black uppercase tracking-widest text-destructive/60 mb-1">A Pagar</p>
+          <p className="text-xl font-black text-destructive">{formatCurrency(totalUnpaidBills)}</p>
+        </div>
+        <div className="p-5 rounded-[2rem] bg-success/5 border border-success/10">
+          <p className="text-[10px] font-black uppercase tracking-widest text-success/60 mb-1">Pago</p>
+          <p className="text-xl font-black text-success">{formatCurrency(totalPaidBills)}</p>
         </div>
       </div>
 
-      {/* Conteúdo scrollável - agora usando scroll da própria página, sem ScrollArea interna */}
-      <div className="flex-1 flex flex-col gap-3 pb-24 pr-1 animate-fade-in">
-        <div className="space-y-3">
-          {/* Cards-resumo principais */}
-          <div className="grid grid-cols-2 gap-3">
-            <div className="rounded-2xl bg-card shadow-lg shadow-primary/5 border border-border/60 px-3 py-2.5 flex flex-col justify-between">
-              <p className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground mb-0.5">
-                Total a pagar
-              </p>
-              <p className="text-lg font-extrabold text-destructive leading-snug">
-                {formatCurrency(totalUnpaidBills)}
-              </p>
-            </div>
-
-            <div className="rounded-2xl bg-card shadow-lg shadow-success/5 border border-border/60 px-3 py-2.5 flex flex-col justify-between">
-              <p className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground mb-0.5">
-                Resistir programação
-              </p>
-              <p className="text-lg font-extrabold text-success leading-snug">
-                {formatCurrency(totalPaidBills)}
-              </p>
-            </div>
-
-            <div className="col-span-2 rounded-2xl bg-card shadow-lg shadow-primary/5 border border-border/60 px-3 py-2.5 flex items-center justify-between">
-              <div>
-                <p className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground mb-0.5">
-                  Próximos vencimentos
+      {/* Lista de Contas Mobile */}
+      <div className="flex-1 overflow-y-auto space-y-3 pb-24">
+        {combinedBills.map(bill => {
+          const isPaid = bill.isPaid || bill.type === 'external_paid';
+          const isOverdue = !isPaid && parseDateLocal(bill.dueDate) < startOfDay(new Date());
+          
+          return (
+            <div 
+              key={bill.id}
+              className={cn(
+                "p-4 rounded-[1.75rem] border transition-all flex items-center gap-4",
+                isPaid ? "bg-success/5 border-success/20 opacity-70" : 
+                isOverdue ? "bg-destructive/5 border-destructive/20" : "bg-card border-border/60 shadow-sm"
+              )}
+            >
+              <div className={cn(
+                "w-12 h-12 rounded-2xl flex items-center justify-center shrink-0",
+                isPaid ? "bg-success/10 text-success" : "bg-primary/10 text-primary"
+              )}>
+                {bill.sourceType === 'loan_installment' ? <Building2 className="w-6 h-6" /> :
+                 bill.sourceType === 'insurance_installment' ? <Shield className="w-6 h-6" /> :
+                 bill.sourceType === 'purchase_installment' ? <ShoppingCart className="w-6 h-6" /> :
+                 <DollarSign className="w-6 h-6" />}
+              </div>
+              
+              <div className="flex-1 min-w-0">
+                <p className="font-bold text-sm truncate">{bill.description}</p>
+                <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
+                  Vence {format(parseDateLocal(bill.dueDate), 'dd/MM')}
                 </p>
-                <p className="text-base font-extrabold text-primary leading-snug">
-                  {formatCurrency(upcomingInfo.total)}
+              </div>
+
+              <div className="text-right space-y-1">
+                <p className={cn("font-black text-sm", isPaid ? "text-success" : "text-foreground")}>
+                  {formatCurrency(bill.expectedAmount)}
                 </p>
-              </div>
-              <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
-                <CalendarCheck className="w-3.5 h-3.5 text-primary" />
-                <span>
-                  {upcomingInfo.nextDate
-                    ? format(upcomingInfo.nextDate, "dd/MM", { locale: ptBR })
-                    : "Sem contas"}
-                </span>
-              </div>
-            </div>
-          </div>
-
-          {/* Placeholder para chamada de ação de nova despesa (formulário abre em modal) */}
-          <div
-            ref={newBillCardRef}
-            className="glass-card p-3 rounded-2xl bg-muted/30 border border-border/60 shrink-0 flex items-center justify-between"
-          >
-            <div className="space-y-0.5">
-              <p className="text-[11px] font-semibold text-muted-foreground">
-                Lançar nova despesa
-              </p>
-              <p className="text-[10px] text-muted-foreground">
-                Toque em "Nova despesa" abaixo para registrar um novo lançamento.
-              </p>
-            </div>
-          </div>
-
-          {/* Contas do mês - lista principal */}
-          <div className="space-y-2">
-            <div className="flex items-center justify-between px-1">
-              <p className="text-[10px] font-semibold uppercase tracking-tight text-muted-foreground">
-                Contas do mês
-              </p>
-              <div className="flex items-center gap-1 text-[10px] text-muted-foreground/80">
-                <Info className="w-3 h-3" />
-                <span>{mobileBills.length} itens</span>
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              {mobileBills.map(bill => {
-                const status = getBillStatus(bill);
-                const isTracker = bill.type === "tracker";
-                const isPaid = bill.isPaid || bill.type === "external_paid";
-                const dueDate = parseDateLocal(bill.dueDate);
-                let Icon = DollarSign;
-                let label = "Despesa";
-                if (bill.sourceType === "loan_installment") {
-                  Icon = Building2;
-                  label = "Empréstimo";
-                } else if (bill.sourceType === "insurance_installment") {
-                  Icon = Shield;
-                  label = "Seguro";
-                } else if (bill.sourceType === "fixed_expense") {
-                  Icon = Repeat;
-                  label = "Fixa";
-                } else if (bill.sourceType === "purchase_installment") {
-                  Icon = ShoppingCart;
-                  label = "Parcela";
-                } else if (bill.sourceType === "ad_hoc") {
-                  Icon = Info;
-                  label = "Avulsa";
-                }
-                return (
-                  <div
-                    key={bill.id}
-                    className={cn(
-                      "rounded-2xl border px-3 py-2.5 flex gap-3 items-center bg-card/95 shadow-sm",
-                      "border-border/60",
-                      status === "atrasado" && "border-destructive/40 bg-destructive/5",
-                      status === "pago" && "border-success/40 bg-success/5",
-                      bill.type === "external_paid" && "opacity-80"
-                    )}
+                {isBillTracker(bill) && (
+                  <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    className={cn("h-8 w-8 rounded-full", isPaid ? "text-success" : "text-muted-foreground")}
+                    onClick={() => handleTogglePaid(bill, !isPaid)}
                   >
-                    <div className="flex flex-col items-center gap-1">
-                      <div className="w-9 h-9 rounded-xl bg-muted/70 flex items-center justify-center">
-                        <Icon className="w-4 h-4 text-primary" />
-                      </div>
-                      <Badge
-                        variant="outline"
-                        className="px-1.5 py-0 h-5 text-[9px] border-0 font-semibold text-muted-foreground"
-                      >
-                        {label}
-                      </Badge>
-                    </div>
-
-                    <div className="flex-1 min-w-0 space-y-0.5">
-                      <p className="text-xs font-semibold text-foreground truncate">
-                        {bill.description}
-                      </p>
-                      <p className="text-[10px] text-muted-foreground truncate">
-                        {isTracker && bill.suggestedCategoryId
-                          ? categoriasV2.find(c => c.id === bill.suggestedCategoryId)?.label || "Sem categoria"
-                          : "Despesa do mês"}
-                      </p>
-                      <p className="text-[10px] text-muted-foreground/80">
-                        {status === "pago" ? "Pago em " : "Vence em "}
-                        {bill.paymentDate
-                          ? format(parseDateLocal(bill.paymentDate), "dd/MM", { locale: ptBR })
-                          : format(dueDate, "dd/MM", { locale: ptBR })}
-                      </p>
-                    </div>
-
-                    <div className="flex flex-col items-end justify-between gap-1 self-stretch">
-                      <p
-                        className={cn(
-                          "text-xs font-extrabold",
-                          status === "pago" || bill.type === "external_paid"
-                            ? "text-success"
-                            : status === "atrasado"
-                              ? "text-destructive"
-                              : "text-foreground"
-                        )}
-                      >
-                        {formatCurrency(bill.expectedAmount)}
-                      </p>
-
-                      <div className="flex items-center gap-2">
-                        {bill.type === "external_paid" ? (
-                          <CheckCircle2 className="w-4 h-4 text-success" />
-                        ) : (
-                          <Checkbox
-                            className="h-4 w-4"
-                            checked={isPaid}
-                            onCheckedChange={checked =>
-                              handleTogglePaid(bill, checked as boolean)
-                            }
-                          />
-                        )}
-
-                        <Badge
-                          variant="outline"
-                          className={cn(
-                            "h-5 px-1.5 text-[9px] font-semibold border-0",
-                            getBillStatusClasses(status)
-                          )}
-                        >
-                          {status === "pago"
-                            ? "Concluído"
-                            : status === "atrasado"
-                              ? "Vencido"
-                              : "Pendente"}
-                        </Badge>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* Procedimentos */}
-          <div className="space-y-2">
-            <div className="flex items-center justify-between px-1">
-              <p className="text-[10px] font-semibold uppercase tracking-tight text-muted-foreground">
-                Procedimentos
-              </p>
-            </div>
-
-            <div className="rounded-2xl bg-muted/40 border border-border/60 p-3 space-y-2 shadow-sm">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Settings className="w-4 h-4 text-muted-foreground" />
-                  <div className="text-[11px]">
-                    <p className="font-semibold text-foreground">Ajustar contas do mês</p>
-                    <p className="text-[10px] text-muted-foreground">
-                      Revise e categorize todas as contas pendentes deste mês.
-                    </p>
-                  </div>
-                </div>
+                    {isPaid ? <CheckCircle2 className="w-5 h-5" /> : <div className="w-5 h-5 rounded-full border-2 border-current" />}
+                  </Button>
+                )}
               </div>
             </div>
-          </div>
-        </div>
+          );
+        })}
       </div>
 
-      {/* Rodapé com ações principais */}
-      <div className="pt-2 pb-3 border-t border-border/60 bg-background/95 flex items-center justify-between gap-3 px-[10px] py-px">
-        <Button
-          className="flex-1 h-10 rounded-full text-sm font-semibold shadow-expressive bg-primary text-primary-foreground hover:bg-primary/90"
+      {/* FAB Mobile */}
+      <div className="fixed bottom-6 right-6 flex flex-col gap-3">
+        <Button 
+          size="icon" 
+          className="h-14 w-14 rounded-2xl shadow-xl bg-accent text-accent-foreground"
+          onClick={() => setShowAddPurchaseDialog(true)}
+        >
+          <ShoppingCart className="w-6 h-6" />
+        </Button>
+        <Button 
+          size="icon" 
+          className="h-16 w-16 rounded-[1.5rem] shadow-2xl bg-primary text-primary-foreground"
           onClick={() => setShowNewBillModal(true)}
         >
-          <Plus className="w-4 h-4 mr-1" />
-          Nova despesa
+          <Plus className="w-8 h-8" />
         </Button>
-
-        <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            size="icon"
-            className="h-9 w-9 rounded-full"
-            onClick={() => {
-              setFixedBillSelectorMode("current");
-              setShowFixedBillSelector(true);
-            }}
-          >
-            <Repeat className="w-4 h-4" />
-          </Button>
-          <Button
-            variant="outline"
-            size="icon"
-            className="h-9 w-9 rounded-full"
-            onClick={() => setShowAddPurchaseDialog(true)}
-          >
-            <ShoppingCart className="w-4 h-4" />
-          </Button>
-        </div>
       </div>
-    </>;
+    </div>
+  );
 
-  // Mobile: KPIs em cards horizontais (mantido para possíveis usos futuros, não exibido neste layout)
-  const renderMobileKPIs = () => null;
   return (
     <>
-      {isMobile ? (
-        open ? (
-          <div className="fixed inset-0 z-50 bg-background flex flex-col">
-            <header className="px-4 pt-3 pb-2 border-b shrink-0 bg-muted/20">
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-primary/10 rounded-lg">
-                  <CalendarCheck className="w-5 h-5 text-primary" />
+      {isMobile && open ? (
+        <div className="fixed inset-0 z-[100] bg-background flex flex-col animate-in fade-in slide-in-from-bottom-4 duration-300">
+          <header className="px-6 pt-8 pb-4 border-b shrink-0 bg-card">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center text-primary">
+                  <CalendarCheck className="w-6 h-6" />
                 </div>
                 <div>
-                  <p className="text-sm font-bold">Contas a Pagar</p>
-                  <p className="text-[10px] text-muted-foreground">
-                    {format(currentDate, "MMMM yyyy", {
-                      locale: ptBR,
-                    })}
-                  </p>
+                  <h2 className="text-xl font-black tracking-tight">Contas a Pagar</h2>
+                  <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Gestão de Fluxo</p>
                 </div>
               </div>
-            </header>
-
-            {/* Conteúdo principal em tela cheia */}
-            <main className="flex-1 flex flex-col p-4 overflow-y-auto bg-background">
-              {renderMobileContent()}
-            </main>
-          </div>
-        ) : null
+              <Button variant="ghost" size="icon" className="rounded-full h-12 w-12" onClick={() => onOpenChange(false)}>
+                <X className="w-6 h-6" />
+              </Button>
+            </div>
+          </header>
+          <main className="flex-1 p-6 overflow-hidden">
+            {renderMobileContent()}
+          </main>
+        </div>
       ) : (
-        /* Desktop: Dialog com ResizableDialogContent */
         <Dialog open={open} onOpenChange={onOpenChange}>
           <ResizableDialogContent
-            storageKey="bills_tracker_modal"
+            storageKey="bills_tracker_modal_v2"
             initialWidth={1300}
-            initialHeight={800}
-            minWidth={900}
-            minHeight={600}
+            initialHeight={850}
+            minWidth={1000}
+            minHeight={700}
             hideCloseButton={true}
-            className="bg-card border-border overflow-hidden flex flex-col p-0"
+            className="rounded-[3rem] bg-background border-none shadow-2xl p-0 overflow-hidden"
           >
             <div className="modal-viewport">
-              <DialogHeader className="px-6 pt-3 pb-3 border-b shrink-0 bg-muted/20">
+              <DialogHeader className="px-10 pt-10 pb-6 bg-background shrink-0">
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 bg-primary/10 rounded-lg">
-                      <CalendarCheck className="w-5 h-5 text-primary" />
+                  <div className="flex items-center gap-5">
+                    <div className="w-16 h-16 rounded-[1.5rem] bg-primary/10 flex items-center justify-center text-primary shadow-lg shadow-primary/5">
+                      <CalendarCheck className="w-8 h-8" />
                     </div>
                     <div>
-                      <DialogTitle className="cq-text-lg font-bold">
-                        Contas a Pagar
-                      </DialogTitle>
-                      <p className="cq-text-xs text-muted-foreground">
-                        Gestão de despesas de {" "}
-                        {format(currentDate, "MMMM yyyy", {
-                          locale: ptBR,
-                        })}
+                      <DialogTitle className="text-3xl font-black tracking-tighter">Contas a Pagar</DialogTitle>
+                      <p className="text-sm font-bold text-muted-foreground flex items-center gap-2 mt-1 uppercase tracking-wider">
+                        <Zap className="w-4 h-4 text-accent" />
+                        Planejamento e Execução de Fluxo
                       </p>
                     </div>
                   </div>
+                  <Button variant="ghost" size="icon" className="h-12 w-12 rounded-full hover:bg-black/5 transition-colors" onClick={() => onOpenChange(false)}>
+                    <X className="w-6 h-6" />
+                  </Button>
                 </div>
               </DialogHeader>
 
               <div className="flex flex-1 overflow-hidden">
-                {/* Sidebar de KPIs com largura proporcional e contêiner próprio */}
-                <div className="w-[20%] min-w-[210px] max-w-[320px] shrink-0 border-r border-border bg-muted/10 sidebar-container">
-                  <div className="p-4 overflow-y-auto h-full">
-                    <BillsSidebarKPIs
-                      currentDate={currentDate}
-                      totalPendingBills={totalUnpaidBills}
-                      totalPaidBills={totalPaidBills}
-                    />
-                  </div>
+                <div className="w-[280px] shrink-0 border-r border-border/40 bg-surface-light dark:bg-surface-dark p-8">
+                  <BillsSidebarKPIs
+                    currentDate={currentDate}
+                    totalPendingBills={totalUnpaidBills}
+                    totalPaidBills={totalPaidBills}
+                  />
                 </div>
-
-                {/* Conteúdo Principal Flexível */}
-                <div className="flex-1 flex flex-col cq-p-md overflow-hidden bg-background">
+                <div className="flex-1 p-8 overflow-hidden bg-background">
                   {renderDesktopContent()}
                 </div>
               </div>
@@ -765,92 +449,112 @@ export function BillsTrackerModal({
         </Dialog>
       )}
 
-      {/* Modal de Nova Despesa (usado principalmente no mobile) */}
-      <Dialog open={showNewBillModal} onOpenChange={setShowNewBillModal}>
-        <DialogContent className="max-w-[min(95vw,24rem)]">
-          <DialogHeader>
-            <DialogTitle className="text-base font-semibold">
-              Nova despesa do mês
-            </DialogTitle>
-          </DialogHeader>
+      {/* Modais Auxiliares */}
+      <FixedBillSelectorModal
+        open={showFixedBillSelector}
+        onOpenChange={setShowFixedBillSelector}
+        mode={fixedBillSelectorMode}
+        currentDate={currentDate}
+        potentialFixedBills={fixedBillSelectorMode === "current" ? potentialFixedBills : futureFixedBills}
+        onToggleFixedBill={handleToggleFixedBill}
+      />
+      
+      <AddPurchaseInstallmentDialog
+        open={showAddPurchaseDialog}
+        onOpenChange={setShowAddPurchaseDialog}
+        currentDate={currentDate}
+      />
 
-          <div className="space-y-3 mt-1">
-            <div className="space-y-1.5">
-              <p className="text-[11px] font-medium text-muted-foreground">
-                Descrição
-              </p>
-              <Input
+      <Dialog open={showNewBillModal} onOpenChange={setShowNewBillModal}>
+        <DialogContent className="max-w-md rounded-[2.5rem] p-8">
+          <DialogHeader>
+            <DialogTitle className="text-2xl font-black tracking-tight">Nova Despesa</DialogTitle>
+            <DialogDescription className="font-bold text-muted-foreground">Lançamento avulso no contas a pagar</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-6 py-4">
+            <div className="space-y-2">
+              <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground px-1">Descrição</Label>
+              <Input 
+                placeholder="Ex: Manutenção Ar Condicionado" 
+                className="h-12 border-2 rounded-xl font-bold"
                 value={newBillDescription}
                 onChange={e => setNewBillDescription(e.target.value)}
-                placeholder="Ex.: assinatura, boleto, conta pontual..."
               />
             </div>
-
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1.5">
-                <p className="text-[11px] font-medium text-muted-foreground">
-                  Valor
-                </p>
-                <Input
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground px-1">Valor</Label>
+                <Input 
+                  placeholder="0,00" 
+                  className="h-12 border-2 rounded-xl font-black text-lg"
                   value={newBillAmount}
                   onChange={e => setNewBillAmount(formatAmountInput(e.target.value))}
-                  placeholder="0,00"
-                  inputMode="decimal"
                 />
               </div>
-              <div className="space-y-1.5">
-                <p className="text-[11px] font-medium text-muted-foreground">
-                  Vencimento
-                </p>
-                <Input
-                  type="date"
+              <div className="space-y-2">
+                <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground px-1">Vencimento</Label>
+                <Input 
+                  type="date" 
+                  className="h-12 border-2 rounded-xl font-bold"
                   value={newBillDueDate}
                   onChange={e => setNewBillDueDate(e.target.value)}
                 />
               </div>
             </div>
           </div>
-
-          <div className="mt-4 flex justify-end gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setShowNewBillModal(false)}
-            >
-              Cancelar
-            </Button>
-            <Button
-              size="sm"
-              className="rounded-full"
+          <DialogFooter>
+            <Button 
+              className="w-full h-14 rounded-2xl font-black text-base shadow-xl shadow-primary/20"
               onClick={() => {
-                const ok = handleAddAdHocBill();
-                if (ok) setShowNewBillModal(false);
+                if (handleAddAdHocBill()) setShowNewBillModal(false);
               }}
             >
-              <Plus className="w-4 h-4 mr-1" />
-              Salvar despesa
+              ADICIONAR CONTA
             </Button>
-          </div>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
-
-      <FixedBillSelectorModal
-        open={showFixedBillSelector}
-        onOpenChange={setShowFixedBillSelector}
-        mode={fixedBillSelectorMode}
-        currentDate={currentDate}
-        potentialFixedBills={
-          fixedBillSelectorMode === "current"
-            ? potentialFixedBills
-            : futureFixedBills
-        }
-        onToggleFixedBill={handleToggleFixedBill}
-      />
-      <AddPurchaseInstallmentDialog
-        open={showAddPurchaseDialog}
-        onOpenChange={setShowAddPurchaseDialog}
-        currentDate={currentDate}
-      />
     </>
   );
+
+  // Helper para adicionar conta avulsa
+  const [newBillDescription, setNewBillDescription] = useState("");
+  const [newBillAmount, setNewBillAmount] = useState("");
+  const [newBillDueDate, setNewBillDueDate] = useState(format(currentDate, "yyyy-MM-dd"));
+
+  const handleAddAdHocBill = (): boolean => {
+    const amount = parseAmount(newBillAmount);
+    if (!newBillDescription || amount <= 0 || !newBillDueDate) {
+      toast.error("Preencha todos os campos.");
+      return false;
+    }
+    setBillsTracker(prev => [...prev, {
+      id: generateBillId(),
+      type: 'tracker',
+      description: newBillDescription,
+      dueDate: newBillDueDate,
+      expectedAmount: amount,
+      sourceType: "ad_hoc",
+      suggestedAccountId: contasMovimento.find(c => c.accountType === "corrente")?.id,
+      suggestedCategoryId: null,
+      isPaid: false,
+      isExcluded: false
+    }]);
+    setNewBillDescription("");
+    setNewBillAmount("");
+    toast.success("Despesa adicionada.");
+    return true;
+  };
+
+  const parseAmount = (value: string): number => {
+    const parsed = parseFloat(value.replace(".", "").replace(",", "."));
+    return isNaN(parsed) ? 0 : parsed;
+  };
+
+  const formatAmountInput = (value: string) => {
+    const cleaned = value.replace(/[^\d,]/g, "");
+    const parts = cleaned.split(",");
+    if (parts.length > 2) return value;
+    return cleaned;
+  };
 }
