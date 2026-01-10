@@ -1,4 +1,4 @@
-import { NavLink, useLocation, useNavigate } from "react-router-dom";
+import { NavLink, useLocation } from "react-router-dom";
 import {
   LayoutDashboard,
   Receipt,
@@ -8,52 +8,42 @@ import {
   Car,
   Download,
   Upload,
-  MoreVertical,
+  Menu,
   Bell,
-  ArrowLeft,
+  Settings2,
+  X,
+  Palette
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useFinance } from "@/contexts/FinanceContext";
-import { toast } from "@/hooks/use-toast";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+import { toast } from "sonner";
 import { useRef, useState } from "react";
 import { useTheme } from "@/contexts/ThemeContext";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Drawer, DrawerClose, DrawerContent, DrawerHeader, DrawerTitle } from "@/components/ui/drawer";
+import {
+  Drawer,
+  DrawerContent,
+  DrawerHeader,
+  DrawerTitle,
+  DrawerTrigger,
+  DrawerClose,
+} from "@/components/ui/drawer";
 import { SidebarAlertas } from "@/components/dashboard/SidebarAlertas";
-
-const FINANCE_ITEMS = [
-  { label: "Extratos", to: "/receitas-despesas", icon: Receipt },
-  { label: "Empréstimos", to: "/emprestimos", icon: CreditCard },
-  { label: "Relatórios", to: "/relatorios", icon: BarChart3 },
-] as const;
+import { Button } from "@/components/ui/button";
+import { Separator } from "@/components/ui/separator";
 
 export function BottomNav() {
   const location = useLocation();
-  const navigate = useNavigate();
   const { exportData, importData } = useFinance();
   const { theme, setTheme, themes } = useTheme();
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [showAlerts, setShowAlerts] = useState(false);
   const [showNavDrawer, setShowNavDrawer] = useState(false);
-  const [showFinanceGroup, setShowFinanceGroup] = useState(false);
 
   const isPathActive = (path: string) => location.pathname === path;
-  const isFinanceActive = FINANCE_ITEMS.some((item) => isPathActive(item.to));
 
   const handleExport = () => {
     exportData();
-    toast({
-      title: "Exportação concluída",
-      description: "Arquivo finance-data.json baixado com sucesso!",
-    });
+    toast.success("Arquivo finance-data.json baixado com sucesso!");
+    setShowNavDrawer(false);
   };
 
   const handleImportClick = () => {
@@ -65,29 +55,46 @@ export function BottomNav() {
     if (!file) return;
 
     if (!file.name.endsWith(".json")) {
-      toast({
-        title: "Erro",
-        description: "Por favor, selecione um arquivo JSON válido.",
-        variant: "destructive",
-      });
+      toast.error("Por favor, selecione um arquivo JSON válido.");
       return;
     }
 
     const result = await importData(file);
-    toast({
-      title: result.success ? "Sucesso" : "Erro",
-      description: result.message,
-      variant: result.success ? "default" : "destructive",
-    });
+    if (result.success) {
+      toast.success(result.message);
+      setShowNavDrawer(false);
+    } else {
+      toast.error(result.message);
+    }
 
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
     }
   };
 
+  const NavItem = ({ to, icon: Icon, label }: { to: string; icon: any; label: string }) => (
+    <NavLink
+      to={to}
+      className={({ isActive }) =>
+        cn(
+          "flex-1 flex flex-col items-center justify-center gap-1 py-1 transition-all duration-300",
+          isActive ? "text-primary scale-110" : "text-muted-foreground hover:text-foreground"
+        )
+      }
+    >
+      <div className={cn(
+        "p-2 rounded-2xl transition-colors",
+        isPathActive(to) ? "bg-primary/10" : "bg-transparent"
+      )}>
+        <Icon className="h-5 w-5" />
+      </div>
+      <span className="text-[10px] font-bold uppercase tracking-tighter">{label}</span>
+    </NavLink>
+  );
+
   return (
-    <nav className="fixed bottom-4 inset-x-0 z-40 flex justify-center md:hidden pointer-events-none px-4">
-      <div className="pointer-events-auto glass-card rounded-full border border-border/60 bg-card/95 shadow-lg max-w-[480px] w-full overflow-hidden transition-all duration-300">
+    <nav className="fixed bottom-4 inset-x-0 z-40 flex justify-center md:hidden px-4 pointer-events-none">
+      <div className="pointer-events-auto glass-card rounded-full border border-border/60 bg-card/95 shadow-2xl max-w-[500px] w-full overflow-hidden">
         <input
           ref={fileInputRef}
           type="file"
@@ -96,190 +103,130 @@ export function BottomNav() {
           onChange={handleFileChange}
         />
 
-        <div className="flex items-center h-16 px-2">
-          {/* Container animado para troca de itens na mesma linha */}
-          <div className="flex flex-1 items-center h-full relative overflow-hidden">
-            
-            {/* Menu Principal */}
-            <div className={cn(
-              "flex items-center gap-1 w-full transition-all duration-300 transform absolute inset-0 px-2",
-              showFinanceGroup ? "-translate-x-full opacity-0 pointer-events-none" : "translate-x-0 opacity-100"
-            )}>
-              <NavLink
-                to="/"
-                className={({ isActive }) =>
-                  cn(
-                    "flex-1 flex flex-col items-center justify-center gap-1 py-1 text-[10px] font-medium transition-colors",
-                    isActive ? "text-primary" : "text-muted-foreground"
-                  )
-                }
-              >
-                <div className={cn("p-2 rounded-xl transition-colors", isPathActive("/") && "bg-primary/10")}>
-                  <LayoutDashboard className="h-5 w-5" />
-                </div>
-                <span>Início</span>
-              </NavLink>
+        <div className="flex items-center h-16 px-1">
+          <NavItem to="/" icon={LayoutDashboard} label="Início" />
+          <NavItem to="/receitas-despesas" icon={Receipt} label="Finanças" />
+          <NavItem to="/investimentos" icon={TrendingUp} label="Investir" />
+          <NavItem to="/veiculos" icon={Car} label="Bens" />
 
+          {/* Botão Menu - Abre o Drawer */}
+          <Drawer open={showNavDrawer} onOpenChange={setShowNavDrawer}>
+            <DrawerTrigger asChild>
               <button
                 type="button"
-                onClick={() => setShowFinanceGroup(true)}
                 className={cn(
-                  "flex-1 flex flex-col items-center justify-center gap-1 py-1 text-[10px] font-medium transition-colors",
-                  isFinanceActive ? "text-primary" : "text-muted-foreground"
+                  "flex-1 flex flex-col items-center justify-center gap-1 py-1 text-muted-foreground",
+                  showNavDrawer && "text-primary"
                 )}
               >
-                <div className={cn("p-2 rounded-xl transition-colors", isFinanceActive && "bg-primary/10")}>
-                  <Receipt className="h-5 w-5" />
+                <div className={cn("p-2 rounded-xl transition-colors", showNavDrawer && "bg-primary/10")}>
+                  <Menu className="h-5 w-5" />
                 </div>
-                <span>Financeiro</span>
+                <span className="text-[10px] font-bold uppercase tracking-tighter">Mais</span>
               </button>
+            </DrawerTrigger>
+            <DrawerContent className="rounded-t-[2rem] border-t-border bg-card max-h-[85vh]">
+              <div className="mx-auto w-12 h-1.5 bg-muted rounded-full mt-3 mb-2" />
+              
+              <DrawerHeader className="px-6 pb-2">
+                <DrawerTitle className="text-left text-lg font-bold flex items-center gap-2">
+                  <Settings2 className="w-5 h-5 text-primary" />
+                  Menu de Opções
+                </DrawerTitle>
+              </DrawerHeader>
 
-              <NavLink
-                to="/investimentos"
-                className={({ isActive }) =>
-                  cn(
-                    "flex-1 flex flex-col items-center justify-center gap-1 py-1 text-[10px] font-medium transition-colors",
-                    isActive ? "text-primary" : "text-muted-foreground"
-                  )
-                }
-              >
-                <div className={cn("p-2 rounded-xl transition-colors", isPathActive("/investimentos") && "bg-primary/10")}>
-                  <TrendingUp className="h-5 w-5" />
+              <div className="px-6 py-4 space-y-6 overflow-y-auto hide-scrollbar-mobile pb-10">
+                {/* Atalhos Secundários */}
+                <div className="grid grid-cols-2 gap-3">
+                  <NavLink
+                    to="/emprestimos"
+                    onClick={() => setShowNavDrawer(false)}
+                    className="flex flex-col items-center gap-2 p-4 rounded-3xl bg-muted/30 border border-border/50 active:bg-muted"
+                  >
+                    <CreditCard className="w-6 h-6 text-warning" />
+                    <span className="text-xs font-bold">Empréstimos</span>
+                  </NavLink>
+                  <NavLink
+                    to="/relatorios"
+                    onClick={() => setShowNavDrawer(false)}
+                    className="flex flex-col items-center gap-2 p-4 rounded-3xl bg-muted/30 border border-border/50 active:bg-muted"
+                  >
+                    <BarChart3 className="w-6 h-6 text-info" />
+                    <span className="text-xs font-bold">Relatórios</span>
+                  </NavLink>
                 </div>
-                <span>Investir</span>
-              </NavLink>
 
-              <NavLink
-                to="/veiculos"
-                className={({ isActive }) =>
-                  cn(
-                    "flex-1 flex flex-col items-center justify-center gap-1 py-1 text-[10px] font-medium transition-colors",
-                    isActive ? "text-primary" : "text-muted-foreground"
-                  )
-                }
-              >
-                <div className={cn("p-2 rounded-xl transition-colors", isPathActive("/veiculos") && "bg-primary/10")}>
-                  <Car className="h-5 w-5" />
+                <Separator />
+
+                {/* Seção de Temas */}
+                <div className="space-y-3">
+                  <p className="text-[11px] font-bold uppercase text-muted-foreground tracking-widest flex items-center gap-2">
+                    <Palette className="w-3 h-3" /> Aparência
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    {themes.map((t) => (
+                      <button
+                        key={t.id}
+                        onClick={() => setTheme(t.id)}
+                        className={cn(
+                          "flex-1 min-w-[100px] flex items-center justify-center gap-2 px-3 py-2.5 rounded-2xl border text-xs font-medium transition-all",
+                          theme === t.id 
+                            ? "bg-primary text-primary-foreground border-primary shadow-lg" 
+                            : "bg-muted/50 text-muted-foreground border-border"
+                        )}
+                      >
+                        <span>{t.icon}</span>
+                        {t.id === "system" ? "Auto" : t.id === "brown-light" ? "Claro" : "Escuro"}
+                      </button>
+                    ))}
+                  </div>
                 </div>
-                <span>Veículos</span>
-              </NavLink>
-            </div>
 
-            {/* Menu Financeiro (Submenu) */}
-            <div className={cn(
-              "flex items-center gap-1 w-full transition-all duration-300 transform absolute inset-0 px-2",
-              showFinanceGroup ? "translate-x-0 opacity-100" : "translate-x-full opacity-0 pointer-events-none"
-            )}>
-              <button
-                type="button"
-                onClick={() => setShowFinanceGroup(false)}
-                className="flex-none flex flex-col items-center justify-center gap-1 p-2 text-primary"
-              >
-                <div className="p-2 rounded-full bg-primary/10">
-                  <ArrowLeft className="h-5 w-5" />
-                </div>
-                <span className="text-[10px] font-bold">Voltar</span>
-              </button>
+                <Separator />
 
-              <div className="flex-1 flex items-center justify-around">
-                {FINANCE_ITEMS.map((item) => {
-                  const Icon = item.icon;
-                  const active = isPathActive(item.to);
-                  return (
-                    <button
-                      key={item.to}
-                      type="button"
-                      onClick={() => {
-                        navigate(item.to);
-                        setShowFinanceGroup(false);
-                      }}
-                      className={cn(
-                        "flex flex-col items-center justify-center gap-1 py-1 text-[10px] font-medium transition-colors",
-                        active ? "text-primary" : "text-muted-foreground"
-                      )}
+                {/* Dados e Alertas */}
+                <div className="space-y-3">
+                  <p className="text-[11px] font-bold uppercase text-muted-foreground tracking-widest">Ações de Dados</p>
+                  <div className="space-y-2">
+                    <Button 
+                      variant="outline" 
+                      className="w-full justify-start h-12 rounded-2xl border-border/60 gap-3"
+                      onClick={handleExport}
                     >
-                      <div className={cn("p-2 rounded-xl transition-colors", active && "bg-primary/10")}>
-                        <Icon className="h-5 w-5" />
+                      <div className="p-1.5 rounded-lg bg-success/10 text-success">
+                        <Download className="w-4 h-4" />
                       </div>
-                      <span>{item.label}</span>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-
-          </div>
-
-          {/* Botão de Opções (Fixo à direita) */}
-          <div className="flex-none flex items-center justify-center pr-2">
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <button
-                  type="button"
-                  className="inline-flex h-10 w-10 items-center justify-center rounded-full text-muted-foreground hover:text-foreground transition-colors"
-                >
-                  <MoreVertical className="h-5 w-5" />
-                </button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent side="top" align="end" className="text-xs min-w-[220px] rounded-2xl mb-2">
-                <DropdownMenuLabel className="text-[11px] uppercase tracking-wide text-muted-foreground">
-                  Tema
-                </DropdownMenuLabel>
-                {themes.map((t) => {
-                  const isActive = theme === t.id;
-                  return (
-                    <DropdownMenuItem
-                      key={t.id}
-                      className={cn(
-                        "flex items-center gap-2 py-2 text-[11px]",
-                        isActive && "text-primary",
-                      )}
-                      onClick={() => setTheme(t.id)}
+                      Exportar Backup (.json)
+                    </Button>
+                    <Button 
+                      variant="outline" 
+                      className="w-full justify-start h-12 rounded-2xl border-border/60 gap-3"
+                      onClick={handleImportClick}
                     >
-                      <span className="text-sm leading-none">{t.icon}</span>
-                      <span className="truncate">
-                        {t.id === "system"
-                          ? "Sistema"
-                          : t.id === "brown-light"
-                          ? "Claro"
-                          : "Escuro"}
-                      </span>
-                    </DropdownMenuItem>
-                  );
-                })}
+                      <div className="p-1.5 rounded-lg bg-info/10 text-info">
+                        <Upload className="w-4 h-4" />
+                      </div>
+                      Importar Backup
+                    </Button>
+                  </div>
+                </div>
 
-                <DropdownMenuSeparator />
-                <DropdownMenuLabel className="text-[11px] uppercase tracking-wide text-muted-foreground">
-                  Dados & alertas
-                </DropdownMenuLabel>
-                <DropdownMenuItem onClick={handleExport} className="py-2">
-                  <Download className="mr-2 h-4 w-4" /> Exportar dados
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={handleImportClick} className="py-2">
-                  <Upload className="mr-2 h-4 w-4" /> Importar JSON
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setShowAlerts(true)} className="py-2">
-                  <Bell className="mr-2 h-4 w-4" /> Alertas
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
+                <Separator />
+
+                {/* Alertas integrados na gaveta */}
+                <div className="space-y-3 pb-4">
+                  <p className="text-[11px] font-bold uppercase text-muted-foreground tracking-widest flex items-center gap-2">
+                    <Bell className="w-3 h-3" /> Notificações do Sistema
+                  </p>
+                  <div className="bg-muted/20 rounded-3xl p-2 border border-border/40">
+                    <SidebarAlertas collapsed={false} />
+                  </div>
+                </div>
+              </div>
+            </DrawerContent>
+          </Drawer>
         </div>
       </div>
-
-      {/* Modal de alertas financeiros */}
-      <Dialog open={showAlerts} onOpenChange={setShowAlerts}>
-        <DialogContent className="max-w-sm p-0 overflow-hidden">
-          <DialogHeader className="px-4 pt-4 pb-2">
-            <DialogTitle className="flex items-center gap-2 text-sm">
-              <Bell className="w-4 h-4" /> Alertas financeiros
-            </DialogTitle>
-          </DialogHeader>
-          <div className="px-3 pb-4">
-            <SidebarAlertas collapsed={false} />
-          </div>
-        </DialogContent>
-      </Dialog>
     </nav>
   );
 }
