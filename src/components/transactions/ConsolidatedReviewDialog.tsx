@@ -1,10 +1,10 @@
 import { useState, useMemo, useCallback, useEffect } from "react";
 import { Dialog, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { FileText, Check, Loader2, X, Settings, Sparkles, Filter, Info } from "lucide-react";
+import { FileText, Check, Loader2, X, Sparkles, Filter, ChevronLeft } from "lucide-react";
 import { 
   ContaCorrente, Categoria, ImportedTransaction, StandardizationRule, 
-  TransacaoCompleta, TransferGroup, generateTransactionId, generateTransferGroupId, 
+  TransacaoCompleta, generateTransactionId, generateTransferGroupId, 
   getDomainFromOperation, getFlowTypeFromOperation, DateRange, ComparisonDateRanges,
   ImportedStatement,
   TransactionLinks
@@ -17,10 +17,11 @@ import { StandardizationRuleFormModal } from "./StandardizationRuleFormModal";
 import { ReviewContextSidebar } from "./ReviewContextSidebar";
 import { StandardizationRuleManagerModal } from "./StandardizationRuleManagerModal";
 import { ResizableSidebar } from "./ResizableSidebar";
-import { startOfMonth, endOfMonth, format, subDays, startOfDay, endOfDay } from "date-fns";
+import { startOfMonth, endOfMonth, format, startOfDay, endOfDay } from "date-fns";
 import { ResizableDialogContent } from "../ui/ResizableDialogContent";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { useMediaQuery } from "@/hooks/useMediaQuery";
 
 interface LoanInfo {
   id: string;
@@ -61,6 +62,7 @@ export function ConsolidatedReviewDialog({
   investments,
   loans,
 }: ConsolidatedReviewDialogProps) {
+  const isMobile = useMediaQuery("(max-width: 768px)");
   const {
     getTransactionsForReview,
     standardizationRules,
@@ -70,9 +72,10 @@ export function ConsolidatedReviewDialog({
     updateImportedStatement,
     importedStatements,
     markLoanParcelPaid,
-    markSeguroParcelPaid,
     addEmprestimo,
     addVeiculo,
+    setTransacoesV2,
+    uncontabilizeImportedTransaction
   } = useFinance();
   
   const account = accounts.find(a => a.id === accountId);
@@ -86,6 +89,7 @@ export function ConsolidatedReviewDialog({
   const [showRuleModal, setShowRuleModal] = useState(false);
   const [txForRule, setTxForRule] = useState<ImportedTransaction | null>(null);
   const [showRuleManagerModal, setShowRuleManagerModal] = useState(false);
+  const [mobileView, setMobileView] = useState<'list' | 'filters'>('list');
 
   const loadTransactions = useCallback(() => {
     if (!reviewRange.from || !reviewRange.to) {
@@ -178,71 +182,143 @@ export function ConsolidatedReviewDialog({
   const readyCount = useMemo(() => transactionsToReview.filter(tx => !tx.isPotentialDuplicate && (tx.categoryId || tx.isTransfer || tx.tempInvestmentId || tx.tempLoanId || tx.tempVehicleOperation || tx.operationType === 'liberacao_emprestimo')).length, [transactionsToReview]);
   const pendingCount = useMemo(() => transactionsToReview.filter(tx => !tx.isPotentialDuplicate && !(tx.categoryId || tx.isTransfer || tx.tempInvestmentId || tx.tempLoanId || tx.tempVehicleOperation || tx.operationType === 'liberacao_emprestimo')).length, [transactionsToReview]);
 
+  const renderContent = () => (
+    <div className="flex flex-1 overflow-hidden">
+      {!isMobile && (
+        <ResizableSidebar initialWidth={320} minWidth={240} maxWidth={400} storageKey="review_sidebar_width">
+          <div className="h-full bg-surface-light dark:bg-surface-dark border-r border-border/40">
+            <ReviewContextSidebar
+              accountId={accountId} statements={importedStatements.filter(s => s.accountId === accountId)}
+              pendingCount={pendingCount} readyToContabilizeCount={readyCount} totalCount={transactionsToReview.length}
+              reviewRange={reviewRange} onPeriodChange={r => setReviewRange(r.range1)} onApplyFilter={loadTransactions}
+              onContabilize={handleContabilize} onClose={() => onOpenChange(false)} onManageRules={() => setShowRuleManagerModal(true)}
+            />
+          </div>
+        </ResizableSidebar>
+      )}
+
+      <div className="flex-1 flex flex-col p-4 md:p-6 overflow-hidden bg-background">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-[11px] font-black uppercase tracking-widest text-muted-foreground flex items-center gap-2">
+             <Filter className="w-3.5 h-3.5" /> Lançamentos Pendentes
+          </h3>
+          <div className="flex items-center gap-2">
+             {isMobile && (
+               <Button variant="outline" size="sm" className="h-8 rounded-full text-[10px] font-bold" onClick={() => setMobileView('filters')}>
+                 Filtros
+               </Button>
+             )}
+             <Badge variant="secondary" className="bg-primary/5 text-primary border-none text-[10px] font-bold">
+              {transactionsToReview.length} itens
+             </Badge>
+          </div>
+        </div>
+        
+        <div className="flex-1 overflow-hidden bg-card rounded-[1.5rem] md:rounded-[2rem] border border-border/40 shadow-sm">
+          {loading ? (
+            <div className="flex flex-col items-center justify-center h-full opacity-50">
+              <Loader2 className="w-10 h-10 animate-spin mb-4" />
+              <p className="font-bold uppercase tracking-widest text-xs">Sincronizando...</p>
+            </div>
+          ) : transactionsToReview.length === 0 ? (
+            <div className="flex flex-col items-center justify-center h-full opacity-30 p-8 text-center">
+              <Check className="w-16 h-16 text-success mb-4" />
+              <p className="text-lg font-black">Tudo revisado!</p>
+              <p className="text-sm">Seu fluxo está 100% categorizado para este período.</p>
+            </div>
+          ) : (
+            <ScrollArea className="h-full">
+              <TransactionReviewTable
+                transactions={transactionsToReview} accounts={accounts} categories={categories}
+                investments={investments} loans={loans} onUpdateTransaction={handleUpdateTransaction} onCreateRule={handleCreateRule}
+              />
+            </ScrollArea>
+          )}
+        </div>
+
+        {isMobile && transactionsToReview.length > 0 && (
+          <div className="mt-4 shrink-0">
+            <Button 
+              onClick={handleContabilize} 
+              disabled={readyCount === 0}
+              className="w-full h-12 rounded-2xl font-bold shadow-lg"
+            >
+              Contabilizar {readyCount} itens
+            </Button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+
+  if (isMobile && open) {
+    return (
+      <div className="fixed inset-0 z-50 bg-background flex flex-col animate-in fade-in slide-in-from-bottom-4 duration-300">
+        <header className="px-4 pt-4 pb-3 border-b shrink-0 bg-surface-light dark:bg-surface-dark">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <Button variant="ghost" size="icon" className="rounded-full" onClick={() => onOpenChange(false)}>
+                <ChevronLeft className="w-6 h-6" />
+              </Button>
+              <div>
+                <h2 className="text-lg font-black tracking-tight">Revisão de Extrato</h2>
+                <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">{account?.name}</p>
+              </div>
+            </div>
+            <Button variant="ghost" size="icon" className="rounded-full" onClick={() => setShowRuleManagerModal(true)}>
+              <Sparkles className="w-5 h-5 text-primary" />
+            </Button>
+          </div>
+        </header>
+
+        {mobileView === 'filters' ? (
+          <div className="flex-1 p-4 bg-surface-light dark:bg-surface-dark overflow-y-auto">
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="font-black uppercase tracking-widest text-xs">Ajustes de Período</h3>
+              <Button variant="ghost" size="sm" onClick={() => setMobileView('list')}>Voltar</Button>
+            </div>
+            <ReviewContextSidebar
+              accountId={accountId} statements={importedStatements.filter(s => s.accountId === accountId)}
+              pendingCount={pendingCount} readyToContabilizeCount={readyCount} totalCount={transactionsToReview.length}
+              reviewRange={reviewRange} onPeriodChange={r => setReviewRange(r.range1)} onApplyFilter={() => { loadTransactions(); setMobileView('list'); }}
+              onContabilize={handleContabilize} onClose={() => onOpenChange(false)} onManageRules={() => setShowRuleManagerModal(true)}
+            />
+          </div>
+        ) : renderContent()}
+      </div>
+    );
+  }
+
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
         <ResizableDialogContent 
           storageKey="consolidated_review_modal"
           initialWidth={1400} initialHeight={850} minWidth={900} minHeight={600} hideCloseButton={true}
-          className="rounded-[2.5rem] bg-surface-light dark:bg-surface-dark border-none shadow-2xl"
+          className="rounded-[2.5rem] bg-surface-light dark:bg-surface-dark border-none shadow-2xl p-0 overflow-hidden"
         >
-          <DialogHeader className="px-8 pt-8 pb-4 bg-surface-light dark:bg-surface-dark shrink-0">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-4">
-                <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center text-primary shadow-lg shadow-primary/5">
-                  <FileText className="w-7 h-7" />
+          <div className="modal-viewport">
+            <DialogHeader className="px-8 pt-8 pb-4 bg-surface-light dark:bg-surface-dark shrink-0">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                  <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center text-primary shadow-lg shadow-primary/5">
+                    <FileText className="w-7 h-7" />
+                  </div>
+                  <div>
+                    <DialogTitle className="text-2xl font-black tracking-tight">Painel de Revisão</DialogTitle>
+                    <DialogDescription className="text-sm font-medium text-muted-foreground flex items-center gap-1.5 mt-1">
+                      <Sparkles className="w-3.5 h-3.5 text-accent" />
+                      {account?.name} • Extratos Importados
+                    </DialogDescription>
+                  </div>
                 </div>
-                <div>
-                  <DialogTitle className="text-2xl font-black tracking-tight">Painel de Revisão</DialogTitle>
-                  <DialogDescription className="text-sm font-medium text-muted-foreground flex items-center gap-1.5 mt-1">
-                    <Sparkles className="w-3.5 h-3.5 text-accent" />
-                    {account?.name} • Extratos Importados
-                  </DialogDescription>
-                </div>
+                <Button variant="ghost" size="icon" className="h-10 w-10 rounded-full hover:bg-black/5" onClick={() => onOpenChange(false)}>
+                  <X className="w-5 h-5" />
+                </Button>
               </div>
-              <Button variant="ghost" size="icon" className="h-10 w-10 rounded-full hover:bg-black/5" onClick={() => onOpenChange(false)}><X className="w-5 h-5" /></Button>
-            </div>
-          </DialogHeader>
+            </DialogHeader>
 
-          <div className="flex flex-1 overflow-hidden">
-            <ResizableSidebar initialWidth={320} minWidth={240} maxWidth={400} storageKey="review_sidebar_width">
-                <div className="h-full bg-surface-light dark:bg-surface-dark border-r border-border/40">
-                  <ReviewContextSidebar
-                      accountId={accountId} statements={importedStatements.filter(s => s.accountId === accountId)}
-                      pendingCount={pendingCount} readyToContabilizeCount={readyCount} totalCount={transactionsToReview.length}
-                      reviewRange={reviewRange} onPeriodChange={r => setReviewRange(r.range1)} onApplyFilter={loadTransactions}
-                      onContabilize={handleContabilize} onClose={() => onOpenChange(false)} onManageRules={() => setShowRuleManagerModal(true)}
-                  />
-                </div>
-            </ResizableSidebar>
-
-            <div className="flex-1 flex flex-col p-6 overflow-hidden bg-background">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-[11px] font-black uppercase tracking-widest text-muted-foreground flex items-center gap-2">
-                   <Filter className="w-3.5 h-3.5" /> Lançamentos Pendentes
-                </h3>
-                <div className="flex items-center gap-2">
-                   <Badge variant="secondary" className="bg-primary/5 text-primary border-none text-[10px] font-bold">
-                    {transactionsToReview.length} itens no período
-                   </Badge>
-                </div>
-              </div>
-              
-              <div className="flex-1 overflow-hidden glass-card p-0 rounded-[2rem] border-border/20 shadow-expressive">
-                {loading ? (
-                  <div className="flex flex-col items-center justify-center h-full opacity-50"><Loader2 className="w-10 h-10 animate-spin mb-4" /><p className="font-bold uppercase tracking-widest text-xs">Sincronizando...</p></div>
-                ) : transactionsToReview.length === 0 ? (
-                  <div className="flex flex-col items-center justify-center h-full opacity-30"><Check className="w-16 h-16 text-success mb-4" /><p className="text-lg font-black">Tudo revisado!</p><p className="text-sm">Seu fluxo está 100% categorizado.</p></div>
-                ) : (
-                  <ScrollArea className="h-full">
-                    <TransactionReviewTable
-                      transactions={transactionsToReview} accounts={accounts} categories={categories}
-                      investments={investments} loans={loans} onUpdateTransaction={handleUpdateTransaction} onCreateRule={handleCreateRule}
-                    />
-                  </ScrollArea>
-                )}
-              </div>
-            </div>
+            {renderContent()}
           </div>
         </ResizableDialogContent>
       </Dialog>
