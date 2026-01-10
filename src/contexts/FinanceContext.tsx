@@ -81,7 +81,10 @@ function parseDateRanges(storedRanges: any): ComparisonDateRanges {
 export const getDueDate = (startDateStr: string, installmentNumber: number): Date => {
   const startDate = parseDateLocal(startDateStr);
   const dueDate = new Date(startDate);
+  
+  // Adjustment: If installmentNumber = 1, add 0 months.
   dueDate.setMonth(dueDate.getMonth() + installmentNumber - 1);
+  
   return dueDate;
 };
 
@@ -485,7 +488,7 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     });
     const accountBalances: Record<string, number> = {};
     contasMovimento.forEach(account => {
-        accountBalances[account.id] = 0;
+        accountBalances[account.id] = account.initialBalance; // Use initialBalance from account
     });
     sortedTransactions.forEach(t => {
         const account = contasMovimento.find(a => a.id === t.accountId);
@@ -494,9 +497,11 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
         const isCreditCard = account.accountType === 'cartao_credito';
         let amountChange = 0;
         if (isCreditCard) {
+            // CC: Despesa (out) aumenta o saldo devedor (negativo), Receita (in) diminui o saldo devedor (positivo)
             if (t.flow === 'out') amountChange = -t.amount;
             else if (t.flow === 'in') amountChange = t.amount;
         } else {
+            // Contas normais: In aumenta, Out diminui
             if (t.flow === 'in' || t.flow === 'transfer_in') amountChange = t.amount;
             else amountChange = -t.amount;
         }
@@ -511,23 +516,39 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     if (!account) return 0;
     const targetDate = date || new Date(9999, 11, 31);
     const targetDateStr = format(targetDate, 'yyyy-MM-dd');
+    
+    // Optimization: Check cache for the exact date
     if (balanceCache.has(`${accountId}_${targetDateStr}`)) {
         return balanceCache.get(`${accountId}_${targetDateStr}`)!;
     }
+
+    // Fallback: Calculate manually if not in cache (should only happen for dates not matching a transaction date)
+    let balance = account.initialBalance;
     const transactionsBeforeDate = allTransactions
         .filter(t => t.accountId === accountId && parseDateLocal(t.date) <= targetDate)
         .sort((a, b) => {
             const dateA = parseDateLocal(a.date).getTime();
             const dateB = parseDateLocal(b.date).getTime();
-            if (dateA !== dateB) return dateB - dateA;
-            return b.id.localeCompare(a.id);
+            if (dateA !== dateB) return dateA - dateB;
+            return a.id.localeCompare(b.id);
         });
-    if (transactionsBeforeDate.length > 0) {
-        const latestTx = transactionsBeforeDate[0];
-        return balanceCache.get(`${accountId}_${latestTx.date}`)!;
-    }
-    return 0;
-  }, [balanceCache]);
+
+    const isCreditCard = account.accountType === 'cartao_credito';
+
+    transactionsBeforeDate.forEach(t => {
+        let amountChange = 0;
+        if (isCreditCard) {
+            if (t.flow === 'out') amountChange = -t.amount;
+            else if (t.flow === 'in') amountChange = t.amount;
+        } else {
+            if (t.flow === 'in' || t.flow === 'transfer_in') amountChange = t.amount;
+            else amountChange = -t.amount;
+        }
+        balance += amountChange;
+    });
+
+    return balance;
+  }, [balanceCache, contasMovimento]);
 
   const calculateTotalInvestmentBalanceAtDate = useCallback((date: Date | undefined): number => {
     const targetDate = date || new Date(9999, 11, 31);
@@ -539,7 +560,7 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
         return acc + Math.max(0, balance);
     }, 0);
   }, [contasMovimento, transacoesV2, calculateBalanceUpToDate]);
-  
+
   const calculatePaidInstallmentsUpToDate = useCallback((loanId: number, targetDate: Date): number => {
     const loanPayments = transacoesV2.filter(t => 
       t.operationType === 'pagamento_emprestimo' && t.links?.loanId === `loan_${loanId}` && parseDateLocal(t.date) <= targetDate
@@ -678,7 +699,8 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
         const newRawTransactions = s.rawTransactions.map(t => {
             if (t.contabilizedTransactionId === transactionId) {
                 updated = true;
-                return { ...t, isContabilized: false, contabilizedTransactionId: undefined, categoryId: null, operationType: null, description: t.originalDescription, isTransfer: false };
+                // Reset fields to allow re-categorization
+                return { ...t, isContabilized: false, contabilizedTransactionId: undefined, categoryId: null, operationType: null, description: t.originalDescription, isTransfer: false, destinationAccountId: null, tempInvestmentId: null, tempLoanId: null, tempParcelaId: null, tempVehicleOperation: null };
             }
             return t;
         });
@@ -721,7 +743,7 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
         newBills.push({
             id: generateBillId(), type: 'tracker', description: `${description} (${i}/${installments})`,
             dueDate: format(dueDate, 'yyyy-MM-dd'), expectedAmount: i === installments ? totalAmount - (installmentAmount * (installments - 1)) : installmentAmount,
-            isPaid: false, sourceType: 'purchase_installment', sourceRef: purchaseGroupId, parcelaNumber: i, totalInstallments: installments, suggestedAccountId, suggestedCategoryId,
+            isPaid: false, sourceType: 'purchase_installment', sourceRef: purchaseGroupId, parcelaNumber: i, totalInstallments: installments, suggestedAccountId, suggestedCategoryId, isExcluded: false,
         });
     }
     setBillsTracker(prev => [...prev, ...newBills]);
@@ -863,6 +885,108 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     } catch { return { success: false, message: "Erro ao importar." }; }
   };
 
+  const markLoanParcelPaid = useCallback((loanId: number, valorPago: number, dataPagamento: string, parcelaNumber?: number) => {
+    setEmprestimos(prevLoans => prevLoans.map(loan => {
+      if (loan.id !== loanId) return loan;
+      
+      const newParcelasPagas = loan.parcelasPagas || 0;
+      
+      let targetParcelaNumber = parcelaNumber;
+      if (!targetParcelaNumber) {
+          targetParcelaNumber = newParcelasPagas + 1;
+      }
+      
+      const updatedParcelasPagas = targetParcelaNumber === newParcelasPagas + 1 ? newParcelasPagas + 1 : newParcelasPagas;
+
+      return {
+        ...loan,
+        parcelasPagas: updatedParcelasPagas,
+      };
+    }));
+  }, [setEmprestimos]);
+
+  const unmarkLoanParcelPaid = useCallback((loanId: number) => {
+    setEmprestimos(prevLoans => prevLoans.map(loan => {
+      if (loan.id !== loanId) return loan;
+      return {
+        ...loan,
+        parcelasPagas: Math.max(0, (loan.parcelasPagas || 0) - 1),
+      };
+    }));
+  }, [setEmprestimos]);
+
+  const markSeguroParcelPaid = useCallback((seguroId: number, parcelaNumero: number, transactionId: string) => {
+    setSegurosVeiculo(prevSeguros => prevSeguros.map(seguro => {
+      if (seguro.id !== seguroId) return seguro;
+      return {
+        ...seguro,
+        parcelas: seguro.parcelas.map(parcela => 
+          parcela.numero === parcelaNumero 
+            ? { ...parcela, paga: true, transactionId } 
+            : parcela
+        ),
+      };
+    }));
+  }, [setSegurosVeiculo]);
+
+  const unmarkSeguroParcelPaid = useCallback((seguroId: number, parcelaNumero: number) => {
+    setSegurosVeiculo(prevSeguros => prevSeguros.map(seguro => {
+      if (seguro.id !== seguroId) return seguro;
+      return {
+        ...seguro,
+        parcelas: seguro.parcelas.map(parcela => 
+          parcela.numero === parcelaNumero 
+            ? { ...parcela, paga: false, transactionId: undefined } 
+            : parcela
+        ),
+      };
+    }));
+  }, [setSegurosVeiculo]);
+
+  const getValorFipeTotal = useCallback((targetDate?: Date) => {
+    const date = targetDate || new Date(9999, 11, 31);
+    return veiculos.filter(v => v.status === 'ativo' && parseDateLocal(v.dataCompra) <= date).reduce((acc, v) => acc + v.valorFipe, 0);
+  }, [veiculos]);
+
+  const getCreditCardDebt = useCallback((targetDate?: Date) => {
+    const date = targetDate || new Date(9999, 11, 31);
+    return contasMovimento.filter(c => c.accountType === 'cartao_credito').reduce((acc, c) => acc + Math.abs(Math.min(0, calculateBalanceUpToDate(c.id, date, transacoesV2, contasMovimento))), 0);
+  }, [contasMovimento, transacoesV2, calculateBalanceUpToDate]);
+
+  const getJurosTotais = useCallback(() => {
+    return emprestimos.reduce((acc, e) => acc + (e.parcela * e.meses - e.valorTotal), 0);
+  }, [emprestimos]);
+
+  const getDespesasFixas = useCallback(() => {
+    const fixedCategoryIds = new Set(categoriasV2.filter(c => c.nature === 'despesa_fixa').map(c => c.id));
+    return transacoesV2.filter(t => t.categoryId && fixedCategoryIds.has(t.categoryId)).reduce((acc, t) => acc + t.amount, 0);
+  }, [transacoesV2, categoriasV2]);
+
+  const getRevenueForPreviousMonth = useCallback((date: Date): number => {
+    const prevMonth = subMonths(date, 1);
+    const start = startOfMonth(prevMonth);
+    const end = endOfMonth(prevMonth);
+
+    return transacoesV2
+      .filter(t => {
+        try {
+          const txDate = parseDateLocal(t.date);
+          return isWithinInterval(txDate, { start, end }) && (t.operationType === 'receita' || t.operationType === 'rendimento');
+        } catch {
+          return false;
+        }
+      })
+      .reduce((acc, t) => acc + t.amount, 0);
+  }, [transacoesV2]);
+
+  const updateBill = useCallback((id: string, updates: Partial<BillTracker>) => {
+    setBillsTracker(prev => prev.map(b => b.id === id ? { ...b, ...updates } : b));
+  }, []);
+
+  const deleteBill = useCallback((id: string) => {
+    setBillsTracker(prev => prev.filter(b => b.id !== id));
+  }, []);
+
   const value = {
     emprestimos, addEmprestimo, updateEmprestimo, deleteEmprestimo: (id: number) => setEmprestimos(p => p.filter(e => e.id !== id)), getPendingLoans: () => emprestimos.filter(e => e.status === 'pendente_config'), markLoanParcelPaid, unmarkLoanParcelPaid, calculateLoanSchedule, calculateLoanAmortizationAndInterest, calculateLoanPrincipalDueInNextMonths,
     veiculos, addVeiculo, updateVeiculo: (id: number, u: any) => setVeiculos(p => p.map(v => v.id === id ? { ...v, ...u } : v)), deleteVeiculo: (id: number) => setVeiculos(p => p.filter(v => v.id !== id)), getPendingVehicles: () => veiculos.filter(v => v.status === 'pendente_cadastro'),
@@ -877,7 +1001,7 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     getTotalReceitas: (m?: string) => transacoesV2.filter(t => (t.operationType === 'receita' || t.operationType === 'rendimento') && (!m || t.date.startsWith(m))).reduce((a, t) => a + t.amount, 0),
     getTotalDespesas: (m?: string) => transacoesV2.filter(t => (t.operationType === 'despesa' || t.operationType === 'pagamento_emprestimo') && (!m || t.date.startsWith(m))).reduce((a, t) => a + t.amount, 0),
     getTotalDividas: () => emprestimos.reduce((a, e) => a + e.valorTotal, 0), getCustoVeiculos: () => veiculos.filter(v => v.status !== 'vendido').reduce((a, v) => a + v.valorSeguro, 0), getSaldoAtual: () => contasMovimento.reduce((a, c) => a + calculateBalanceUpToDate(c.id, undefined, transacoesV2, contasMovimento), 0),
-    getValorFipeTotal, getSaldoDevedor: (d?: Date) => getLoanPrincipalRemaining(d) + getCreditCardDebt(d), getLoanPrincipalRemaining: (d?: Date) => emprestimos.reduce((a, e) => { if (e.status === 'quitado' || e.status === 'pendente_config') return a; const paid = calculatePaidInstallmentsUpToDate(e.id, d || new Date(9999, 11, 31)); const s = calculateLoanSchedule(e.id); const lp = s.find(x => x.parcela === paid); return a + (lp ? lp.saldoDevedor : e.valorTotal); }, 0), getCreditCardDebt: (d?: Date) => contasMovimento.filter(c => c.accountType === 'cartao_credito').reduce((a, c) => a + Math.abs(Math.min(0, calculateBalanceUpToDate(c.id, d || new Date(9999, 11, 31), transacoesV2, contasMovimento))), 0), getJurosTotais: () => emprestimos.reduce((a, e) => a + (e.parcela * e.meses - e.valorTotal), 0), getDespesasFixas: () => transacoesV2.filter(t => categoriasV2.find(c => c.id === t.categoryId)?.nature === 'despesa_fixa').reduce((a, t) => a + t.amount, 0),
+    getValorFipeTotal, getSaldoDevedor: (d?: Date) => getLoanPrincipalRemaining(d) + getCreditCardDebt(d), getLoanPrincipalRemaining: (d?: Date) => emprestimos.reduce((a, e) => { if (e.status === 'quitado' || e.status === 'pendente_config') return a; const paid = calculatePaidInstallmentsUpToDate(e.id, d || new Date(9999, 11, 31)); const s = calculateLoanSchedule(e.id); const lp = s.find(x => x.parcela === paid); return a + (lp ? lp.saldoDevedor : e.valorTotal); }, 0), getCreditCardDebt, getJurosTotais, getDespesasFixas,
     getPatrimonioLiquido: (d?: Date) => getAtivosTotal(d) - getPassivosTotal(d), getAtivosTotal, getPassivosTotal, getSegurosAApropriar, getSegurosAPagar,
     calculateBalanceUpToDate, calculateTotalInvestmentBalanceAtDate, calculatePaidInstallmentsUpToDate, exportData, importData,
   };

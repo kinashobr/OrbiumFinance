@@ -50,6 +50,7 @@ const ReceitasDespesas = () => {
   }, [transacoesV2, dateRanges.range1]);
 
   const visibleAccounts = useMemo(() => contasMovimento.filter(a => !a.hidden), [contasMovimento]);
+  
   const accountSummaries: AccountSummary[] = useMemo(() => {
     const periodStart = dateRanges.range1.from;
     const periodEnd = dateRanges.range1.to;
@@ -66,8 +67,49 @@ const ReceitasDespesas = () => {
     });
   }, [visibleAccounts, transactions, dateRanges, calculateBalanceUpToDate, contasMovimento]);
 
+  // --- Derived States for Modals ---
+  const viewingAccount = useMemo(() => {
+    return viewingAccountId ? contasMovimento.find(a => a.id === viewingAccountId) : undefined;
+  }, [viewingAccountId, contasMovimento]);
+
+  const viewingSummary = useMemo(() => {
+    return viewingAccountId ? accountSummaries.find(s => s.accountId === viewingAccountId) : undefined;
+  }, [viewingAccountId, accountSummaries]);
+
+  const transactionCountByCategory = useMemo(() => {
+    return transactions.reduce((acc, t) => {
+        if (t.categoryId) {
+            acc[t.categoryId] = (acc[t.categoryId] || 0) + 1;
+        }
+        return acc;
+    }, {} as Record<string, number>);
+  }, [transactions]);
+  // ---------------------------------
+
   const handleEditTransaction = (t: TransacaoCompleta) => { setEditingTransaction(t); setSelectedAccountForModal(t.accountId); setShowMovimentarModal(true); };
-  const handleDeleteTransaction = (id: string) => { if (window.confirm("Excluir transação?")) { const t = transactions.find(x => x.id === id); if (t?.links?.loanId) unmarkLoanParcelPaid(parseInt(t.links.loanId.replace('loan_', ''))); if (t?.links?.vehicleTransactionId && t.flow === 'out') { const [s, p] = t.links.vehicleTransactionId.split('_'); unmarkSeguroParcelPaid(parseInt(s), parseInt(p)); } if (t?.meta.source === 'import') uncontabilizeImportedTransaction(id); setTransacoesV2(prev => prev.filter(x => x.links?.transferGroupId ? x.links.transferGroupId !== t?.links?.transferGroupId : x.id !== id)); toast.success("Excluído!"); } };
+  
+  const handleDeleteTransaction = (id: string) => { 
+    if (window.confirm("Excluir transação?")) { 
+      const t = transactions.find(x => x.id === id); 
+      if (t?.links?.loanId) unmarkLoanParcelPaid(parseInt(t.links.loanId.replace('loan_', ''))); 
+      if (t?.links?.vehicleTransactionId && t.flow === 'out') { 
+        const [s, p] = t.links.vehicleTransactionId.split('_'); 
+        unmarkSeguroParcelPaid(parseInt(s), parseInt(p)); 
+      } 
+      if (t?.meta.source === 'import') uncontabilizeImportedTransaction(id); 
+      setTransacoesV2(prev => prev.filter(x => x.links?.transferGroupId ? x.links.transferGroupId !== t?.links?.transferGroupId : x.id !== id)); 
+      toast.success("Excluído!"); 
+    } 
+  };
+  
+  const handleToggleConciliated = useCallback((id: string, value: boolean) => {
+    setTransacoesV2(prev => prev.map(t => t.id === id ? { ...t, conciliated: value } : t));
+  }, [setTransacoesV2]);
+  
+  const handleManageRules = useCallback(() => {
+    setShowStatementManagerModal(false);
+    setShowRuleManagerModal(true);
+  }, []);
 
   return (
     <MainLayout>
@@ -119,14 +161,14 @@ const ReceitasDespesas = () => {
         </div>
       </div>
 
-      <MovimentarContaModal open={showMovimentarModal} onOpenChange={setShowMovimentarModal} accounts={contasMovimento} categories={categories} investments={accounts.filter(c => ['renda_fixa', 'poupanca', 'cripto', 'reserva', 'objetivo'].includes(c.accountType)).map(i => ({ id: i.id, name: i.name }))} loans={emprestimos.filter(e => e.status !== 'pendente_config').map(e => ({ id: `loan_${e.id}`, institution: e.contrato, numeroContrato: e.contrato, parcelas: e.meses > 0 ? Array.from({ length: e.meses }, (_, i) => ({ numero: i + 1, vencimento: format(addMonths(parseDateLocal(e.dataInicio!), i), 'yyyy-MM-dd'), valor: e.parcela, paga: transactions.some(t => t.links?.loanId === `loan_${e.id}` && t.links?.parcelaId === (i+1).toString()) })) : [], valorParcela: e.parcela, totalParcelas: e.meses }))} segurosVeiculo={segurosVeiculo} veiculos={veiculos} selectedAccountId={selectedAccountForModal} onSubmit={(t, g) => { if (editingTransaction) { setTransacoesV2(p => p.map(x => x.id === t.id ? t : x)); } else { if (g) { const outT = { ...t, id: generateTransactionId(), flow: 'transfer_out' as const, links: { ...t.links, transferGroupId: g.id } }; const inT = { ...t, id: generateTransactionId(), accountId: g.toAccountId, flow: (accounts.find(a => a.id === g.toAccountId)?.accountType === 'cartao_credito' ? 'in' : 'transfer_in') as any, links: { ...t.links, transferGroupId: g.id }, conciliated: false }; addTransacaoV2(outT); addTransacaoV2(inT); } else addTransacaoV2(t); } }} editingTransaction={editingTransaction} />
+      <MovimentarContaModal open={showMovimentarModal} onOpenChange={setShowMovimentarModal} accounts={contasMovimento} categories={categories} investments={contasMovimento.filter(c => ['renda_fixa', 'poupanca', 'cripto', 'reserva', 'objetivo'].includes(c.accountType)).map(i => ({ id: i.id, name: i.name }))} loans={emprestimos.filter(e => e.status !== 'pendente_config').map(e => ({ id: `loan_${e.id}`, institution: e.contrato, numeroContrato: e.contrato, parcelas: e.meses > 0 ? Array.from({ length: e.meses }, (_, i) => ({ numero: i + 1, vencimento: format(addMonths(parseDateLocal(e.dataInicio!), i), 'yyyy-MM-dd'), valor: e.parcela, paga: transactions.some(t => t.links?.loanId === `loan_${e.id}` && t.links?.parcelaId === (i+1).toString()) })) : [], valorParcela: e.parcela, totalParcelas: e.meses }))} segurosVeiculo={segurosVeiculo} veiculos={veiculos} selectedAccountId={selectedAccountForModal} onSubmit={(t, g) => { if (editingTransaction) { setTransacoesV2(p => p.map(x => x.id === t.id ? t : x)); } else { if (g) { const outT = { ...t, id: generateTransactionId(), flow: 'transfer_out' as const, links: { ...t.links, transferGroupId: g.id } }; const inT = { ...t, id: generateTransactionId(), accountId: g.toAccountId, flow: (contasMovimento.find(a => a.id === g.toAccountId)?.accountType === 'cartao_credito' ? 'in' : 'transfer_in') as any, links: { ...t.links, transferGroupId: g.id }, conciliated: false }; addTransacaoV2(outT); addTransacaoV2(inT); } else addTransacaoV2(t); } }} editingTransaction={editingTransaction} />
       <AccountFormModal open={showAccountModal} onOpenChange={setShowAccountModal} account={editingAccount} onSubmit={(a, b) => { if (editingAccount) setContasMovimento(p => p.map(x => x.id === a.id ? a : x)); else { setContasMovimento(p => [...p, a]); if (b !== 0) addTransacaoV2({ id: generateTransactionId(), date: a.startDate!, accountId: a.id, flow: b >= 0 ? 'in' : 'out', operationType: 'initial_balance', domain: 'operational', amount: Math.abs(b), categoryId: null, description: "Saldo Inicial", links: { investmentId: null, loanId: null, transferGroupId: null, parcelaId: null, vehicleTransactionId: null }, conciliated: true, attachments: [], meta: { createdBy: 'user', source: 'manual', createdAt: new Date().toISOString() } }); } }} onDelete={id => setContasMovimento(p => p.filter(x => x.id !== id))} hasTransactions={editingAccount ? transactions.some(t => t.accountId === editingAccount.id) : false} />
       <CategoryFormModal open={showCategoryModal} onOpenChange={setShowCategoryModal} category={editingCategory} onSubmit={c => { if (editingCategory) setCategoriasV2(p => p.map(x => x.id === c.id ? c : x)); else setCategoriasV2(p => [...p, c]); }} onDelete={id => setCategoriasV2(p => p.filter(x => x.id !== id))} hasTransactions={editingCategory ? transactions.some(t => t.categoryId === editingCategory.id) : false} />
       <CategoryListModal open={showCategoryListModal} onOpenChange={setShowCategoryListModal} categories={categories} onAddCategory={() => { setEditingCategory(undefined); setShowCategoryModal(true); }} onEditCategory={c => { setEditingCategory(c); setShowCategoryModal(true); }} onDeleteCategory={id => setCategoriasV2(p => p.filter(x => x.id !== id))} transactionCountByCategory={transactionCountByCategory} />
       {viewingAccount && viewingSummary && <AccountStatementDialog open={showStatementDialog} onOpenChange={setShowStatementDialog} account={viewingAccount} accountSummary={viewingSummary} transactions={transactions.filter(t => t.accountId === viewingAccountId)} categories={categories} onEditTransaction={handleEditTransaction} onDeleteTransaction={handleDeleteTransaction} onToggleConciliated={handleToggleConciliated} onReconcileAll={() => setTransacoesV2(p => p.map(t => t.accountId === viewingAccountId ? { ...t, conciliated: true } : t))} />}
       <BillsTrackerModal open={showBillsTrackerModal} onOpenChange={setShowBillsTrackerModal} />
       <StatementManagerDialog open={showStatementManagerModal} onOpenChange={setShowStatementManagerModal} initialAccountId={viewingAccountId || undefined} onStartConsolidatedReview={id => { setAccountForConsolidatedReview(id); setShowConsolidatedReview(true); }} onManageRules={handleManageRules} />
-      {accountForConsolidatedReview && <ConsolidatedReviewDialog open={showConsolidatedReview} onOpenChange={setShowConsolidatedReview} accountId={accountForConsolidatedReview} accounts={contasMovimento} categories={categories} investments={accounts.filter(c => ['renda_fixa', 'poupanca', 'cripto', 'reserva', 'objetivo'].includes(c.accountType)).map(i => ({ id: i.id, name: i.name }))} loans={emprestimos.map(e => ({ id: `loan_${e.id}`, institution: e.contrato, numeroContrato: e.contrato, parcelas: [], valorParcela: e.parcela, totalParcelas: e.meses }))} />}
+      {accountForConsolidatedReview && <ConsolidatedReviewDialog open={showConsolidatedReview} onOpenChange={setShowConsolidatedReview} accountId={accountForConsolidatedReview} accounts={contasMovimento} categories={categories} investments={contasMovimento.filter(c => ['renda_fixa', 'poupanca', 'cripto', 'reserva', 'objetivo'].includes(c.accountType)).map(i => ({ id: i.id, name: i.name }))} loans={emprestimos.map(e => ({ id: `loan_${e.id}`, institution: e.contrato, numeroContrato: e.contrato, parcelas: [], valorParcela: e.parcela, totalParcelas: e.meses }))} />}
       <StandardizationRuleManagerModal open={showRuleManagerModal} onOpenChange={setShowRuleManagerModal} rules={standardizationRules} onDeleteRule={deleteStandardizationRule} categories={categories} />
     </MainLayout>
   );
