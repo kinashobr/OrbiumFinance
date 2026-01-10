@@ -25,7 +25,6 @@ const Index = () => {
   const { 
     transacoesV2,
     contasMovimento,
-    categoriasV2,
     getAtivosTotal,
     getPassivosTotal,
     calculateBalanceUpToDate,
@@ -108,48 +107,57 @@ const Index = () => {
   }, [transacoesPeriodo1, transacoesPeriodo2]);
 
   const saude = useMemo(() => {
-    const diversificacao = 65; // Lógica simplificada mantida para diversificação
-    const estabilidade = fluxo.p2.saldo !== 0 ? Math.min(100, (fluxo.p1.saldo / fluxo.p2.saldo) * 100) : 100;
-    const dependencia = 40;
+    const temDados = contasMovimento.length > 0;
+    const diversificacao = temDados ? 65 : 0; // Placeholder dinâmico
+    const estabilidade = temDados && fluxo.p2.saldo !== 0 ? Math.min(100, (fluxo.p1.saldo / fluxo.p2.saldo) * 100) : 0;
+    const dependencia = temDados ? 40 : 0;
 
     return {
-      liquidez: metricasPatrimoniais.passivosAtuais > 0 ? metricasPatrimoniais.ativosAtuais / metricasPatrimoniais.passivosAtuais : 2.5,
+      liquidez: metricasPatrimoniais.passivosAtuais > 0 ? metricasPatrimoniais.ativosAtuais / metricasPatrimoniais.passivosAtuais : 0,
       endividamento: metricasPatrimoniais.ativosAtuais > 0 ? (metricasPatrimoniais.passivosAtuais / metricasPatrimoniais.ativosAtuais) * 100 : 0,
       diversificacao,
       estabilidade,
       dependencia
     };
-  }, [metricasPatrimoniais, fluxo]);
+  }, [metricasPatrimoniais, fluxo, contasMovimento]);
 
-  // Lógica do Score Orbium (0-1000)
   const scoreOrbium = useMemo(() => {
-    let score = 0;
+    if (contasMovimento.length === 0) return 0;
     
-    // 1. Liquidez (Ativos/Passivos) - Peso 250
+    let score = 0;
     const liqRatio = saude.liquidez;
     if (liqRatio >= 2) score += 250;
     else if (liqRatio >= 1.2) score += 150;
-    else score += 50;
+    else if (liqRatio > 0) score += 50;
 
-    // 2. Endividamento - Peso 250
     const endRatio = saude.endividamento;
-    if (endRatio <= 25) score += 250;
-    else if (endRatio <= 45) score += 150;
-    else score += 50;
+    if (metricasPatrimoniais.ativosAtuais > 0) {
+      if (endRatio <= 25) score += 250;
+      else if (endRatio <= 45) score += 150;
+      else score += 50;
+    }
 
-    // 3. Margem de Poupança - Peso 250
     const savingsRate = fluxo.p1.rec > 0 ? (fluxo.p1.saldo / fluxo.p1.rec) * 100 : 0;
-    if (savingsRate >= 20) score += 250;
-    else if (savingsRate >= 10) score += 150;
-    else score += 50;
+    if (fluxo.p1.rec > 0) {
+      if (savingsRate >= 20) score += 250;
+      else if (savingsRate >= 10) score += 150;
+      else score += 50;
+    }
 
-    // 4. Evolução Patrimonial - Peso 250
     if (metricasPatrimoniais.variacaoAbs > 0) score += 250;
-    else if (metricasPatrimoniais.variacaoAbs === 0) score += 125;
-    else score += 25;
+    else if (metricasPatrimoniais.variacaoAbs === 0 && metricasPatrimoniais.plAtual > 0) score += 125;
+    else if (metricasPatrimoniais.variacaoAbs < 0) score += 25;
 
     return score;
-  }, [saude, fluxo, metricasPatrimoniais]);
+  }, [saude, fluxo, metricasPatrimoniais, contasMovimento]);
+
+  const scoreInfo = useMemo(() => {
+    if (contasMovimento.length === 0) return { label: "Iniciante", status: "Crítico" };
+    if (scoreOrbium >= 800) return { label: "Excelente", status: "Premium" };
+    if (scoreOrbium >= 600) return { label: "Bom", status: "Prêmio" };
+    if (scoreOrbium >= 400) return { label: "Regular", status: "Padrão" };
+    return { label: "Atenção", status: "Básico" };
+  }, [scoreOrbium, contasMovimento]);
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', {
@@ -187,7 +195,6 @@ const Index = () => {
         <div className="grid grid-cols-1 md:grid-cols-12 gap-6 animate-fade-in-up">
           <div className="col-span-12 lg:col-span-8 bg-surface-light dark:bg-surface-dark rounded-[32px] p-8 shadow-soft relative overflow-hidden border border-white/60 dark:border-white/5 group h-[420px] flex flex-col justify-between">
             <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent opacity-50"></div>
-            
             <div className="absolute bottom-0 left-0 right-0 h-[280px] pointer-events-none">
               <svg className="w-full h-full" preserveAspectRatio="none" viewBox="0 0 800 250">
                 <defs>
@@ -201,7 +208,6 @@ const Index = () => {
                 <path d="M0,150 C120,130 240,190 360,130 C480,70 600,100 700,50 C760,20 780,40 800,80" fill="none" stroke="hsl(var(--primary))" strokeLinecap="round" strokeWidth="4" vectorEffect="non-scaling-stroke"></path>
               </svg>
             </div>
-
             <div className="relative z-10 flex justify-between items-start">
               <div>
                 <div className="flex items-center gap-3 mb-2">
@@ -228,7 +234,6 @@ const Index = () => {
               </div>
             </div>
           </div>
-
           <div className="col-span-12 lg:col-span-4 flex flex-col gap-6">
             <CockpitCards data={{
               patrimonioTotal: metricasPatrimoniais.plAtual,
@@ -258,7 +263,6 @@ const Index = () => {
               <p className="font-display font-bold text-3xl text-foreground tabular-nums">{formatCurrency(fluxo.p1.saldo)}</p>
             </div>
           </div>
-
           <div className="col-span-1 md:col-span-2 bg-surface-light dark:bg-surface-dark rounded-[32px] p-6 shadow-soft border border-white/60 dark:border-white/5 flex flex-col justify-center h-[160px] hover:-translate-y-1 transition-transform duration-300">
             <div className="flex items-start justify-between mb-4">
               <div className="w-10 h-10 rounded-full bg-orange-100 dark:bg-orange-900/20 flex items-center justify-center text-primary">
@@ -271,7 +275,6 @@ const Index = () => {
               <p className="font-display font-bold text-3xl text-foreground tabular-nums">{formatCurrency(fluxo.p1.des)}</p>
             </div>
           </div>
-
           <div className="col-span-1 md:col-span-4 bg-gradient-to-r from-neutral-800 to-neutral-900 text-white rounded-[32px] p-6 shadow-lg flex items-center justify-between relative overflow-hidden h-[160px]">
              <div className="absolute right-0 bottom-0 opacity-10 scale-150 translate-x-10 translate-y-10">
               <Sparkles className="w-[180px] h-[180px]" />
@@ -281,9 +284,9 @@ const Index = () => {
               <p className="text-neutral-400 text-sm mb-4 max-w-[200px]">Saúde patrimonial com base em {contasMovimento.length} contas.</p>
               <div className="flex gap-2">
                 <span className="px-3 py-1 bg-white/10 rounded-full text-[10px] font-bold uppercase backdrop-blur-md border border-white/10">
-                  {scoreOrbium >= 800 ? "Excelente" : scoreOrbium >= 600 ? "Bom" : scoreOrbium >= 400 ? "Regular" : "Crítico"}
+                  {scoreInfo.label}
                 </span>
-                <span className="px-3 py-1 bg-white/10 rounded-full text-[10px] font-bold uppercase backdrop-blur-md border border-white/10">Prêmio</span>
+                <span className="px-3 py-1 bg-white/10 rounded-full text-[10px] font-bold uppercase backdrop-blur-md border border-white/10">{scoreInfo.status}</span>
               </div>
             </div>
             <div className="z-10 text-right">
@@ -296,7 +299,7 @@ const Index = () => {
                     stroke="hsl(var(--primary))" 
                     strokeWidth="4" 
                     strokeDasharray="276.46"
-                    strokeDashoffset={276.46 - (276.46 * scoreOrbium / 1000)}
+                    strokeDashoffset={276.46 - (276.46 * (scoreOrbium / 1000))}
                     strokeLinecap="round"
                     className="transition-all duration-1000 ease-out"
                   />
@@ -317,7 +320,6 @@ const Index = () => {
                 dependenciaRenda={saude.dependencia}
               />
             </section>
-            
             <section className="animate-fade-in-up" style={{ animationDelay: '200ms' }}>
               <FluxoCaixaHeatmap 
                 month={dateRanges.range1.from ? format(dateRanges.range1.from, 'MM') : format(new Date(), 'MM')} 
@@ -326,7 +328,6 @@ const Index = () => {
               />
             </section>
           </div>
-
           <div className="space-y-8">
             <section className="animate-fade-in-up" style={{ animationDelay: '250ms' }}>
               <AcompanhamentoAtivos
@@ -337,7 +338,6 @@ const Index = () => {
                 poupanca={contasMovimento.filter(c => c.accountType === 'poupanca').reduce((a, c) => a + calculateBalanceUpToDate(c.id, dateRanges.range1.to, transacoesV2, contasMovimento), 0)}
               />
             </section>
-
             <section className="animate-fade-in-up" style={{ animationDelay: '300ms' }}>
               <MovimentacoesRelevantes transacoes={transacoesPeriodo1} limit={5} />
             </section>
