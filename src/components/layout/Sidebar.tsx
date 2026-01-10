@@ -1,6 +1,6 @@
-import { useState, useRef, useEffect } from "react";
-import { NavLink, useLocation } from "react-router-dom";
-import { cn } from "@/lib/utils";
+import { useState, useRef, useEffect, useMemo } from "react";
+import { NavLink, useLocation, useNavigate } from "react-router-dom";
+import { cn, parseDateLocal } from "@/lib/utils";
 import { 
   LayoutDashboard, 
   Receipt, 
@@ -33,7 +33,13 @@ import {
   DialogTitle, 
   DialogTrigger 
 } from "@/components/ui/dialog";
+import { 
+  Popover, 
+  PopoverContent, 
+  PopoverTrigger 
+} from "@/components/ui/popover";
 import { Separator } from "@/components/ui/separator";
+import { isAfter, isSameDay, startOfDay } from "date-fns";
 
 interface NavItemData {
   title: string;
@@ -43,17 +49,28 @@ interface NavItemData {
 
 const mainNavItems: NavItemData[] = [
   { title: "Início", path: "/", icon: LayoutDashboard },
-  { title: "Financeiro", path: "/receitas-despesas", icon: Receipt },
-  { title: "Dívidas", path: "/emprestimos", icon: CreditCard },
+  { title: "Movimentação", path: "/receitas-despesas", icon: Receipt },
+  { title: "Financiamentos", path: "/emprestimos", icon: CreditCard },
   { title: "Análise", path: "/relatorios", icon: BarChart3 },
-  { title: "Investir", path: "/investimentos", icon: PieChart },
+  { title: "Investimentos", path: "/investimentos", icon: PieChart },
   { title: "Bens", path: "/veiculos", icon: Car },
 ];
 
 export function Sidebar() {
   const [collapsed, setCollapsed] = useState(false);
   const location = useLocation();
-  const { exportData, importData } = useFinance();
+  const { 
+    exportData, 
+    importData,
+    transacoesV2, 
+    emprestimos, 
+    segurosVeiculo,
+    categoriasV2,
+    contasMovimento,
+    getSaldoDevedor,
+    alertStartDate,
+    calculateBalanceUpToDate
+  } = useFinance();
   const { theme, setTheme, themes } = useTheme();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -68,6 +85,55 @@ export function Sidebar() {
     localStorage.setItem("sidebar-collapsed", JSON.stringify(collapsed));
     window.dispatchEvent(new CustomEvent("sidebar-toggle", { detail: collapsed }));
   }, [collapsed]);
+
+  // Lógica para contar alertas e controlar o badge (mesma lógica do SidebarAlertas)
+  const alertCount = useMemo(() => {
+    const parsedAlertStartDate = startOfDay(parseDateLocal(alertStartDate));
+    const now = new Date();
+    
+    const totalDividas = getSaldoDevedor();
+    const emprestimosPendentes = emprestimos.filter(e => e.status === 'pendente_config').length;
+    
+    const transacoesFluxo = transacoesV2.filter(t => {
+      try {
+        const d = parseDateLocal(t.date);
+        return isAfter(d, parsedAlertStartDate) || isSameDay(d, parsedAlertStartDate);
+      } catch { return false; }
+    });
+
+    const receitasMes = transacoesFluxo
+      .filter(t => t.operationType === "receita" || t.operationType === "rendimento")
+      .reduce((acc, t) => acc + t.amount, 0);
+
+    const despesasMes = transacoesFluxo
+      .filter(t => t.operationType === "despesa" || t.operationType === "pagamento_emprestimo")
+      .reduce((acc, t) => acc + t.amount, 0);
+
+    const margemPoupanca = receitasMes > 0 ? ((receitasMes - despesasMes) / receitasMes) * 100 : 0;
+    
+    const dataLimiteSeguro = new Date();
+    dataLimiteSeguro.setDate(dataLimiteSeguro.getDate() + 60);
+    const segurosVencendo = segurosVeiculo.filter(s => {
+      try {
+        const vigenciaFim = parseDateLocal(s.vigenciaFim);
+        return vigenciaFim > now && vigenciaFim <= dataLimiteSeguro;
+      } catch { return false; }
+    }).length;
+
+    // Contagem simplificada de alertas ativos baseada nas tolerâncias padrão
+    let count = 0;
+    if (emprestimosPendentes > 0) count++;
+    if (margemPoupanca < 10 && receitasMes > 0) count++;
+    if (segurosVencendo > 0) count++;
+    
+    const contasLiquidez = contasMovimento.filter(c => 
+      ['conta_corrente', 'poupanca', 'reserva_emergencia', 'aplicacao_renda_fixa'].includes(c.accountType)
+    );
+    const saldoLiquidez = contasLiquidez.reduce((acc, c) => acc + calculateBalanceUpToDate(c.id, now, transacoesV2, contasMovimento), 0);
+    if (saldoLiquidez < 0) count++;
+
+    return count;
+  }, [transacoesV2, emprestimos, segurosVeiculo, alertStartDate, getSaldoDevedor, contasMovimento, calculateBalanceUpToDate]);
 
   const handleExport = () => {
     exportData();
@@ -167,31 +233,35 @@ export function Sidebar() {
       <div className="px-2.5 pb-4 space-y-1.5 mt-auto shrink-0">
         <Separator className="mx-2.5 mb-3 opacity-30" />
         
-        <Dialog>
-          <DialogTrigger asChild>
+        {/* Alertas - Transformado em Popover (painel lateral) */}
+        <Popover>
+          <PopoverTrigger asChild>
             <button className={cn(
               "relative flex items-center h-10 rounded-full transition-all duration-300 group hover:bg-muted/50",
               collapsed ? "justify-center w-full" : "px-3 gap-3 w-full"
             )}>
               <div className="relative flex items-center justify-center w-5 h-5 text-muted-foreground group-hover:text-primary transition-colors">
                 <Bell size={18} />
-                <span className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-destructive rounded-full border-2 border-card" />
+                {alertCount > 0 && (
+                  <span className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-destructive rounded-full border-2 border-card" />
+                )}
               </div>
               {!collapsed && <span className="text-[13px] font-bold text-muted-foreground group-hover:text-foreground">Alertas</span>}
             </button>
-          </DialogTrigger>
-          <DialogContent className="rounded-[2rem] max-w-sm p-0 overflow-hidden border-border/40 shadow-2xl">
-            <DialogHeader className="px-6 pt-6 pb-2">
-              <DialogTitle className="flex items-center gap-3 text-lg font-black">
-                <Bell className="text-primary" /> Alertas do Sistema
-              </DialogTitle>
-            </DialogHeader>
-            <div className="px-4 pb-6">
+          </PopoverTrigger>
+          <PopoverContent side="right" sideOffset={12} className="p-0 border-border/40 shadow-2xl rounded-[1.75rem] w-80 bg-card/98 backdrop-blur-xl">
+            <div className="px-5 pt-5 pb-2">
+              <h3 className="flex items-center gap-2 text-sm font-black uppercase tracking-widest text-foreground">
+                <Bell className="w-4 h-4 text-primary" /> Central de Alertas
+              </h3>
+            </div>
+            <div className="px-3 pb-5">
               <SidebarAlertas collapsed={false} />
             </div>
-          </DialogContent>
-        </Dialog>
+          </PopoverContent>
+        </Popover>
 
+        {/* Configurações */}
         <Dialog>
           <DialogTrigger asChild>
             <button className={cn(
