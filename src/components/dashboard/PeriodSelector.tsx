@@ -176,7 +176,7 @@ export function PeriodSelector({
         <Button
           variant="outline"
           className={cn(
-            "w-full sm:w-auto justify-start text-left h-10 px-4 rounded-full border-border/40 bg-card/50 backdrop-blur-sm shadow-sm hover:shadow-md hover:bg-accent hover:text-accent-foreground transition-all duration-300 group",
+            "w-full sm:w-auto justify-start text-left h-10 px-4 rounded-full border-border/40 bg-card shadow-sm hover:shadow-md hover:bg-accent hover:text-accent-foreground transition-all duration-300 group",
             (!range.from && !range.to) && "text-muted-foreground",
             className
           )}
@@ -193,13 +193,13 @@ export function PeriodSelector({
       </PopoverTrigger>
       
       <PopoverContent 
-        className="p-3 bg-popover/98 backdrop-blur-2xl text-popover-foreground border-border/40 w-auto shadow-[0_25px_50px_-12px_rgba(0,0,0,0.25)] rounded-[2rem]"
+        className="p-3 bg-popover text-popover-foreground border-border/40 w-auto shadow-[0_25px_50px_-12px_rgba(0,0,0,0.25)] rounded-[2rem]"
         side="bottom"
         align="end"
         sideOffset={12}
       >
         <div className="flex flex-col sm:flex-row gap-4">
-          {/* Presets Column - Material 3 Navigation Drawer Style */}
+          {/* Presets Column */}
           <div className="sm:w-[160px] shrink-0 flex flex-col gap-1 sm:border-r border-border/40 pr-3">
             <div className="flex items-center gap-2 px-3 py-2 mb-1">
               <Clock className="w-3.5 h-3.5 text-muted-foreground" />
@@ -237,11 +237,11 @@ export function PeriodSelector({
               classNames={{
                 months: "flex flex-col space-y-4",
                 month: "space-y-4",
-                caption: "flex justify-between items-center px-4 relative h-10 mb-2",
+                caption: "relative flex items-center justify-center h-10 mb-4 px-10",
                 caption_label: "text-sm font-black text-foreground uppercase tracking-widest",
-                nav: "flex items-center gap-1",
+                nav: "absolute inset-0 flex items-center justify-between px-2 pointer-events-none",
                 nav_button: cn(
-                  "h-8 w-8 bg-muted/50 rounded-full flex items-center justify-center transition-colors hover:bg-primary/10 hover:text-primary"
+                  "h-8 w-8 bg-muted rounded-full flex items-center justify-center transition-colors hover:bg-primary/10 hover:text-primary pointer-events-auto z-10"
                 ),
                 table: "w-full border-collapse",
                 head_row: "grid grid-cols-7 mb-2",
@@ -249,10 +249,10 @@ export function PeriodSelector({
                 row: "grid grid-cols-7 gap-y-1 w-full",
                 cell: "relative p-0 text-center text-sm focus-within:relative focus-within:z-20",
                 day: cn(
-                  "h-9 w-9 p-0 font-bold rounded-xl transition-all duration-200 flex items-center justify-center mx-auto hover:bg-primary/10 hover:text-primary"
+                  "h-8 w-8 p-0 font-bold rounded-xl transition-all duration-200 flex items-center justify-center mx-auto hover:bg-primary/10 hover:text-primary"
                 ),
                 day_range_middle: "aria-selected:bg-primary/10 aria-selected:text-primary rounded-none",
-                day_selected: "bg-primary text-primary-foreground shadow-md shadow-primary/20 hover:bg-primary hover:text-primary-foreground focus:bg-primary focus:text-primary-foreground scale-110 z-10",
+                day_selected: "bg-primary text-primary-foreground shadow-sm hover:bg-primary hover:text-primary-foreground focus:bg-primary focus:text-primary-foreground z-10",
                 day_today: "bg-muted/50 text-foreground ring-1 ring-inset ring-border",
                 day_outside: "text-muted-foreground/20 opacity-30",
                 day_disabled: "text-muted-foreground opacity-50",
