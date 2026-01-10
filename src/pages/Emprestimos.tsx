@@ -140,11 +140,7 @@ const Emprestimos = () => {
                 onDateRangeChange={handlePeriodChange}
                 className="h-11 rounded-full bg-surface-light dark:bg-surface-dark border-border/40 shadow-sm px-6 font-bold"
               />
-              <LoanForm 
-                onSubmit={addEmprestimo} 
-                contasCorrentes={getContasCorrentesTipo()} 
-                className="h-11 rounded-full bg-primary text-primary-foreground shadow-xl shadow-primary/20 px-8 font-black uppercase tracking-widest text-[10px]"
-              />
+              {/* Removed LoanForm button */}
             </div>
           </header>
 
@@ -295,7 +291,9 @@ const Emprestimos = () => {
                   <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest mt-1">Portfólio de Crédito</p>
                 </div>
               </div>
-              <Badge variant="secondary" className="rounded-full px-6 py-1.5 font-black text-xs uppercase tracking-widest bg-muted/50">{emprestimos.length} CONTRATOS</Badge>
+              <Badge variant="secondary" className="rounded-full px-6 py-1.5 font-black text-xs uppercase tracking-widest bg-muted/50 text-muted-foreground">
+                {emprestimos.length} CONTRATOS
+              </Badge>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8">
