@@ -68,6 +68,12 @@ export function StandardizationRuleManagerModal({
     setShowFormModal(true);
   };
 
+  // Função para truncar o texto
+  const truncateText = (text: string, maxLength: number) => {
+    if (text.length <= maxLength) return text;
+    return text.substring(0, maxLength) + "...";
+  };
+
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
@@ -124,8 +130,8 @@ export function StandardizationRuleManagerModal({
                         )}>
                           {operationConfig?.label || 'N/A'}
                         </Badge>
-                        <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest break-words max-w-full">
-                          Padrão: "{rule.pattern}"
+                        <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest break-words max-w-full" title={rule.pattern}>
+                          Padrão: "{truncateText(rule.pattern, 70)}"
                         </p>
                       </div>
                       <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 flex-wrap">
