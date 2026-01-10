@@ -154,6 +154,13 @@ const ReceitasDespesas = () => {
     });
   }, [visibleAccounts, transactions, dateRanges, calculateBalanceUpToDate, accounts]);
 
+  const handleReconcile = useCallback((accountId: string) => {
+    setTransacoesV2(prev => prev.map(t => 
+      t.accountId === accountId ? { ...t, conciliated: true } : t
+    ));
+    toast.success(`Todas as transações da conta ${accounts.find(a => a.id === accountId)?.name || accountId} foram conciliadas.`);
+  }, [setTransacoesV2, accounts]);
+
   const handleMovimentar = (accountId: string) => {
     setSelectedAccountForModal(accountId);
     setEditingTransaction(undefined);
@@ -348,7 +355,9 @@ const ReceitasDespesas = () => {
           transferGroupId: groupId,
           parcelaId: primaryTx.links.parcelaId || null,
           vehicleTransactionId: primaryTx.links.vehicleTransactionId || null
-        }
+        },
+        meta: { ...primaryTx.meta, createdBy: 'system' },
+        conciliated: false,
       };
       if (!newTransactions.some(t => t.id === secondaryTx.id)) newTransactions.push(secondaryTx);
     }
