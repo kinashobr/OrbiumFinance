@@ -5,7 +5,6 @@ import {
   TrendingDown,
   Sparkles,
   Settings,
-  ChevronRight,
   ArrowRight
 } from "lucide-react";
 import { cn, getDueDate } from "@/lib/utils";
@@ -21,6 +20,7 @@ interface AlertItem {
   icon: React.ElementType;
   title: string;
   description: string;
+  value?: string; // Campo opcional para destacar valores
   action?: () => void;
 }
 
@@ -59,33 +59,27 @@ export function LoanAlerts({ emprestimos, className, onOpenPendingConfig }: Loan
     const pendingLoans = emprestimos.filter(e => e.status === 'pendente_config');
     if (pendingLoans.length > 0) items.push({ id: "pend", type: "info", icon: Settings, title: "Configuração Pendente", description: "Há novos contratos aguardando detalhes.", action: onOpenPendingConfig });
     if (hasOverdue) items.push({ id: "over", type: "danger", icon: AlertTriangle, title: "Parcelas Atrasadas", description: "Verifique seu cronograma de pagamentos." });
-    if (nextDueDate && differenceInDays(nextDueDate, hoje) <= 7) items.push({ id: "next", type: "warning", icon: Calendar, title: "Vencimento Próximo", description: `Próxima parcela em ${differenceInDays(nextDueDate, hoje)} dias.` });
-    if (totalJurosRestantes > 1000) items.push({ id: "save", type: "success", icon: TrendingDown, title: "Economia de Juros", description: `A quitação antecipada economiza até R$ ${totalJurosRestantes.toFixed(0)}.` });
+    if (nextDueDate && differenceInDays(nextDueDate, hoje) <= 7) items.push({ id: "next", type: "warning", icon: Calendar, title: "Vencimento Próximo", description: `Sua próxima fatura vence em ${differenceInDays(nextDueDate, hoje)} dias.` });
+    
+    if (totalJurosRestantes > 1000) {
+      items.push({ 
+        id: "save", 
+        type: "success", 
+        icon: TrendingDown, 
+        title: "Economia de Juros", 
+        description: "Valor total de juros futuros que podem ser eliminados com a quitação antecipada.",
+        value: `R$ ${totalJurosRestantes.toLocaleString('pt-BR', { maximumFractionDigits: 0 })}`
+      });
+    }
     
     return items;
   }, [activeLoans, emprestimos, calculateLoanSchedule, calculatePaidInstallmentsUpToDate, onOpenPendingConfig]);
 
   const styles = {
-    warning: {
-      bg: "bg-warning/5 border-warning/20",
-      iconBg: "bg-warning/10 text-warning",
-      btn: "text-warning hover:bg-warning/10"
-    },
-    info: {
-      bg: "bg-primary/5 border-primary/20",
-      iconBg: "bg-primary/10 text-primary",
-      btn: "text-primary hover:bg-primary/10"
-    },
-    success: {
-      bg: "bg-success/5 border-success/20",
-      iconBg: "bg-success/10 text-success",
-      btn: "text-success hover:bg-success/10"
-    },
-    danger: {
-      bg: "bg-destructive/5 border-destructive/20",
-      iconBg: "bg-destructive/10 text-destructive",
-      btn: "text-destructive hover:bg-destructive/10"
-    },
+    warning: { bg: "bg-warning/5 border-warning/20", iconBg: "bg-warning/10 text-warning", btn: "text-warning hover:bg-warning/10" },
+    info: { bg: "bg-primary/5 border-primary/20", iconBg: "bg-primary/10 text-primary", btn: "text-primary hover:bg-primary/10" },
+    success: { bg: "bg-success/5 border-success/20", iconBg: "bg-success/10 text-success", btn: "text-success hover:bg-success/10" },
+    danger: { bg: "bg-destructive/5 border-destructive/20", iconBg: "bg-destructive/10 text-destructive", btn: "text-destructive hover:bg-destructive/10" },
   };
 
   if (alerts.length === 0) return null;
@@ -94,31 +88,41 @@ export function LoanAlerts({ emprestimos, className, onOpenPendingConfig }: Loan
     <div className={cn("space-y-4", className)}>
       <div className="flex items-center gap-2 px-1">
         <Sparkles className="w-4 h-4 text-primary" />
-        <h3 className="text-[11px] font-black uppercase tracking-[0.2em] text-muted-foreground">Inteligência e Alertas</h3>
+        <h3 className="text-[11px] font-black uppercase tracking-[0.2em] text-muted-foreground">Insights do Motor de Análise</h3>
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         {alerts.map((alert) => {
           const style = styles[alert.type];
+          const isSaveCard = alert.id === 'save';
+
           return (
             <div
               key={alert.id}
               className={cn(
-                "flex flex-col p-5 rounded-[2rem] border transition-all duration-300 hover:-translate-y-1 hover:shadow-lg",
-                style.bg
+                "flex flex-col p-6 rounded-[2.5rem] border transition-all duration-300 hover:-translate-y-1 hover:shadow-xl",
+                style.bg,
+                isSaveCard && "sm:col-span-1"
               )}
             >
               <div className="flex items-start justify-between mb-4">
                 <div className={cn("p-3 rounded-2xl shadow-sm", style.iconBg)}>
-                  <alert.icon className="w-5 h-5" />
+                  <alert.icon className="w-6 h-6" />
                 </div>
                 <Badge variant="outline" className={cn("border-none font-black text-[9px] px-2 py-1 rounded-lg", style.iconBg)}>
                   {alert.type.toUpperCase()}
                 </Badge>
               </div>
               
-              <div className="flex-1">
-                <p className="text-sm font-black text-foreground leading-tight">{alert.title}</p>
-                <p className="text-xs font-medium text-muted-foreground mt-1.5 leading-relaxed">{alert.description}</p>
+              <div className="flex-1 space-y-2">
+                <p className="text-xs font-black text-muted-foreground uppercase tracking-widest">{alert.title}</p>
+                {alert.value ? (
+                  <div className="space-y-1">
+                    <p className="text-4xl font-black text-foreground tracking-tighter tabular-nums">{alert.value}</p>
+                    <p className="text-[11px] font-medium text-muted-foreground leading-relaxed max-w-[200px]">{alert.description}</p>
+                  </div>
+                ) : (
+                  <p className="text-sm font-bold text-foreground leading-tight">{alert.description}</p>
+                )}
               </div>
 
               {alert.action && (
@@ -126,10 +130,10 @@ export function LoanAlerts({ emprestimos, className, onOpenPendingConfig }: Loan
                   variant="ghost" 
                   size="sm" 
                   onClick={alert.action}
-                  className={cn("mt-4 w-full justify-between rounded-xl font-bold text-[11px] uppercase tracking-wider h-10", style.btn)}
+                  className={cn("mt-6 w-full justify-between rounded-xl font-black text-[10px] uppercase tracking-[0.15em] h-11 border border-current/10", style.btn)}
                 >
-                  Resolver Agora
-                  <ArrowRight className="w-3.5 h-3.5" />
+                  Configurar Contrato
+                  <ArrowRight className="w-4 h-4" />
                 </Button>
               )}
             </div>

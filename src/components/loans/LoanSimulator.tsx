@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { Calculator, TrendingUp, RefreshCw, DollarSign, Sparkles, ArrowRight } from "lucide-react";
+import { Calculator, RefreshCw, Sparkles, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -45,13 +45,32 @@ export function LoanSimulator({ emprestimos, className }: LoanSimulatorProps) {
     return taxaPonderada / totalPrincipal;
   }, [emprestimos]);
 
+  const formatCurrency = (value: number) => `R$ ${value.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`;
+
+  const ResultCard = ({ title, value, badge, subtext, labelSub }: { title: string, value: string, badge?: string, subtext?: string, labelSub?: string }) => (
+    <div className="p-8 rounded-[2.5rem] bg-success/5 border border-success/20 space-y-4 relative overflow-hidden animate-in zoom-in duration-500">
+        <Sparkles className="absolute -right-4 -top-4 w-20 h-20 text-success/10 rotate-12" />
+        <div className="flex justify-between items-center">
+            <span className="text-[10px] font-black uppercase tracking-[0.2em] text-success/60">{title}</span>
+            {badge && <Badge className="bg-success/20 text-success border-none font-black text-[10px] px-2 py-1">{badge}</Badge>}
+        </div>
+        <p className="text-5xl font-black text-success tracking-tighter tabular-nums">{value}</p>
+        <div className="pt-4 border-t border-success/10 flex justify-between items-end">
+            <div className="space-y-1">
+                <p className="text-[9px] font-black text-success/50 uppercase tracking-widest">{labelSub}</p>
+                <p className="text-sm font-black text-success/80 uppercase">{subtext}</p>
+            </div>
+            <ArrowRight className="w-5 h-5 text-success/30" />
+        </div>
+    </div>
+  );
+
   const simulacaoAumento = useMemo(() => {
     const aumento = Number(aumentoParcela) || 0;
     if (aumento <= 0 || totalSaldoDevedor <= 0) return null;
     const novaParcela = parcelaTotal + aumento;
     const i = taxaMedia / 100;
-    let mesesRestantes = 0;
-    let novosMesesRestantes = 0;
+    let mesesRestantes = 0, novosMesesRestantes = 0;
     if (i > 0 && parcelaTotal > 0 && novaParcela > 0) {
         const term1 = (totalSaldoDevedor * i) / parcelaTotal;
         mesesRestantes = term1 < 1 ? -Math.log(1 - term1) / Math.log(1 + i) : 999;
@@ -60,17 +79,13 @@ export function LoanSimulator({ emprestimos, className }: LoanSimulatorProps) {
     } else if (i === 0) {
         mesesRestantes = totalSaldoDevedor / parcelaTotal;
         novosMesesRestantes = totalSaldoDevedor / novaParcela;
-    } else return null;
-    const mesesEconomizados = Math.max(0, mesesRestantes - novosMesesRestantes);
-    const jurosEconomizadosFinal = Math.max(0, (parcelaTotal * mesesRestantes) - (novaParcela * novosMesesRestantes));
-    return { novaParcela, mesesEconomizados, jurosEconomizados: jurosEconomizadosFinal };
+    }
+    return { novaParcela, mesesEconomizados: Math.max(0, mesesRestantes - novosMesesRestantes), jurosEconomizados: Math.max(0, (parcelaTotal * mesesRestantes) - (novaParcela * novosMesesRestantes)) };
   }, [aumentoParcela, parcelaTotal, totalSaldoDevedor, taxaMedia]);
 
   const simulacaoQuitacao = useMemo(() => {
     const valor = Number(valorQuitacao) || 0;
     if (valor <= 0 || totalSaldoDevedor <= 0) return null;
-    const percentualQuitacao = Math.min(100, (valor / totalSaldoDevedor) * 100);
-    const saldoRestante = Math.max(0, totalSaldoDevedor - valor);
     let jurosRestantesTotal = 0;
     emprestimos.forEach(e => {
         if (e.status === 'quitado' || e.status === 'pendente_config') return;
@@ -78,125 +93,79 @@ export function LoanSimulator({ emprestimos, className }: LoanSimulatorProps) {
         const parcelasPagas = e.parcelasPagas || 0;
         jurosRestantesTotal += schedule.filter(item => item.parcela > parcelasPagas).reduce((acc, item) => acc + item.juros, 0);
     });
-    const jurosEconomizados = jurosRestantesTotal * (valor / totalSaldoDevedor);
-    return { percentualQuitacao, saldoRestante, jurosEconomizados: Math.max(0, jurosEconomizados) };
+    return { percentualQuitacao: Math.min(100, (valor / totalSaldoDevedor) * 100), saldoRestante: Math.max(0, totalSaldoDevedor - valor), jurosEconomizados: Math.max(0, jurosRestantesTotal * (valor / totalSaldoDevedor)) };
   }, [valorQuitacao, totalSaldoDevedor, calculateLoanSchedule, emprestimos]);
 
   const simulacaoRefinanciamento = useMemo(() => {
     const taxa = Number(novaTaxa) || 0;
     if (taxa <= 0 || taxa >= taxaMedia || totalSaldoDevedor <= 0) return null;
-    const diferencaTaxa = taxaMedia - taxa;
-    const economiaAnual = totalSaldoDevedor * (diferencaTaxa / 100) * 12;
-    const mesesRestantes = totalSaldoDevedor / parcelaTotal; 
     const i = taxa / 100;
-    let novaParcela = 0;
-    if (i > 0 && mesesRestantes > 0) novaParcela = (totalSaldoDevedor * i) / (1 - Math.pow(1 + i, -mesesRestantes));
-    else if (i === 0) novaParcela = totalSaldoDevedor / mesesRestantes;
-    else return null;
-    return { novaTaxa: taxa, economiaAnual, novaParcela, reducaoParcela: parcelaTotal - novaParcela };
+    const mesesRestantes = totalSaldoDevedor / (parcelaTotal || 1); 
+    const novaParcela = i > 0 ? (totalSaldoDevedor * i) / (1 - Math.pow(1 + i, -mesesRestantes)) : totalSaldoDevedor / mesesRestantes;
+    return { economiaAnual: totalSaldoDevedor * ((taxaMedia - taxa) / 100) * 12, novaParcela };
   }, [novaTaxa, taxaMedia, totalSaldoDevedor, parcelaTotal]);
 
-  const formatCurrency = (value: number) => `R$ ${value.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`;
-
   return (
-    <div className={cn("space-y-6", className)}>
+    <div className={cn("space-y-8", className)}>
       <div className="flex items-center gap-3 px-1">
-        <div className="p-2 bg-primary/10 rounded-xl text-primary">
-          <Calculator className="w-5 h-5" />
+        <div className="p-2.5 bg-primary/10 rounded-2xl text-primary shadow-sm">
+          <Calculator className="w-6 h-6" />
         </div>
-        <h3 className="font-display font-bold text-lg text-foreground">Simulador de Cenários</h3>
+        <h3 className="font-display font-bold text-xl text-foreground">Laboratório de Crédito</h3>
       </div>
 
-      <Tabs defaultValue="aumentar" className="space-y-6">
-        <TabsList className="bg-muted/50 w-full grid grid-cols-3 p-1 rounded-2xl h-12">
-          <TabsTrigger value="aumentar" className="rounded-xl text-[10px] font-black uppercase tracking-widest data-[state=active]:bg-card data-[state=active]:shadow-sm">
-            Aumentar
-          </TabsTrigger>
-          <TabsTrigger value="quitar" className="rounded-xl text-[10px] font-black uppercase tracking-widest data-[state=active]:bg-card data-[state=active]:shadow-sm">
-            Quitar
-          </TabsTrigger>
-          <TabsTrigger value="refinanciar" className="rounded-xl text-[10px] font-black uppercase tracking-widest data-[state=active]:bg-card data-[state=active]:shadow-sm">
-            Refinanciar
-          </TabsTrigger>
+      <Tabs defaultValue="aumentar" className="space-y-8">
+        <TabsList className="bg-muted/50 w-full grid grid-cols-3 p-1.5 rounded-[2rem] h-14">
+          <TabsTrigger value="aumentar" className="rounded-[1.5rem] text-[10px] font-black uppercase tracking-widest data-[state=active]:bg-card data-[state=active]:shadow-md">Aumentar</TabsTrigger>
+          <TabsTrigger value="quitar" className="rounded-[1.5rem] text-[10px] font-black uppercase tracking-widest data-[state=active]:bg-card data-[state=active]:shadow-md">Quitar</TabsTrigger>
+          <TabsTrigger value="refinanciar" className="rounded-[1.5rem] text-[10px] font-black uppercase tracking-widest data-[state=active]:bg-card data-[state=active]:shadow-md">Refinanciar</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="aumentar" className="space-y-6 animate-in fade-in duration-500">
+        <TabsContent value="aumentar" className="space-y-6">
           <div className="space-y-2">
-            <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground px-1">Aumentar parcela em (R$)</Label>
-            <Input
-              type="number"
-              placeholder="500"
-              value={aumentoParcela}
-              onChange={(e) => setAumentoParcela(e.target.value)}
-              className="h-12 border-2 rounded-2xl bg-card font-bold text-lg"
-            />
+            <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground px-1">Aporte Extra Mensal (R$)</Label>
+            <Input type="number" placeholder="Ex: 500" value={aumentoParcela} onChange={(e) => setAumentoParcela(e.target.value)} className="h-14 border-2 rounded-2xl bg-card font-black text-2xl px-6" />
           </div>
           {simulacaoAumento && (
-            <div className="p-6 rounded-[2rem] bg-success/5 border border-success/20 space-y-4 relative overflow-hidden">
-              <Sparkles className="absolute -right-2 -top-2 w-12 h-12 text-success/10 rotate-12" />
-              <div className="flex justify-between items-center">
-                <span className="text-[10px] font-black uppercase tracking-widest text-success/60">Economia Estimada</span>
-                <Badge className="bg-success/20 text-success border-none font-black text-[10px]">-{simulacaoAumento.mesesEconomizados.toFixed(0)} MESES</Badge>
-              </div>
-              <p className="text-3xl font-black text-success tracking-tighter">{formatCurrency(simulacaoAumento.jurosEconomizados)}</p>
-              <div className="pt-3 border-t border-success/10 flex justify-between text-[10px] font-bold text-success/70 uppercase">
-                <span>Nova Parcela</span>
-                <span>{formatCurrency(simulacaoAumento.novaParcela)}</span>
-              </div>
-            </div>
+            <ResultCard 
+                title="Redução Projetada" 
+                value={`R$ ${simulacaoAumento.jurosEconomizados.toLocaleString('pt-BR', { maximumFractionDigits: 0 })}`} 
+                badge={`-${simulacaoAumento.mesesEconomizados.toFixed(0)} MESES`}
+                labelSub="Nova Parcela"
+                subtext={formatCurrency(simulacaoAumento.novaParcela)}
+            />
           )}
         </TabsContent>
 
-        <TabsContent value="quitar" className="space-y-6 animate-in fade-in duration-500">
+        <TabsContent value="quitar" className="space-y-6">
           <div className="space-y-2">
-            <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground px-1">Valor para quitação (R$)</Label>
-            <Input
-              type="number"
-              placeholder="10000"
-              value={valorQuitacao}
-              onChange={(e) => setValorQuitacao(e.target.value)}
-              className="h-12 border-2 rounded-2xl bg-card font-bold text-lg"
-            />
+            <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground px-1">Valor para Amortização (R$)</Label>
+            <Input type="number" placeholder="Ex: 10.000" value={valorQuitacao} onChange={(e) => setValorQuitacao(e.target.value)} className="h-14 border-2 rounded-2xl bg-card font-black text-2xl px-6" />
           </div>
           {simulacaoQuitacao && (
-            <div className="p-6 rounded-[2rem] bg-success/5 border border-success/20 space-y-4">
-              <div className="flex justify-between items-center">
-                <span className="text-[10px] font-black uppercase tracking-widest text-success/60">Juros que deixará de pagar</span>
-                <Badge className="bg-success/20 text-success border-none font-black text-[10px]">{simulacaoQuitacao.percentualQuitacao.toFixed(0)}% DA DÍVIDA</Badge>
-              </div>
-              <p className="text-3xl font-black text-success tracking-tighter">{formatCurrency(simulacaoQuitacao.jurosEconomizados)}</p>
-              <div className="pt-3 border-t border-success/10 flex justify-between text-[10px] font-bold text-success/70 uppercase">
-                <span>Saldo Restante</span>
-                <span>{formatCurrency(simulacaoQuitacao.saldoRestante)}</span>
-              </div>
-            </div>
+            <ResultCard 
+                title="Corte de Juros" 
+                value={`R$ ${simulacaoQuitacao.jurosEconomizados.toLocaleString('pt-BR', { maximumFractionDigits: 0 })}`} 
+                badge={`${simulacaoQuitacao.percentualQuitacao.toFixed(0)}% DA DÍVIDA`}
+                labelSub="Saldo Restante"
+                subtext={formatCurrency(simulacaoQuitacao.saldoRestante)}
+            />
           )}
         </TabsContent>
 
-        <TabsContent value="refinanciar" className="space-y-6 animate-in fade-in duration-500">
+        <TabsContent value="refinanciar" className="space-y-6">
           <div className="space-y-2">
-            <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground px-1">Nova taxa mensal (%) - Atual: {taxaMedia.toFixed(2)}%</Label>
-            <Input
-              type="number"
-              step="0.01"
-              placeholder="1.50"
-              value={novaTaxa}
-              onChange={(e) => setNovaTaxa(e.target.value)}
-              className="h-12 border-2 rounded-2xl bg-card font-bold text-lg"
-            />
+            <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground px-1">Meta de Taxa Mensal (%)</Label>
+            <Input type="number" step="0.01" placeholder={`Atual: ${taxaMedia.toFixed(2)}%`} value={novaTaxa} onChange={(e) => setNovaTaxa(e.target.value)} className="h-14 border-2 rounded-2xl bg-card font-black text-2xl px-6" />
           </div>
           {simulacaoRefinanciamento && (
-            <div className="p-6 rounded-[2rem] bg-success/5 border border-success/20 space-y-4">
-              <div className="flex justify-between items-center">
-                <span className="text-[10px] font-black uppercase tracking-widest text-success/60">Economia Anual</span>
-                <Badge className="bg-success/20 text-success border-none font-black text-[10px]">-{formatCurrency(simulacaoRefinanciamento.reducaoParcela)}/MÊS</Badge>
-              </div>
-              <p className="text-3xl font-black text-success tracking-tighter">{formatCurrency(simulacaoRefinanciamento.economiaAnual)}</p>
-              <div className="pt-3 border-t border-success/10 flex justify-between text-[10px] font-bold text-success/70 uppercase">
-                <span>Nova Parcela</span>
-                <span>{formatCurrency(simulacaoRefinanciamento.novaParcela)}</span>
-              </div>
-            </div>
+            <ResultCard 
+                title="Economia Anual" 
+                value={`R$ ${simulacaoRefinanciamento.economiaAnual.toLocaleString('pt-BR', { maximumFractionDigits: 0 })}`} 
+                badge="REFINANCIAMENTO"
+                labelSub="Nova Parcela Estimada"
+                subtext={formatCurrency(simulacaoRefinanciamento.novaParcela)}
+            />
           )}
         </TabsContent>
       </Tabs>
