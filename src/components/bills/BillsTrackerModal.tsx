@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useCallback, useRef } from "react";
+import { useState, useMemo, useCallback } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -9,19 +9,17 @@ import { Label } from "@/components/ui/label";
 import { 
   Plus, 
   CalendarCheck, 
-  Repeat, 
   Shield, 
   Building2, 
   DollarSign, 
-  Info, 
   Settings, 
   ShoppingCart, 
   ChevronLeft, 
   ChevronRight, 
   X, 
   CheckCircle2,
-  ArrowRight,
-  Zap
+  Zap,
+  ArrowLeft
 } from "lucide-react";
 import { useFinance } from "@/contexts/FinanceContext";
 import { 
@@ -31,14 +29,14 @@ import {
   generateBillId, 
   TransactionLinks, 
   OperationType, 
-  BillDisplayItem, 
-  ExternalPaidBill 
+  BillDisplayItem 
 } from "@/types/finance";
 import { BillsTrackerList } from "./BillsTrackerList";
+import { BillsTrackerMobileList } from "./BillsTrackerMobileList";
 import { BillsSidebarKPIs } from "./BillsSidebarKPIs";
 import { FixedBillSelectorModal } from "./FixedBillSelectorModal";
 import { AddPurchaseInstallmentDialog } from "./AddPurchaseInstallmentDialog";
-import { format, startOfMonth, endOfMonth, subMonths, addMonths, startOfDay } from "date-fns";
+import { format, startOfMonth, subMonths, addMonths, startOfDay } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { toast } from "sonner";
 import { cn, parseDateLocal } from "@/lib/utils";
@@ -67,12 +65,10 @@ export function BillsTrackerModal({ open, onOpenChange }: BillsTrackerModalProps
     setTransacoesV2,
     categoriasV2,
     emprestimos,
-    calculateLoanAmortizationAndInterest,
     markSeguroParcelPaid,
     markLoanParcelPaid,
     unmarkSeguroParcelPaid,
     unmarkLoanParcelPaid,
-    transacoesV2
   } = useFinance();
 
   const isMobile = useMediaQuery("(max-width: 768px)");
@@ -82,10 +78,12 @@ export function BillsTrackerModal({ open, onOpenChange }: BillsTrackerModalProps
   const [showAddPurchaseDialog, setShowAddPurchaseDialog] = useState(false);
   const [showNewBillModal, setShowNewBillModal] = useState(false);
 
-  // Helper para adicionar conta avulsa
-  const [newBillDescription, setNewBillDescription] = useState("");
-  const [newBillAmount, setNewBillAmount] = useState("");
-  const [newBillDueDate, setNewBillDueDate] = useState(format(currentDate, "yyyy-MM-dd"));
+  // Form state para nova conta avulsa
+  const [newBillData, setNewBillData] = useState({
+    description: "",
+    amount: "",
+    dueDate: format(new Date(), "yyyy-MM-dd"),
+  });
 
   const trackerManagedBills = useMemo(() => getBillsForMonth(currentDate), [getBillsForMonth, currentDate]);
   const externalPaidBills = useMemo(() => getOtherPaidExpensesForMonth(currentDate), [getOtherPaidExpensesForMonth, currentDate]);
@@ -237,6 +235,35 @@ export function BillsTrackerModal({ open, onOpenChange }: BillsTrackerModalProps
     }
   }, [setBillsTracker, contasMovimento, categoriasV2]);
 
+  const handleAddAdHocBill = () => {
+    const amount = parseFloat(newBillData.amount.replace(".", "").replace(",", "."));
+    if (!newBillData.description || isNaN(amount) || amount <= 0 || !newBillData.dueDate) {
+      toast.error("Preencha todos os campos corretamente.");
+      return;
+    }
+
+    setBillsTracker(prev => [...prev, {
+      id: generateBillId(),
+      type: 'tracker',
+      description: newBillData.description,
+      dueDate: newBillData.dueDate,
+      expectedAmount: amount,
+      sourceType: "ad_hoc",
+      suggestedAccountId: contasMovimento.find(c => c.accountType === "corrente")?.id,
+      suggestedCategoryId: null,
+      isPaid: false,
+      isExcluded: false
+    }]);
+
+    setNewBillData({
+      description: "",
+      amount: "",
+      dueDate: format(currentDate, "yyyy-MM-dd"),
+    });
+    setShowNewBillModal(false);
+    toast.success("Conta avulsa adicionada!");
+  };
+
   const renderDesktopContent = () => (
     <div className="flex flex-col h-full">
       <div className="flex items-center justify-between mb-6 shrink-0">
@@ -311,72 +338,32 @@ export function BillsTrackerModal({ open, onOpenChange }: BillsTrackerModalProps
       </div>
 
       {/* Lista de Contas Mobile */}
-      <div className="flex-1 overflow-y-auto space-y-3 pb-24">
-        {combinedBills.map(bill => {
-          const isPaid = bill.isPaid || bill.type === 'external_paid';
-          const isOverdue = !isPaid && parseDateLocal(bill.dueDate) < startOfDay(new Date());
-          
-          return (
-            <div 
-              key={bill.id}
-              className={cn(
-                "p-4 rounded-[1.75rem] border transition-all flex items-center gap-4",
-                isPaid ? "bg-success/5 border-success/20 opacity-70" : 
-                isOverdue ? "bg-destructive/5 border-destructive/20" : "bg-card border-border/60 shadow-sm"
-              )}
-            >
-              <div className={cn(
-                "w-12 h-12 rounded-2xl flex items-center justify-center shrink-0",
-                isPaid ? "bg-success/10 text-success" : "bg-primary/10 text-primary"
-              )}>
-                {bill.sourceType === 'loan_installment' ? <Building2 className="w-6 h-6" /> :
-                 bill.sourceType === 'insurance_installment' ? <Shield className="w-6 h-6" /> :
-                 bill.sourceType === 'purchase_installment' ? <ShoppingCart className="w-6 h-6" /> :
-                 <DollarSign className="w-6 h-6" />}
-              </div>
-              
-              <div className="flex-1 min-w-0">
-                <p className="font-bold text-sm truncate">{bill.description}</p>
-                <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
-                  Vence {format(parseDateLocal(bill.dueDate), 'dd/MM')}
-                </p>
-              </div>
-
-              <div className="text-right space-y-1">
-                <p className={cn("font-black text-sm", isPaid ? "text-success" : "text-foreground")}>
-                  {formatCurrency(bill.expectedAmount)}
-                </p>
-                {isBillTracker(bill) && (
-                  <Button 
-                    variant="ghost" 
-                    size="icon" 
-                    className={cn("h-8 w-8 rounded-full", isPaid ? "text-success" : "text-muted-foreground")}
-                    onClick={() => handleTogglePaid(bill, !isPaid)}
-                  >
-                    {isPaid ? <CheckCircle2 className="w-5 h-5" /> : <div className="w-5 h-5 rounded-full border-2 border-current" />}
-                  </Button>
-                )}
-              </div>
-            </div>
-          );
-        })}
+      <div className="flex-1 overflow-hidden">
+        <BillsTrackerMobileList 
+          bills={combinedBills}
+          onUpdateBill={updateBill}
+          onDeleteBill={deleteBill}
+          onAddBill={(b) => setBillsTracker(prev => [...prev, { ...b, id: generateBillId(), type: 'tracker', isPaid: false, isExcluded: false }])}
+          onTogglePaid={handleTogglePaid}
+          currentDate={currentDate}
+        />
       </div>
 
-      {/* FAB Mobile */}
-      <div className="fixed bottom-6 right-6 flex flex-col gap-3">
+      {/* FAB Mobile - Corrigido para não sobrepor e acionar corretamente */}
+      <div className="fixed bottom-6 right-6 flex flex-col gap-3 z-[110]">
         <Button 
           size="icon" 
-          className="h-14 w-14 rounded-2xl shadow-xl bg-accent text-accent-foreground"
+          className="h-12 w-12 rounded-2xl shadow-xl bg-accent text-accent-foreground"
           onClick={() => setShowAddPurchaseDialog(true)}
         >
-          <ShoppingCart className="w-6 h-6" />
+          <ShoppingCart className="w-5 h-5" />
         </Button>
         <Button 
           size="icon" 
-          className="h-16 w-16 rounded-[1.5rem] shadow-2xl bg-primary text-primary-foreground"
+          className="h-14 w-14 rounded-[1.25rem] shadow-2xl bg-primary text-primary-foreground"
           onClick={() => setShowNewBillModal(true)}
         >
-          <Plus className="w-8 h-8" />
+          <Plus className="w-7 h-7" />
         </Button>
       </div>
     </div>
@@ -387,20 +374,22 @@ export function BillsTrackerModal({ open, onOpenChange }: BillsTrackerModalProps
       {isMobile && open ? (
         <div className="fixed inset-0 z-[100] bg-background flex flex-col animate-in fade-in slide-in-from-bottom-4 duration-300">
           <header className="px-6 pt-8 pb-4 border-b shrink-0 bg-card">
-            <div className="flex items-center gap-4">
-              <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center text-primary">
-                <CalendarCheck className="w-6 h-6" />
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <Button variant="ghost" size="icon" className="rounded-full h-10 w-10" onClick={() => onOpenChange(false)}>
+                  <ArrowLeft className="w-6 h-6" />
+                </Button>
+                <div>
+                  <h2 className="text-xl font-black tracking-tight">Contas a Pagar</h2>
+                  <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Gestão de Fluxo</p>
+                </div>
               </div>
-              <div>
-                <h2 className="text-xl font-black tracking-tight">Contas a Pagar</h2>
-                <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Gestão de Fluxo</p>
-              </div>
+              <Button variant="ghost" size="icon" className="rounded-full h-10 w-10 bg-muted/50" onClick={() => { setFixedBillSelectorMode("current"); setShowFixedBillSelector(true); }}>
+                <Settings className="w-5 h-5" />
+              </Button>
             </div>
-            <Button variant="ghost" size="icon" className="rounded-full h-12 w-12" onClick={() => onOpenChange(false)}>
-              <X className="w-6 h-6" />
-            </Button>
           </header>
-          <main className="flex-1 p-6 overflow-hidden">
+          <main className="flex-1 p-6 overflow-hidden relative">
             {renderMobileContent()}
           </main>
         </div>
@@ -469,49 +458,51 @@ export function BillsTrackerModal({ open, onOpenChange }: BillsTrackerModalProps
         currentDate={currentDate}
       />
 
+      {/* Modal de Nova Conta Otimizado para Mobile */}
       <Dialog open={showNewBillModal} onOpenChange={setShowNewBillModal}>
-        <DialogContent className="max-w-md rounded-[2.5rem] p-8">
+        <DialogContent className="max-w-[min(90vw,400px)] rounded-[2rem] p-6 sm:p-8 z-[120]">
           <DialogHeader>
-            <DialogTitle className="text-2xl font-black tracking-tight">Nova Despesa</DialogTitle>
-            <DialogDescription className="font-bold text-muted-foreground">Lançamento avulso no contas a pagar</DialogDescription>
+            <DialogTitle className="text-xl sm:text-2xl font-black tracking-tight">Nova Despesa</DialogTitle>
+            <DialogDescription className="font-bold text-muted-foreground text-xs">Lançamento avulso no planejamento</DialogDescription>
           </DialogHeader>
-          <div className="space-y-6 py-4">
-            <div className="space-y-2">
+          <div className="space-y-5 py-4">
+            <div className="space-y-1.5">
               <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground px-1">Descrição</Label>
               <Input 
-                placeholder="Ex: Manutenção Ar Condicionado" 
-                className="h-12 border-2 rounded-xl font-bold"
-                value={newBillDescription}
-                onChange={e => setNewBillDescription(e.target.value)}
+                placeholder="Ex: Manutenção Casa" 
+                className="h-11 border-2 rounded-xl font-bold text-sm"
+                value={newBillData.description}
+                onChange={e => setNewBillData(prev => ({ ...prev, description: e.target.value }))}
               />
             </div>
             <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
+              <div className="space-y-1.5">
                 <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground px-1">Valor</Label>
                 <Input 
                   placeholder="0,00" 
-                  className="h-12 border-2 rounded-xl font-black text-lg"
-                  value={newBillAmount}
-                  onChange={e => setNewBillAmount(formatAmountInput(e.target.value))}
+                  className="h-11 border-2 rounded-xl font-black text-base"
+                  value={newBillData.amount}
+                  onChange={e => {
+                    const val = e.target.value.replace(/[^\d,]/g, "");
+                    setNewBillData(prev => ({ ...prev, amount: val }));
+                  }}
                 />
               </div>
-              <div className="space-y-2">
+              <div className="space-y-1.5">
                 <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground px-1">Vencimento</Label>
                 <Input 
                   type="date" 
-                  className="h-12 border-2 rounded-xl font-bold"
-                  value={newBillDueDate}
-                  onChange={e => setNewBillDueDate(e.target.value)}
+                  className="h-11 border-2 rounded-xl font-bold text-xs"
+                  value={newBillData.dueDate}
+                  onChange={e => setNewBillData(prev => ({ ...prev, dueDate: e.target.value }))}
                 />
               </div>
             </div>
           </div>
-          <DialogFooter>
+          <DialogFooter className="mt-2">
             <Button 
-              className="w-full h-14 rounded-2xl font-black text-base shadow-xl shadow-primary/20"
-              onClick={() => {
-                if (handleAddAdHocBill()) setShowNewBillModal(false);
-              }}
+              className="w-full h-12 rounded-xl font-black text-sm shadow-lg shadow-primary/20"
+              onClick={handleAddAdHocBill}
             >
               ADICIONAR CONTA
             </Button>
@@ -520,40 +511,4 @@ export function BillsTrackerModal({ open, onOpenChange }: BillsTrackerModalProps
       </Dialog>
     </>
   );
-
-  const handleAddAdHocBill = (): boolean => {
-    const amount = parseAmount(newBillAmount);
-    if (!newBillDescription || amount <= 0 || !newBillDueDate) {
-      toast.error("Preencha todos os campos.");
-      return false;
-    }
-    setBillsTracker(prev => [...prev, {
-      id: generateBillId(),
-      type: 'tracker',
-      description: newBillDescription,
-      dueDate: newBillDueDate,
-      expectedAmount: amount,
-      sourceType: "ad_hoc",
-      suggestedAccountId: contasMovimento.find(c => c.accountType === "corrente")?.id,
-      suggestedCategoryId: null,
-      isPaid: false,
-      isExcluded: false
-    }]);
-    setNewBillDescription("");
-    setNewBillAmount("");
-    toast.success("Despesa adicionada.");
-    return true;
-  };
-
-  const parseAmount = (value: string): number => {
-    const parsed = parseFloat(value.replace(".", "").replace(",", "."));
-    return isNaN(parsed) ? 0 : parsed;
-  };
-
-  const formatAmountInput = (value: string) => {
-    const cleaned = value.replace(/[^\d,]/g, "");
-    const parts = cleaned.split(",");
-    if (parts.length > 2) return value;
-    return cleaned;
-  };
 }
