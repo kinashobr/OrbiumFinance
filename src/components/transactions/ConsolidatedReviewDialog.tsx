@@ -1,8 +1,7 @@
 import { useState, useMemo, useCallback, useEffect } from "react";
 import { Dialog, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { FileText, Check, Loader2, AlertCircle, Calendar, ArrowRight, X, Settings } from "lucide-react";
+import { FileText, Check, Loader2, X, Settings, Sparkles, Filter, Info } from "lucide-react";
 import { 
   ContaCorrente, Categoria, ImportedTransaction, StandardizationRule, 
   TransacaoCompleta, TransferGroup, generateTransactionId, generateTransferGroupId, 
@@ -15,13 +14,12 @@ import { toast } from "sonner";
 import { parseDateLocal, cn } from "@/lib/utils";
 import { TransactionReviewTable } from "./TransactionReviewTable";
 import { StandardizationRuleFormModal } from "./StandardizationRuleFormModal";
-import { ReviewContextSidebar } from "./ReviewContextSidebar"; // NEW IMPORT
-import { StandardizationRuleManagerModal } from "./StandardizationRuleManagerModal"; // NEW IMPORT
-import { ResizableSidebar } from "./ResizableSidebar"; // NEW IMPORT
+import { ReviewContextSidebar } from "./ReviewContextSidebar";
+import { StandardizationRuleManagerModal } from "./StandardizationRuleManagerModal";
+import { ResizableSidebar } from "./ResizableSidebar";
 import { startOfMonth, endOfMonth, format, subDays, startOfDay, endOfDay } from "date-fns";
-import { ResizableDialogContent } from "../ui/ResizableDialogContent"; // NEW IMPORT
+import { ResizableDialogContent } from "../ui/ResizableDialogContent";
 
-// Interface simplificada para Empréstimo (COMPLETA)
 interface LoanInfo {
   id: string;
   institution: string;
@@ -37,7 +35,6 @@ interface LoanInfo {
   totalParcelas: number;
 }
 
-// Interface simplificada para Investimento
 interface InvestmentInfo {
   id: string;
   name: string;
@@ -66,7 +63,7 @@ export function ConsolidatedReviewDialog({
     getTransactionsForReview,
     standardizationRules,
     addStandardizationRule,
-    deleteStandardizationRule, // ADDED
+    deleteStandardizationRule,
     addTransacaoV2,
     updateImportedStatement,
     importedStatements,
@@ -77,452 +74,179 @@ export function ConsolidatedReviewDialog({
   } = useFinance();
   
   const account = accounts.find(a => a.id === accountId);
-  
-  // Estado para o período de filtro (usa o mês atual como padrão)
   const [reviewRange, setReviewRange] = useState<DateRange>(() => ({
     from: startOfMonth(new Date()),
     to: endOfMonth(new Date()),
   }));
   
-  // Estado para as transações em revisão (consolidadas e filtradas)
   const [transactionsToReview, setTransactionsToReview] = useState<ImportedTransaction[]>([]);
   const [loading, setLoading] = useState(false);
-  
-  // Estado para o modal de regra
   const [showRuleModal, setShowRuleModal] = useState(false);
   const [txForRule, setTxForRule] = useState<ImportedTransaction | null>(null);
-  
-  // Estado para o gerenciador de regras
   const [showRuleManagerModal, setShowRuleManagerModal] = useState(false);
 
-  // 1. Carregar e filtrar transações pendentes
   const loadTransactions = useCallback(() => {
     if (!reviewRange.from || !reviewRange.to) {
       setTransactionsToReview([]);
       return;
     }
     setLoading(true);
-    
-    // Chama a função do contexto para consolidar e filtrar
     const consolidatedTxs = getTransactionsForReview(accountId, reviewRange);
-    
-    // Clonar para permitir edição local
     setTransactionsToReview(consolidatedTxs.map(tx => ({ ...tx })));
     setLoading(false);
   }, [accountId, reviewRange, getTransactionsForReview]);
 
-  useEffect(() => {
-    if (open) {
-      loadTransactions();
-    }
-  }, [open, loadTransactions]);
+  useEffect(() => { if (open) loadTransactions(); }, [open, loadTransactions]);
   
-  // 2. Handlers para edição local na tabela
   const handleUpdateTransaction = useCallback((id: string, updates: Partial<ImportedTransaction>) => {
-    setTransactionsToReview(prev => prev.map(tx => {
-      if (tx.id === id) {
-        const updatedTx = { ...tx, ...updates };
-        
-        // Lógica de limpeza de campos de vínculo ao mudar o tipo de operação
-        if (updates.operationType && updates.operationType !== tx.operationType) {
-            updatedTx.destinationAccountId = null;
-            updatedTx.tempInvestmentId = null;
-            updatedTx.tempLoanId = null;
-            updatedTx.tempVehicleOperation = null;
-            updatedTx.tempParcelaId = null; // Limpa a parcela
-            updatedTx.isTransfer = updates.operationType === 'transferencia';
-        }
-        
-        return updatedTx;
-      }
-      return tx;
-    }));
+    setTransactionsToReview(prev => prev.map(tx => tx.id === id ? { ...tx, ...updates } : tx));
   }, []);
   
-  // 3. Handler para criar regra
-  const handleCreateRule = (tx: ImportedTransaction) => {
-    setTxForRule(tx);
-    setShowRuleModal(true);
-  };
+  const handleCreateRule = (tx: ImportedTransaction) => { setTxForRule(tx); setShowRuleModal(true); };
   
   const handleSaveRule = (rule: Omit<StandardizationRule, "id">) => {
     addStandardizationRule(rule);
-    toast.success("Regra salva! Aplicando a transações pendentes...");
-    
-    // Reaplicar regras e recarregar a lista para ver o efeito imediato
+    toast.success("Regra aplicada!");
     loadTransactions();
   };
 
-  // 4. Contabilização (Processamento final)
   const handleContabilize = () => {
     const txsToContabilize = transactionsToReview.filter(tx => {
-      // IGNORAR DUPLICATAS POTENCIAIS
       if (tx.isPotentialDuplicate) return false; 
-      
-      // Verifica se a transação está pronta para ser contabilizada
-      const isCategorized = tx.categoryId || tx.isTransfer || tx.tempInvestmentId || tx.tempLoanId || tx.tempVehicleOperation || tx.operationType === 'liberacao_emprestimo';
-      return !!isCategorized;
+      return tx.categoryId || tx.isTransfer || tx.tempInvestmentId || tx.tempLoanId || tx.tempVehicleOperation || tx.operationType === 'liberacao_emprestimo';
     });
     
     if (txsToContabilize.length === 0) {
-      toast.error("Nenhuma transação pronta para contabilização. Categorize ou vincule as pendentes (Duplicatas Potenciais são ignoradas).");
+      toast.error("Categorize as transações antes de contabilizar.");
       return;
     }
     
     setLoading(true);
     const newTransactions: TransacaoCompleta[] = [];
-    const contabilizedIds = new Set<string>();
     const updatedStatements = new Map<string, ImportedStatement>();
-    
-    // Mapeamento de IDs de transações brutas para seus extratos
     const txToStatementMap = new Map<string, string>();
-    importedStatements.forEach(s => {
-        s.rawTransactions.forEach(t => txToStatementMap.set(t.id, s.id));
-    });
+    importedStatements.forEach(s => s.rawTransactions.forEach(t => txToStatementMap.set(t.id, s.id)));
 
     txsToContabilize.forEach(tx => {
       const transactionId = generateTransactionId();
-      const now = new Date().toISOString();
-      
-      const account = accounts.find(a => a.id === tx.accountId);
-      const isCreditCard = account?.accountType === 'cartao_credito';
-      
-      const isIncoming = tx.operationType === 'receita' || tx.operationType === 'resgate' ||
-                         tx.operationType === 'liberacao_emprestimo' || tx.operationType === 'rendimento' ||
-                         (tx.operationType === 'veiculo' && tx.tempVehicleOperation === 'venda');
-      
       let flow = getFlowTypeFromOperation(tx.operationType!, tx.tempVehicleOperation || undefined);
-      
-      // Ajuste de fluxo para Cartão de Crédito
-      if (isCreditCard) {
-        if (tx.operationType === 'despesa') flow = 'out'; 
-        else if (tx.operationType === 'transferencia') flow = 'in'; 
-      }
+      const isCreditCard = accounts.find(a => a.id === tx.accountId)?.accountType === 'cartao_credito';
+      if (isCreditCard) flow = tx.operationType === 'despesa' ? 'out' : 'in';
 
       const baseTx: TransacaoCompleta = {
-        id: transactionId,
-        date: tx.date,
-        accountId: tx.accountId,
-        flow,
-        operationType: tx.operationType!,
-        domain: getDomainFromOperation(tx.operationType!),
-        amount: tx.amount,
-        categoryId: tx.categoryId || null,
-        description: tx.description,
-        links: {
-          investmentId: tx.tempInvestmentId || null,
-          loanId: tx.tempLoanId || null,
-          transferGroupId: null,
-          parcelaId: tx.tempParcelaId || null, // USANDO tempParcelaId
-          vehicleTransactionId: null,
-        } as TransactionLinks,
-        conciliated: true, // Transações importadas e contabilizadas são consideradas conciliadas
-        attachments: [],
-        meta: {
-          createdBy: 'system',
-          source: 'import',
-          createdAt: now,
-          originalDescription: tx.originalDescription,
-          vehicleOperation: tx.operationType === 'veiculo' ? tx.tempVehicleOperation || undefined : undefined,
-        }
+        id: transactionId, date: tx.date, accountId: tx.accountId, flow, operationType: tx.operationType!, domain: getDomainFromOperation(tx.operationType!),
+        amount: tx.amount, categoryId: tx.categoryId || null, description: tx.description, links: { investmentId: tx.tempInvestmentId || null, loanId: tx.tempLoanId || null, transferGroupId: null, parcelaId: tx.tempParcelaId || null, vehicleTransactionId: null },
+        conciliated: true, attachments: [], meta: { createdBy: 'system', source: 'import', createdAt: new Date().toISOString(), originalDescription: tx.originalDescription, vehicleOperation: tx.operationType === 'veiculo' ? tx.tempVehicleOperation || undefined : undefined }
       };
       
-      // 1. Transferência
       if (tx.isTransfer && tx.destinationAccountId) {
         const groupId = generateTransferGroupId();
         baseTx.links.transferGroupId = groupId;
-        
-        const fromAccount = accounts.find(a => a.id === tx.accountId);
-        const toAccount = accounts.find(a => a.id === tx.destinationAccountId);
-        const isToCreditCard = toAccount?.accountType === 'cartao_credito';
-        
-        // Transação de Saída (Conta Origem - a conta do extrato)
-        const outTx: TransacaoCompleta = {
-          ...baseTx,
-          flow: 'transfer_out',
-          description: tx.description || `Transferência para ${toAccount?.name}`,
-        };
-        newTransactions.push(outTx);
-        
-        // Transação de Entrada (Conta Destino - a contraparte)
-        const inTx: TransacaoCompleta = {
-          ...baseTx,
-          id: generateTransactionId(),
-          accountId: tx.destinationAccountId,
-          // CORREÇÃO APLICADA AQUI: Se o destino é CC, o fluxo é 'in' (pagamento de fatura)
-          flow: isToCreditCard ? 'in' : 'transfer_in', 
-          operationType: 'transferencia' as const,
-          description: isToCreditCard ? `Pagamento de fatura CC ${toAccount?.name}` : tx.description || `Transferência recebida de ${fromAccount?.name}`,
-          links: {
-            ...baseTx.links,
-            transferGroupId: groupId,
-          },
-          // A transação de contraparte não é considerada conciliada, pois não veio do extrato dela.
-          conciliated: false, 
-        };
-        newTransactions.push(inTx);
-        
-      } 
-      // 2. Aplicação/Resgate
-      else if (tx.operationType === 'aplicacao' || tx.operationType === 'resgate') {
-        const isAplicacao = tx.operationType === 'aplicacao';
-        const groupId = isAplicacao ? `app_${Date.now()}` : `res_${Date.now()}`;
-        baseTx.links.transferGroupId = groupId;
-        
-        // Transação 1: Conta Corrente (Saída/Entrada)
+        newTransactions.push({ ...baseTx, flow: 'transfer_out' });
+        const toAcc = accounts.find(a => a.id === tx.destinationAccountId);
+        newTransactions.push({ ...baseTx, id: generateTransactionId(), accountId: tx.destinationAccountId, flow: toAcc?.accountType === 'cartao_credito' ? 'in' : 'transfer_in', description: tx.description || `Transferência para ${toAcc?.name}`, links: { ...baseTx.links, transferGroupId: groupId }, conciliated: false });
+      } else if (tx.operationType === 'aplicacao' || tx.operationType === 'resgate') {
+        const isApp = tx.operationType === 'aplicacao';
+        const gid = `app_${Date.now()}`; baseTx.links.transferGroupId = gid;
         newTransactions.push(baseTx);
-        
-        // Transação 2: Conta Investimento (Entrada/Saída)
-        const secondaryTx: TransacaoCompleta = {
-          ...baseTx,
-          id: generateTransactionId(),
-          accountId: tx.tempInvestmentId!,
-          flow: isAplicacao ? 'in' : 'out',
-          operationType: isAplicacao ? 'aplicacao' : 'resgate',
-          domain: 'investment',
-          description: isAplicacao ? (tx.description || `Aplicação recebida`) : (tx.description || `Resgate enviado`),
-          links: {
-            ...baseTx.links,
-            investmentId: baseTx.accountId, // Link de volta para a conta corrente
-          },
-          meta: { ...baseTx.meta, createdBy: 'system' },
-          conciliated: false, // Contraparte não conciliada
-        };
-        newTransactions.push(secondaryTx);
-      }
-      // 3. Liberação Empréstimo
-      else if (tx.operationType === 'liberacao_emprestimo') {
+        newTransactions.push({ ...baseTx, id: generateTransactionId(), accountId: tx.tempInvestmentId!, flow: isApp ? 'in' : 'out', operationType: isApp ? 'aplicacao' : 'resgate', domain: 'investment', links: { ...baseTx.links, investmentId: baseTx.accountId }, conciliated: false });
+      } else {
         newTransactions.push(baseTx);
-        addEmprestimo({
-          contrato: tx.description,
-          valorTotal: tx.amount,
-          parcela: 0,
-          meses: 0,
-          taxaMensal: 0,
-          status: 'pendente_config',
-          liberacaoTransactionId: baseTx.id,
-          contaCorrenteId: baseTx.accountId,
-          dataInicio: baseTx.date,
-        });
-      }
-      // 4. Pagamento Empréstimo
-      else if (tx.operationType === 'pagamento_emprestimo' && tx.tempLoanId) {
-        newTransactions.push(baseTx);
-        const loanIdNum = parseInt(tx.tempLoanId.replace('loan_', ''));
-        // Nota: Usamos tx.tempParcelaId para marcar a parcela paga
-        const parcelaNum = tx.tempParcelaId ? parseInt(tx.tempParcelaId) : undefined;
-        if (!isNaN(loanIdNum)) {
-            markLoanParcelPaid(loanIdNum, tx.amount, tx.date, parcelaNum);
-        }
-      }
-      // 5. Compra de Veículo
-      else if (tx.operationType === 'veiculo' && tx.tempVehicleOperation === 'compra') {
-        newTransactions.push(baseTx);
-        addVeiculo({
-            modelo: tx.description,
-            marca: '',
-            tipo: 'carro', // Default
-            ano: 0,
-            dataCompra: tx.date,
-            valorVeiculo: tx.amount,
-            valorSeguro: 0,
-            vencimentoSeguro: "",
-            parcelaSeguro: 0,
-            valorFipe: 0,
-            compraTransactionId: baseTx.id,
-            status: 'pendente_cadastro',
-        });
-      }
-      // 6. Transação Simples (Receita/Despesa/Rendimento)
-      else {
-        newTransactions.push(baseTx);
+        if (tx.operationType === 'liberacao_emprestimo') addEmprestimo({ contrato: tx.description, valorTotal: tx.amount, parcela: 0, meses: 0, taxaMensal: 0, status: 'pendente_config', liberacaoTransactionId: baseTx.id, contaCorrenteId: baseTx.accountId, dataInicio: baseTx.date });
+        if (tx.operationType === 'pagamento_emprestimo' && tx.tempLoanId) markLoanParcelPaid(parseInt(tx.tempLoanId.replace('loan_', '')), tx.amount, tx.date, tx.tempParcelaId ? parseInt(tx.tempParcelaId) : undefined);
+        if (tx.operationType === 'veiculo' && tx.tempVehicleOperation === 'compra') addVeiculo({ modelo: tx.description, marca: '', tipo: 'carro', ano: 0, dataCompra: tx.date, valorVeiculo: tx.amount, valorSeguro: 0, vencimentoSeguro: "", parcelaSeguro: 0, valorFipe: 0, compraTransactionId: baseTx.id, status: 'pendente_cadastro' });
       }
       
-      contabilizedIds.add(tx.id);
-      
-      // 5. Atualizar status dos statements
-      const statementId = txToStatementMap.get(tx.id);
-      if (statementId) {
-          if (!updatedStatements.has(statementId)) {
-              const originalStatement = importedStatements.find(s => s.id === statementId);
-              if (originalStatement) {
-                  updatedStatements.set(statementId, { ...originalStatement });
-              }
-          }
-          const statement = updatedStatements.get(statementId);
-          if (statement) {
-              statement.rawTransactions = statement.rawTransactions.map(rawTx => 
-                  rawTx.id === tx.id ? { ...rawTx, isContabilized: true, contabilizedTransactionId: transactionId } : rawTx
-              );
-          }
+      const sid = txToStatementMap.get(tx.id);
+      if (sid) {
+          if (!updatedStatements.has(sid)) updatedStatements.set(sid, { ...importedStatements.find(s => s.id === sid)! });
+          const s = updatedStatements.get(sid)!;
+          s.rawTransactions = s.rawTransactions.map(raw => raw.id === tx.id ? { ...raw, isContabilized: true, contabilizedTransactionId: transactionId } : raw);
       }
     });
     
-    // 5. Persistir no contexto
     newTransactions.forEach(t => addTransacaoV2(t));
-    
-    // 6. Atualizar status dos statements
-    updatedStatements.forEach(s => {
-        const pendingCount = s.rawTransactions.filter(t => !t.isContabilized).length;
-        const newStatus = pendingCount === 0 ? 'complete' : 'partial';
-        updateImportedStatement(s.id, { rawTransactions: s.rawTransactions, status: newStatus });
-    });
+    updatedStatements.forEach(s => updateImportedStatement(s.id, { rawTransactions: s.rawTransactions, status: s.rawTransactions.filter(t => !t.isContabilized).length === 0 ? 'complete' : 'partial' }));
     
     setLoading(false);
-    toast.success(`${txsToContabilize.length} transações contabilizadas com sucesso!`);
+    toast.success(`${txsToContabilize.length} transações processadas.`);
     onOpenChange(false);
   };
   
-  // Lógica para o PeriodSelector
-  const handlePeriodChange = useCallback((ranges: ComparisonDateRanges) => {
-    setReviewRange(ranges.range1);
-  }, []);
-  
-  const handleApplyFilter = () => {
-    loadTransactions();
-  };
-  
-  const handleManageRules = () => {
-    setShowRuleManagerModal(true);
-  };
-  
-  // CORREÇÃO AQUI: Calcular a contagem de transações prontas e pendentes
-  const readyToContabilizeCount = useMemo(() => {
-    return transactionsToReview.filter(tx => {
-      // Ignora duplicatas potenciais
-      if (tx.isPotentialDuplicate) return false; 
-      
-      // Verifica se a transação está pronta para ser contabilizada
-      const isCategorized = tx.categoryId || tx.isTransfer || tx.tempInvestmentId || tx.tempLoanId || tx.tempVehicleOperation || tx.operationType === 'liberacao_emprestimo';
-      return !!isCategorized;
-    }).length;
-  }, [transactionsToReview]);
-  
-  const pendingCount = useMemo(() => {
-    return transactionsToReview.filter(tx => {
-      // Ignora duplicatas potenciais
-      if (tx.isPotentialDuplicate) return false; 
-      
-      // Verifica se a transação NÃO está pronta
-      const isCategorized = tx.categoryId || tx.isTransfer || tx.tempInvestmentId || tx.tempLoanId || tx.tempVehicleOperation || tx.operationType === 'liberacao_emprestimo';
-      return !isCategorized;
-    }).length;
-  }, [transactionsToReview]);
-  
-  const totalCount = transactionsToReview.length;
+  const readyCount = useMemo(() => transactionsToReview.filter(tx => !tx.isPotentialDuplicate && (tx.categoryId || tx.isTransfer || tx.tempInvestmentId || tx.tempLoanId || tx.tempVehicleOperation || tx.operationType === 'liberacao_emprestimo')).length, [transactionsToReview]);
+  const pendingCount = useMemo(() => transactionsToReview.filter(tx => !tx.isPotentialDuplicate && !(tx.categoryId || tx.isTransfer || tx.tempInvestmentId || tx.tempLoanId || tx.tempVehicleOperation || tx.operationType === 'liberacao_emprestimo')).length, [transactionsToReview]);
 
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
         <ResizableDialogContent 
           storageKey="consolidated_review_modal"
-          initialWidth={1400}
-          initialHeight={850}
-          minWidth={900}
-          minHeight={600}
-          maxWidth={1800}
-          maxHeight={1200}
-          hideCloseButton={true} 
+          initialWidth={1400} initialHeight={850} minWidth={900} minHeight={600} hideCloseButton={true}
+          className="rounded-[2.5rem] bg-surface-light dark:bg-surface-dark border-none shadow-2xl"
         >
-          <DialogHeader className="px-4 pt-3 pb-2 border-b shrink-0">
+          <DialogHeader className="px-8 pt-8 pb-4 bg-surface-light dark:bg-surface-dark shrink-0">
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <FileText className="w-5 h-5 text-primary" />
+              <div className="flex items-center gap-4">
+                <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center text-primary shadow-lg shadow-primary/5">
+                  <FileText className="w-7 h-7" />
+                </div>
                 <div>
-                  <DialogTitle className="text-lg">Revisão Consolidada</DialogTitle>
-                  <DialogDescription className="text-xs">
-                    {account?.name}
+                  <DialogTitle className="text-2xl font-black tracking-tight">Painel de Revisão</DialogTitle>
+                  <DialogDescription className="text-sm font-medium text-muted-foreground flex items-center gap-1.5 mt-1">
+                    <Sparkles className="w-3.5 h-3.5 text-accent" />
+                    {account?.name} • Extratos Importados
                   </DialogDescription>
                 </div>
               </div>
-              <div className="flex items-center gap-2">
-                {/* Botão de fechar customizado (mantido) */}
-                <Button 
-                  variant="ghost" 
-                  size="icon" 
-                  className="h-8 w-8"
-                  onClick={() => onOpenChange(false)}
-                >
-                  <X className="w-4 h-4" />
-                </Button>
-              </div>
+              <Button variant="ghost" size="icon" className="h-10 w-10 rounded-full hover:bg-black/5" onClick={() => onOpenChange(false)}><X className="w-5 h-5" /></Button>
             </div>
           </DialogHeader>
 
-          <div className="flex flex-1 overflow-y-auto"> {/* CORREÇÃO 1: A rolagem vertical é gerenciada por este container */}
-            
-            {/* Coluna Lateral (Controle e Status) - AGORA REDIMENSIONÁVEL */}
-            <ResizableSidebar
-                initialWidth={350}
-                minWidth={200}
-                maxWidth={400}
-                storageKey="review_sidebar_width"
-            >
-                <ReviewContextSidebar
-                    accountId={accountId}
-                    statements={importedStatements.filter(s => s.accountId === accountId)}
-                    pendingCount={pendingCount}
-                    readyToContabilizeCount={readyToContabilizeCount}
-                    totalCount={totalCount}
-                    reviewRange={reviewRange}
-                    onPeriodChange={handlePeriodChange}
-                    onApplyFilter={handleApplyFilter}
-                    onContabilize={handleContabilize}
-                    onClose={() => onOpenChange(false)}
-                    onManageRules={handleManageRules}
-                />
+          <div className="flex flex-1 overflow-hidden">
+            <ResizableSidebar initialWidth={320} minWidth={240} maxWidth={400} storageKey="review_sidebar_width">
+                <div className="h-full bg-surface-light dark:bg-surface-dark border-r border-border/40">
+                  <ReviewContextSidebar
+                      accountId={accountId} statements={importedStatements.filter(s => s.accountId === accountId)}
+                      pendingCount={pendingCount} readyToContabilizeCount={readyCount} totalCount={transactionsToReview.length}
+                      reviewRange={reviewRange} onPeriodChange={r => setReviewRange(r.range1)} onApplyFilter={loadTransactions}
+                      onContabilize={handleContabilize} onClose={() => onOpenChange(false)} onManageRules={() => setShowRuleManagerModal(true)}
+                  />
+                </div>
             </ResizableSidebar>
 
-            {/* Coluna Principal (Tabela de Revisão) */}
-            <div className="flex-1 px-4 pt-2 pb-2"> {/* CORREÇÃO 2: Removido overflow-y-auto daqui */}
-              <h3 className="text-sm font-semibold text-foreground mb-3">
-                Transações Pendentes no Período ({format(reviewRange.from || new Date(), 'dd/MM/yy')} - {format(reviewRange.to || new Date(), 'dd/MM/yy')})
-              </h3>
+            <div className="flex-1 flex flex-col p-6 overflow-hidden bg-background">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-[11px] font-black uppercase tracking-widest text-muted-foreground flex items-center gap-2">
+                   <Filter className="w-3.5 h-3.5" /> Lançamentos Pendentes
+                </h3>
+                <div className="flex items-center gap-2">
+                   <Badge variant="secondary" className="bg-primary/5 text-primary border-none text-[10px] font-bold">
+                    {transactionsToReview.length} itens no período
+                   </Badge>
+                </div>
+              </div>
               
-              {loading ? (
-                <div className="flex flex-col items-center justify-center h-64 text-muted-foreground">
-                  <Loader2 className="w-8 h-8 animate-spin mb-3" />
-                  Carregando transações...
-                </div>
-              ) : transactionsToReview.length === 0 ? (
-                <div className="flex flex-col items-center justify-center h-64 text-muted-foreground">
-                  <Check className="w-8 h-8 text-success mb-3" />
-                  <p className="text-lg font-medium">Nenhuma transação pendente neste período.</p>
-                  <p className="text-sm">Importe mais extratos ou ajuste o filtro de datas.</p>
-                </div>
-              ) : (
-                <TransactionReviewTable
-                  transactions={transactionsToReview}
-                  accounts={accounts}
-                  categories={categories}
-                  investments={investments}
-                  loans={loans}
-                  onUpdateTransaction={handleUpdateTransaction}
-                  onCreateRule={handleCreateRule}
-                />
-              )}
+              <div className="flex-1 overflow-hidden glass-card p-0 rounded-[2rem] border-border/20 shadow-expressive">
+                {loading ? (
+                  <div className="flex flex-col items-center justify-center h-full opacity-50"><Loader2 className="w-10 h-10 animate-spin mb-4" /><p className="font-bold uppercase tracking-widest text-xs">Sincronizando...</p></div>
+                ) : transactionsToReview.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center h-full opacity-30"><Check className="w-16 h-16 text-success mb-4" /><p className="text-lg font-black">Tudo revisado!</p><p className="text-sm">Seu fluxo está 100% categorizado.</p></div>
+                ) : (
+                  <ScrollArea className="h-full">
+                    <TransactionReviewTable
+                      transactions={transactionsToReview} accounts={accounts} categories={categories}
+                      investments={investments} loans={loans} onUpdateTransaction={handleUpdateTransaction} onCreateRule={handleCreateRule}
+                    />
+                  </ScrollArea>
+                )}
+              </div>
             </div>
           </div>
         </ResizableDialogContent>
       </Dialog>
       
-      {/* Modal de Criação de Regra */}
-      <StandardizationRuleFormModal
-        open={showRuleModal}
-        onOpenChange={setShowRuleModal}
-        initialTransaction={txForRule}
-        categories={categories}
-        onSave={handleSaveRule}
-      />
-      
-      {/* Modal de Gerenciamento de Regras */}
-      <StandardizationRuleManagerModal
-        open={showRuleManagerModal}
-        onOpenChange={setShowRuleManagerModal}
-        rules={standardizationRules}
-        onDeleteRule={deleteStandardizationRule}
-        categories={categories}
-      />
+      <StandardizationRuleFormModal open={showRuleModal} onOpenChange={setShowRuleModal} initialTransaction={txForRule} categories={categories} onSave={handleSaveRule} />
+      <StandardizationRuleManagerModal open={showRuleManagerModal} onOpenChange={setShowRuleManagerModal} rules={standardizationRules} onDeleteRule={deleteStandardizationRule} categories={categories} />
     </>
   );
 }

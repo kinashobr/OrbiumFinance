@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Pin, Save, AlertCircle } from "lucide-react";
+import { Pin, Save, AlertCircle, Check, X } from "lucide-react";
 import { StandardizationRule, ImportedTransaction, Categoria, OperationType, CATEGORY_NATURE_LABELS } from "@/types/finance";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -12,12 +12,12 @@ import { toast } from "sonner";
 interface StandardizationRuleFormModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  initialTransaction: ImportedTransaction | null;
+  initialTransaction?: ImportedTransaction | null;
+  initialRule?: StandardizationRule | null; // Adicionado para edição
   categories: Categoria[];
-  onSave: (rule: Omit<StandardizationRule, "id">) => void;
+  onSave: (rule: Omit<StandardizationRule, "id">, ruleId?: string) => void;
 }
 
-// Operações que podem ser padronizadas
 const STANDARDIZABLE_OPERATIONS: { value: OperationType; label: string; color: string }[] = [
   { value: 'receita', label: 'Receita', color: 'text-success' },
   { value: 'despesa', label: 'Despesa', color: 'text-destructive' },
@@ -34,11 +34,12 @@ export function StandardizationRuleFormModal({
   open,
   onOpenChange,
   initialTransaction,
+  initialRule,
   categories,
   onSave,
 }: StandardizationRuleFormModalProps) {
   const [pattern, setPattern] = useState("");
-  const [categoryId, setCategoryId] = useState<string | null>(null); // Allow null
+  const [categoryId, setCategoryId] = useState<string | null>(null);
   const [operationType, setOperationType] = useState<OperationType | ''>('');
   const [descriptionTemplate, setDescriptionTemplate] = useState("");
 
@@ -54,118 +55,106 @@ export function StandardizationRuleFormModal({
   const categoryRequired = operationType && !NON_CATEGORY_OPERATIONS.includes(operationType as OperationType);
 
   useEffect(() => {
-    if (open && initialTransaction) {
-      setPattern(initialTransaction.originalDescription);
-      setOperationType(initialTransaction.operationType || "");
-      setDescriptionTemplate(initialTransaction.description);
-      
-      // Set categoryId based on initial transaction, allowing null
-      setCategoryId(initialTransaction.categoryId || null);
-      
-      // If the initial operation type doesn't require a category, clear it locally
-      if (initialTransaction.operationType && NON_CATEGORY_OPERATIONS.includes(initialTransaction.operationType)) {
-          setCategoryId(null);
+    if (open) {
+      if (initialRule) {
+        setPattern(initialRule.pattern);
+        setOperationType(initialRule.operationType);
+        setCategoryId(initialRule.categoryId);
+        setDescriptionTemplate(initialRule.descriptionTemplate);
+      } else if (initialTransaction) {
+        setPattern(initialTransaction.originalDescription);
+        setOperationType(initialTransaction.operationType || "");
+        setDescriptionTemplate(initialTransaction.description);
+        setCategoryId(initialTransaction.categoryId || null);
+        if (initialTransaction.operationType && NON_CATEGORY_OPERATIONS.includes(initialTransaction.operationType)) {
+            setCategoryId(null);
+        }
       }
-      
-    } else if (!open) {
-      // Reset state on close
+    } else {
       setPattern("");
       setCategoryId(null);
       setOperationType("");
       setDescriptionTemplate("");
     }
-  }, [open, initialTransaction]);
+  }, [open, initialTransaction, initialRule]);
 
   const getCategoryOptions = useMemo(() => {
-    if (!operationType) return categories;
-    
-    // If category is not required, we don't need to filter options, but we keep the existing logic for required ones.
-    if (!categoryRequired) return categories; 
-    
-    const isIncome = operationType === 'receita' || operationType === 'rendimento' || operationType === 'liberacao_emprestimo';
-    
-    return categories.filter(c => 
-      (isIncome && c.nature === 'receita') || 
-      (!isIncome && c.nature !== 'receita')
-    );
+    if (!operationType || !categoryRequired) return categories; 
+    const isIncome = ['receita', 'rendimento', 'liberacao_emprestimo'].includes(operationType);
+    return categories.filter(c => (isIncome && c.nature === 'receita') || (!isIncome && c.nature !== 'receita'));
   }, [categories, operationType, categoryRequired]);
 
   const handleSubmit = () => {
     if (!pattern.trim() || !operationType || !descriptionTemplate.trim()) {
-      toast.error("Preencha o padrão, operação e descrição padronizada.");
+      toast.error("Preencha todos os campos obrigatórios.");
       return;
     }
-    
     if (categoryRequired && !categoryId) {
         toast.error("A categoria é obrigatória para esta operação.");
         return;
     }
     
-    // If category is not required, save null
-    const finalCategoryId = categoryRequired ? categoryId : null;
-
     onSave({
       pattern: pattern.trim(),
-      categoryId: finalCategoryId,
+      categoryId: categoryRequired ? categoryId : null,
       operationType: operationType as OperationType,
       descriptionTemplate: descriptionTemplate.trim(),
-    });
+    }, initialRule?.id);
     
     onOpenChange(false);
-    toast.success("Regra de padronização criada com sucesso!");
   };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Pin className="w-5 h-5 text-primary" />
-            Criar Regra de Padronização
-          </DialogTitle>
-          <DialogDescription>
-            Crie uma regra para categorizar automaticamente transações futuras com a mesma descrição.
-          </DialogDescription>
+      <DialogContent className="max-w-lg p-0 overflow-hidden rounded-[2.5rem]">
+        <DialogHeader className="px-6 pt-6 pb-4 bg-primary/10">
+          <div className="flex items-start gap-3">
+            <div className="w-12 h-12 rounded-xl bg-primary/20 flex items-center justify-center">
+              <Pin className="w-6 h-6 text-primary" />
+            </div>
+            <div className="flex-1">
+              <DialogTitle className="text-xl font-bold">
+                {initialRule ? 'Editar Regra' : 'Nova Regra de Padronização'}
+              </DialogTitle>
+              <DialogDescription className="text-sm text-muted-foreground mt-1">
+                Automatize a categorização de transações importadas.
+              </DialogDescription>
+            </div>
+          </div>
         </DialogHeader>
 
-        <div className="space-y-4 py-4">
+        <div className="p-6 space-y-6">
           <div className="space-y-2">
-            <Label htmlFor="pattern">Padrão de Busca (Descrição Original) *</Label>
+            <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Padrão de Busca *</Label>
             <Input
-              id="pattern"
               value={pattern}
               onChange={(e) => setPattern(e.target.value)}
-              placeholder="Ex: PAGAMENTO CARTAO DE CREDITO"
-              className="bg-muted border-border"
+              placeholder="Ex: PAGAMENTO CARTAO"
+              className="h-12 border-2 rounded-xl text-sm"
             />
-            <p className="text-xs text-muted-foreground flex items-center gap-1">
+            <p className="text-[10px] text-muted-foreground flex items-center gap-1">
                 <AlertCircle className="w-3 h-3" />
-                A regra será aplicada a qualquer transação que contenha este texto.
+                Busca parcial na descrição original do extrato.
             </p>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="operationType">Tipo de Operação *</Label>
+              <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Operação *</Label>
               <Select
                 value={operationType}
                 onValueChange={(v) => {
                     setOperationType(v as OperationType);
-                    // Clear category if the new operation type doesn't require one
-                    if (NON_CATEGORY_OPERATIONS.includes(v as OperationType)) {
-                        setCategoryId(null);
-                    }
+                    if (NON_CATEGORY_OPERATIONS.includes(v as OperationType)) setCategoryId(null);
                 }}
               >
-                <SelectTrigger className="h-9 text-sm">
+                <SelectTrigger className="h-12 border-2 rounded-xl">
                   <SelectValue placeholder="Selecione..." />
                 </SelectTrigger>
                 <SelectContent>
                   {STANDARDIZABLE_OPERATIONS.map(op => (
                     <SelectItem key={op.value} value={op.value}>
-                      <span className={cn("flex items-center gap-2", op.color)}>
-                        {op.label}
-                      </span>
+                      <span className={cn("flex items-center gap-2", op.color)}>{op.label}</span>
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -173,19 +162,19 @@ export function StandardizationRuleFormModal({
             </div>
             
             <div className="space-y-2">
-              <Label htmlFor="categoryId">Categoria {categoryRequired ? '*' : '(Opcional)'}</Label>
+              <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Categoria {categoryRequired ? '*' : ''}</Label>
               <Select
                 value={categoryId || ''}
                 onValueChange={setCategoryId}
                 disabled={!categoryRequired}
               >
-                <SelectTrigger className="h-9 text-sm">
+                <SelectTrigger className="h-12 border-2 rounded-xl">
                   <SelectValue placeholder={categoryRequired ? "Selecione..." : "Não aplicável"} />
                 </SelectTrigger>
                 <SelectContent className="max-h-60">
                   {getCategoryOptions.map(cat => (
                     <SelectItem key={cat.id} value={cat.id}>
-                      {cat.icon} {cat.label} ({CATEGORY_NATURE_LABELS[cat.nature]})
+                      {cat.icon} {cat.label}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -194,27 +183,23 @@ export function StandardizationRuleFormModal({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="descriptionTemplate">Descrição Padronizada *</Label>
+            <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Descrição Padronizada *</Label>
             <Input
-              id="descriptionTemplate"
               value={descriptionTemplate}
               onChange={(e) => setDescriptionTemplate(e.target.value)}
-              placeholder="Ex: Pagamento Fatura Cartão X"
-              className="bg-muted border-border"
+              placeholder="Ex: Pagamento Fatura Cartão"
+              className="h-12 border-2 rounded-xl text-sm"
             />
-            <p className="text-xs text-muted-foreground">
-                Esta será a descrição usada no seu histórico financeiro.
-            </p>
           </div>
         </div>
 
-        <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
+        <DialogFooter className="p-6 bg-muted/20 border-t flex gap-3">
+          <Button variant="ghost" onClick={() => onOpenChange(false)} className="rounded-full h-11 px-6 font-bold">
             Cancelar
           </Button>
-          <Button onClick={handleSubmit} className="gap-2">
-            <Save className="w-4 h-4" />
-            Salvar Regra
+          <Button onClick={handleSubmit} className="rounded-full h-11 px-8 font-bold gap-2">
+            <Check className="w-4 h-4" />
+            {initialRule ? 'Atualizar Regra' : 'Salvar Regra'}
           </Button>
         </DialogFooter>
       </DialogContent>
