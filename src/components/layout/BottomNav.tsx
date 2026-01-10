@@ -97,7 +97,7 @@ export function BottomNav() {
 
   return (
     <nav className="fixed bottom-0 inset-x-0 z-40 flex justify-center md:hidden px-2 pb-2 pt-0 pointer-events-none">
-      <div className="pointer-events-auto bg-card/90 backdrop-blur-xl rounded-[2.5rem] border border-border/40 shadow-[0_20px_50px_rgba(0,0,0,0.2)] max-w-[min(100%,480px)] w-full overflow-hidden">
+      <div className="pointer-events-auto bg-card rounded-[2.5rem] border border-border/40 shadow-[0_20px_50px_rgba(0,0,0,0.2)] max-w-[min(100%,480px)] w-full overflow-hidden">
         <input
           ref={fileInputRef}
           type="file"
@@ -137,7 +137,7 @@ export function BottomNav() {
                 </span>
               </button>
             </DrawerTrigger>
-            <DrawerContent className="rounded-t-[3rem] border-t-border bg-card/98 backdrop-blur-2xl max-h-[85vh]">
+            <DrawerContent className="rounded-t-[3rem] border-t-border bg-card max-h-[85vh]">
               <div className="mx-auto w-12 h-1.5 bg-muted/50 rounded-full mt-4 mb-2" />
               
               <DrawerHeader className="px-8 pb-4">
