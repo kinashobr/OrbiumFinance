@@ -17,7 +17,7 @@ import {
   Sparkles,
   LineChart,
 } from "lucide-react";
-import { format, startOfDay, endOfDay, isWithinInterval } from "date-fns";
+import { format, startOfDay, endOfDay, isWithinInterval, subMonths, endOfMonth } from "date-fns";
 import { parseDateLocal, cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 
@@ -25,8 +25,10 @@ const Index = () => {
   const { 
     transacoesV2,
     contasMovimento,
+    veiculos,
     getAtivosTotal,
     getPassivosTotal,
+    getPatrimonioLiquido,
     calculateBalanceUpToDate,
     dateRanges,
     setDateRanges,
@@ -51,7 +53,6 @@ const Index = () => {
   }, [transacoesV2]);
 
   const transacoesPeriodo1 = useMemo(() => filterTransactionsByRange(dateRanges.range1), [filterTransactionsByRange, dateRanges.range1]);
-  const transacoesPeriodo2 = useMemo(() => filterTransactionsByRange(dateRanges.range2), [filterTransactionsByRange, dateRanges.range2]);
 
   const metricasPatrimoniais = useMemo(() => {
     const end1 = dateRanges.range1.to;
@@ -98,19 +99,16 @@ const Index = () => {
     };
 
     const p1 = calc(transacoesPeriodo1);
-    const p2 = calc(transacoesPeriodo2);
-
-    const variacaoFluxoAbs = p1.saldo - p2.saldo;
-    const variacaoFluxoPerc = p2.saldo !== 0 ? (variacaoFluxoAbs / Math.abs(p2.saldo)) * 100 : 0;
-
-    return { p1, p2, variacaoFluxoAbs, variacaoFluxoPerc };
-  }, [transacoesPeriodo1, transacoesPeriodo2]);
+    
+    // For comparison we don't necessarily need p2 here for the main cards unless we want specific comparison trends
+    return { p1 };
+  }, [transacoesPeriodo1]);
 
   const saude = useMemo(() => {
     const temDados = contasMovimento.length > 0;
-    const diversificacao = temDados ? 65 : 0; // Placeholder dinâmico
-    const estabilidade = temDados && fluxo.p2.saldo !== 0 ? Math.min(100, (fluxo.p1.saldo / fluxo.p2.saldo) * 100) : 0;
-    const dependencia = temDados ? 40 : 0;
+    const diversificacao = temDados ? 65 : 0; 
+    const estabilidade = 85; // Placeholder
+    const dependencia = 40;
 
     return {
       liquidez: metricasPatrimoniais.passivosAtuais > 0 ? metricasPatrimoniais.ativosAtuais / metricasPatrimoniais.passivosAtuais : 0,
@@ -119,7 +117,7 @@ const Index = () => {
       estabilidade,
       dependencia
     };
-  }, [metricasPatrimoniais, fluxo, contasMovimento]);
+  }, [metricasPatrimoniais, contasMovimento]);
 
   const scoreOrbium = useMemo(() => {
     if (contasMovimento.length === 0) return 0;
@@ -168,6 +166,46 @@ const Index = () => {
     }).format(value);
   };
 
+  // --- Dynamic SVG Paths for Patrimonio Líquido Card ---
+  const dynamicPlPaths = useMemo(() => {
+    const now = new Date();
+    const points = Array.from({ length: 7 }, (_, i) => {
+      const date = endOfMonth(subMonths(now, 6 - i));
+      return getPatrimonioLiquido(date);
+    });
+
+    const max = Math.max(...points, 1);
+    const min = Math.min(...points, 0);
+    const range = max - min || 1;
+    
+    // Normalização para o viewBox 800x250 (usando 50-200 para a linha)
+    const coords = points.map((val, i) => {
+      const x = (i / (points.length - 1)) * 800;
+      const y = 200 - ((val - min) / range) * 150; 
+      return { x, y };
+    });
+
+    const isAllZero = points.every(v => v === 0);
+
+    if (isAllZero) {
+      return {
+        line: "M0,230 L800,230",
+        area: "M0,230 L800,230 L800,250 L0,250 Z"
+      };
+    }
+
+    // Gerar caminho da linha (Linear para precisão)
+    let lineD = `M${coords[0].x},${coords[0].y}`;
+    for (let i = 1; i < coords.length; i++) {
+        lineD += ` L${coords[i].x},${coords[i].y}`;
+    }
+
+    // Gerar caminho da área (fechando o polígono)
+    const areaD = `${lineD} L800,250 L0,250 Z`;
+
+    return { line: lineD, area: areaD };
+  }, [getPatrimonioLiquido, transacoesV2, contasMovimento, veiculos]);
+
   return (
     <MainLayout>
       <div className="space-y-8 pb-10">
@@ -195,6 +233,8 @@ const Index = () => {
         <div className="grid grid-cols-1 md:grid-cols-12 gap-6 animate-fade-in-up">
           <div className="col-span-12 lg:col-span-8 bg-surface-light dark:bg-surface-dark rounded-[32px] p-8 shadow-soft relative overflow-hidden border border-white/60 dark:border-white/5 group h-[420px] flex flex-col justify-between">
             <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent opacity-50"></div>
+            
+            {/* Dynamic Background Graph */}
             <div className="absolute bottom-0 left-0 right-0 h-[280px] pointer-events-none">
               <svg className="w-full h-full" preserveAspectRatio="none" viewBox="0 0 800 250">
                 <defs>
@@ -203,11 +243,30 @@ const Index = () => {
                     <stop offset="100%" stopColor="hsl(var(--primary))" stopOpacity="0"></stop>
                   </linearGradient>
                 </defs>
-                <path className="transition-all duration-1000 ease-out translate-y-2 group-hover:translate-y-0" d="M0,250 L0,180 C100,170 200,210 300,180 C400,150 500,170 600,140 C700,110 750,130 800,100 L800,250 Z" fill="url(#chartFill)" opacity="0.4"></path>
-                <path d="M0,250 L0,150 C120,130 240,190 360,130 C480,70 600,100 700,50 C760,20 780,40 800,80 L800,250 Z" fill="url(#chartFill)"></path>
-                <path d="M0,150 C120,130 240,190 360,130 C480,70 600,100 700,50 C760,20 780,40 800,80" fill="none" stroke="hsl(var(--primary))" strokeLinecap="round" strokeWidth="4" vectorEffect="non-scaling-stroke"></path>
+                {/* Secondary Fill (lighter) */}
+                <path 
+                  className="transition-all duration-1000 ease-out translate-y-2 group-hover:translate-y-0" 
+                  d={dynamicPlPaths.area} 
+                  fill="url(#chartFill)" 
+                  opacity="0.2"
+                ></path>
+                {/* Main Fill */}
+                <path 
+                  d={dynamicPlPaths.area} 
+                  fill="url(#chartFill)"
+                ></path>
+                {/* Stroke Line */}
+                <path 
+                  d={dynamicPlPaths.line} 
+                  fill="none" 
+                  stroke="hsl(var(--primary))" 
+                  strokeLinecap="round" 
+                  strokeWidth="4" 
+                  vectorEffect="non-scaling-stroke"
+                ></path>
               </svg>
             </div>
+
             <div className="relative z-10 flex justify-between items-start">
               <div>
                 <div className="flex items-center gap-3 mb-2">
@@ -254,9 +313,6 @@ const Index = () => {
               <div className="w-10 h-10 rounded-full bg-green-100 dark:bg-green-900/20 flex items-center justify-center text-green-700 dark:text-green-400">
                 <TrendingUp className="w-5 h-5" />
               </div>
-              <span className="text-xs font-bold bg-green-100 dark:bg-green-900/20 text-green-700 dark:text-green-400 px-2.5 py-1 rounded-lg">
-                {fluxo.variacaoFluxoPerc >= 0 ? '+' : ''}{fluxo.variacaoFluxoPerc.toFixed(1)}%
-              </span>
             </div>
             <div>
               <p className="text-[11px] font-bold text-muted-foreground uppercase mb-1 tracking-wider">Resultado Operacional</p>
