@@ -29,7 +29,7 @@ export function FixedBillSelectorModal({
   
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-[min(95vw,52rem)] h-[min(90vh,800px)] p-0 overflow-hidden rounded-[2rem] sm:rounded-[3rem] border-none shadow-2xl flex flex-col">
+      <DialogContent className="max-w-[min(95vw,52rem)] h-[min(90vh,800px)] p-0 overflow-hidden rounded-[2rem] sm:rounded-[3rem] border-none shadow-2xl flex flex-col z-[130]">
         <DialogHeader className={cn(
           "px-6 sm:px-8 pt-8 sm:pt-10 pb-6 shrink-0 relative",
           isCurrent ? "bg-primary/5" : "bg-accent/5"

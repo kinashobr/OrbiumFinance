@@ -90,7 +90,7 @@ export function AddPurchaseInstallmentDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl p-0 overflow-hidden rounded-[2rem] sm:rounded-[3rem] border-none shadow-2xl">
+      <DialogContent className="max-w-2xl p-0 overflow-hidden rounded-[2rem] sm:rounded-[3rem] border-none shadow-2xl z-[140]">
         <DialogHeader className="px-6 sm:px-8 pt-8 sm:pt-10 pb-6 bg-primary/5 relative">
           <div className="flex items-center gap-4 sm:gap-5">
             <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-2xl bg-primary/10 flex items-center justify-center text-primary shadow-lg shadow-primary/5">
