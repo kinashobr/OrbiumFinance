@@ -68,7 +68,7 @@ export function ConsolidatedReviewDialog({
     getTransactionsForReview,
     standardizationRules,
     addStandardizationRule,
-    deleteStandardizationRule, // Adicionado para corrigir o erro de compilação
+    deleteStandardizationRule,
     addTransacaoV2,
     updateImportedStatement,
     importedStatements,
@@ -142,7 +142,7 @@ export function ConsolidatedReviewDialog({
       const baseTx: TransacaoCompleta = {
         id: transactionId, date: tx.date, accountId: tx.accountId, flow, operationType: tx.operationType!, domain: getDomainFromOperation(tx.operationType!),
         amount: tx.amount, categoryId: tx.categoryId || null, description: tx.description, links: { investmentId: tx.tempInvestmentId || null, loanId: tx.tempLoanId || null, transferGroupId: null, parcelaId: tx.tempParcelaId || null, vehicleTransactionId: null },
-        conciliated: true, attachments: [], meta: { createdBy: 'system', source: 'import', createdAt: new Date().toISOString(), originalDescription: tx.originalDescription, vehicleOperation: tx.operationType === 'veiculo' ? tx.tempVehicleOperation || undefined : undefined }
+        conciliated: true, attachments: [], meta: { createdBy: 'system', source: 'import', createdAt: editingTransaction?.meta.createdAt || new Date().toISOString(), originalDescription: tx.originalDescription, vehicleOperation: tx.operationType === 'veiculo' ? tx.tempVehicleOperation || undefined : undefined }
       };
       
       if (tx.isTransfer && tx.destinationAccountId) {
@@ -186,7 +186,7 @@ export function ConsolidatedReviewDialog({
     <div className="flex flex-1 overflow-hidden">
       {!isMobile && (
         <ResizableSidebar initialWidth={340} minWidth={280} maxWidth={420} storageKey="review_sidebar_width">
-          <div className="h-full bg-surface-light dark:bg-surface-dark border-r border-border/40">
+          <div className="h-full bg-card border-r border-border/40">
             <ReviewContextSidebar
               accountId={accountId} statements={importedStatements.filter(s => s.accountId === accountId)}
               pendingCount={pendingCount} readyToContabilizeCount={readyCount} totalCount={transactionsToReview.length}
@@ -220,7 +220,7 @@ export function ConsolidatedReviewDialog({
           )}
         </div>
         
-        <div className="flex-1 overflow-hidden bg-card rounded-[2.5rem] border border-border/40 shadow-soft">
+        <div className="flex-1 overflow-hidden bg-card rounded-[2.5rem] border border-border/40 shadow-sm">
           {loading ? (
             <div className="flex flex-col items-center justify-center h-full opacity-50">
               <Loader2 className="w-12 h-12 animate-spin mb-4 text-primary" />
@@ -264,7 +264,7 @@ export function ConsolidatedReviewDialog({
   if (isMobile && open) {
     return (
       <div className="fixed inset-0 z-50 bg-background flex flex-col animate-in fade-in slide-in-from-bottom-4 duration-300">
-        <header className="px-6 pt-6 pb-4 border-b shrink-0 bg-surface-light dark:bg-surface-dark">
+        <header className="px-6 pt-6 pb-4 border-b shrink-0 bg-card">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
               <Button variant="ghost" size="icon" className="rounded-full h-12 w-12" onClick={() => onOpenChange(false)}>
@@ -282,7 +282,7 @@ export function ConsolidatedReviewDialog({
         </header>
 
         {mobileView === 'filters' ? (
-          <div className="flex-1 p-6 bg-surface-light dark:bg-surface-dark overflow-y-auto">
+          <div className="flex-1 p-6 bg-background overflow-y-auto">
             <div className="flex items-center justify-between mb-8">
               <h3 className="font-black uppercase tracking-widest text-sm">Ajustes de Período</h3>
               <Button variant="ghost" size="sm" className="font-bold" onClick={() => setMobileView('list')}>Voltar</Button>
@@ -305,10 +305,10 @@ export function ConsolidatedReviewDialog({
         <ResizableDialogContent 
           storageKey="consolidated_review_modal"
           initialWidth={1400} initialHeight={900} minWidth={1000} minHeight={700} hideCloseButton={true}
-          className="rounded-[3rem] bg-surface-light dark:bg-surface-dark border-none shadow-2xl p-0 overflow-hidden"
+          className="rounded-[3rem] bg-background border-none shadow-2xl p-0 overflow-hidden"
         >
           <div className="modal-viewport">
-            <DialogHeader className="px-10 pt-10 pb-6 bg-surface-light dark:bg-surface-dark shrink-0">
+            <DialogHeader className="px-10 pt-10 pb-6 bg-background shrink-0">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-5">
                   <div className="w-16 h-16 rounded-[1.5rem] bg-primary/10 flex items-center justify-center text-primary shadow-lg shadow-primary/5">

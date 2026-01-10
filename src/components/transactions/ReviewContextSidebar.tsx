@@ -50,7 +50,7 @@ export function ReviewContextSidebar({
   }), [reviewRange]);
 
   return (
-    <div className="flex flex-col h-full p-6 space-y-8">
+    <div className="flex flex-col h-full p-6 space-y-8 bg-card">
       {/* Status de Progresso Expressivo */}
       <div className="space-y-4">
         <div className="flex items-end justify-between">
@@ -78,7 +78,7 @@ export function ReviewContextSidebar({
               <Calendar className="w-4 h-4 text-primary" />
               <Label className="text-[11px] font-bold uppercase tracking-widest text-foreground">Período de Análise</Label>
             </div>
-            <div className="p-4 rounded-[1.5rem] bg-card border border-border/40 shadow-sm space-y-3">
+            <div className="p-4 rounded-[1.5rem] bg-background border border-border/40 shadow-sm space-y-3">
               <PeriodSelector 
                 initialRanges={dummyRanges}
                 onDateRangeChange={onPeriodChange}
