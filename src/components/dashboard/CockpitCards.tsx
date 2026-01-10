@@ -39,6 +39,7 @@ export function CockpitCards({ data }: CockpitCardsProps) {
     subtitle?: string;
     tooltip: string;
     color: string;
+    bgColor: string;
   }> = [
     {
       id: "patrimonio",
@@ -46,8 +47,9 @@ export function CockpitCards({ data }: CockpitCardsProps) {
       value: formatCurrency(data.patrimonioTotal),
       status: "neutral",
       icon: Target,
-      tooltip: "Valor total dos ativos menos passivos.",
+      tooltip: "Valor total dos ativos menos passivos acumulados.",
       color: "text-primary",
+      bgColor: "bg-primary/10",
     },
     {
       id: "variacao",
@@ -56,8 +58,9 @@ export function CockpitCards({ data }: CockpitCardsProps) {
       subtitle: `${isPositiveVariation ? "+" : ""}${data.variacaoPercentual.toFixed(1)}%`,
       status: isPositiveVariation ? "success" : "danger",
       icon: isPositiveVariation ? TrendingUp : TrendingDown,
-      tooltip: "Mudança no patrimônio comparada ao período anterior.",
+      tooltip: "Diferença patrimonial entre o período atual e o anterior.",
       color: isPositiveVariation ? "text-success" : "text-destructive",
+      bgColor: isPositiveVariation ? "bg-success/10" : "bg-destructive/10",
     },
     {
       id: "liquidez",
@@ -65,8 +68,9 @@ export function CockpitCards({ data }: CockpitCardsProps) {
       value: formatCurrency(data.liquidezImediata),
       status: "info",
       icon: Droplets,
-      tooltip: "Recursos disponíveis em contas de alta liquidez.",
+      tooltip: "Capital disponível em contas de resgate imediato.",
       color: "text-info",
+      bgColor: "bg-info/10",
     },
     {
       id: "compromissos",
@@ -74,8 +78,9 @@ export function CockpitCards({ data }: CockpitCardsProps) {
       value: formatCurrency(data.compromissosMes),
       status: "warning",
       icon: CalendarClock,
-      tooltip: "Despesas e parcelas no período atual.",
+      tooltip: "Total de despesas e parcelas provisionadas no período.",
       color: "text-warning",
+      bgColor: "bg-warning/10",
     },
     {
       id: "projecao",
@@ -83,46 +88,47 @@ export function CockpitCards({ data }: CockpitCardsProps) {
       value: formatCurrency(Math.abs(data.projecao30Dias)),
       status: isPositiveProjection ? "success" : "danger",
       icon: isPositiveProjection ? ArrowUpRight : ArrowDownRight,
-      tooltip: "Saldo líquido projetado para 30 dias.",
+      tooltip: "Estimativa de saldo líquido após 30 dias com base no fluxo atual.",
       color: isPositiveProjection ? "text-success" : "text-destructive",
+      bgColor: isPositiveProjection ? "bg-success/10" : "bg-destructive/10",
     },
   ];
 
   return (
     <TooltipProvider>
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 md:gap-4">
-        {cards.map((card, index) => (
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 md:gap-6">
+        {cards.map((card) => (
           <Tooltip key={card.id}>
             <TooltipTrigger asChild>
               <div className={cn(
-                "glass-card p-4 md:p-5 rounded-[1.75rem] flex flex-col justify-between h-full transition-all hover:scale-[1.02] border-border/40",
+                "glass-card p-5 rounded-[2.25rem] flex flex-col justify-between h-44 transition-all hover:scale-[1.03] active:scale-[0.98] border-border/40 group",
                 card.status === "success" && "stat-card-positive",
                 card.status === "danger" && "stat-card-negative",
                 card.status === "warning" && "stat-card-warning",
                 card.status === "info" && "stat-card-info"
               )}>
                 <div className="flex items-center justify-between mb-4">
-                  <div className={cn("p-2.5 rounded-2xl bg-primary/10", card.color)}>
+                  <div className={cn("p-3 rounded-2xl transition-transform group-hover:rotate-12", card.bgColor, card.color)}>
                     <card.icon className="w-5 h-5 md:w-6 md:h-6" />
                   </div>
                   {card.subtitle && (
-                    <Badge variant="outline" className={cn("text-[10px] border-none font-bold", card.color)}>
+                    <Badge variant="outline" className={cn("text-[10px] md:text-xs border-none font-black px-2 py-0.5 rounded-full", card.bgColor, card.color)}>
                       {card.subtitle}
                     </Badge>
                   )}
                 </div>
                 <div>
-                  <p className="text-[10px] md:text-xs font-bold text-muted-foreground uppercase tracking-wider mb-1">
+                  <p className="text-[10px] md:text-[11px] font-bold text-muted-foreground uppercase tracking-widest mb-1 opacity-70">
                     {card.title}
                   </p>
-                  <p className="text-base md:text-xl font-black text-foreground truncate">
+                  <p className="text-lg md:text-2xl font-black text-foreground truncate">
                     {card.value}
                   </p>
                 </div>
               </div>
             </TooltipTrigger>
-            <TooltipContent className="bg-popover border-border">
-              <p className="text-xs">{card.tooltip}</p>
+            <TooltipContent className="bg-popover border-border px-3 py-2 shadow-xl rounded-xl max-w-xs">
+              <p className="text-xs font-medium leading-relaxed">{card.tooltip}</p>
             </TooltipContent>
           </Tooltip>
         ))}

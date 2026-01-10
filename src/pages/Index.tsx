@@ -12,7 +12,8 @@ import { PeriodSelector } from "@/components/dashboard/PeriodSelector";
 import { DateRange, ComparisonDateRanges } from "@/types/finance";
 import { 
   Activity,
-  LayoutDashboard
+  LayoutDashboard,
+  Sparkles
 } from "lucide-react";
 import { startOfMonth, endOfMonth, isWithinInterval, format, subMonths, subDays, startOfDay, endOfDay } from "date-fns";
 import { parseDateLocal } from "@/lib/utils";
@@ -126,34 +127,49 @@ const Index = () => {
 
   return (
     <MainLayout>
-      <div className="space-y-6">
-        <header className="space-y-3 animate-fade-in border-0">
-          <div className="flex items-center justify-between text-xs text-muted-foreground">
-            <div className="inline-flex items-start gap-3">
-              <div className="flex flex-col">
-                <span className="text-sm font-semibold text-foreground">Central Financeira</span>
-                <span className="text-[11px]">Painel de Performance</span>
+      <div className="space-y-8 pb-10">
+        {/* Cabeçalho Expressivo */}
+        <header className="space-y-4 animate-fade-in px-1">
+          <div className="flex items-center justify-between">
+            <div className="flex flex-col gap-1">
+              <div className="flex items-center gap-2">
+                <LayoutDashboard className="w-5 h-5 text-primary" />
+                <h1 className="text-xl md:text-2xl font-bold tracking-tight text-foreground">Cockpit Financeiro</h1>
               </div>
+              <p className="text-xs text-muted-foreground font-medium flex items-center gap-1">
+                <Sparkles className="w-3 h-3 text-warning" />
+                Bem-vindo ao seu centro de comando patrimonial
+              </p>
             </div>
-          </div>
-          <div className="flex flex-wrap items-stretch gap-2 max-w-full">
             <PeriodSelector 
               initialRanges={dateRanges}
               onDateRangeChange={handlePeriodChange}
-              className="h-8 rounded-full border-none bg-card px-3 text-[11px] font-medium text-secondary shadow-xs"
+              className="hidden sm:flex h-10 rounded-2xl bg-card border-border/60 shadow-xs"
+            />
+          </div>
+          
+          <div className="sm:hidden">
+            <PeriodSelector 
+              initialRanges={dateRanges}
+              onDateRangeChange={handlePeriodChange}
+              className="w-full h-10 rounded-2xl bg-card border-border/60"
             />
           </div>
         </header>
 
+        {/* KPIs Principais */}
         <section className="animate-fade-in-up">
           <CockpitCards data={cockpitData} />
         </section>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-2 space-y-6">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 md:gap-8">
+          <div className="lg:col-span-2 space-y-8">
+            {/* Lista de Movimentações */}
             <section className="animate-fade-in-up" style={{ animationDelay: '100ms' }}>
               <MovimentacoesRelevantes transacoes={transacoesPeriodo1} limit={6} />
             </section>
+            
+            {/* Mapa de Calor do Fluxo */}
             <section className="animate-fade-in-up" style={{ animationDelay: '200ms' }}>
               <FluxoCaixaHeatmap 
                 month={dateRanges.range1.from ? format(dateRanges.range1.from, 'MM') : format(new Date(), 'MM')} 
@@ -162,7 +178,9 @@ const Index = () => {
               />
             </section>
           </div>
-          <div className="space-y-6">
+
+          <div className="space-y-8">
+            {/* Widgets de Contexto Lateral */}
             <section className="animate-fade-in-up" style={{ animationDelay: '150ms' }}>
               <AcompanhamentoAtivos
                 investimentosRF={saldosPorConta.filter(c => c.accountType === 'renda_fixa' || c.accountType === 'poupanca').reduce((a, c) => a + c.saldo, 0)}
@@ -172,6 +190,7 @@ const Index = () => {
                 poupanca={saldosPorConta.filter(c => c.accountType === 'poupanca').reduce((a, c) => a + c.saldo, 0)}
               />
             </section>
+            
             <section className="animate-fade-in-up" style={{ animationDelay: '250ms' }}>
               <SaudeFinanceira
                 liquidez={liquidezRatio}

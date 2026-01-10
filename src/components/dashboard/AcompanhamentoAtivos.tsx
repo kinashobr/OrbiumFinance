@@ -21,7 +21,6 @@ interface AtivoGrupo {
 }
 
 interface AcompanhamentoAtivosProps {
-  // Usando apenas valores consolidados, pois a lógica de cálculo está no Index.tsx
   investimentosRF: number;
   criptomoedas: number;
   stablecoins: number;
@@ -41,132 +40,70 @@ export function AcompanhamentoAtivos({
   variacaoCripto = 0,
 }: AcompanhamentoAtivosProps) {
   const formatCurrency = (value: number) => {
-    if (value >= 1000000) {
-      return `R$ ${(value / 1000000).toFixed(1)}M`;
-    }
-    if (value >= 1000) {
-      return `R$ ${(value / 1000).toFixed(1)}k`;
-    }
     return new Intl.NumberFormat('pt-BR', {
       style: 'currency',
       currency: 'BRL',
       minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
     }).format(value);
   };
 
   const grupos: AtivoGrupo[] = [
-    {
-      id: 'renda-fixa',
-      nome: 'Renda Fixa',
-      valor: investimentosRF + poupanca,
-      variacao: variacaoRF,
-      icon: Landmark,
-      color: 'text-info',
-      bgColor: 'bg-info/10',
-    },
-    {
-      id: 'cripto',
-      nome: 'Criptoativos',
-      valor: criptomoedas,
-      variacao: variacaoCripto,
-      icon: Bitcoin,
-      color: 'text-warning',
-      bgColor: 'bg-warning/10',
-    },
-    {
-      id: 'stables',
-      nome: 'Stablecoins',
-      valor: stablecoins,
-      variacao: 0,
-      icon: Coins,
-      color: 'text-success',
-      bgColor: 'bg-success/10',
-    },
-    {
-      id: 'reserva',
-      nome: 'Reserva Emergência',
-      valor: reservaEmergencia,
-      variacao: 0,
-      icon: PiggyBank,
-      color: 'text-primary',
-      bgColor: 'bg-primary/10',
-    },
+    { id: 'rf', nome: 'Renda Fixa', valor: investimentosRF + poupanca, variacao: variacaoRF, icon: Landmark, color: 'text-info', bgColor: 'bg-info/15' },
+    { id: 'cripto', nome: 'Criptoativos', valor: criptomoedas, variacao: variacaoCripto, icon: Bitcoin, color: 'text-warning', bgColor: 'bg-warning/15' },
+    { id: 'stables', nome: 'Stablecoins', valor: stablecoins, variacao: 0, icon: Coins, color: 'text-success', bgColor: 'bg-success/15' },
+    { id: 'reserva', nome: 'Reserva', valor: reservaEmergencia, variacao: 0, icon: PiggyBank, color: 'text-primary', bgColor: 'bg-primary/15' },
   ].filter(g => g.valor > 0);
 
   const totalAtivos = grupos.reduce((acc, g) => acc + g.valor, 0);
 
-  const VariacaoIcon = ({ variacao }: { variacao: number }) => {
-    if (variacao > 0) return <TrendingUp className="h-3 w-3 text-success" />;
-    if (variacao < 0) return <TrendingDown className="h-3 w-3 text-destructive" />;
-    return <Minus className="h-3 w-3 text-muted-foreground" />;
-  };
-
   return (
-    <div className="glass-card p-4 md:p-5">
-      <div className="mb-3 md:mb-4">
-        <h3 className="text-fluid-lg font-semibold text-foreground">Acompanhamento de Ativos</h3>
-        <p className="text-fluid-xs text-muted-foreground">Visão consolidada dos investimentos</p>
+    <div className="glass-card p-6 rounded-[2.5rem] border-border/40 shadow-expressive">
+      <div className="mb-6">
+        <h3 className="text-lg font-black text-foreground tracking-tight">Ativos Totais</h3>
+        <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground opacity-70">Distribuição da Carteira</p>
       </div>
 
-      {grupos.length > 0 ? (
-        <div className="space-y-4">
-          {grupos.map((grupo) => {
-            const percentual = totalAtivos > 0 ? (grupo.valor / totalAtivos) * 100 : 0;
-            
-            return (
-              <div key={grupo.id} className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <div className={cn("p-1.5 rounded-md", grupo.bgColor)}>
-                      <grupo.icon className={cn("h-3.5 w-3.5", grupo.color)} />
-                    </div>
-                    <span className="text-fluid-sm font-medium text-foreground">{grupo.nome}</span>
+      <div className="space-y-6">
+        {grupos.map((grupo) => {
+          const percentual = totalAtivos > 0 ? (grupo.valor / totalAtivos) * 100 : 0;
+          
+          return (
+            <div key={grupo.id} className="space-y-2.5">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center transition-transform hover:scale-110", grupo.bgColor, grupo.color)}>
+                    <grupo.icon className="h-5 w-5" />
                   </div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-fluid-sm font-bold text-foreground">
-                      {formatCurrency(grupo.valor)}
-                    </span>
-                    {grupo.variacao !== 0 && (
-                      <div className="flex items-center gap-0.5">
-                        <VariacaoIcon variacao={grupo.variacao} />
-                        <span className={cn(
-                          "text-xs font-medium",
-                          grupo.variacao > 0 ? "text-success" : "text-destructive"
-                        )}>
-                          {grupo.variacao > 0 ? '+' : ''}{grupo.variacao.toFixed(1)}%
-                        </span>
-                      </div>
-                    )}
+                  <div>
+                    <p className="text-sm font-bold text-foreground leading-tight">{grupo.nome}</p>
+                    <p className="text-[10px] font-bold text-muted-foreground/60">{percentual.toFixed(0)}% da carteira</p>
                   </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  <Progress 
-                    value={percentual} 
-                    className="h-1.5 flex-1"
-                  />
-                  <span className="text-xs text-muted-foreground w-10 text-right">
-                    {percentual.toFixed(0)}%
-                  </span>
+                <div className="text-right">
+                  <p className="text-sm font-black text-foreground tabular-nums">{formatCurrency(grupo.valor)}</p>
+                  {grupo.variacao !== 0 && (
+                    <div className={cn("flex items-center justify-end gap-1 text-[10px] font-black uppercase", grupo.variacao > 0 ? "text-success" : "text-destructive")}>
+                        {grupo.variacao > 0 ? <TrendingUp className="h-2.5 w-2.5" /> : <TrendingDown className="h-2.5 w-2.5" />}
+                        {Math.abs(grupo.variacao).toFixed(1)}%
+                    </div>
+                  )}
                 </div>
               </div>
-            );
-          })}
-
-          <div className="pt-3 mt-3 border-t border-border/50">
-            <div className="flex items-center justify-between">
-              <span className="text-fluid-sm font-medium text-muted-foreground">Total Investido</span>
-              <span className="text-fluid-lg font-bold text-foreground">
-                {formatCurrency(totalAtivos)}
-              </span>
+              <Progress value={percentual} className="h-2 rounded-full" />
             </div>
+          );
+        })}
+
+        <div className="pt-4 mt-6 border-t border-border/40">
+          <div className="flex items-center justify-between">
+            <span className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">Total Investido</span>
+            <span className="text-xl font-black text-primary tabular-nums">
+              {formatCurrency(totalAtivos)}
+            </span>
           </div>
         </div>
-      ) : (
-        <div className="text-center py-8 text-muted-foreground">
-          <p className="text-sm">Nenhum ativo cadastrado</p>
-          <p className="text-xs mt-1">Acesse Investimentos para adicionar</p>
-        </div>
-      )}
+      </div>
     </div>
   );
 }
