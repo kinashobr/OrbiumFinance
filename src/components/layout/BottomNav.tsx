@@ -1,15 +1,9 @@
 import { NavLink, useLocation } from "react-router-dom";
 import {
   LayoutDashboard,
-  Receipt,
-  CreditCard,
   BarChart3,
-  TrendingUp,
-  Car,
   Download,
   Upload,
-  Menu,
-  Bell,
   Settings2,
   Palette,
   Settings,
@@ -30,6 +24,7 @@ import {
 import { SidebarAlertas } from "@/components/dashboard/SidebarAlertas";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
+import { CreditCard, TrendingUp, Car, Bell } from "lucide-react";
 
 export function BottomNav() {
   const location = useLocation();
@@ -37,8 +32,6 @@ export function BottomNav() {
   const { theme, setTheme, themes } = useTheme();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [showNavDrawer, setShowNavDrawer] = useState(false);
-
-  const isPathActive = (path: string) => location.pathname === path;
 
   const handleExport = () => {
     exportData();
@@ -82,14 +75,18 @@ export function BottomNav() {
         )
       }
     >
-      <div className={cn(
-        "relative flex items-center justify-center h-8 w-14 rounded-full transition-all duration-300 overflow-hidden",
-        isActive ? "bg-primary/20 scale-105" : "bg-transparent"
-      )}>
-        <Icon className={cn("h-5 w-5 transition-transform duration-300", isActive && "scale-110")} />
-      </div>
-      {isActive && (
-        <span className="absolute -top-4 w-8 h-1 bg-primary rounded-b-full shadow-[0_4px_10px_hsl(var(--primary)/0.5)]"></span>
+      {({ isActive }) => (
+        <>
+          <div className={cn(
+            "relative flex items-center justify-center h-8 w-14 rounded-full transition-all duration-300 overflow-hidden",
+            isActive ? "bg-primary/20 scale-105" : "bg-transparent"
+          )}>
+            <Icon className={cn("h-5 w-5 transition-transform duration-300", isActive && "scale-110")} />
+          </div>
+          {isActive && (
+            <span className="absolute -top-4 w-8 h-1 bg-primary rounded-b-full shadow-[0_4px_10px_hsl(var(--primary)/0.5)]"></span>
+          )}
+        </>
       )}
     </NavLink>
   );
@@ -142,7 +139,6 @@ export function BottomNav() {
             </DrawerHeader>
 
             <div className="px-8 py-4 space-y-8 overflow-y-auto hide-scrollbar-mobile pb-12">
-              {/* Navigation Links (Secondary) */}
               <div className="space-y-2">
                 <p className="text-[11px] font-black uppercase text-muted-foreground tracking-[0.15em]">Navegação</p>
                 <NavLink to="/emprestimos" onClick={() => setShowNavDrawer(false)} className="flex items-center gap-4 p-3 rounded-2xl bg-muted/30 hover:bg-muted/50 transition-colors">
@@ -161,7 +157,6 @@ export function BottomNav() {
 
               <Separator className="opacity-40" />
 
-              {/* Visual Theme */}
               <div className="space-y-4">
                 <div className="flex items-center gap-2">
                   <Palette className="w-4 h-4 text-muted-foreground" />
@@ -190,7 +185,6 @@ export function BottomNav() {
 
               <Separator className="opacity-40" />
 
-              {/* Data Backup */}
               <div className="space-y-4">
                 <p className="text-[11px] font-black uppercase text-muted-foreground tracking-[0.15em]">Gestão de Dados</p>
                 <div className="grid grid-cols-1 gap-3">
@@ -225,7 +219,6 @@ export function BottomNav() {
 
               <Separator className="opacity-40" />
 
-              {/* Notifications */}
               <div className="space-y-4 pb-4">
                 <div className="flex items-center gap-2">
                   <Bell className="w-4 h-4 text-muted-foreground" />

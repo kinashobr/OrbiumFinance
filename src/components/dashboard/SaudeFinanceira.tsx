@@ -1,20 +1,15 @@
 import { 
-  Shield, 
   AlertTriangle, 
   CheckCircle2, 
   XCircle,
-  TrendingUp,
   Wallet,
   Scale,
   Activity,
-  Briefcase,
-  Info,
-  Balance,
   ShieldCheck
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
 
 interface IndicadorSaude {
   id: string;
@@ -36,18 +31,16 @@ interface SaudeFinanceiraProps {
 }
 
 const statusConfig = {
-  otimo: { color: 'text-success', bgColor: 'bg-success/10', label: 'ÓTIMO' },
-  bom: { color: 'text-info', bgColor: 'bg-info/10', label: 'BOM' },
-  atencao: { color: 'text-warning', bgColor: 'bg-warning/10', label: 'ATENÇÃO' },
-  critico: { color: 'text-destructive', bgColor: 'bg-destructive/10', label: 'CRÍTICO' },
+  otimo: { color: 'text-success', bgColor: 'bg-success/10', label: 'ÓTIMO', icon: CheckCircle2 },
+  bom: { color: 'text-info', bgColor: 'bg-info/10', label: 'BOM', icon: CheckCircle2 },
+  atencao: { color: 'text-warning', bgColor: 'bg-warning/10', label: 'ATENÇÃO', icon: AlertTriangle },
+  critico: { color: 'text-destructive', bgColor: 'bg-destructive/10', label: 'CRÍTICO', icon: XCircle },
 };
 
 export function SaudeFinanceira({
   liquidez,
   endividamento,
-  diversificacao,
   estabilidadeFluxo,
-  dependenciaRenda,
 }: SaudeFinanceiraProps) {
   
   const getStatusLiquidez = (valor: number): IndicadorSaude['status'] => {
@@ -111,7 +104,7 @@ export function SaudeFinanceira({
     { 
       id: 'cobertura', 
       nome: 'Meses de Cobertura', 
-      valor: 6, // Simulação de 6 meses de cobertura
+      valor: 6,
       status: getStatusCobertura(6), 
       icon: ShieldCheck, 
       valorBruto: 6,
@@ -135,60 +128,62 @@ export function SaudeFinanceira({
   };
 
   return (
-    <Card className="glass-card p-6 rounded-[var(--radius)] border-border/60 shadow-expressive">
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h3 className="text-lg font-black text-foreground tracking-tight">Saúde Financeira</h3>
-          <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground opacity-70">Indicadores Sintéticos</p>
+    <TooltipProvider>
+      <Card className="glass-card p-6 rounded-[var(--radius)] border-border/60 shadow-expressive">
+        <div className="flex items-center justify-between mb-6">
+          <div>
+            <h3 className="text-lg font-black text-foreground tracking-tight">Saúde Financeira</h3>
+            <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground opacity-70">Indicadores Sintéticos</p>
+          </div>
+          <div className={cn("flex items-center gap-2 px-3 py-1.5 rounded-full border border-current transition-all", configGeral.color, configGeral.bgColor)}>
+            <configGeral.icon className="h-4 w-4" />
+            <span className="text-xs font-black uppercase">{configGeral.label}</span>
+          </div>
         </div>
-        <div className={cn("flex items-center gap-2 px-3 py-1.5 rounded-full border border-current transition-all", configGeral.color, configGeral.bgColor)}>
-          <configGeral.icon className="h-4 w-4" />
-          <span className="text-xs font-black uppercase">{configGeral.label}</span>
-        </div>
-      </div>
 
-      <div className="grid grid-cols-2 gap-4">
-        {indicadores.map((ind) => {
-          const config = statusConfig[ind.status];
-          const Icon = ind.icon;
-          
-          return (
-            <Tooltip key={ind.id}>
-              <TooltipTrigger asChild>
-                <div 
-                  className={cn(
-                    "rounded-[var(--radius)] p-5 border relative group cursor-help",
-                    config.bgColor,
-                    config.color,
-                    ind.status === 'otimo' && "border-success/20",
-                    ind.status === 'bom' && "border-info/20",
-                    ind.status === 'atencao' && "border-warning/20",
-                    ind.status === 'critico' && "border-destructive/20",
-                  )}
-                >
-                  <div className="flex justify-between items-start mb-4">
-                    <div className="w-10 h-10 rounded-full bg-card flex items-center justify-center shadow-sm">
-                      <Icon className={cn("w-5 h-5", config.color)} />
+        <div className="grid grid-cols-2 gap-4">
+          {indicadores.map((ind) => {
+            const config = statusConfig[ind.status];
+            const Icon = ind.icon;
+            
+            return (
+              <Tooltip key={ind.id}>
+                <TooltipTrigger asChild>
+                  <div 
+                    className={cn(
+                      "rounded-[var(--radius)] p-5 border relative group cursor-help",
+                      config.bgColor,
+                      config.color,
+                      ind.status === 'otimo' && "border-success/20",
+                      ind.status === 'bom' && "border-info/20",
+                      ind.status === 'atencao' && "border-warning/20",
+                      ind.status === 'critico' && "border-destructive/20",
+                    )}
+                  >
+                    <div className="flex justify-between items-start mb-4">
+                      <div className="w-10 h-10 rounded-full bg-card flex items-center justify-center shadow-sm">
+                        <Icon className={cn("w-5 h-5", config.color)} />
+                      </div>
+                      <span className={cn("text-[10px] font-bold px-3 py-1 rounded-full", config.bgColor, config.color)}>
+                        {config.label}
+                      </span>
                     </div>
-                    <span className={cn("text-[10px] font-bold px-3 py-1 rounded-full", config.bgColor, config.color)}>
-                      {config.label}
-                    </span>
+                    <p className="text-3xl font-bold mb-1">
+                      {formatValue(ind.valorBruto, ind.unit)}
+                      {ind.unit !== '%' && ind.unit !== 'x' && <span className="text-sm ml-1">{ind.unit}</span>}
+                    </p>
+                    <p className="text-xs font-semibold opacity-70 mt-1">{ind.nome}</p>
                   </div>
-                  <p className="text-3xl font-bold mb-1">
-                    {formatValue(ind.valorBruto, ind.unit)}
-                    {ind.unit !== '%' && ind.unit !== 'x' && <span className="text-sm ml-1">{ind.unit}</span>}
-                  </p>
-                  <p className="text-xs font-semibold opacity-70 mt-1">{ind.nome}</p>
-                </div>
-              </TooltipTrigger>
-              <TooltipContent side="right" className="p-3 bg-popover/95 border-border rounded-2xl shadow-2xl max-w-[200px]">
-                <p className="font-black text-xs mb-1">{ind.nome}</p>
-                <p className="text-[10px] text-muted-foreground mb-2 leading-tight">{ind.descricao}</p>
-              </TooltipContent>
-            </Tooltip>
-          );
-        })}
-      </div>
-    </Card>
+                </TooltipTrigger>
+                <TooltipContent side="right" className="p-3 bg-popover/95 border-border rounded-2xl shadow-2xl max-w-[200px]">
+                  <p className="font-black text-xs mb-1">{ind.nome}</p>
+                  <p className="text-[10px] text-muted-foreground mb-2 leading-tight">{ind.descricao}</p>
+                </TooltipContent>
+              </Tooltip>
+            );
+          })}
+        </div>
+      </Card>
+    </TooltipProvider>
   );
 }

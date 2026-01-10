@@ -1,11 +1,11 @@
 import { useState, useRef, useEffect } from "react";
 import { NavLink, useLocation } from "react-router-dom";
 import { cn } from "@/lib/utils";
-import { LayoutDashboard, Receipt, CreditCard, Car, ChevronLeft, ChevronRight, Wallet, Download, Upload, TrendingUp, PieChart, BarChart3, Building, Bell, Settings, Settings2, Palette } from "lucide-react";
+import { LayoutDashboard, Receipt, CreditCard, Car, Wallet, Download, Upload, BarChart3, Bell, Settings } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useFinance } from "@/contexts/FinanceContext";
 import { useTheme } from "@/contexts/ThemeContext";
-import { toast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { SidebarAlertas } from "@/components/dashboard/SidebarAlertas";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -26,6 +26,8 @@ const navItems: NavItemProps[] = [
   { to: "/investimentos", icon: TrendingUp, label: "Investimentos", isActive: false },
   { to: "/veiculos", icon: Car, label: "Veículos", isActive: false },
 ];
+
+import { TrendingUp } from "lucide-react";
 
 export function Sidebar() {
   const location = useLocation();
@@ -50,10 +52,11 @@ export function Sidebar() {
       return;
     }
     const result = await importData(file);
-    toast[result.success ? "success" : "error"]({
-      title: result.success ? "Sucesso" : "Erro",
-      description: result.message,
-    });
+    if (result.success) {
+      toast.success(result.message);
+    } else {
+      toast.error(result.message);
+    }
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
     }
@@ -89,7 +92,6 @@ export function Sidebar() {
 
   return (
     <aside className="hidden lg:flex fixed left-0 top-0 bottom-0 z-40 w-24 bg-card h-screen flex-col items-center py-8 border-r border-border/40 shrink-0">
-      {/* Header - Logo */}
       <div className="mb-12 shrink-0">
         <Tooltip>
           <TooltipTrigger asChild>
@@ -103,23 +105,19 @@ export function Sidebar() {
         </Tooltip>
       </div>
 
-      {/* Navigation - Fixed Icons */}
       <nav className="flex-1 flex flex-col gap-4 w-full px-4">
         {navItems.map(item => (
           <NavItem key={item.to} {...item} isActive={location.pathname === item.to} />
         ))}
       </nav>
 
-      {/* Footer actions (Settings/Alerts) */}
       <div className="mt-auto flex flex-col gap-4 w-full px-4 shrink-0">
-        {/* Alerts */}
         <Dialog>
           <DialogTrigger asChild>
             <Tooltip>
               <TooltipTrigger asChild>
                 <button type="button" className="w-full aspect-square rounded-2xl text-muted-foreground hover:bg-muted/50 hover:text-foreground flex items-center justify-center relative">
                   <Bell className="w-6 h-6" />
-                  {/* Placeholder for badge */}
                   <span className="w-2 h-2 bg-destructive rounded-full absolute top-3 right-3 border border-card" />
                 </button>
               </TooltipTrigger>
@@ -136,7 +134,6 @@ export function Sidebar() {
           </DialogContent>
         </Dialog>
 
-        {/* Settings/Data */}
         <Dialog>
           <DialogTrigger asChild>
             <Tooltip>
