@@ -1,425 +1,122 @@
+"use client";
+
 import { useMemo, useCallback } from "react";
-import {
-  TrendingUp,
-  TrendingDown,
-  DollarSign,
-  Receipt,
-  Calculator,
-  BarChart3,
-  PieChart,
-  Minus,
-  Plus,
-  Equal,
-  Percent,
-} from "lucide-react";
-import {
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-  Legend,
-  PieChart as RechartsPie,
-  Pie,
-  Cell,
-  ComposedChart,
-  Line,
-  Bar,
-} from "recharts";
+import { TrendingUp, TrendingDown, DollarSign, Receipt, Calculator, Minus, Plus, Equal, Sparkles, ArrowDownRight, ArrowUpRight } from "lucide-react";
 import { useFinance } from "@/contexts/FinanceContext";
 import { ReportCard } from "./ReportCard";
-import { ExpandablePanel } from "./ExpandablePanel";
 import { cn, parseDateLocal } from "@/lib/utils";
-import { format, subMonths, startOfMonth, endOfMonth, isWithinInterval, startOfDay, endOfDay } from "date-fns";
-import { ptBR } from "date-fns/locale";
-import { ComparisonDateRanges, DateRange } from "@/types/finance";
-import { TransacaoCompleta } from "@/types/finance";
+import { ComparisonDateRanges, DateRange, TransacaoCompleta } from "@/types/finance";
+import { startOfDay, endOfDay, isWithinInterval } from "date-fns";
+import { Badge } from "@/components/ui/badge";
 
-const COLORS = {
-  success: "hsl(142, 76%, 36%)",
-  warning: "hsl(38, 92%, 50%)",
-  danger: "hsl(0, 72%, 51%)",
-  primary: "hsl(199, 89%, 48%)",
-  accent: "hsl(270, 80% 60%)",
-  muted: "hsl(215, 20% 55%)",
-  gold: "hsl(45, 93%, 47%)",
-  cyan: "hsl(180, 70%, 50%)",
-};
-
-const PIE_COLORS = [
-  COLORS.primary,
-  COLORS.accent,
-  COLORS.success,
-  COLORS.warning,
-  COLORS.gold,
-  COLORS.cyan,
-  COLORS.danger,
-];
-
-interface DRETabProps {
-  dateRanges: ComparisonDateRanges;
-}
-
-const formatCurrency = (value: number) => `R$ ${value.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-
-interface DREItemProps {
-  label: string;
-  value: number;
-  type: 'receita' | 'despesa' | 'subtotal' | 'resultado';
-  icon?: React.ReactNode;
-  level?: number;
-}
-
-function DREItem({ label, value, type, icon, level = 0 }: DREItemProps) {
-  const baseClasses = "flex items-center justify-between py-2 px-4 border-b border-border/50";
-  
-  const typeClasses = {
-    receita: "text-success",
-    despesa: "text-destructive",
-    subtotal: "font-semibold bg-muted/30 border-t border-b border-border/80",
-    resultado: "font-bold text-lg bg-primary/10 border-t-2 border-b-2 border-primary/50",
-  };
-  
-  const paddingClass = level === 1 ? "pl-8" : level === 2 ? "pl-12" : "pl-4";
-
-  return (
-    <div className={cn(baseClasses, typeClasses[type], paddingClass)}>
-      <div className="flex items-center gap-2">
-        {icon}
-        <span className={cn("text-sm", type === 'resultado' && "text-base")}>{label}</span>
-      </div>
-      <span className={cn(
-        "font-medium whitespace-nowrap",
-        type === 'resultado' && "text-xl"
-      )}>
-        {formatCurrency(value)}
-      </span>
-    </div>
-  );
-}
-
-const CustomPieLabel = ({ cx, cy, midAngle, outerRadius, percent, name }: any) => {
-  const RADIAN = Math.PI / 180;
-  const radius = outerRadius * 1.1;
-  const x = cx + radius * Math.cos(-midAngle * RADIAN);
-  const y = cy + radius * Math.sin(-midAngle * RADIAN);
-  
-  return (
-    <text 
-      x={x} 
-      y={y} 
-      fill="hsl(var(--foreground))" 
-      textAnchor={x > cx ? 'start' : 'end'} 
-      dominantBaseline="central"
-      fontSize={12}
-    >
-      {`${name} (${(percent * 100).toFixed(0)}%)`}
-    </text>
-  );
-};
-
-export function DRETab({ dateRanges }: DRETabProps) {
-  const {
-    transacoesV2,
-    categoriasV2,
-    emprestimos,
-    calculateLoanSchedule,
-  } = useFinance();
-
+export function DRETab({ dateRanges }: { dateRanges: ComparisonDateRanges }) {
+  const { transacoesV2, categoriasV2, calculateLoanSchedule } = useFinance();
   const { range1, range2 } = dateRanges;
-  const now = new Date();
 
-  const filterTransactionsByRange = useCallback((range: DateRange) => {
-    if (!range.from || !range.to) return transacoesV2;
-    const rangeFrom = startOfDay(range.from);
-    const rangeTo = endOfDay(range.to);
-    return transacoesV2.filter(t => {
+  const calculateDRE = useCallback((range: DateRange) => {
+    const rangeFrom = range.from ? startOfDay(range.from) : undefined;
+    const rangeTo = range.to ? endOfDay(range.to) : undefined;
+    
+    const txs = transacoesV2.filter(t => {
       try {
-        const dataT = parseDateLocal(t.date);
-        return isWithinInterval(dataT, { start: rangeFrom, end: rangeTo });
-      } catch {
-        return false;
-      }
-    });
-  }, [transacoesV2]);
-
-  const transacoesPeriodo1 = useMemo(() => filterTransactionsByRange(range1), [filterTransactionsByRange, range1]);
-  const transacoesPeriodo2 = useMemo(() => filterTransactionsByRange(range2), [filterTransactionsByRange, range2]);
-
-  const calculateDRE = useCallback((transactions: TransacaoCompleta[]) => {
-    const categoriasMap = new Map(categoriasV2.map(c => [c.id, c]));
-
-    const transacoesReceitaBruta = transactions.filter(t => 
-      t.operationType === 'receita'
-    );
-
-    const receitasBrutasAgrupadas = new Map<string, number>();
-    transacoesReceitaBruta.forEach(t => {
-      const cat = categoriasMap.get(t.categoryId || '');
-      if (cat) {
-        receitasBrutasAgrupadas.set(cat.label, (receitasBrutasAgrupadas.get(cat.label) || 0) + t.amount);
-      }
+        const d = parseDateLocal(t.date);
+        return (!rangeFrom || isWithinInterval(d, { start: rangeFrom, end: rangeTo || new Date() }));
+      } catch { return false; }
     });
 
-    const receitasBrutas: { categoria: string; valor: number }[] = [];
-    receitasBrutasAgrupadas.forEach((valor, categoria) => {
-      receitasBrutas.push({ categoria, valor });
-    });
-    receitasBrutas.sort((a, b) => b.valor - a.valor);
-    const totalReceitaBruta = receitasBrutas.reduce((acc, r) => acc + r.valor, 0);
-
-    const despesasFixas: { categoria: string; valor: number }[] = [];
-    const despesasVariaveis: { categoria: string; valor: number }[] = [];
+    const rec = txs.filter(t => t.operationType === 'receita').reduce((a, t) => a + t.amount, 0);
+    const fix = txs.filter(t => {
+      const c = categoriasV2.find(x => x.id === t.categoryId);
+      return c?.nature === 'despesa_fixa';
+    }).reduce((a, t) => a + t.amount, 0);
+    const var_ = txs.filter(t => {
+      const c = categoriasV2.find(x => x.id === t.categoryId);
+      return c?.nature === 'despesa_variavel';
+    }).reduce((a, t) => a + t.amount, 0);
     
-    const transacoesDespesaOperacional = transactions.filter(t => 
-      t.operationType !== 'initial_balance' && 
-      t.operationType !== 'veiculo' && 
-      t.operationType !== 'pagamento_emprestimo' &&
-      t.flow === 'out'
-    );
-
-    const despesasFixasMap = new Map<string, number>();
-    const despesasVariaveisMap = new Map<string, number>();
-
-    transacoesDespesaOperacional.forEach(t => {
-      const cat = categoriasMap.get(t.categoryId || '');
-      if (cat) {
-        if (cat.nature === 'despesa_fixa') {
-          despesasFixasMap.set(cat.label, (despesasFixasMap.get(cat.label) || 0) + t.amount);
-        } else {
-          despesasVariaveisMap.set(cat.label, (despesasVariaveisMap.get(cat.label) || 0) + t.amount);
-        }
+    let juros = 0;
+    txs.filter(t => t.operationType === 'pagamento_emprestimo').forEach(t => {
+      const lid = t.links?.loanId?.replace('loan_', '');
+      const pid = t.links?.parcelaId;
+      if (lid && pid) {
+        const s = calculateLoanSchedule(parseInt(lid));
+        const item = s.find(i => i.parcela === parseInt(pid));
+        if (item) juros += item.juros;
       }
     });
-    
-    despesasFixasMap.forEach((valor, categoria) => despesasFixas.push({ categoria, valor }));
-    despesasVariaveisMap.forEach((valor, categoria) => despesasVariaveis.push({ categoria, valor }));
-    despesasFixas.sort((a, b) => b.valor - a.valor);
-    despesasVariaveis.sort((a, b) => b.valor - a.valor);
 
-    const totalDespesasFixas = despesasFixas.reduce((acc, d) => acc + d.valor, 0);
-    const totalDespesasVariaveis = despesasVariaveis.reduce((acc, d) => acc + d.valor, 0);
+    const res = rec - fix - var_ - juros;
+    return { rec, fix, var: var_, juros, res };
+  }, [transacoesV2, categoriasV2, calculateLoanSchedule]);
 
-    const resultadoBruto = totalReceitaBruta - totalDespesasFixas;
-    const resultadoOperacional = resultadoBruto - totalDespesasVariaveis;
+  const dre1 = useMemo(() => calculateDRE(range1), [calculateDRE, range1]);
+  const dre2 = useMemo(() => calculateDRE(range2), [calculateDRE, range2]);
 
-    const totalRendimentos = transactions
-      .filter(t => t.operationType === 'rendimento')
-      .reduce((acc, t) => acc + t.amount, 0);
-
-    let jurosEmprestimos = 0;
-    transactions.filter(t => t.operationType === 'pagamento_emprestimo').forEach(t => {
-        const loanIdStr = t.links?.loanId?.replace('loan_', '');
-        const parcelaIdStr = t.links?.parcelaId;
-        if (loanIdStr && parcelaIdStr) {
-            const loanId = parseInt(loanIdStr);
-            const parcelaNumber = parseInt(parcelaIdStr);
-            if (!isNaN(loanId) && !isNaN(parcelaNumber)) {
-                const schedule = calculateLoanSchedule(loanId);
-                const item = schedule.find(i => i.parcela === parcelaNumber);
-                if (item) jurosEmprestimos += item.juros;
-            }
-        }
-    });
-
-    const resultadoFinanceiro = totalRendimentos - jurosEmprestimos;
-    const resultadoLiquido = resultadoOperacional + resultadoFinanceiro;
-
-    const composicaoDespesas = [
-      { name: "Despesas Fixas", value: totalDespesasFixas, color: COLORS.danger },
-      { name: "Despesas Variáveis", value: totalDespesasVariaveis, color: COLORS.warning },
-      { name: "Juros e Encargos", value: jurosEmprestimos, color: COLORS.accent },
-    ].filter(item => item.value > 0);
-
-    return {
-      totalReceitaBruta,
-      totalDespesas: totalDespesasFixas + totalDespesasVariaveis + jurosEmprestimos,
-      resultadoLiquido,
-      resultadoBruto,
-      resultadoOperacional,
-      totalRendimentos,
-      jurosEmprestimos,
-      resultadoFinanceiro,
-      receitasBrutas,
-      despesasFixas,
-      despesasVariaveis,
-      composicaoDespesas,
-      totalDespesasFixas,
-      totalDespesasVariaveis,
-    };
-  }, [categoriasV2, emprestimos, calculateLoanSchedule]);
-
-  const dre1 = useMemo(() => calculateDRE(transacoesPeriodo1), [calculateDRE, transacoesPeriodo1]);
-  const dre2 = useMemo(() => calculateDRE(transacoesPeriodo2), [calculateDRE, transacoesPeriodo2]);
-
-  const variacaoRL = useMemo(() => {
-    if (!range2.from) return { diff: 0, percent: 0 };
-    const diff = dre1.resultadoLiquido - dre2.resultadoLiquido;
-    const percent = dre2.resultadoLiquido !== 0 ? (diff / Math.abs(dre2.resultadoLiquido)) * 100 : 0;
-    return { diff, percent };
-  }, [dre1, dre2, range2.from]);
-
-  const evolucaoMensal = useMemo(() => {
-    const resultado: { mes: string; receitas: number; despesas: number; resultado: number }[] = [];
-    for (let i = 11; i >= 0; i--) {
-      const data = subMonths(now, i);
-      const inicio = startOfMonth(data);
-      const fim = endOfMonth(data);
-      const mesLabel = format(data, 'MMM', { locale: ptBR });
-
-      const transacoesMes = transacoesV2.filter(t => {
-        try {
-          const dataT = parseDateLocal(t.date);
-          return isWithinInterval(dataT, { start: inicio, end: fim });
-        } catch { return false; }
-      });
-
-      const receitasMes = transacoesMes
-        .filter(t => t.operationType !== 'initial_balance' && (t.operationType === 'receita' || t.operationType === 'rendimento'))
-        .reduce((acc, t) => acc + t.amount, 0);
-      
-      const despesasMes = transacoesMes
-        .filter(t => t.operationType !== 'initial_balance' && (t.operationType === 'despesa' || t.operationType === 'pagamento_emprestimo' || t.operationType === 'veiculo'))
-        .reduce((acc, t) => acc + t.amount, 0);
-
-      resultado.push({
-        mes: mesLabel.charAt(0).toUpperCase() + mesLabel.slice(1),
-        receitas: receitasMes,
-        despesas: despesasMes,
-        resultado: receitasMes - despesasMes,
-      });
-    }
-    return resultado;
-  }, [transacoesV2, now]);
+  const formatCurrency = (v: number) => `R$ ${v.toLocaleString("pt-BR", { minimumFractionDigits: 0 })}`;
 
   return (
-    <div className="space-y-6">
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <ReportCard
-          title="Receita Bruta"
-          value={formatCurrency(dre1.totalReceitaBruta)}
-          status="success"
-          icon={<TrendingUp className="w-5 h-5" />}
-          tooltip="Soma das receitas operacionais (salário, vendas, etc)"
-          delay={0}
-        />
-        <ReportCard
-          title="Despesa Operacional"
-          value={formatCurrency(dre1.totalDespesasFixas + dre1.totalDespesasVariaveis)}
-          status="danger"
-          icon={<TrendingDown className="w-5 h-5" />}
-          tooltip="Soma das despesas fixas e variáveis"
-          delay={50}
-        />
-        <ReportCard
-          title="Resultado Líquido"
-          value={formatCurrency(dre1.resultadoLiquido)}
-          status={dre1.resultadoLiquido > 0 ? "success" : "danger"}
-          icon={<DollarSign className="w-5 h-5" />}
-          tooltip="Resultado final após receitas financeiras e juros"
-          delay={100}
-        />
-        <ReportCard
-          title="Variação do RL"
-          value={`${variacaoRL.percent.toFixed(1)}%`}
-          trend={variacaoRL.percent}
-          trendLabel="anterior"
-          status={variacaoRL.percent >= 0 ? "success" : "danger"}
-          icon={<Percent className="w-5 h-5" />}
-          tooltip={`Variação do Resultado Líquido vs período anterior`}
-          delay={150}
-        />
+    <div className="space-y-12 animate-fade-in">
+      {/* HERO SECTION - Resultado Líquido */}
+      <div className={cn(
+        "rounded-[3.5rem] p-12 shadow-2xl border-4 transition-all duration-700 relative overflow-hidden flex flex-col items-center text-center group",
+        dre1.res >= 0 ? "bg-success/5 border-success/20 shadow-success/10" : "bg-destructive/5 border-destructive/20 shadow-destructive/10"
+      )}>
+        <div className="absolute inset-0 bg-gradient-to-b from-transparent to-black/[0.02]" />
+        <div className="relative z-10 space-y-4">
+          <div className="flex items-center justify-center gap-3">
+             <div className={cn("p-3 rounded-2xl shadow-xl", dre1.res >= 0 ? "bg-success text-success-foreground" : "bg-destructive text-destructive-foreground")}>
+                <DollarSign className="w-8 h-8" />
+             </div>
+             <div>
+                <p className="text-[11px] font-black uppercase tracking-[0.3em] opacity-60">Performance Mensal</p>
+                <h3 className="font-display font-black text-2xl uppercase">{dre1.res >= 0 ? "Superávit Líquido" : "Déficit Líquido"}</h3>
+             </div>
+          </div>
+          
+          <h2 className={cn("text-7xl sm:text-8xl font-black tracking-tighter tabular-nums leading-none", dre1.res >= 0 ? "text-success" : "text-destructive")}>
+            {formatCurrency(dre1.res)}
+          </h2>
+
+          <div className="flex items-center justify-center gap-4">
+             <Badge className={cn("rounded-xl px-4 py-1.5 font-black text-sm", dre1.res >= dre2.res ? "bg-success/20 text-success" : "bg-destructive/20 text-destructive")}>
+                {dre1.res >= dre2.res ? <ArrowUpRight className="w-4 h-4 mr-2" /> : <ArrowDownRight className="w-4 h-4 mr-2" />}
+                {formatCurrency(Math.abs(dre1.res - dre2.res))} de variação
+             </Badge>
+          </div>
+        </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <ExpandablePanel
-          title="Demonstração do Resultado"
-          subtitle="Estrutura Contábil"
-          icon={<Receipt className="w-4 h-4" />}
-          badge={formatCurrency(dre1.resultadoLiquido)}
-          badgeStatus={dre1.resultadoLiquido > 0 ? "success" : "danger"}
-          defaultExpanded={true}
-        >
-          <div className="glass-card p-0">
-            <DREItem label="RECEITA BRUTA" value={dre1.totalReceitaBruta} type="receita" icon={<Plus className="w-4 h-4" />} />
-            {dre1.receitasBrutas.map((r, i) => (
-              <DREItem key={i} label={r.categoria} value={r.valor} type="receita" level={1} />
-            ))}
-
-            <DREItem label="(-) DESPESAS FIXAS" value={dre1.totalDespesasFixas} type="despesa" icon={<Minus className="w-4 h-4" />} />
-            {dre1.despesasFixas.map((d, i) => (
-              <DREItem key={i} label={d.categoria} value={d.valor} type="despesa" level={1} />
-            ))}
-
-            <DREItem label="RESULTADO BRUTO" value={dre1.resultadoBruto} type="subtotal" icon={<Equal className="w-4 h-4" />} />
-
-            <DREItem label="(-) DESPESAS VARIÁVEIS" value={dre1.totalDespesasVariaveis} type="despesa" icon={<Minus className="w-4 h-4" />} />
-            {dre1.despesasVariaveis.map((d, i) => (
-              <DREItem key={i} label={d.categoria} value={d.valor} type="despesa" level={1} />
-            ))}
-
-            <DREItem label="RESULTADO OPERACIONAL" value={dre1.resultadoOperacional} type="subtotal" icon={<Equal className="w-4 h-4" />} />
-
-            <DREItem label="(+/-) RESULTADO FINANCEIRO" value={dre1.resultadoFinanceiro} type="subtotal" icon={<Calculator className="w-4 h-4" />} />
-            <DREItem label="(+) Rendimentos de Investimentos" value={dre1.totalRendimentos} type="receita" level={1} />
-            <DREItem label="(-) Juros de Empréstimos" value={dre1.jurosEmprestimos} type="despesa" level={1} />
-
-            <DREItem label="RESULTADO LÍQUIDO" value={dre1.resultadoLiquido} type="resultado" icon={<DollarSign className="w-4 h-4" />} />
-          </div>
-        </ExpandablePanel>
-
-        <div className="space-y-6">
-          <ExpandablePanel
-            title="Evolução do Resultado"
-            subtitle="Últimos 12 meses"
-            icon={<BarChart3 className="w-4 h-4" />}
-          >
-            <div className="h-[300px]">
-              <ResponsiveContainer width="100%" height="100%">
-                <ComposedChart data={evolucaoMensal}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(220, 20%, 18%)" vertical={false} />
-                  <XAxis dataKey="mes" axisLine={false} tickLine={false} tick={{ fill: COLORS.muted, fontSize: 11 }} />
-                  <YAxis yAxisId="left" axisLine={false} tickLine={false} tick={{ fill: COLORS.muted, fontSize: 11 }} tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`} />
-                  <YAxis yAxisId="right" orientation="right" axisLine={false} tickLine={false} tick={{ fill: COLORS.primary, fontSize: 11 }} tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`} />
-                  <Tooltip contentStyle={{ backgroundColor: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: "12px" }} />
-                  <Legend />
-                  <Bar yAxisId="left" dataKey="receitas" name="Receitas" fill={COLORS.success} opacity={0.7} radius={[4, 4, 0, 0]} />
-                  <Bar yAxisId="left" dataKey="despesas" name="Despesas" fill={COLORS.danger} opacity={0.7} radius={[4, 4, 0, 0]} />
-                  <Line yAxisId="right" type="monotone" dataKey="resultado" name="Resultado" stroke={COLORS.primary} strokeWidth={3} dot={false} />
-                </ComposedChart>
-              </ResponsiveContainer>
+      <div className="max-w-4xl mx-auto space-y-6">
+         {/* Estrutura DRE como Fluxo Cascata */}
+         <div className="space-y-4">
+            <div className="p-6 rounded-[2rem] bg-success/10 border border-success/20 flex items-center justify-between group hover:scale-[1.01] transition-transform">
+               <div className="flex items-center gap-5">
+                  <div className="w-12 h-12 rounded-2xl bg-success text-white flex items-center justify-center shadow-lg"><Plus className="w-6 h-6" /></div>
+                  <div><p className="text-sm font-black uppercase tracking-widest text-success/60">Receita Bruta</p><p className="text-2xl font-black text-foreground">Entradas do Período</p></div>
+               </div>
+               <p className="text-3xl font-black text-success tabular-nums">{formatCurrency(dre1.rec)}</p>
             </div>
-          </ExpandablePanel>
 
-          <ExpandablePanel
-            title="Composição das Despesas"
-            subtitle="Distribuição por tipo"
-            icon={<PieChart className="w-4 h-4" />}
-          >
-            <div className="h-[300px]">
-              <ResponsiveContainer width="100%" height="100%">
-                <RechartsPie>
-                  <Pie
-                    data={dre1.composicaoDespesas}
-                    dataKey="value"
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={60}
-                    outerRadius={100}
-                    paddingAngle={2}
-                    label={CustomPieLabel}
-                    labelLine
-                  >
-                    {dre1.composicaoDespesas.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={PIE_COLORS[index % PIE_COLORS.length]} />
-                    ))}
-                  </Pie>
-                  <Tooltip contentStyle={{ backgroundColor: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: "12px" }} />
-                </RechartsPie>
-              </ResponsiveContainer>
+            <div className="flex justify-center py-2 opacity-30"><Minus className="w-8 h-8" /></div>
+
+            <div className="p-6 rounded-[2rem] bg-destructive/5 border border-destructive/10 flex items-center justify-between group hover:scale-[1.01] transition-transform">
+               <div className="flex items-center gap-5">
+                  <div className="w-12 h-12 rounded-2xl bg-destructive text-white flex items-center justify-center shadow-lg"><Minus className="w-6 h-6" /></div>
+                  <div><p className="text-sm font-black uppercase tracking-widest text-destructive/60">Gastos Operacionais</p><p className="text-2xl font-black text-foreground">Fixas + Variáveis</p></div>
+               </div>
+               <p className="text-3xl font-black text-destructive tabular-nums">{formatCurrency(dre1.fix + dre1.var)}</p>
             </div>
-          </ExpandablePanel>
-        </div>
+
+            <div className="flex justify-center py-2 opacity-30"><Calculator className="w-8 h-8" /></div>
+
+            <div className="p-6 rounded-[2rem] bg-primary/5 border border-primary/10 flex items-center justify-between group hover:scale-[1.01] transition-transform">
+               <div className="flex items-center gap-5">
+                  <div className="w-12 h-12 rounded-2xl bg-primary text-white flex items-center justify-center shadow-lg"><TrendingDown className="w-6 h-6" /></div>
+                  <div><p className="text-sm font-black uppercase tracking-widest text-primary/60">Custo Financeiro</p><p className="text-2xl font-black text-foreground">Juros de Crédito</p></div>
+               </div>
+               <p className="text-3xl font-black text-primary tabular-nums">{formatCurrency(dre1.juros)}</p>
+            </div>
+         </div>
       </div>
     </div>
   );

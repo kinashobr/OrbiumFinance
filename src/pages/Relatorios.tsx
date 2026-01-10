@@ -1,15 +1,17 @@
+"use client";
+
 import { useState, useCallback } from "react";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { BalancoTab } from "@/components/reports/BalancoTab";
 import { DRETab } from "@/components/reports/DRETab";
 import { IndicadoresTab } from "@/components/reports/IndicadoresTab";
-import { Scale, Receipt, Activity, BarChart3 } from "lucide-react";
+import { Scale, Receipt, Activity, BarChart3, Sparkles } from "lucide-react";
 import { PeriodSelector } from "@/components/dashboard/PeriodSelector";
 import { ComparisonDateRanges } from "@/types/finance";
 import { useFinance } from "@/contexts/FinanceContext";
 
-const Relatorios = () => {
+export default function Relatorios() {
   const { dateRanges, setDateRanges } = useFinance();
 
   const handlePeriodChange = useCallback((ranges: ComparisonDateRanges) => {
@@ -18,65 +20,65 @@ const Relatorios = () => {
 
   return (
     <MainLayout>
-      <div className="space-y-6">
-        <header className="space-y-3 animate-fade-in border-0">
-          <div className="flex items-center justify-between text-xs text-muted-foreground">
-            <div className="inline-flex items-start gap-3">
-              <div className="flex flex-col">
-                <span className="text-sm font-semibold text-foreground">Relatórios Gerenciais</span>
-                <span className="text-[11px]">Balanço e Demonstrações</span>
+      <div className="space-y-10 pb-12">
+        <header className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 px-1 animate-fade-in">
+          <div className="flex items-center gap-4">
+            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-primary to-primary-dark flex items-center justify-center text-white shadow-xl shadow-primary/20 ring-4 ring-primary/10">
+              <BarChart3 className="w-7 h-7" />
+            </div>
+            <div>
+              <h1 className="font-display font-bold text-3xl leading-none tracking-tight text-foreground">Análise</h1>
+              <div className="flex items-center gap-2 mt-1">
+                 <Sparkles className="w-3.5 h-3.5 text-accent" />
+                 <p className="text-xs text-muted-foreground font-black tracking-widest uppercase opacity-60">Inteligência Patrimonial</p>
               </div>
             </div>
           </div>
-          <div className="flex flex-wrap items-stretch gap-2 max-w-full">
-            <PeriodSelector 
-              initialRanges={dateRanges}
-              onDateRangeChange={handlePeriodChange}
-              className="h-8 rounded-full border-none bg-card px-3 text-[11px] font-medium text-secondary shadow-xs"
-            />
-          </div>
+          <PeriodSelector 
+            initialRanges={dateRanges}
+            onDateRangeChange={handlePeriodChange}
+            className="h-11 rounded-full bg-surface-light dark:bg-surface-dark border-border/40 shadow-sm px-6 font-bold"
+          />
         </header>
 
-        <Tabs defaultValue="balanco" className="space-y-6">
+        <Tabs defaultValue="balanco" className="space-y-8">
           <div className="border-b border-border/40 px-1">
-            <TabsList className="bg-transparent h-auto p-0 gap-8">
+            <TabsList className="bg-transparent h-auto p-0 gap-10">
               <TabsTrigger
                 value="balanco"
-                className="bg-transparent rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent shadow-none px-0 py-3 text-xs font-bold uppercase tracking-wider text-muted-foreground data-[state=active]:text-foreground"
+                className="bg-transparent rounded-none border-b-4 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent shadow-none px-0 py-4 text-xs font-black uppercase tracking-[0.2em] text-muted-foreground data-[state=active]:text-foreground transition-all"
               >
-                <Scale className="w-3.5 h-3.5 mr-2" />
+                <Scale className="w-4 h-4 mr-2.5" />
                 Balanço
               </TabsTrigger>
               <TabsTrigger
                 value="dre"
-                className="bg-transparent rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent shadow-none px-0 py-3 text-xs font-bold uppercase tracking-wider text-muted-foreground data-[state=active]:text-foreground"
+                className="bg-transparent rounded-none border-b-4 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent shadow-none px-0 py-4 text-xs font-black uppercase tracking-[0.2em] text-muted-foreground data-[state=active]:text-foreground transition-all"
               >
-                <Receipt className="w-3.5 h-3.5 mr-2" />
+                <Receipt className="w-4 h-4 mr-2.5" />
                 DRE
               </TabsTrigger>
               <TabsTrigger
                 value="indicadores"
-                className="bg-transparent rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent shadow-none px-0 py-3 text-xs font-bold uppercase tracking-wider text-muted-foreground data-[state=active]:text-foreground"
+                className="bg-transparent rounded-none border-b-4 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent shadow-none px-0 py-4 text-xs font-black uppercase tracking-[0.2em] text-muted-foreground data-[state=active]:text-foreground transition-all"
               >
-                <Activity className="w-3.5 h-3.5 mr-2" />
-                Indicadores
+                <Activity className="w-4 h-4 mr-2.5" />
+                Saúde
               </TabsTrigger>
             </TabsList>
           </div>
 
-          <TabsContent value="balanco" className="mt-0 animate-fade-in-up">
+          <TabsContent value="balanco" className="mt-0 focus-visible:outline-none">
             <BalancoTab dateRanges={dateRanges} />
           </TabsContent>
-          <TabsContent value="dre" className="mt-0 animate-fade-in-up">
+          <TabsContent value="dre" className="mt-0 focus-visible:outline-none">
             <DRETab dateRanges={dateRanges} />
           </TabsContent>
-          <TabsContent value="indicadores" className="mt-0 animate-fade-in-up">
+          <TabsContent value="indicadores" className="mt-0 focus-visible:outline-none">
             <IndicadoresTab dateRanges={dateRanges} />
           </TabsContent>
         </Tabs>
       </div>
     </MainLayout>
   );
-};
-
-export default Relatorios;
+}
