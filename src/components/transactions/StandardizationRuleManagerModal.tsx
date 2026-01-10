@@ -10,6 +10,7 @@ import { StandardizationRuleFormModal } from "./StandardizationRuleFormModal";
 import { useFinance } from "@/contexts/FinanceContext";
 import { Badge } from "@/components/ui/badge";
 import { STANDARDIZABLE_OPERATIONS } from "./StandardizationRuleFormModal";
+import { useMediaQuery } from "@/hooks/useMediaQuery"; // Import useMediaQuery
 
 interface StandardizationRuleManagerModalProps {
   open: boolean;
@@ -32,6 +33,7 @@ export function StandardizationRuleManagerModal({
   const [searchTerm, setSearchTerm] = useState("");
   const [editingRule, setEditingRule] = useState<StandardizationRule | null>(null);
   const [showFormModal, setShowFormModal] = useState(false);
+  const isMobile = useMediaQuery("(max-width: 768px)"); // Use the hook
   
   const categoriesMap = useMemo(() => new Map(categories.map(c => [c.id, c])), [categories]);
 

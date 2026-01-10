@@ -7,6 +7,7 @@ import { cn, parseDateLocal } from "@/lib/utils";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { useMediaQuery } from "@/hooks/useMediaQuery"; // Import useMediaQuery
 
 export interface FixedBillSelectorModalProps {
   open: boolean;
@@ -26,7 +27,8 @@ export function FixedBillSelectorModal({
 }: FixedBillSelectorModalProps) {
   const isCurrent = mode === 'current';
   const Icon = isCurrent ? Settings : Plus;
-  
+  const isMobile = useMediaQuery("(max-width: 768px)"); // Use the hook
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-[min(95vw,52rem)] h-[min(90vh,800px)] p-0 overflow-hidden rounded-[2rem] sm:rounded-[3rem] border-none shadow-2xl flex flex-col z-[130]">
@@ -50,14 +52,16 @@ export function FixedBillSelectorModal({
               </DialogDescription>
             </div>
           </div>
-          <Button 
-            variant="ghost" 
-            size="icon" 
-            className="absolute right-4 top-4 rounded-full sm:hidden"
-            onClick={() => onOpenChange(false)}
-          >
-            <X className="w-5 h-5" />
-          </Button>
+          {!isMobile && ( // Only show on mobile
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              className="absolute right-4 top-4 rounded-full"
+              onClick={() => onOpenChange(false)}
+            >
+              <X className="w-5 h-5" />
+            </Button>
+          )}
         </DialogHeader>
 
         <ScrollArea className="flex-1 p-4 sm:p-8">

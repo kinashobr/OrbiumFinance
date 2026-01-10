@@ -11,6 +11,7 @@ import { cn, getDueDate } from "@/lib/utils";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { useMediaQuery } from "@/hooks/useMediaQuery"; // Import useMediaQuery
 
 interface AddPurchaseInstallmentDialogProps {
   open: boolean;
@@ -24,6 +25,7 @@ export function AddPurchaseInstallmentDialog({
   currentDate,
 }: AddPurchaseInstallmentDialogProps) {
   const { contasMovimento, categoriasV2, addPurchaseInstallments } = useFinance();
+  const isMobile = useMediaQuery("(max-width: 768px)"); // Use the hook
   
   const [formData, setFormData] = useState({
     description: "",
@@ -103,14 +105,16 @@ export function AddPurchaseInstallmentDialog({
               </DialogDescription>
             </div>
           </div>
-          <Button 
-            variant="ghost" 
-            size="icon" 
-            className="absolute right-4 top-4 rounded-full sm:hidden"
-            onClick={() => onOpenChange(false)}
-          >
-            <X className="w-5 h-5" />
-          </Button>
+          {!isMobile && ( // Only show on mobile
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              className="absolute right-4 top-4 rounded-full"
+              onClick={() => onOpenChange(false)}
+            >
+              <X className="w-5 h-5" />
+            </Button>
+          )}
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="p-6 sm:p-8 space-y-6 sm:space-y-8 max-h-[70vh] overflow-y-auto">
