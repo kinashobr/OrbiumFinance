@@ -5,8 +5,6 @@ import {
   Scale, 
   Activity,
   Shield,
-  ArrowUpRight,
-  ChevronRight
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -21,13 +19,31 @@ interface SaudeFinanceiraProps {
 export function SaudeFinanceira({
   liquidez,
   endividamento,
+  diversificacao,
+  estabilidadeFluxo,
+  dependenciaRenda,
 }: SaudeFinanceiraProps) {
   
-  const getLiquidezStatus = (val: number) => val >= 2 ? { label: "ÓTIMO", color: "text-green-800", bg: "bg-green-50/80 dark:bg-green-900/10", border: "border-green-100 dark:border-green-900/20" } : { label: "ATENÇÃO", color: "text-orange-800", bg: "bg-orange-50/80 dark:bg-orange-900/10", border: "border-orange-100 dark:border-orange-900/20" };
-  const getEndividamentoStatus = (val: number) => val <= 25 ? { label: "ÓTIMO", color: "text-green-800", bg: "bg-green-50/80 dark:bg-green-900/10", border: "border-green-100 dark:border-green-900/20" } : { label: "ALTO", color: "text-red-800", bg: "bg-red-50/80 dark:bg-red-900/10", border: "border-red-100 dark:border-red-900/20" };
+  const getLiquidezStatus = (val: number) => {
+    if (val >= 2) return { label: "ÓTIMO", color: "text-green-800", bg: "bg-green-50/80 dark:bg-green-900/10", border: "border-green-100 dark:border-green-900/20" };
+    if (val >= 1.2) return { label: "BOM", color: "text-blue-800", bg: "bg-blue-50/80 dark:bg-blue-900/10", border: "border-blue-100 dark:border-blue-900/20" };
+    return { label: "ATENÇÃO", color: "text-orange-800", bg: "bg-orange-50/80 dark:bg-orange-900/10", border: "border-orange-100 dark:border-orange-900/20" };
+  };
+
+  const getEndividamentoStatus = (val: number) => {
+    if (val <= 25) return { label: "ÓTIMO", color: "text-green-800", bg: "bg-green-50/80 dark:bg-green-900/10", border: "border-green-100 dark:border-green-900/20" };
+    if (val <= 45) return { label: "ALERTA", color: "text-orange-800", bg: "bg-orange-50/80 dark:bg-orange-900/10", border: "border-orange-100 dark:border-orange-900/20" };
+    return { label: "ALTO", color: "text-red-800", bg: "bg-red-50/80 dark:bg-red-900/10", border: "border-red-100 dark:border-red-900/20" };
+  };
+
+  const getDiversificacaoStatus = (val: number) => {
+    if (val >= 60) return { label: "ALTA", color: "text-green-800", bg: "bg-green-50/80 dark:bg-green-900/10" };
+    return { label: "BAIXA", color: "text-orange-800", bg: "bg-orange-50/80 dark:bg-orange-900/10" };
+  };
 
   const liq = getLiquidezStatus(liquidez);
   const end = getEndividamentoStatus(endividamento);
+  const div = getDiversificacaoStatus(diversificacao);
 
   return (
     <div className="space-y-4">
@@ -38,55 +54,59 @@ export function SaudeFinanceira({
 
       <div className="grid grid-cols-2 gap-3">
         {/* Liquidez */}
-        <div className={cn("rounded-3xl p-5 border transition-colors group relative overflow-hidden", liq.bg, liq.border)}>
+        <div className={cn("rounded-3xl p-5 border transition-all hover:scale-[1.02] group relative overflow-hidden", liq.bg, liq.border)}>
           <div className="flex justify-between items-start mb-4">
             <div className="w-10 h-10 rounded-full bg-white dark:bg-black/20 flex items-center justify-center shadow-sm">
               <Wallet className={cn("w-5 h-5", liq.color)} />
             </div>
-            <span className={cn("text-[10px] font-bold px-3 py-1 rounded-full border border-black/5 dark:border-white/5", liq.color === 'text-green-800' ? 'bg-white/60 text-green-800' : 'bg-white/60 text-orange-800')}>
+            <span className={cn("text-[9px] font-bold px-2 py-0.5 rounded-full border border-black/5 dark:border-white/5", liq.bg.replace('50/80', '100').replace('900/10', '900/40'))}>
               {liq.label}
             </span>
           </div>
-          <p className={cn("text-3xl font-display font-bold", liq.color.replace('800', '600').replace('text-', 'text-'))}>{liquidez.toFixed(1)}</p>
-          <p className="text-xs font-semibold opacity-60 mt-1">Liquidez Geral</p>
+          <p className={cn("text-3xl font-display font-bold", liq.color.replace('800', '600'))}>{liquidez.toFixed(1)}</p>
+          <p className="text-[10px] font-bold uppercase tracking-tight opacity-60 mt-1">Liquidez Geral</p>
         </div>
 
         {/* Endividamento */}
-        <div className={cn("rounded-3xl p-5 border transition-colors group relative overflow-hidden", end.bg, end.border)}>
+        <div className={cn("rounded-3xl p-5 border transition-all hover:scale-[1.02] group relative overflow-hidden", end.bg, end.border)}>
           <div className="flex justify-between items-start mb-4">
             <div className="w-10 h-10 rounded-full bg-white dark:bg-black/20 flex items-center justify-center shadow-sm">
               <Scale className={cn("w-5 h-5", end.color)} />
             </div>
-            <span className={cn("text-[10px] font-bold px-3 py-1 rounded-full border border-black/5 dark:border-white/5", end.color === 'text-green-800' ? 'bg-white/60 text-green-800' : 'bg-white/60 text-red-800')}>
+            <span className={cn("text-[9px] font-bold px-2 py-0.5 rounded-full border border-black/5 dark:border-white/5", end.bg.replace('50/80', '100').replace('900/10', '900/40'))}>
               {end.label}
             </span>
           </div>
-          <p className={cn("text-3xl font-display font-bold", end.color.replace('800', '600').replace('text-', 'text-'))}>{endividamento.toFixed(0)}%</p>
-          <p className="text-xs font-semibold opacity-60 mt-1">Endividamento</p>
+          <p className={cn("text-3xl font-display font-bold", end.color.replace('800', '600'))}>{endividamento.toFixed(0)}%</p>
+          <p className="text-[10px] font-bold uppercase tracking-tight opacity-60 mt-1">Endividamento</p>
         </div>
 
-        {/* Estabilidade (Mocked logic from original layout) */}
-        <div className="bg-red-50/80 dark:bg-red-900/10 rounded-3xl p-5 border border-red-100 dark:border-red-900/20">
+        {/* Diversificação */}
+        <div className={cn("rounded-3xl p-5 border transition-all hover:scale-[1.02] group relative overflow-hidden", div.bg, "border-neutral-100 dark:border-neutral-800")}>
           <div className="flex justify-between items-start mb-4">
             <div className="w-10 h-10 rounded-full bg-white dark:bg-black/20 flex items-center justify-center shadow-sm">
-              <Activity className="w-5 h-5 text-red-700" />
+              <Activity className={cn("w-5 h-5", div.color)} />
             </div>
-            <span className="text-[10px] font-bold bg-white/60 px-2 py-0.5 rounded-full text-red-800">BAIXA</span>
+            <span className={cn("text-[9px] font-bold px-2 py-0.5 rounded-full border border-black/5 dark:border-white/5", div.color === 'text-green-800' ? 'text-green-800 bg-green-100/50' : 'text-orange-800 bg-orange-100/50')}>
+              {div.label}
+            </span>
           </div>
-          <p className="text-3xl font-display font-bold text-red-700 dark:text-red-400">Alerta</p>
-          <p className="text-xs font-semibold text-red-700/60 dark:text-red-500/60 mt-1">Estabilidade Fluxo</p>
+          <p className={cn("text-3xl font-display font-bold", div.color.replace('800', '600'))}>{diversificacao.toFixed(0)}%</p>
+          <p className="text-[10px] font-bold uppercase tracking-tight opacity-60 mt-1">Diversificação</p>
         </div>
 
-        {/* Cobertura */}
-        <div className="bg-white dark:bg-surface-dark rounded-3xl p-5 border border-neutral-surface-light dark:border-neutral-surface-dark shadow-sm">
+        {/* Estabilidade Fluxo */}
+        <div className="bg-white dark:bg-surface-dark rounded-3xl p-5 border border-neutral-100 dark:border-neutral-800 shadow-sm transition-all hover:scale-[1.02]">
           <div className="flex justify-between items-start mb-4">
-            <div className="w-10 h-10 rounded-full bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center text-muted-foreground">
+            <div className="w-10 h-10 rounded-full bg-neutral-50 dark:bg-neutral-900 flex items-center justify-center text-muted-foreground">
               <Shield className="w-5 h-5" />
             </div>
-            <span className="text-[10px] font-bold bg-neutral-100 dark:bg-neutral-800 px-2 py-0.5 rounded-full text-muted-foreground">BOM</span>
+            <span className="text-[9px] font-bold bg-neutral-100 dark:bg-neutral-800 px-2 py-0.5 rounded-full text-muted-foreground">
+              {estabilidadeFluxo >= 80 ? "ALTA" : "MÉDIA"}
+            </span>
           </div>
-          <p className="text-3xl font-display font-bold text-foreground">6 <span className="text-sm">Meses</span></p>
-          <p className="text-xs font-semibold text-muted-foreground mt-1">Cobertura</p>
+          <p className="text-3xl font-display font-bold text-foreground">{estabilidadeFluxo.toFixed(0)}%</p>
+          <p className="text-[10px] font-bold uppercase tracking-tight text-muted-foreground mt-1">Estabilidade</p>
         </div>
       </div>
     </div>
