@@ -1,3 +1,5 @@
+"use client";
+
 import { useMemo, useState, useCallback, useEffect } from "react";
 import {
   Table,
@@ -10,7 +12,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Pin, ArrowLeftRight, TrendingUp, TrendingDown, AlertCircle, Check, PiggyBank, CreditCard, Car, Info } from "lucide-react";
+import { Pin, ArrowLeftRight, TrendingUp, TrendingDown, AlertCircle, Check, PiggyBank, CreditCard, Car, Info, Sparkles, Calendar } from "lucide-react";
 import { ContaCorrente, Categoria, ImportedTransaction, OperationType, CATEGORY_NATURE_LABELS } from "@/types/finance";
 import { cn, parseDateLocal } from "@/lib/utils";
 import { EditableCell } from "../EditableCell";
@@ -45,46 +47,19 @@ interface TransactionReviewTableProps {
   onCreateRule: (transaction: ImportedTransaction) => void;
 }
 
-const OPERATION_OPTIONS: { value: OperationType; label: string; color: string }[] = [
-  { value: 'receita', label: 'Receita', color: 'text-success' },
-  { value: 'despesa', label: 'Despesa', color: 'text-destructive' },
-  { value: 'transferencia', label: 'Transferência', color: 'text-primary' },
-  { value: 'aplicacao', label: 'Aplicação', color: 'text-purple-500' },
-  { value: 'resgate', label: 'Resgate', color: 'text-amber-500' },
-  { value: 'pagamento_emprestimo', label: 'Pag. Empréstimo', color: 'text-orange-500' },
-  { value: 'liberacao_emprestimo', label: 'Liberação Empréstimo', color: 'text-emerald-500' },
-  { value: 'veiculo', label: 'Veículo', color: 'text-blue-500' },
-  { value: 'rendimento', label: 'Rendimento', color: 'text-teal-500' },
+const OPERATION_OPTIONS: { value: OperationType; label: string; color: string; bgColor: string }[] = [
+  { value: 'receita', label: 'Receita', color: 'text-success', bgColor: 'bg-success/10' },
+  { value: 'despesa', label: 'Despesa', color: 'text-destructive', bgColor: 'bg-destructive/10' },
+  { value: 'transferencia', label: 'Transferência', color: 'text-primary', bgColor: 'bg-primary/10' },
+  { value: 'aplicacao', label: 'Aplicação', color: 'text-purple-500', bgColor: 'bg-purple-500/10' },
+  { value: 'resgate', label: 'Resgate', color: 'text-amber-500', bgColor: 'bg-amber-500/10' },
+  { value: 'pagamento_emprestimo', label: 'Pag. Empréstimo', color: 'text-orange-500', bgColor: 'bg-orange-500/10' },
+  { value: 'liberacao_emprestimo', label: 'Liberação', color: 'text-emerald-500', bgColor: 'bg-emerald-500/10' },
+  { value: 'veiculo', label: 'Veículo', color: 'text-blue-500', bgColor: 'bg-blue-500/10' },
+  { value: 'rendimento', label: 'Rendimento', color: 'text-teal-500', bgColor: 'bg-teal-500/10' },
 ];
 
 const formatCurrency = (value: number) => `R$ ${value.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`;
-
-const COLUMN_KEYS = ['date', 'amount', 'originalDescription', 'operationType', 'vinculo', 'category', 'description', 'rule'] as const;
-type ColumnKey = typeof COLUMN_KEYS[number];
-
-const INITIAL_WIDTHS: Record<ColumnKey, number> = {
-  date: 80,
-  amount: 100,
-  originalDescription: 250,
-  operationType: 150,
-  vinculo: 200,
-  category: 200,
-  description: 250,
-  rule: 80,
-};
-
-const columnHeaders: { key: ColumnKey, label: string, align?: 'center' | 'right' }[] = [
-  { key: 'date', label: 'Data' },
-  { key: 'amount', label: 'Valor', align: 'right' },
-  { key: 'originalDescription', label: 'Descrição Original' },
-  { key: 'operationType', label: 'Tipo Operação' },
-  { key: 'vinculo', label: 'Vínculo / Contraparte' },
-  { key: 'category', label: 'Categoria' },
-  { key: 'description', label: 'Descrição Final' },
-  { key: 'rule', label: 'Regra', align: 'center' },
-];
-
-const STORAGE_KEY = 'review_table_column_widths';
 
 export function TransactionReviewTable({
   transactions,
@@ -96,91 +71,15 @@ export function TransactionReviewTable({
   onCreateRule,
 }: TransactionReviewTableProps) {
   
-  const [columnWidths, setColumnWidths] = useState<Record<ColumnKey, number>>(() => {
-    try {
-      const saved = localStorage.getItem(STORAGE_KEY);
-      return saved ? JSON.parse(saved) : INITIAL_WIDTHS;
-    } catch {
-      return INITIAL_WIDTHS;
-    }
-  });
-  
-  useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(columnWidths));
-  }, [columnWidths]);
-
-  const [resizingColumn, setResizingColumn] = useState<ColumnKey | null>(null);
-  const [startX, setStartX] = useState(0);
-  const [startWidth, setStartWidth] = useState(0);
-
-  const handleMouseDown = (e: React.MouseEvent, key: ColumnKey) => {
-    e.preventDefault();
-    setResizingColumn(key);
-    setStartX(e.clientX);
-    setStartWidth(columnWidths[key]);
-  };
-
-  const handleMouseMove = useCallback((e: MouseEvent) => {
-    if (!resizingColumn) return;
-
-    const deltaX = e.clientX - startX;
-    const newWidth = Math.max(30, startWidth + deltaX);
-
-    setColumnWidths(prev => ({
-      ...prev,
-      [resizingColumn]: newWidth,
-    }));
-  }, [resizingColumn, startX, startWidth]);
-
-  const handleMouseUp = useCallback(() => {
-    setResizingColumn(null);
-  }, []);
-
-  useEffect(() => {
-    if (resizingColumn) {
-      window.addEventListener('mousemove', handleMouseMove);
-      window.addEventListener('mouseup', handleMouseUp);
-      document.body.style.cursor = 'col-resize';
-      document.body.style.userSelect = 'none';
-    } else {
-      window.removeEventListener('mousemove', handleMouseMove);
-      window.removeEventListener('mouseup', handleMouseUp);
-      document.body.style.cursor = 'default';
-      document.body.style.userSelect = 'auto';
-    };
-
-    return () => {
-      window.removeEventListener('mousemove', handleMouseMove);
-      window.removeEventListener('mouseup', handleMouseUp);
-      document.body.style.cursor = 'default';
-      document.body.style.userSelect = 'auto';
-    };
-  }, [resizingColumn, handleMouseMove, handleMouseUp]);
-  
-  const totalWidth = useMemo(() => {
-    return Object.values(columnWidths).reduce((sum, w) => sum + w, 0);
-  }, [columnWidths]);
-  
   const categoriesMap = useMemo(() => new Map(categories.map(c => [c.id, c])), [categories]);
-  const accountsMap = useMemo(() => new Map(accounts.map(a => [a.id, a])), [accounts]);
   
   const getCategoryOptions = (operationType: OperationType | null) => {
     if (!operationType || operationType === 'transferencia' || operationType === 'initial_balance') return categories;
-    
-    const isIncome = operationType === 'receita' || operationType === 'rendimento' || operationType === 'liberacao_emprestimo';
-    
-    return categories.filter(c => 
-      (isIncome && c.nature === 'receita') || 
-      (!isIncome && c.nature !== 'receita')
-    );
+    const isIncome = ['receita', 'rendimento', 'liberacao_emprestimo'].includes(operationType);
+    return categories.filter(c => (isIncome && c.nature === 'receita') || (!isIncome && c.nature !== 'receita'));
   };
   
-  const availableDestinationAccounts = useMemo(() => 
-    accounts.filter(a => !a.hidden), 
-    [accounts]
-  );
-  
-  const investmentAccounts = useMemo(() => investments, [investments]);
+  const availableDestinationAccounts = useMemo(() => accounts.filter(a => !a.hidden), [accounts]);
   const activeLoans = useMemo(() => loans.filter(l => !l.id.includes('pending')), [loans]);
 
   const renderVincularSelector = (tx: ImportedTransaction) => {
@@ -195,14 +94,12 @@ export function TransactionReviewTable({
           onValueChange={(v) => onUpdateTransaction(tx.id, { destinationAccountId: v })}
           disabled={isDisabled}
         >
-          <SelectTrigger className="h-7 text-xs">
+          <SelectTrigger className="h-9 rounded-xl border-none bg-muted/50 text-xs font-bold">
             <SelectValue placeholder="Conta Destino..." />
           </SelectTrigger>
-          <SelectContent className="max-h-60">
+          <SelectContent>
             {destinationOptions.map(a => (
-              <SelectItem key={a.id} value={a.id}>
-                {a.name}
-              </SelectItem>
+              <SelectItem key={a.id} value={a.id} className="text-xs font-medium">{a.name}</SelectItem>
             ))}
           </SelectContent>
         </Select>
@@ -216,17 +113,12 @@ export function TransactionReviewTable({
           onValueChange={(v) => onUpdateTransaction(tx.id, { tempInvestmentId: v })}
           disabled={isDisabled}
         >
-          <SelectTrigger className="h-7 text-xs">
-            <SelectValue placeholder="Conta Investimento..." />
+          <SelectTrigger className="h-9 rounded-xl border-none bg-muted/50 text-xs font-bold">
+            <SelectValue placeholder="Investimento..." />
           </SelectTrigger>
-          <SelectContent className="max-h-60">
-            {investmentAccounts.map(i => (
-              <SelectItem key={i.id} value={i.id}>
-                <span className="flex items-center gap-2">
-                    <PiggyBank className="w-3 h-3 text-purple-500" />
-                    {i.name}
-                </span>
-              </SelectItem>
+          <SelectContent>
+            {investments.map(i => (
+              <SelectItem key={i.id} value={i.id} className="text-xs font-medium">{i.name}</SelectItem>
             ))}
           </SelectContent>
         </Select>
@@ -235,47 +127,36 @@ export function TransactionReviewTable({
     
     if (opType === 'pagamento_emprestimo') {
       const selectedLoan = activeLoans.find(l => l.id === tx.tempLoanId);
-      const availableInstallments = selectedLoan 
-        ? selectedLoan.parcelas.filter(p => !p.paga) 
-        : [];
+      const availableInstallments = selectedLoan ? selectedLoan.parcelas.filter(p => !p.paga) : [];
 
       return (
         <div className="flex gap-2">
-          {/* Seletor 1: Contrato (tempLoanId) */}
           <Select
             value={tx.tempLoanId || ''}
             onValueChange={(v) => onUpdateTransaction(tx.id, { tempLoanId: v, tempParcelaId: null })}
             disabled={isDisabled}
           >
-            <SelectTrigger className="h-7 text-xs flex-1 min-w-[100px]">
+            <SelectTrigger className="h-9 rounded-xl border-none bg-muted/50 text-xs font-bold flex-1">
               <SelectValue placeholder="Contrato..." />
             </SelectTrigger>
-            <SelectContent className="max-h-60">
+            <SelectContent>
               {activeLoans.map(l => (
-                <SelectItem key={l.id} value={l.id}>
-                  <span className="flex items-center gap-2">
-                      <CreditCard className="w-3 h-3 text-orange-500" />
-                      {l.institution}
-                  </span>
-                </SelectItem>
+                <SelectItem key={l.id} value={l.id} className="text-xs font-medium">{l.institution}</SelectItem>
               ))}
             </SelectContent>
           </Select>
           
-          {/* Seletor 2: Parcela (tempParcelaId) */}
           <Select
             value={tx.tempParcelaId || ''}
             onValueChange={(v) => onUpdateTransaction(tx.id, { tempParcelaId: v })}
             disabled={isDisabled || !tx.tempLoanId}
           >
-            <SelectTrigger className="h-7 text-xs w-[100px]">
-              <SelectValue placeholder="Parcela..." />
+            <SelectTrigger className="h-9 rounded-xl border-none bg-muted/50 text-xs font-bold w-24">
+              <SelectValue placeholder="P..." />
             </SelectTrigger>
-            <SelectContent className="max-h-60">
+            <SelectContent>
               {availableInstallments.map(p => (
-                <SelectItem key={p.numero} value={String(p.numero)}>
-                  {`P. ${p.numero} (${formatCurrency(p.valor)})`}
-                </SelectItem>
+                <SelectItem key={p.numero} value={String(p.numero)} className="text-xs font-medium">P. {p.numero}</SelectItem>
               ))}
             </SelectContent>
           </Select>
@@ -283,212 +164,157 @@ export function TransactionReviewTable({
       );
     }
     
-    if (opType === 'veiculo') {
-      return (
-        <Select
-          value={tx.tempVehicleOperation || ''}
-          onValueChange={(v) => onUpdateTransaction(tx.id, { tempVehicleOperation: v as 'compra' | 'venda' })}
-          disabled={isDisabled}
-        >
-          <SelectTrigger className="h-7 text-xs">
-            <SelectValue placeholder="Operação..." />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="compra">
-                <span className="flex items-center gap-2 text-destructive">
-                    <Car className="w-3 h-3" /> Compra (Saída)
-                </span>
-            </SelectItem>
-            <SelectItem value="venda">
-                <span className="flex items-center gap-2 text-success">
-                    <Car className="w-3 h-3" /> Venda (Entrada)
-                </span>
-            </SelectItem>
-          </SelectContent>
-        </Select>
-      );
-    }
-    
-    if (opType === 'liberacao_emprestimo') {
-        return (
-            <Badge variant="outline" className="text-[10px] px-1 py-0 border-emerald-500 text-emerald-500">
-                <Info className="w-3 h-3 mr-1" /> Config. Posterior
-            </Badge>
-        );
-    }
-
-    return <span className="text-muted-foreground text-xs">—</span>;
-  };
-  
-  const isCategoryDisabled = (tx: ImportedTransaction): boolean => {
-    const opType = tx.operationType;
-    if (!opType) return true;
-    
-    return tx.isPotentialDuplicate ||
-           opType === 'transferencia' || 
-           opType === 'aplicacao' || 
-           opType === 'resgate' || 
-           opType === 'pagamento_emprestimo' ||
-           opType === 'liberacao_emprestimo' ||
-           opType === 'veiculo';
+    return <span className="text-muted-foreground/40 text-[10px] font-black uppercase tracking-widest">—</span>;
   };
 
   return (
-    <div className="overflow-x-auto">
-      <Table style={{ minWidth: `${totalWidth}px` }}>
-        <TableHeader className="sticky top-0 bg-card z-10">
-          <TableRow className="border-border hover:bg-transparent h-9">
-            {columnHeaders.map((header) => (
-              <TableHead 
-                key={header.key} 
-                className={cn(
-                  "text-muted-foreground text-xs p-2 relative",
-                  header.align === 'center' && 'text-center',
-                  header.align === 'right' && 'text-right'
-                )}
-                style={{ width: columnWidths[header.key] }}
-              >
-                {header.label}
-                {header.key !== 'rule' && (
-                  <div
-                    className="absolute right-0 top-0 h-full w-2 cursor-col-resize"
-                    onMouseDown={(e) => handleMouseDown(e, header.key)}
-                  />
-                )}
-              </TableHead>
-            ))}
+    <div className="w-full">
+      <Table>
+        <TableHeader className="bg-muted/30 sticky top-0 z-20">
+          <TableRow className="hover:bg-transparent border-none h-12">
+            <TableHead className="text-[10px] font-black uppercase tracking-widest pl-6">Data & Valor</TableHead>
+            <TableHead className="text-[10px] font-black uppercase tracking-widest">Descrição Original</TableHead>
+            <TableHead className="text-[10px] font-black uppercase tracking-widest">Classificação</TableHead>
+            <TableHead className="text-[10px] font-black uppercase tracking-widest">Vínculo</TableHead>
+            <TableHead className="text-[10px] font-black uppercase tracking-widest">Descrição Final</TableHead>
+            <TableHead className="text-[10px] font-black uppercase tracking-widest text-center pr-6">Ações</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {transactions.map((tx) => {
-            const isIncome = tx.operationType === 'receita' || tx.operationType === 'rendimento' || tx.operationType === 'liberacao_emprestimo' || (tx.operationType === 'veiculo' && tx.amount > 0);
-            const currentCategory = tx.categoryId ? categoriesMap.get(tx.categoryId) : null;
+            const isIncome = ['receita', 'rendimento', 'liberacao_emprestimo'].includes(tx.operationType || '') || (tx.operationType === 'veiculo' && tx.amount > 0);
+            const category = tx.categoryId ? categoriesMap.get(tx.categoryId) : null;
+            const opConfig = OPERATION_OPTIONS.find(o => o.value === tx.operationType);
             
-            const isVincularComplete = 
+            const isCategorized = 
                 (tx.operationType === 'transferencia' && !!tx.destinationAccountId) ||
                 ((tx.operationType === 'aplicacao' || tx.operationType === 'resgate') && !!tx.tempInvestmentId) ||
                 (tx.operationType === 'pagamento_emprestimo' && !!tx.tempLoanId && !!tx.tempParcelaId) ||
                 (tx.operationType === 'veiculo' && !!tx.tempVehicleOperation) ||
-                (!isCategoryDisabled(tx) && !!tx.categoryId) ||
+                (!!tx.categoryId) ||
                 tx.operationType === 'liberacao_emprestimo';
-            
-            const isCategorized = isVincularComplete;
-            
+
             return (
               <TableRow 
                 key={tx.id} 
                 className={cn(
-                  "border-border hover:bg-muted/30 transition-colors h-10",
-                  !isCategorized && !tx.isPotentialDuplicate && "bg-warning/5 hover:bg-warning/10",
-                  tx.isPotentialDuplicate && "bg-success/5 hover:bg-success/10 border-l-4 border-success/50"
+                  "group border-b border-border/40 transition-all hover:bg-muted/20 h-20",
+                  !isCategorized && !tx.isPotentialDuplicate && "bg-warning/[0.02]",
+                  tx.isPotentialDuplicate && "bg-success/[0.02]"
                 )}
               >
-                <TableCell className="text-muted-foreground text-xs whitespace-nowrap p-2" style={{ width: columnWidths.date }}>
-                  {parseDateLocal(tx.date).toLocaleDateString("pt-BR")}
+                {/* Data & Valor */}
+                <TableCell className="pl-6">
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-1.5 text-[10px] font-black text-muted-foreground uppercase tracking-tighter">
+                      <Calendar className="w-3 h-3" />
+                      {parseDateLocal(tx.date).toLocaleDateString("pt-BR")}
+                    </div>
+                    <p className={cn(
+                      "text-lg font-black tracking-tight font-display",
+                      isIncome ? "text-success" : "text-destructive"
+                    )}>
+                      {isIncome ? '+' : '-'} {formatCurrency(tx.amount)}
+                    </p>
+                  </div>
                 </TableCell>
-                <TableCell className={cn(
-                  "font-medium whitespace-nowrap text-sm p-2 text-right",
-                  isIncome ? "text-success" : "text-destructive"
-                )} style={{ width: columnWidths.amount }}>
-                  {isIncome ? '+' : '-'} {formatCurrency(tx.amount)}
+
+                {/* Descrição Original */}
+                <TableCell className="max-w-[200px]">
+                  <div className="space-y-1">
+                    <p className="text-xs font-bold text-foreground truncate" title={tx.originalDescription}>
+                      {tx.originalDescription}
+                    </p>
+                    {tx.isPotentialDuplicate && (
+                      <Badge variant="outline" className="bg-success/10 text-success border-none text-[9px] font-black px-1.5 py-0">
+                        <Check className="w-2.5 h-2.5 mr-1" /> DUPLICATA
+                      </Badge>
+                    )}
+                  </div>
                 </TableCell>
-                <TableCell className="text-xs max-w-[250px] truncate p-2" title={tx.originalDescription} style={{ width: columnWidths.originalDescription }}>
-                  {tx.originalDescription}
-                  {tx.isPotentialDuplicate && (
-                    <Badge variant="outline" className="ml-2 text-[10px] px-1 py-0 border-success text-success">
-                      <Check className="w-3 h-3 mr-1" /> Duplicata
-                    </Badge>
-                  )}
-                </TableCell>
-                
-                <TableCell className="p-2" style={{ width: columnWidths.operationType }}>
-                  <Select
-                    value={tx.operationType || ''}
-                    onValueChange={(v) => onUpdateTransaction(tx.id, { 
+
+                {/* Classificação (Tipo + Categoria) */}
+                <TableCell>
+                  <div className="flex flex-col gap-2 w-[180px]">
+                    <Select
+                      value={tx.operationType || ''}
+                      onValueChange={(v) => onUpdateTransaction(tx.id, { 
                         operationType: v as OperationType, 
                         isTransfer: v === 'transferencia',
                         categoryId: null,
                         destinationAccountId: null,
                         tempInvestmentId: null,
                         tempLoanId: null,
-                        tempVehicleOperation: null,
                         tempParcelaId: null,
-                    })}
-                    disabled={tx.isPotentialDuplicate}
-                  >
-                    <SelectTrigger className="h-7 text-xs">
-                      <SelectValue placeholder="Selecione..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {OPERATION_OPTIONS.map(op => (
-                        <SelectItem key={op.value} value={op.value}>
-                          <span className={cn("flex items-center gap-2 text-sm", op.color)}>
+                      })}
+                      disabled={tx.isPotentialDuplicate}
+                    >
+                      <SelectTrigger className={cn(
+                        "h-8 rounded-lg border-none text-[10px] font-black uppercase tracking-widest px-2",
+                        opConfig?.bgColor || "bg-muted",
+                        opConfig?.color || "text-muted-foreground"
+                      )}>
+                        <SelectValue placeholder="TIPO..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {OPERATION_OPTIONS.map(op => (
+                          <SelectItem key={op.value} value={op.value} className="text-[10px] font-black uppercase tracking-widest">
                             {op.label}
-                          </span>
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+
+                    <Select
+                      value={tx.categoryId || ''}
+                      onValueChange={(v) => onUpdateTransaction(tx.id, { categoryId: v })}
+                      disabled={tx.isPotentialDuplicate || ['transferencia', 'aplicacao', 'resgate', 'pagamento_emprestimo', 'veiculo'].includes(tx.operationType || '')}
+                    >
+                      <SelectTrigger className="h-8 rounded-lg border-none bg-muted/50 text-[11px] font-bold px-2">
+                        <SelectValue placeholder="CATEGORIA..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {getCategoryOptions(tx.operationType).map(cat => (
+                          <SelectItem key={cat.id} value={cat.id} className="text-xs font-medium">
+                            {cat.icon} {cat.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </TableCell>
-                
-                <TableCell className="p-2" style={{ width: columnWidths.vinculo }}>
+
+                {/* Vínculo */}
+                <TableCell className="w-[220px]">
                   {renderVincularSelector(tx)}
                 </TableCell>
-                
-                <TableCell className="p-2" style={{ width: columnWidths.category }}>
-                  <Select
-                    value={tx.categoryId || ''}
-                    onValueChange={(v) => onUpdateTransaction(tx.id, { categoryId: v })}
-                    disabled={isCategoryDisabled(tx)}
-                  >
-                    <SelectTrigger className="h-7 text-xs">
-                      <SelectValue placeholder="Selecione..." />
-                    </SelectTrigger>
-                    <SelectContent className="max-h-60">
-                      {getCategoryOptions(tx.operationType).map(cat => (
-                        <SelectItem key={cat.id} value={cat.id}>
-                          <span className="text-sm">
-                            {cat.icon} {cat.label} ({CATEGORY_NATURE_LABELS[cat.nature]})
-                          </span>
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </TableCell>
-                
-                <TableCell className="p-2" style={{ width: columnWidths.description }}>
+
+                {/* Descrição Final */}
+                <TableCell>
                   <EditableCell
                     value={tx.description}
-                    type="text"
                     onSave={(v) => onUpdateTransaction(tx.id, { description: String(v) })}
-                    className="text-xs h-7"
+                    className="text-xs font-bold h-9 bg-muted/30 rounded-xl px-3 border-none hover:bg-muted/50 transition-colors"
                     disabled={tx.isPotentialDuplicate}
                   />
                 </TableCell>
-                
-                <TableCell className="text-center p-2" style={{ width: columnWidths.rule }}>
+
+                {/* Ações */}
+                <TableCell className="text-center pr-6">
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="h-7 w-7 text-muted-foreground hover:text-primary"
+                    className="h-10 w-10 rounded-full text-muted-foreground hover:bg-primary/10 hover:text-primary transition-all"
                     onClick={() => onCreateRule(tx)}
                     disabled={!isCategorized || tx.isPotentialDuplicate}
-                    title="Criar regra de padronização"
+                    title="Criar regra inteligente"
                   >
-                    <Pin className="w-3.5 h-3.5" />
+                    <Sparkles className="w-5 h-5" />
                   </Button>
                 </TableCell>
               </TableRow>
             );
           })}
-          {transactions.length === 0 && (
-            <TableRow>
-              <TableCell colSpan={8} className="text-center py-10 text-muted-foreground">
-                <AlertCircle className="w-6 h-6 mx-auto mb-2" />
-                Nenhuma transação para revisar.
-              </TableCell>
-            </TableRow>
-          )}
         </TableBody>
       </Table>
     </div>

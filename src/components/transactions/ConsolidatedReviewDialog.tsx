@@ -1,7 +1,9 @@
+"use client";
+
 import { useState, useMemo, useCallback, useEffect } from "react";
-import { Dialog, DialogHeader, DialogTitle, DialogDescription, DialogContent } from "@/components/ui/dialog";
+import { Dialog, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { FileText, Check, Loader2, X, Sparkles, Filter, ChevronLeft } from "lucide-react";
+import { FileText, Check, Loader2, X, Sparkles, Filter, ChevronLeft, LayoutGrid } from "lucide-react";
 import { 
   ContaCorrente, Categoria, ImportedTransaction, StandardizationRule, 
   TransacaoCompleta, generateTransactionId, generateTransferGroupId, 
@@ -66,14 +68,12 @@ export function ConsolidatedReviewDialog({
     getTransactionsForReview,
     standardizationRules,
     addStandardizationRule,
-    deleteStandardizationRule,
     addTransacaoV2,
     updateImportedStatement,
     importedStatements,
     markLoanParcelPaid,
     addEmprestimo,
     addVeiculo,
-    setTransacoesV2,
     uncontabilizeImportedTransaction
   } = useFinance();
   
@@ -184,7 +184,7 @@ export function ConsolidatedReviewDialog({
   const renderContent = () => (
     <div className="flex flex-1 overflow-hidden">
       {!isMobile && (
-        <ResizableSidebar initialWidth={320} minWidth={240} maxWidth={400} storageKey="review_sidebar_width">
+        <ResizableSidebar initialWidth={340} minWidth={280} maxWidth={420} storageKey="review_sidebar_width">
           <div className="h-full bg-surface-light dark:bg-surface-dark border-r border-border/40">
             <ReviewContextSidebar
               accountId={accountId} statements={importedStatements.filter(s => s.accountId === accountId)}
@@ -196,34 +196,44 @@ export function ConsolidatedReviewDialog({
         </ResizableSidebar>
       )}
 
-      <div className="flex-1 flex flex-col p-4 md:p-6 overflow-hidden bg-background">
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-[11px] font-black uppercase tracking-widest text-muted-foreground flex items-center gap-2">
-             <Filter className="w-3.5 h-3.5" /> Lançamentos Pendentes
-          </h3>
-          <div className="flex items-center gap-2">
-             {isMobile && (
-               <Button variant="outline" size="sm" className="h-8 rounded-full text-[10px] font-bold" onClick={() => setMobileView('filters')}>
-                 Filtros
-               </Button>
-             )}
-             <Badge variant="secondary" className="bg-primary/5 text-primary border-none text-[10px] font-bold">
-              {transactionsToReview.length} itens
-             </Badge>
+      <div className="flex-1 flex flex-col p-8 overflow-hidden bg-background">
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center gap-3">
+            <div className="p-2 rounded-xl bg-primary/10 text-primary">
+              <LayoutGrid className="w-5 h-5" />
+            </div>
+            <div>
+              <h3 className="text-sm font-black uppercase tracking-[0.15em] text-foreground">
+                Lançamentos Pendentes
+              </h3>
+              <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider">
+                {transactionsToReview.length} transações encontradas
+              </p>
+            </div>
           </div>
+          
+          {isMobile && (
+            <Button variant="outline" size="sm" className="h-10 rounded-full px-6 font-bold gap-2" onClick={() => setMobileView('filters')}>
+              <Filter className="w-4 h-4" /> Filtros
+            </Button>
+          )}
         </div>
         
-        <div className="flex-1 overflow-hidden bg-card rounded-[1.5rem] md:rounded-[2rem] border border-border/40 shadow-sm">
+        <div className="flex-1 overflow-hidden bg-card rounded-[2.5rem] border border-border/40 shadow-soft">
           {loading ? (
             <div className="flex flex-col items-center justify-center h-full opacity-50">
-              <Loader2 className="w-10 h-10 animate-spin mb-4" />
-              <p className="font-bold uppercase tracking-widest text-xs">Sincronizando...</p>
+              <Loader2 className="w-12 h-12 animate-spin mb-4 text-primary" />
+              <p className="font-black uppercase tracking-widest text-[10px]">Sincronizando dados...</p>
             </div>
           ) : transactionsToReview.length === 0 ? (
-            <div className="flex flex-col items-center justify-center h-full opacity-30 p-8 text-center">
-              <Check className="w-16 h-16 text-success mb-4" />
-              <p className="text-lg font-black">Tudo revisado!</p>
-              <p className="text-sm">Seu fluxo está 100% categorizado para este período.</p>
+            <div className="flex flex-col items-center justify-center h-full p-12 text-center">
+              <div className="w-24 h-24 rounded-full bg-success/10 flex items-center justify-center text-success mb-6">
+                <Check className="w-12 h-12" />
+              </div>
+              <h4 className="text-2xl font-black tracking-tight text-foreground mb-2">Tudo em ordem!</h4>
+              <p className="text-muted-foreground max-w-xs mx-auto">
+                Não há transações pendentes de revisão para este período e conta.
+              </p>
             </div>
           ) : (
             <ScrollArea className="h-full">
@@ -236,13 +246,13 @@ export function ConsolidatedReviewDialog({
         </div>
 
         {isMobile && transactionsToReview.length > 0 && (
-          <div className="mt-4 shrink-0">
+          <div className="mt-6 shrink-0">
             <Button 
               onClick={handleContabilize} 
               disabled={readyCount === 0}
-              className="w-full h-12 rounded-2xl font-bold shadow-lg"
+              className="w-full h-14 rounded-[1.5rem] font-black shadow-xl shadow-primary/20"
             >
-              Contabilizar {readyCount} itens
+              CONTABILIZAR {readyCount} ITENS
             </Button>
           </div>
         )}
@@ -253,28 +263,28 @@ export function ConsolidatedReviewDialog({
   if (isMobile && open) {
     return (
       <div className="fixed inset-0 z-50 bg-background flex flex-col animate-in fade-in slide-in-from-bottom-4 duration-300">
-        <header className="px-4 pt-4 pb-3 border-b shrink-0 bg-surface-light dark:bg-surface-dark">
+        <header className="px-6 pt-6 pb-4 border-b shrink-0 bg-surface-light dark:bg-surface-dark">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <Button variant="ghost" size="icon" className="rounded-full" onClick={() => onOpenChange(false)}>
-                <ChevronLeft className="w-6 h-6" />
+            <div className="flex items-center gap-4">
+              <Button variant="ghost" size="icon" className="rounded-full h-12 w-12" onClick={() => onOpenChange(false)}>
+                <ChevronLeft className="w-8 h-8" />
               </Button>
               <div>
-                <h2 className="text-lg font-black tracking-tight">Revisão de Extrato</h2>
-                <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">{account?.name}</p>
+                <h2 className="text-xl font-black tracking-tight">Revisão</h2>
+                <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">{account?.name}</p>
               </div>
             </div>
-            <Button variant="ghost" size="icon" className="rounded-full" onClick={() => setShowRuleManagerModal(true)}>
-              <Sparkles className="w-5 h-5 text-primary" />
+            <Button variant="ghost" size="icon" className="rounded-full h-12 w-12 bg-primary/10 text-primary" onClick={() => setShowRuleManagerModal(true)}>
+              <Sparkles className="w-6 h-6" />
             </Button>
           </div>
         </header>
 
         {mobileView === 'filters' ? (
-          <div className="flex-1 p-4 bg-surface-light dark:bg-surface-dark overflow-y-auto">
-            <div className="flex items-center justify-between mb-6">
-              <h3 className="font-black uppercase tracking-widest text-xs">Ajustes de Período</h3>
-              <Button variant="ghost" size="sm" onClick={() => setMobileView('list')}>Voltar</Button>
+          <div className="flex-1 p-6 bg-surface-light dark:bg-surface-dark overflow-y-auto">
+            <div className="flex items-center justify-between mb-8">
+              <h3 className="font-black uppercase tracking-widest text-sm">Ajustes de Período</h3>
+              <Button variant="ghost" size="sm" className="font-bold" onClick={() => setMobileView('list')}>Voltar</Button>
             </div>
             <ReviewContextSidebar
               accountId={accountId} statements={importedStatements.filter(s => s.accountId === accountId)}
@@ -293,26 +303,26 @@ export function ConsolidatedReviewDialog({
       <Dialog open={open} onOpenChange={onOpenChange}>
         <ResizableDialogContent 
           storageKey="consolidated_review_modal"
-          initialWidth={1400} initialHeight={850} minWidth={900} minHeight={600} hideCloseButton={true}
-          className="rounded-[2.5rem] bg-surface-light dark:bg-surface-dark border-none shadow-2xl p-0 overflow-hidden"
+          initialWidth={1400} initialHeight={900} minWidth={1000} minHeight={700} hideCloseButton={true}
+          className="rounded-[3rem] bg-surface-light dark:bg-surface-dark border-none shadow-2xl p-0 overflow-hidden"
         >
           <div className="modal-viewport">
-            <DialogHeader className="px-8 pt-8 pb-4 bg-surface-light dark:bg-surface-dark shrink-0">
+            <DialogHeader className="px-10 pt-10 pb-6 bg-surface-light dark:bg-surface-dark shrink-0">
               <div className="flex items-center justify-between">
-                <div className="flex items-center gap-4">
-                  <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center text-primary shadow-lg shadow-primary/5">
-                    <FileText className="w-7 h-7" />
+                <div className="flex items-center gap-5">
+                  <div className="w-16 h-16 rounded-[1.5rem] bg-primary/10 flex items-center justify-center text-primary shadow-lg shadow-primary/5">
+                    <FileText className="w-8 h-8" />
                   </div>
                   <div>
-                    <DialogTitle className="text-2xl font-black tracking-tight">Painel de Revisão</DialogTitle>
-                    <DialogDescription className="text-sm font-medium text-muted-foreground flex items-center gap-1.5 mt-1">
-                      <Sparkles className="w-3.5 h-3.5 text-accent" />
-                      {account?.name} • Extratos Importados
+                    <DialogTitle className="text-3xl font-black tracking-tighter">Painel de Revisão</DialogTitle>
+                    <DialogDescription className="text-sm font-bold text-muted-foreground flex items-center gap-2 mt-1">
+                      <Sparkles className="w-4 h-4 text-accent" />
+                      {account?.name} • Inteligência de Extratos
                     </DialogDescription>
                   </div>
                 </div>
-                <Button variant="ghost" size="icon" className="h-10 w-10 rounded-full hover:bg-black/5" onClick={() => onOpenChange(false)}>
-                  <X className="w-5 h-5" />
+                <Button variant="ghost" size="icon" className="h-12 w-12 rounded-full hover:bg-black/5 transition-colors" onClick={() => onOpenChange(false)}>
+                  <X className="w-6 h-6" />
                 </Button>
               </div>
             </DialogHeader>
