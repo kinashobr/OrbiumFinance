@@ -15,10 +15,10 @@ import {
   TrendingDown,
   LayoutDashboard,
   Sparkles,
-  SsidChart
+  LineChart, // Substituído SsidChart por LineChart
 } from "lucide-react";
 import { subMonths, isWithinInterval, format, startOfDay, endOfDay } from "date-fns";
-import { parseDateLocal } from "@/lib/utils";
+import { parseDateLocal, cn } from "@/lib/utils"; // Importando cn
 import { Badge } from "@/components/ui/badge";
 
 const Index = () => {
@@ -132,7 +132,7 @@ const Index = () => {
               <div>
                 <div className="flex items-center gap-3 mb-2">
                   <div className="p-2 bg-orange-100 dark:bg-orange-900/30 rounded-xl text-primary">
-                    <SsidChart className="w-5 h-5" />
+                    <LineChart className="w-5 h-5" />
                   </div>
                   <span className="text-sm font-bold text-muted-foreground uppercase tracking-wider">Patrimônio Líquido</span>
                 </div>
