@@ -3,13 +3,13 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Pin, Trash2, Pencil, Search, Sparkles, X, Plus } from "lucide-react";
-import { StandardizationRule, Categoria, OPERATION_TYPE_LABELS } from "@/types/finance";
+import { StandardizationRule, Categoria } from "@/types/finance";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { StandardizationRuleFormModal } from "./StandardizationRuleFormModal";
 import { useFinance } from "@/contexts/FinanceContext";
 import { Badge } from "@/components/ui/badge";
-import { STANDARDIZABLE_OPERATIONS } from "./StandardizationRuleFormModal"; // Importação adicionada
+import { STANDARDIZABLE_OPERATIONS } from "./StandardizationRuleFormModal";
 
 interface StandardizationRuleManagerModalProps {
   open: boolean;
@@ -112,41 +112,45 @@ export function StandardizationRuleManagerModal({
                 return (
                   <div 
                     key={rule.id} 
-                    className="p-4 rounded-3xl bg-card border border-border/40 hover:border-primary/30 hover:shadow-md transition-all group flex items-center gap-4"
+                    className="p-4 rounded-3xl bg-card border border-border/40 hover:border-primary/30 hover:shadow-md transition-all group flex items-center justify-between gap-4"
                   >
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-1">
+                    <div className="flex-1 min-w-0 overflow-hidden">
+                      <div className="flex items-center gap-2 mb-1 flex-wrap">
                         <Badge variant="outline" className={cn("text-[10px] font-black uppercase tracking-wider py-0 px-2 rounded-lg", operationConfig?.color.replace('text-', 'bg-') + '/10', operationConfig?.color)}>
                           {operationConfig?.label || 'N/A'}
                         </Badge>
-                        <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest truncate">
+                        <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest truncate max-w-full" title={rule.pattern}>
                           Padrão: "{rule.pattern}"
                         </p>
                       </div>
-                      <div className="flex items-center gap-3">
-                        <p className="font-bold text-base text-foreground truncate">{rule.descriptionTemplate}</p>
+                      <div className="flex items-center gap-3 flex-wrap">
+                        <p className="font-bold text-base text-foreground truncate max-w-[300px]" title={rule.descriptionTemplate}>
+                          {rule.descriptionTemplate}
+                        </p>
                         {category && (
-                          <span className="text-[11px] font-bold text-muted-foreground bg-muted/50 px-2 py-0.5 rounded-lg flex items-center gap-1">
+                          <span className="text-[11px] font-bold text-muted-foreground bg-muted/50 px-2 py-0.5 rounded-lg flex items-center gap-1 shrink-0">
                             {category.icon} {category.label}
                           </span>
                         )}
                       </div>
                     </div>
                     
-                    <div className="flex items-center gap-1 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <div className="flex items-center gap-1 shrink-0">
                       <Button 
                         variant="ghost" 
                         size="icon" 
-                        className="h-10 w-10 rounded-full hover:bg-primary/10 hover:text-primary"
+                        className="h-10 w-10 rounded-full text-muted-foreground hover:bg-primary/10 hover:text-primary transition-colors"
                         onClick={() => handleEdit(rule)}
+                        title="Editar regra"
                       >
                         <Pencil className="w-4.5 h-4.5" />
                       </Button>
                       <Button 
                         variant="ghost" 
                         size="icon" 
-                        className="h-10 w-10 rounded-full hover:bg-destructive/10 hover:text-destructive"
+                        className="h-10 w-10 rounded-full text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors"
                         onClick={() => handleDelete(rule)}
+                        title="Excluir regra"
                       >
                         <Trash2 className="w-4.5 h-4.5" />
                       </Button>
