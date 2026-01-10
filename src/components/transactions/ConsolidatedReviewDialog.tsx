@@ -91,6 +91,18 @@ export function ConsolidatedReviewDialog({
   const [showRuleManagerModal, setShowRuleManagerModal] = useState(false);
   const [mobileView, setMobileView] = useState<'list' | 'filters'>('list');
 
+  // Bloquear scroll do fundo no mobile
+  useEffect(() => {
+    if (isMobile && open) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = 'unset';
+    }
+    return () => {
+      document.body.style.overflow = 'unset';
+    };
+  }, [isMobile, open]);
+
   const loadTransactions = useCallback(() => {
     if (!reviewRange.from || !reviewRange.to) {
       setTransactionsToReview([]);
@@ -197,7 +209,7 @@ export function ConsolidatedReviewDialog({
         </ResizableSidebar>
       )}
 
-      <div className="flex-1 flex flex-col p-8 overflow-hidden bg-background">
+      <div className="flex-1 flex flex-col p-4 sm:p-8 overflow-hidden bg-background">
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-3">
             <div className="p-2 rounded-xl bg-primary/10 text-primary">
@@ -263,39 +275,45 @@ export function ConsolidatedReviewDialog({
 
   if (isMobile && open) {
     return (
-      <div className="fixed inset-0 z-50 bg-background flex flex-col animate-in fade-in slide-in-from-bottom-4 duration-300">
-        <header className="px-6 pt-6 pb-4 border-b shrink-0 bg-card">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <Button variant="ghost" size="icon" className="rounded-full h-12 w-12" onClick={() => onOpenChange(false)}>
-                <ChevronLeft className="w-8 h-8" />
-              </Button>
-              <div>
-                <h2 className="text-xl font-black tracking-tight">Revisão</h2>
-                <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">{account?.name}</p>
+      <>
+        <div className="fixed inset-0 z-[100] bg-background flex flex-col animate-in fade-in slide-in-from-bottom-4 duration-300">
+          <header className="px-6 pt-6 pb-4 border-b shrink-0 bg-card">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <Button variant="ghost" size="icon" className="rounded-full h-12 w-12" onClick={() => onOpenChange(false)}>
+                  <ChevronLeft className="w-8 h-8" />
+                </Button>
+                <div>
+                  <h2 className="text-xl font-black tracking-tight">Revisão</h2>
+                  <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">{account?.name}</p>
+                </div>
               </div>
+              <Button variant="ghost" size="icon" className="rounded-full h-12 w-12 bg-primary/10 text-primary" onClick={() => setShowRuleManagerModal(true)}>
+                <Sparkles className="w-6 h-6" />
+              </Button>
             </div>
-            <Button variant="ghost" size="icon" className="rounded-full h-12 w-12 bg-primary/10 text-primary" onClick={() => setShowRuleManagerModal(true)}>
-              <Sparkles className="w-6 h-6" />
-            </Button>
-          </div>
-        </header>
+          </header>
 
-        {mobileView === 'filters' ? (
-          <div className="flex-1 p-6 bg-background overflow-y-auto">
-            <div className="flex items-center justify-between mb-8">
-              <h3 className="font-black uppercase tracking-widest text-sm">Ajustes de Período</h3>
-              <Button variant="ghost" size="sm" className="font-bold" onClick={() => setMobileView('list')}>Voltar</Button>
+          {mobileView === 'filters' ? (
+            <div className="flex-1 p-6 bg-background overflow-y-auto">
+              <div className="flex items-center justify-between mb-8">
+                <h3 className="font-black uppercase tracking-widest text-sm">Ajustes de Período</h3>
+                <Button variant="ghost" size="sm" className="font-bold" onClick={() => setMobileView('list')}>Voltar</Button>
+              </div>
+              <ReviewContextSidebar
+                accountId={accountId} statements={importedStatements.filter(s => s.accountId === accountId)}
+                pendingCount={pendingCount} readyToContabilizeCount={readyCount} totalCount={transactionsToReview.length}
+                reviewRange={reviewRange} onPeriodChange={r => setReviewRange(r.range1)} onApplyFilter={() => { loadTransactions(); setMobileView('list'); }}
+                onContabilize={handleContabilize} onClose={() => onOpenChange(false)} onManageRules={() => setShowRuleManagerModal(true)}
+              />
             </div>
-            <ReviewContextSidebar
-              accountId={accountId} statements={importedStatements.filter(s => s.accountId === accountId)}
-              pendingCount={pendingCount} readyToContabilizeCount={readyCount} totalCount={transactionsToReview.length}
-              reviewRange={reviewRange} onPeriodChange={r => setReviewRange(r.range1)} onApplyFilter={() => { loadTransactions(); setMobileView('list'); }}
-              onContabilize={handleContabilize} onClose={() => onOpenChange(false)} onManageRules={() => setShowRuleManagerModal(true)}
-            />
-          </div>
-        ) : renderContent()}
-      </div>
+          ) : renderContent()}
+        </div>
+        
+        {/* Modais de Regras renderizados fora da condicional de filtros para garantir funcionamento */}
+        <StandardizationRuleFormModal open={showRuleModal} onOpenChange={setShowRuleModal} initialTransaction={txForRule} categories={categories} onSave={handleSaveRule} />
+        <StandardizationRuleManagerModal open={showRuleManagerModal} onOpenChange={setShowRuleManagerModal} rules={standardizationRules} onDeleteRule={deleteStandardizationRule} categories={categories} />
+      </>
     );
   }
 
