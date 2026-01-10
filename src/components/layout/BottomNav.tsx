@@ -25,7 +25,6 @@ import {
   DrawerHeader,
   DrawerTitle,
   DrawerTrigger,
-  DrawerClose,
 } from "@/components/ui/drawer";
 import { SidebarAlertas } from "@/components/dashboard/SidebarAlertas";
 import { Button } from "@/components/ui/button";
@@ -77,8 +76,8 @@ export function BottomNav() {
       to={to}
       className={({ isActive }) =>
         cn(
-          "flex-1 flex flex-col items-center justify-center gap-1 py-1 transition-all duration-300",
-          isActive ? "text-primary scale-110" : "text-muted-foreground hover:text-foreground"
+          "flex-none w-[72px] flex flex-col items-center justify-center gap-1 py-1 transition-all duration-300 snap-center",
+          isActive ? "text-primary scale-105" : "text-muted-foreground hover:text-foreground"
         )
       }
     >
@@ -88,13 +87,15 @@ export function BottomNav() {
       )}>
         <Icon className="h-5 w-5" />
       </div>
-      <span className="text-[10px] font-bold uppercase tracking-tighter">{label}</span>
+      <span className="text-[9px] font-bold uppercase tracking-tight truncate w-full text-center px-1">
+        {label}
+      </span>
     </NavLink>
   );
 
   return (
     <nav className="fixed bottom-4 inset-x-0 z-40 flex justify-center md:hidden px-4 pointer-events-none">
-      <div className="pointer-events-auto glass-card rounded-full border border-border/60 bg-card/95 shadow-2xl max-w-[500px] w-full overflow-hidden">
+      <div className="pointer-events-auto glass-card rounded-full border border-border/60 bg-card/95 shadow-2xl max-w-[min(100%,500px)] w-full overflow-hidden">
         <input
           ref={fileInputRef}
           type="file"
@@ -103,9 +104,12 @@ export function BottomNav() {
           onChange={handleFileChange}
         />
 
-        <div className="flex items-center h-16 px-1">
+        {/* Container de Scroll */}
+        <div className="flex items-center h-16 px-2 overflow-x-auto no-scrollbar snap-x snap-mandatory">
           <NavItem to="/" icon={LayoutDashboard} label="Início" />
           <NavItem to="/receitas-despesas" icon={Receipt} label="Finanças" />
+          <NavItem to="/emprestimos" icon={CreditCard} label="Dívidas" />
+          <NavItem to="/relatorios" icon={BarChart3} label="Análise" />
           <NavItem to="/investimentos" icon={TrendingUp} label="Investir" />
           <NavItem to="/veiculos" icon={Car} label="Bens" />
 
@@ -115,14 +119,14 @@ export function BottomNav() {
               <button
                 type="button"
                 className={cn(
-                  "flex-1 flex flex-col items-center justify-center gap-1 py-1 text-muted-foreground",
+                  "flex-none w-[72px] flex flex-col items-center justify-center gap-1 py-1 text-muted-foreground snap-center",
                   showNavDrawer && "text-primary"
                 )}
               >
                 <div className={cn("p-2 rounded-xl transition-colors", showNavDrawer && "bg-primary/10")}>
                   <Menu className="h-5 w-5" />
                 </div>
-                <span className="text-[10px] font-bold uppercase tracking-tighter">Mais</span>
+                <span className="text-[9px] font-bold uppercase tracking-tight">Mais</span>
               </button>
             </DrawerTrigger>
             <DrawerContent className="rounded-t-[2rem] border-t-border bg-card max-h-[85vh]">
@@ -131,33 +135,11 @@ export function BottomNav() {
               <DrawerHeader className="px-6 pb-2">
                 <DrawerTitle className="text-left text-lg font-bold flex items-center gap-2">
                   <Settings2 className="w-5 h-5 text-primary" />
-                  Menu de Opções
+                  Configurações
                 </DrawerTitle>
               </DrawerHeader>
 
               <div className="px-6 py-4 space-y-6 overflow-y-auto hide-scrollbar-mobile pb-10">
-                {/* Atalhos Secundários */}
-                <div className="grid grid-cols-2 gap-3">
-                  <NavLink
-                    to="/emprestimos"
-                    onClick={() => setShowNavDrawer(false)}
-                    className="flex flex-col items-center gap-2 p-4 rounded-3xl bg-muted/30 border border-border/50 active:bg-muted"
-                  >
-                    <CreditCard className="w-6 h-6 text-warning" />
-                    <span className="text-xs font-bold">Empréstimos</span>
-                  </NavLink>
-                  <NavLink
-                    to="/relatorios"
-                    onClick={() => setShowNavDrawer(false)}
-                    className="flex flex-col items-center gap-2 p-4 rounded-3xl bg-muted/30 border border-border/50 active:bg-muted"
-                  >
-                    <BarChart3 className="w-6 h-6 text-info" />
-                    <span className="text-xs font-bold">Relatórios</span>
-                  </NavLink>
-                </div>
-
-                <Separator />
-
                 {/* Seção de Temas */}
                 <div className="space-y-3">
                   <p className="text-[11px] font-bold uppercase text-muted-foreground tracking-widest flex items-center gap-2">
@@ -184,7 +166,7 @@ export function BottomNav() {
 
                 <Separator />
 
-                {/* Dados e Alertas */}
+                {/* Dados */}
                 <div className="space-y-3">
                   <p className="text-[11px] font-bold uppercase text-muted-foreground tracking-widest">Ações de Dados</p>
                   <div className="space-y-2">
@@ -213,10 +195,10 @@ export function BottomNav() {
 
                 <Separator />
 
-                {/* Alertas integrados na gaveta */}
+                {/* Alertas */}
                 <div className="space-y-3 pb-4">
                   <p className="text-[11px] font-bold uppercase text-muted-foreground tracking-widest flex items-center gap-2">
-                    <Bell className="w-3 h-3" /> Notificações do Sistema
+                    <Bell className="w-3 h-3" /> Notificações
                   </p>
                   <div className="bg-muted/20 rounded-3xl p-2 border border-border/40">
                     <SidebarAlertas collapsed={false} />
