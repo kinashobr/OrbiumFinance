@@ -5,10 +5,6 @@ import {
   TrendingDown, 
   ChevronRight,
   TrendingUpDown,
-  DollarSign,
-  ArrowLeftRight,
-  CreditCard,
-  Car
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -27,23 +23,18 @@ const operationConfig: Record<string, {
   color: string;
   bgColor: string;
 }> = {
-  receita: { icon: TrendingUp, label: 'Receita', color: 'text-success', bgColor: 'bg-success/15' },
-  despesa: { icon: TrendingDown, label: 'Despesa', color: 'text-destructive', bgColor: 'bg-destructive/15' },
+  receita: { icon: ArrowUpCircle, label: 'Receita', color: 'text-success', bgColor: 'bg-success/15' },
+  despesa: { icon: ArrowDownCircle, label: 'Despesa', color: 'text-destructive', bgColor: 'bg-destructive/15' },
   aplicacao: { icon: TrendingUp, label: 'Aporte', color: 'text-info', bgColor: 'bg-info/15' },
   resgate: { icon: TrendingDown, label: 'Resgate', color: 'text-warning', bgColor: 'bg-warning/15' },
   rendimento: { icon: TrendingUp, label: 'Rendimento', color: 'text-success', bgColor: 'bg-success/15' },
-  transferencia: { icon: ArrowLeftRight, label: 'Transferência', color: 'text-primary', bgColor: 'bg-primary/15' },
-  pagamento_emprestimo: { icon: CreditCard, label: 'Pag. Empréstimo', color: 'text-orange-500', bgColor: 'bg-orange-500/15' },
-  liberacao_emprestimo: { icon: DollarSign, label: 'Liberação', color: 'text-success', bgColor: 'bg-success/15' },
-  veiculo: { icon: Car, label: 'Veículo', color: 'text-blue-500', bgColor: 'bg-blue-500/15' },
-  initial_balance: { icon: DollarSign, label: 'Saldo Inicial', color: 'text-muted-foreground', bgColor: 'bg-muted/15' },
 };
 
 export function MovimentacoesRelevantes({ transacoes, limit = 6 }: MovimentacoesRelevantesProps) {
   const navigate = useNavigate();
 
   const movimentacoes = [...transacoes]
-    .filter(t => t.operationType !== 'initial_balance')
+    .filter(t => t.flow !== 'transfer_in' && t.flow !== 'transfer_out' && t.amount >= 50)
     .sort((a, b) => parseDateLocal(b.date).getTime() - parseDateLocal(a.date).getTime())
     .slice(0, limit);
 
@@ -59,10 +50,10 @@ export function MovimentacoesRelevantes({ transacoes, limit = 6 }: Movimentacoes
   };
 
   return (
-    <div className="glass-card p-6 rounded-[var(--radius)] border-border/60 shadow-expressive">
+    <div className="glass-card p-6 rounded-[2.5rem] border-border/40 shadow-expressive">
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h3 className="font-black text-lg text-foreground tracking-tight">Movimentações</h3>
+          <h3 className="text-lg font-black text-foreground tracking-tight">Movimentações</h3>
           <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground opacity-70">Eventos de impacto</p>
         </div>
         <Button 
@@ -79,7 +70,6 @@ export function MovimentacoesRelevantes({ transacoes, limit = 6 }: Movimentacoes
         {movimentacoes.map((mov) => {
           const config = operationConfig[mov.operationType] || operationConfig.despesa;
           const isIncome = mov.flow === 'in' || mov.flow === 'transfer_in';
-          const Icon = config.icon;
           
           return (
             <div 
@@ -88,8 +78,8 @@ export function MovimentacoesRelevantes({ transacoes, limit = 6 }: Movimentacoes
               onClick={() => navigate("/receitas-despesas")}
             >
               <div className="flex items-center gap-4 flex-1 min-w-0">
-                <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center shrink-0 transition-transform group-hover:scale-110", config.bgColor)}>
-                  <Icon className={cn("h-5 w-5", config.color)} />
+                <div className={cn("w-12 h-12 rounded-full flex items-center justify-center shrink-0 transition-transform group-hover:scale-110", config.bgColor)}>
+                  <config.icon className={cn("h-6 w-6", config.color)} />
                 </div>
                 <div className="min-w-0 flex-1">
                   <p className="text-sm font-bold text-foreground truncate group-hover:text-primary transition-colors">
@@ -97,7 +87,7 @@ export function MovimentacoesRelevantes({ transacoes, limit = 6 }: Movimentacoes
                   </p>
                   <div className="flex items-center gap-2">
                     <span className="text-[10px] font-black uppercase text-muted-foreground/60">{formatDate(mov.date)}</span>
-                    <Badge variant="outline" className={cn("text-[9px] font-black uppercase border-none px-0", config.color)}>{config.label}</Badge>
+                    <Badge variant="outline" className="text-[9px] font-black uppercase border-none px-0 text-muted-foreground/40">{config.label}</Badge>
                   </div>
                 </div>
               </div>

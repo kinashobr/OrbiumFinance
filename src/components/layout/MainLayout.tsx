@@ -8,22 +8,31 @@ interface MainLayoutProps {
 export function MainLayout({
   children
 }: MainLayoutProps) {
-  // O novo design desktop usa uma sidebar sempre recolhida (w-24)
-  const sidebarWidthClass = "lg:w-24"; 
-  const mainContentMarginClass = "lg:ml-24"; 
-
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
+    const saved = localStorage.getItem("sidebar-collapsed");
+    return saved ? JSON.parse(saved) : false;
+  });
+  useEffect(() => {
+    const handleSidebarToggle = (e: CustomEvent) => {
+      setSidebarCollapsed(e.detail);
+    };
+    window.addEventListener("sidebar-toggle", handleSidebarToggle as EventListener);
+    return () => {
+      window.removeEventListener("sidebar-toggle", handleSidebarToggle as EventListener);
+    };
+  }, []);
   return <div className="min-h-screen bg-background text-foreground flex flex-col">
-      {/* Top App Bar – Removido, agora o header é parte do Index.tsx ou Page.tsx */}
-      <header className="sticky top-0 z-40 border-b border-border bg-background/95 backdrop-blur-sm hidden md:block">
+      {/* Top App Bar – Material 3 style */}
+      <header className="sticky top-0 z-40 border-b border-border bg-background/95 backdrop-blur-sm">
         
       </header>
 
       <div className="flex-1 flex w-full">
-        {/* Desktop navigation drawer (sempre recolhido no novo design) */}
+        {/* Desktop navigation drawer */}
         <Sidebar />
 
-        <main className={cn("flex-1 min-h-[calc(100vh)] px-3 md:px-6 pb-20 md:pb-8 pt-4 md:pt-6 transition-all duration-300", mainContentMarginClass)}>
-          <div className="max-w-[min(1600px,95vw)] mx-auto space-y-4">{children}</div>
+        <main className={cn("flex-1 min-h-[calc(100vh-3.5rem)] px-3 md:px-6 pb-20 md:pb-8 pt-4 md:pt-6 transition-all duration-300", sidebarCollapsed ? "md:ml-20" : "md:ml-[280px]")}>
+          <div className="max-w-[min(1400px,95vw)] mx-auto space-y-4">{children}</div>
         </main>
       </div>
 
