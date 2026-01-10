@@ -1,9 +1,7 @@
-import { Target, TrendingUp, TrendingDown, CalendarClock, ArrowUpRight, ArrowDownRight, Droplets, Wallet, CalendarDays } from "lucide-react";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { KpiCard, type KpiStatus } from "@/components/ui/KpiCard";
-import { Badge } from "@/components/ui/badge";
+"use client";
+
+import { useMemo } from "react";
 import { cn } from "@/lib/utils";
-import { AreaChart, Area, ResponsiveContainer } from "recharts";
 
 interface CockpitData {
   patrimonioTotal: number;
@@ -12,162 +10,84 @@ interface CockpitData {
   liquidezImediata: number;
   compromissosMes: number;
   projecao30Dias: number;
+  totalAtivos: number;
 }
 
 interface CockpitCardsProps {
   data: CockpitData;
 }
 
-// Dummy data for the chart visualization
-const chartData = [
-  { name: 'A', value: 100 },
-  { name: 'B', value: 130 },
-  { name: 'C', value: 90 },
-  { name: 'D', value: 150 },
-  { name: 'E', value: 120 },
-  { name: 'F', value: 180 },
-];
-
 export function CockpitCards({ data }: CockpitCardsProps) {
-  const formatCurrency = (value: number, decimals: number = 0) => {
-    return new Intl.NumberFormat("pt-BR", {
-      style: "currency",
-      currency: "BRL",
-      minimumFractionDigits: decimals,
-      maximumFractionDigits: decimals,
-    }).format(value);
+  const formatCompact = (value: number) => {
+    if (value >= 1000000) return `${(value / 1000000).toFixed(1)}M`;
+    if (value >= 1000) return `${(value / 1000).toFixed(0)}k`;
+    return value.toString();
   };
 
-  const isPositiveVariation = data.variacaoPatrimonio >= 0;
-  const isPositiveProjection = data.projecao30Dias >= 0;
-
-  const miniCards: Array<{
-    id: string;
-    title: string;
-    value: string;
-    icon: React.ElementType;
-    trendLabel: string;
-    color: string;
-    bgColor: string;
-  }> = [
-    {
-      id: "variacao",
-      title: "Variação Mês",
-      value: formatCurrency(Math.abs(data.variacaoPatrimonio), 1),
-      icon: isPositiveVariation ? TrendingUp : TrendingDown,
-      trendLabel: `${isPositiveVariation ? "+" : ""}${data.variacaoPercentual.toFixed(1)}%`,
-      color: isPositiveVariation ? "text-success" : "text-destructive",
-      bgColor: isPositiveVariation ? "bg-success/10" : "bg-destructive/10",
-    },
-    {
-      id: "liquidez",
-      title: "Liquidez Imediata",
-      value: formatCurrency(data.liquidezImediata, 1),
-      icon: Droplets,
-      trendLabel: "Disponível",
-      color: "text-primary",
-      bgColor: "bg-primary/10",
-    },
-    {
-      id: "compromissos",
-      title: "Compromissos",
-      value: formatCurrency(data.compromissosMes, 1),
-      icon: CalendarClock,
-      trendLabel: "Pendentes",
-      color: "text-warning",
-      bgColor: "bg-warning/10",
-    },
-    {
-      id: "projecao",
-      title: "Projeção 30D",
-      value: formatCurrency(Math.abs(data.projecao30Dias), 1),
-      icon: isPositiveProjection ? ArrowUpRight : ArrowDownRight,
-      trendLabel: isPositiveProjection ? "Positiva" : "Negativa",
-      color: isPositiveProjection ? "text-success" : "text-destructive",
-      bgColor: isPositiveProjection ? "bg-success/10" : "bg-destructive/10",
-    },
-  ];
+  const liquidezPercent = useMemo(() => {
+    if (data.totalAtivos === 0) return 0;
+    return Math.min(100, (data.liquidezImediata / data.totalAtivos) * 100);
+  }, [data.liquidezImediata, data.totalAtivos]);
 
   return (
-    <TooltipProvider>
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 md:gap-6">
-        {/* Card Principal: Patrimônio Líquido (PL) */}
-        <div className="col-span-1 lg:col-span-8 bg-card rounded-[var(--radius)] p-6 md:p-8 shadow-soft relative overflow-hidden border border-border/60 group h-[300px] flex flex-col justify-between">
-          
-          {/* Chart Background (Simulação de área) */}
-          <div className="absolute bottom-0 left-0 right-0 h-40 pointer-events-none opacity-80">
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={chartData}>
-                <defs>
-                  <linearGradient id="plGradient" x1="0" x2="0" y1="0" y2="1">
-                    <stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity={0.4} />
-                    <stop offset="100%" stopColor="hsl(var(--primary))" stopOpacity={0} />
-                  </linearGradient>
-                </defs>
-                <Area 
-                  type="monotone" 
-                  dataKey="value" 
-                  stroke="hsl(var(--primary))" 
-                  strokeWidth={3} 
-                  fillOpacity={1} 
-                  fill="url(#plGradient)" 
-                />
-              </AreaChart>
-            </ResponsiveContainer>
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 gap-6 h-full">
+      {/* Card de Liquidez */}
+      <div className="bg-surface-light dark:bg-surface-dark rounded-[32px] p-6 shadow-soft border border-white/60 dark:border-white/5 flex items-center justify-between relative overflow-hidden h-[200px] hover:shadow-lg transition-shadow group">
+        <div className="flex flex-col h-full justify-between z-10">
+          <div>
+            <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider mb-1">Liquidez</p>
+            <p className="font-display font-bold text-3xl text-foreground">R$ {formatCompact(data.liquidezImediata)}</p>
+            <p className="text-xs text-muted-foreground mt-1">Disponível agora</p>
           </div>
-
-          <div className="relative z-10 flex justify-between items-start">
-            <div className="p-3 bg-primary/10 rounded-2xl backdrop-blur-sm">
-              <Target className="w-6 h-6 text-primary" />
-            </div>
-            <div className="flex items-center gap-1 bg-success/10 px-3 py-1.5 rounded-full border border-success/20 backdrop-blur-md">
-              <TrendingUp className="w-4 h-4 text-success" />
-              <span className="text-xs font-bold text-success">
-                {isPositiveVariation ? "+" : ""}{data.variacaoPercentual.toFixed(1)}%
-              </span>
-            </div>
-          </div>
-
-          <div className="relative z-10 mt-auto pb-1">
-            <p className="text-sm font-bold text-muted-foreground uppercase tracking-wider mb-1">Patrimônio Líquido</p>
-            <p className="font-bold text-4xl md:text-5xl text-foreground tracking-tight leading-none">
-              {formatCurrency(data.patrimonioTotal)}
-            </p>
-            <p className="text-xs text-muted-foreground mt-1 font-medium">
-              {isPositiveVariation ? "Aumento" : "Redução"} de {formatCurrency(Math.abs(data.variacaoPatrimonio), 0)} este mês
-            </p>
+          <div className="flex items-center gap-2 mt-auto">
+            <span className="w-2 h-2 rounded-full bg-primary animate-pulse"></span>
+            <span className="text-xs font-bold text-primary">Saldo operante</span>
           </div>
         </div>
-
-        {/* Mini Cards (4x) */}
-        <div className="col-span-1 lg:col-span-4 grid grid-cols-2 gap-4 md:gap-6">
-          {miniCards.map((card) => (
-            <div 
-              key={card.id}
-              className={cn(
-                "col-span-1 bg-card rounded-[var(--radius)] p-4 md:p-5 shadow-soft border border-border/60 flex flex-col justify-between h-36 hover:shadow-md transition-shadow",
-                card.id === 'liquidez' && "border-l-4 border-l-primary",
-                card.id === 'compromissos' && "border-l-4 border-l-warning",
-                card.id === 'variacao' && (isPositiveVariation ? "border-l-4 border-l-success" : "border-l-4 border-l-destructive"),
-                card.id === 'projecao' && (isPositiveProjection ? "border-l-4 border-l-success" : "border-l-4 border-l-destructive"),
-              )}
-            >
-              <div className="flex items-start justify-between mb-3">
-                <div className={cn("w-8 h-8 rounded-full flex items-center justify-center", card.bgColor, card.color)}>
-                  <card.icon className="w-4 h-4" />
-                </div>
-                <span className={cn("text-[10px] font-bold px-2 py-0.5 rounded-full", card.bgColor, card.color)}>
-                  {card.trendLabel}
-                </span>
-              </div>
-              <div>
-                <p className="text-[10px] font-bold text-muted-foreground uppercase mb-1">{card.title}</p>
-                <p className="font-bold text-xl text-foreground">{card.value}</p>
-              </div>
-            </div>
-          ))}
+        <div className="relative w-32 h-32 flex items-center justify-center shrink-0">
+          <svg className="transform -rotate-90 w-full h-full">
+            <circle className="text-neutral-100 dark:text-neutral-800" cx="64" cy="64" fill="transparent" r="54" stroke="currentColor" strokeWidth="10"></circle>
+            <circle 
+              className="text-primary transition-all duration-1000 ease-out" 
+              cx="64" cy="64" fill="transparent" r="54" stroke="currentColor" 
+              strokeWidth="10"
+              strokeDasharray="339.29"
+              strokeDashoffset={339.29 - (339.29 * liquidezPercent / 100)}
+              strokeLinecap="round"
+            ></circle>
+          </svg>
+          <span className="absolute text-2xl font-bold text-foreground">{liquidezPercent.toFixed(0)}%</span>
         </div>
       </div>
-    </TooltipProvider>
+
+      {/* Card de Carteira / Distribuição */}
+      <div className="bg-surface-light dark:bg-surface-dark rounded-[32px] p-6 shadow-soft border border-white/60 dark:border-white/5 flex items-center justify-between relative overflow-hidden h-[200px] hover:shadow-lg transition-shadow group">
+        <div className="flex flex-col h-full justify-between z-10">
+          <div>
+            <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider mb-1">Compromissos</p>
+            <p className="font-display font-bold text-3xl text-foreground">R$ {formatCompact(data.compromissosMes)}</p>
+            <p className="text-xs text-muted-foreground mt-1">Provisionado no mês</p>
+          </div>
+          <div className="flex items-center gap-2 mt-auto">
+            <span className="w-2 h-2 rounded-full bg-indigo-400"></span>
+            <span className="text-xs font-bold text-indigo-500">Saúde: Estável</span>
+          </div>
+        </div>
+        <div className="relative w-32 h-32 flex items-center justify-center shrink-0">
+          <svg className="transform -rotate-90 w-full h-full">
+            <circle className="text-neutral-100 dark:text-neutral-800" cx="64" cy="64" fill="transparent" r="54" stroke="currentColor" strokeWidth="10"></circle>
+            <circle 
+              className="text-indigo-400 transition-all duration-1000 ease-out" 
+              cx="64" cy="64" fill="transparent" r="54" stroke="currentColor" 
+              strokeWidth="10"
+              strokeDasharray="339.29"
+              strokeDashoffset={339.29 - (339.29 * 65 / 100)}
+              strokeLinecap="round"
+            ></circle>
+          </svg>
+          <span className="absolute text-2xl font-bold text-foreground">65%</span>
+        </div>
+      </div>
+    </div>
   );
 }
