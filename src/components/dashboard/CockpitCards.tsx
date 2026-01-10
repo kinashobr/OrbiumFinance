@@ -9,7 +9,7 @@ interface CockpitData {
   variacaoPercentual: number;
   liquidezImediata: number;
   compromissosMes: number;
-  compromissosPercent: number; // NOVO
+  compromissosPercent: number;
   totalAtivos: number;
   projecao30Dias: number;
 }
@@ -30,7 +30,6 @@ export function CockpitCards({ data }: CockpitCardsProps) {
     return Math.min(100, (data.liquidezImediata / data.totalAtivos) * 100);
   }, [data.liquidezImediata, data.totalAtivos]);
 
-  // Constantes para o círculo SVG (Raio 54 -> Circunferência ~339.29)
   const CIRCUMFERENCE = 339.29;
 
   return (
@@ -44,8 +43,16 @@ export function CockpitCards({ data }: CockpitCardsProps) {
             <p className="text-xs text-muted-foreground mt-1">Disponível agora</p>
           </div>
           <div className="flex items-center gap-2 mt-auto">
-            <span className="w-2 h-2 rounded-full bg-primary animate-pulse"></span>
-            <span className="text-xs font-bold text-primary">Saldo operante</span>
+            <span className={cn(
+              "w-2 h-2 rounded-full animate-pulse",
+              data.liquidezImediata > 0 ? "bg-primary" : "bg-neutral-300"
+            )}></span>
+            <span className={cn(
+              "text-xs font-bold",
+              data.liquidezImediata > 0 ? "text-primary" : "text-muted-foreground"
+            )}>
+              {data.liquidezImediata > 0 ? "Saldo operante" : "Sem saldo"}
+            </span>
           </div>
         </div>
         <div className="relative w-32 h-32 flex items-center justify-center shrink-0">
@@ -83,13 +90,16 @@ export function CockpitCards({ data }: CockpitCardsProps) {
           <div className="flex items-center gap-2 mt-auto">
             <span className={cn(
               "w-2 h-2 rounded-full",
+              data.totalAtivos === 0 ? "bg-neutral-300" :
               data.compromissosPercent <= 70 ? "bg-green-400" : "bg-red-400"
             )}></span>
             <span className={cn(
               "text-xs font-bold",
+              data.totalAtivos === 0 ? "text-muted-foreground" :
               data.compromissosPercent <= 70 ? "text-green-600" : "text-red-600"
             )}>
-              {data.compromissosPercent <= 70 ? "Saúde: Estável" : "Saúde: Alerta"}
+              {data.totalAtivos === 0 ? "Sem movimentação" :
+               data.compromissosPercent <= 70 ? "Saúde: Estável" : "Saúde: Alerta"}
             </span>
           </div>
         </div>
@@ -105,6 +115,7 @@ export function CockpitCards({ data }: CockpitCardsProps) {
             <circle 
               className={cn(
                 "transition-all duration-1000 ease-out",
+                data.totalAtivos === 0 ? "text-neutral-200" :
                 data.compromissosPercent <= 70 ? "text-indigo-400" : "text-red-400"
               )}
               cx="64" cy="64" r="54" 
