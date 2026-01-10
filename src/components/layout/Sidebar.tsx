@@ -1,190 +1,285 @@
 import { useState, useRef, useEffect } from "react";
 import { NavLink, useLocation } from "react-router-dom";
 import { cn } from "@/lib/utils";
-import { LayoutDashboard, Receipt, CreditCard, Car, Wallet, Download, Upload, BarChart3, Bell, Settings } from "lucide-react";
+import { 
+  LayoutDashboard, 
+  Receipt, 
+  CreditCard, 
+  Car, 
+  ChevronLeft, 
+  ChevronRight, 
+  Wallet, 
+  Download, 
+  Upload, 
+  TrendingUp, 
+  PieChart, 
+  BarChart3, 
+  Building, 
+  Bell, 
+  Settings,
+  Palette,
+  Database
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useFinance } from "@/contexts/FinanceContext";
 import { useTheme } from "@/contexts/ThemeContext";
-import { toast } from "sonner";
+import { toast } from "@/hooks/use-toast";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { SidebarAlertas } from "@/components/dashboard/SidebarAlertas";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { 
+  Dialog, 
+  DialogContent, 
+  DialogHeader, 
+  DialogTitle, 
+  DialogTrigger 
+} from "@/components/ui/dialog";
 import { Separator } from "@/components/ui/separator";
 
-interface NavItemProps {
-  to: string;
+interface NavItemData {
+  title: string;
+  path: string;
   icon: React.ElementType;
-  isActive: boolean;
-  label: string;
 }
 
-const navItems: NavItemProps[] = [
-  { to: "/", icon: LayoutDashboard, label: "Dashboard", isActive: false },
-  { to: "/relatorios", icon: BarChart3, label: "Relatórios", isActive: false },
-  { to: "/receitas-despesas", icon: Receipt, label: "Finanças", isActive: false },
-  { to: "/emprestimos", icon: CreditCard, label: "Dívidas", isActive: false },
-  { to: "/investimentos", icon: TrendingUp, label: "Investimentos", isActive: false },
-  { to: "/veiculos", icon: Car, label: "Veículos", isActive: false },
+const mainNavItems: NavItemData[] = [
+  { title: "Dashboard", path: "/", icon: LayoutDashboard },
+  { title: "Financeiro", path: "/receitas-despesas", icon: Receipt },
+  { title: "Empréstimos", path: "/emprestimos", icon: CreditCard },
+  { title: "Relatórios", path: "/relatorios", icon: BarChart3 },
+  { title: "Investimentos", path: "/investimentos", icon: PieChart },
+  { title: "Veículos", path: "/veiculos", icon: Car },
 ];
 
-import { TrendingUp } from "lucide-react";
-
 export function Sidebar() {
+  const [collapsed, setCollapsed] = useState(false);
   const location = useLocation();
   const { exportData, importData } = useFinance();
   const { theme, setTheme, themes } = useTheme();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  useEffect(() => {
+    const savedCollapsed = localStorage.getItem("sidebar-collapsed");
+    if (savedCollapsed) {
+      setCollapsed(JSON.parse(savedCollapsed));
+    }
+  }, []);
+
+  useEffect(() => {
+    localStorage.setItem("sidebar-collapsed", JSON.stringify(collapsed));
+    window.dispatchEvent(new CustomEvent("sidebar-toggle", { detail: collapsed }));
+  }, [collapsed]);
+
   const handleExport = () => {
     exportData();
-    toast.success("Arquivo finance-data.json baixado com sucesso!");
+    toast({ title: "Exportação concluída", description: "Arquivo baixado com sucesso!" });
   };
 
-  const handleImportClick = () => {
-    fileInputRef.current?.click();
-  };
+  const handleImportClick = () => fileInputRef.current?.click();
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file) return;
-    if (!file.name.endsWith(".json")) {
-      toast.error("Por favor, selecione um arquivo JSON válido.");
-      return;
-    }
+    if (!file || !file.name.endsWith(".json")) return;
     const result = await importData(file);
-    if (result.success) {
-      toast.success(result.message);
-    } else {
-      toast.error(result.message);
-    }
-    if (fileInputRef.current) {
-      fileInputRef.current.value = "";
-    }
+    toast({ 
+      title: result.success ? "Sucesso" : "Erro", 
+      description: result.message,
+      variant: result.success ? "default" : "destructive"
+    });
+    if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
-  const NavItem = ({ to, icon: Icon, label }: NavItemProps) => {
-    const isActive = location.pathname === to;
-    
-    return (
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <NavLink
-            to={to}
-            className={cn(
-              "w-full aspect-square rounded-2xl flex items-center justify-center relative group transition-all duration-200",
-              isActive 
-                ? "bg-primary/10 text-primary shadow-glow" 
-                : "text-muted-foreground hover:bg-muted/50 hover:text-foreground"
-            )}
-          >
-            {isActive && (
-              <span className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-8 bg-primary rounded-r-full" />
-            )}
-            <Icon className={cn("w-6 h-6 transition-transform duration-200", isActive && "scale-110")} />
-          </NavLink>
-        </TooltipTrigger>
-        <TooltipContent side="right" className="sidebar-tooltip">
-          {label}
-        </TooltipContent>
-      </Tooltip>
+  const NavItem = ({ item }: { item: NavItemData }) => {
+    const isActive = location.pathname === item.path;
+    const Icon = item.icon;
+
+    const content = (
+      <NavLink
+        to={item.path}
+        className={cn(
+          "relative group flex items-center h-12 transition-all duration-300 outline-none",
+          collapsed ? "justify-center w-full" : "px-3 gap-4"
+        )}
+      >
+        {/* Active Indicator (Pill) */}
+        <div className={cn(
+          "absolute inset-y-1 rounded-full transition-all duration-300 ease-in-out",
+          isActive ? "bg-primary/20 opacity-100" : "bg-transparent opacity-0 group-hover:bg-muted/50 group-hover:opacity-100",
+          collapsed ? "left-2 right-2" : "left-0 right-0"
+        )} />
+        
+        {/* Icon with active color */}
+        <div className={cn(
+          "relative z-10 flex items-center justify-center shrink-0 transition-colors duration-300",
+          collapsed ? "w-10 h-10" : "w-6 h-6",
+          isActive ? "text-primary" : "text-muted-foreground group-hover:text-foreground"
+        )}>
+          <Icon className={cn("transition-transform duration-300", isActive ? "scale-110" : "scale-100")} size={collapsed ? 22 : 20} />
+        </div>
+
+        {/* Label (Hidden when collapsed) */}
+        {!collapsed && (
+          <span className={cn(
+            "relative z-10 text-sm font-bold tracking-wide transition-colors duration-300",
+            isActive ? "text-primary" : "text-muted-foreground group-hover:text-foreground"
+          )}>
+            {item.title}
+          </span>
+        )}
+      </NavLink>
     );
+
+    if (collapsed) {
+      return (
+        <Tooltip>
+          <TooltipTrigger asChild>{content}</TooltipTrigger>
+          <TooltipContent side="right" className="font-bold">{item.title}</TooltipContent>
+        </Tooltip>
+      );
+    }
+
+    return content;
   };
 
   return (
-    <aside className="hidden lg:flex fixed left-0 top-0 bottom-0 z-40 w-24 bg-card h-screen flex-col items-center py-8 border-r border-border/40 shrink-0">
-      <div className="mb-12 shrink-0">
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center text-white shadow-lg shadow-primary/30 ring-4 ring-primary/10 cursor-pointer">
-              <Wallet className="w-6 h-6" />
-            </div>
-          </TooltipTrigger>
-          <TooltipContent side="right" className="sidebar-tooltip">
-            Orbium Finance
-          </TooltipContent>
-        </Tooltip>
+    <aside className={cn(
+      "hidden md:flex fixed left-4 top-4 bottom-4 z-40 bg-card/95 backdrop-blur-xl border border-border/40 shadow-2xl transition-all duration-500 ease-in-out flex-col rounded-[2.5rem] overflow-hidden",
+      collapsed ? "w-20" : "w-64"
+    )}>
+      {/* Header / Logo */}
+      <div className={cn(
+        "h-20 flex items-center shrink-0 transition-all duration-500",
+        collapsed ? "justify-center" : "px-6 gap-3"
+      )}>
+        <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-primary to-primary-dark flex items-center justify-center text-white shadow-lg shadow-primary/20 shrink-0">
+          <Wallet size={24} />
+        </div>
+        {!collapsed && (
+          <div className="flex flex-col min-w-0 animate-in fade-in slide-in-from-left-4 duration-500">
+            <span className="font-black text-lg leading-tight tracking-tighter">ORBIUM</span>
+            <span className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground opacity-60">Finance</span>
+          </div>
+        )}
       </div>
 
-      <nav className="flex-1 flex flex-col gap-4 w-full px-4">
-        {navItems.map(item => (
-          <NavItem key={item.to} {...item} isActive={location.pathname === item.to} />
-        ))}
-      </nav>
+      {/* Main Nav */}
+      <div className="flex-1 overflow-y-auto no-scrollbar py-4 px-3 space-y-1">
+        {mainNavItems.map(item => <NavItem key={item.path} item={item} />)}
+      </div>
 
-      <div className="mt-auto flex flex-col gap-4 w-full px-4 shrink-0">
+      {/* System Actions Area */}
+      <div className="px-3 pb-6 space-y-2 mt-auto shrink-0">
+        <Separator className="mx-3 mb-4 opacity-40" />
+        
+        {/* Alertas - Material 3 Style */}
         <Dialog>
           <DialogTrigger asChild>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <button type="button" className="w-full aspect-square rounded-2xl text-muted-foreground hover:bg-muted/50 hover:text-foreground flex items-center justify-center relative">
-                  <Bell className="w-6 h-6" />
-                  <span className="w-2 h-2 bg-destructive rounded-full absolute top-3 right-3 border border-card" />
-                </button>
-              </TooltipTrigger>
-              <TooltipContent side="right" className="sidebar-tooltip">Alertas</TooltipContent>
-            </Tooltip>
+            <button className={cn(
+              "relative flex items-center h-12 rounded-full transition-all duration-300 group hover:bg-muted/50",
+              collapsed ? "justify-center w-full" : "px-3 gap-4 w-full"
+            )}>
+              <div className="relative flex items-center justify-center w-6 h-6 text-muted-foreground group-hover:text-primary transition-colors">
+                <Bell size={20} />
+                <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-destructive rounded-full border-2 border-card" />
+              </div>
+              {!collapsed && <span className="text-sm font-bold text-muted-foreground group-hover:text-foreground">Alertas</span>}
+            </button>
           </DialogTrigger>
-          <DialogContent className="max-w-sm p-0 overflow-hidden">
-            <DialogHeader className="px-4 pt-4 pb-2">
-              <DialogTitle className="text-sm">Alertas Financeiros</DialogTitle>
+          <DialogContent className="rounded-[2rem] max-w-sm p-0 overflow-hidden border-border/40 shadow-2xl">
+            <DialogHeader className="px-6 pt-6 pb-2">
+              <DialogTitle className="flex items-center gap-3 text-lg font-black">
+                <Bell className="text-primary" /> Alertas do Sistema
+              </DialogTitle>
             </DialogHeader>
-            <div className="px-3 pb-4">
+            <div className="px-4 pb-6">
               <SidebarAlertas collapsed={false} />
             </div>
           </DialogContent>
         </Dialog>
 
+        {/* Configurações & Dados */}
         <Dialog>
           <DialogTrigger asChild>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <button type="button" className="w-full aspect-square rounded-2xl text-muted-foreground hover:bg-muted/50 hover:text-foreground flex items-center justify-center">
-                  <Settings className="w-6 h-6" />
-                </button>
-              </TooltipTrigger>
-              <TooltipContent side="right" className="sidebar-tooltip">Configurações</TooltipContent>
-            </Tooltip>
+            <button className={cn(
+              "relative flex items-center h-12 rounded-full transition-all duration-300 group hover:bg-muted/50",
+              collapsed ? "justify-center w-full" : "px-3 gap-4 w-full"
+            )}>
+              <div className="flex items-center justify-center w-6 h-6 text-muted-foreground group-hover:text-primary transition-colors">
+                <Settings size={20} />
+              </div>
+              {!collapsed && <span className="text-sm font-bold text-muted-foreground group-hover:text-foreground">Configurações</span>}
+            </button>
           </DialogTrigger>
-          <DialogContent className="max-w-sm p-0 overflow-hidden">
-            <DialogHeader className="px-4 pt-4 pb-2">
-              <DialogTitle className="text-sm">Aparência & Dados</DialogTitle>
+          <DialogContent className="rounded-[2.5rem] max-w-md p-0 overflow-hidden border-border/40 shadow-2xl">
+            <DialogHeader className="px-8 pt-8 pb-4">
+              <DialogTitle className="text-xl font-black flex items-center gap-3">
+                <div className="p-2.5 rounded-2xl bg-primary/10">
+                  <Settings className="w-6 h-6 text-primary" />
+                </div>
+                Painel de Sistema
+              </DialogTitle>
             </DialogHeader>
-            <div className="px-4 pb-4 space-y-4">
-              <div className="space-y-2">
-                <p className="text-[11px] text-muted-foreground uppercase tracking-wide">Tema</p>
-                <div className="flex flex-wrap gap-1">
-                  {themes.map(t => {
-                    const isActive = theme === t.id;
-                    return (
-                      <button 
-                        key={t.id} 
-                        type="button" 
-                        onClick={() => setTheme(t.id)} 
-                        className={cn(
-                          "inline-flex max-w-full items-center justify-center rounded-full border px-2.5 py-1.5 text-[11px] font-medium transition-colors overflow-hidden gap-1", 
-                          isActive ? "bg-primary/10 border-primary text-primary" : "bg-muted/60 border-border text-muted-foreground hover:text-foreground hover:bg-muted"
-                        )}
-                      >
-                        <span className="text-xs leading-none flex-shrink-0">{t.icon}</span>
-                        <span className="leading-none truncate max-w-[96px]">
-                          {t.id === "system" ? "Sistema" : t.id === "brown-light" ? "Claro" : "Escuro"}
-                        </span>
-                      </button>
-                    );
-                  })}
+            
+            <div className="px-8 py-4 space-y-8 pb-10 overflow-y-auto max-h-[70vh]">
+              {/* Tema Visual */}
+              <div className="space-y-4">
+                <div className="flex items-center gap-2">
+                  <Palette className="w-4 h-4 text-muted-foreground" />
+                  <p className="text-[11px] font-black uppercase text-muted-foreground tracking-widest">Tema Visual</p>
+                </div>
+                <div className="grid grid-cols-3 gap-3">
+                  {themes.map((t) => (
+                    <button
+                      key={t.id}
+                      onClick={() => setTheme(t.id)}
+                      className={cn(
+                        "flex flex-col items-center justify-center gap-2 py-4 rounded-3xl border-2 transition-all active:scale-95",
+                        theme === t.id 
+                          ? "bg-primary/10 text-primary border-primary shadow-sm" 
+                          : "bg-muted/30 text-muted-foreground border-transparent hover:border-border/60"
+                      )}
+                    >
+                      <span className="text-xl">{t.icon}</span>
+                      <span className="text-[10px] font-bold uppercase tracking-wider">{t.id === 'system' ? 'Auto' : t.name.split(' ')[0]}</span>
+                    </button>
+                  ))}
                 </div>
               </div>
-              <Separator className="border-border/50" />
-              <div className="space-y-2">
-                <p className="text-[11px] text-muted-foreground uppercase tracking-wide">Dados</p>
-                <div className="flex flex-col gap-2">
-                  <Button type="button" variant="outline" size="sm" className="w-full justify-start gap-2 text-xs" onClick={handleExport}>
-                    <Download className="w-4 h-4" />
-                    Exportar dados
+
+              <Separator className="opacity-40" />
+
+              {/* Dados e Backup */}
+              <div className="space-y-4">
+                <div className="flex items-center gap-2">
+                  <Database className="w-4 h-4 text-muted-foreground" />
+                  <p className="text-[11px] font-black uppercase text-muted-foreground tracking-widest">Banco de Dados</p>
+                </div>
+                <div className="flex flex-col gap-3">
+                  <Button 
+                    variant="outline" 
+                    className="h-14 rounded-2xl justify-start gap-4 border-border/60 group"
+                    onClick={handleExport}
+                  >
+                    <div className="p-2 rounded-xl bg-success/10 text-success group-hover:bg-success/20 transition-colors">
+                      <Download size={20} />
+                    </div>
+                    <div className="text-left">
+                      <p className="text-sm font-bold">Exportar JSON</p>
+                      <p className="text-[10px] text-muted-foreground font-medium">Backup local dos dados</p>
+                    </div>
                   </Button>
-                  <Button type="button" variant="ghost" size="sm" className="w-full justify-start gap-2 text-xs" onClick={handleImportClick}>
-                    <Upload className="w-4 h-4" />
-                    Importar JSON
+                  
+                  <Button 
+                    variant="outline" 
+                    className="h-14 rounded-2xl justify-start gap-4 border-border/60 group"
+                    onClick={handleImportClick}
+                  >
+                    <div className="p-2 rounded-xl bg-info/10 text-info group-hover:bg-info/20 transition-colors">
+                      <Upload size={20} />
+                    </div>
+                    <div className="text-left">
+                      <p className="text-sm font-bold">Importar Dados</p>
+                      <p className="text-[10px] text-muted-foreground font-medium">Restaurar de arquivo .json</p>
+                    </div>
                   </Button>
                   <input ref={fileInputRef} type="file" accept="application/json" className="hidden" onChange={handleFileChange} />
                 </div>
@@ -192,6 +287,16 @@ export function Sidebar() {
             </div>
           </DialogContent>
         </Dialog>
+
+        {/* Botão de Colapso */}
+        <button
+          onClick={() => setCollapsed(!collapsed)}
+          className={cn(
+            "flex items-center justify-center w-full h-10 rounded-full bg-muted/30 text-muted-foreground hover:bg-muted hover:text-foreground transition-all duration-300 mt-4",
+          )}
+        >
+          {collapsed ? <ChevronRight size={18} /> : <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest"><ChevronLeft size={16} /> Recolher</div>}
+        </button>
       </div>
     </aside>
   );
