@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useCallback } from "react";
-import { Droplets, Shield, TrendingUp, Gauge, Activity, ShieldCheck, Calculator, Zap, Flame, Target, Banknote, CreditCard, Sparkles } from "lucide-react";
+import { Droplets, Shield, TrendingUp, Gauge, Activity, ShieldCheck, Calculator, Zap, Flame, Target, Banknote, CreditCard, Sparkles, Scale } from "lucide-react";
 import { useFinance } from "@/contexts/FinanceContext";
 import { ReportCard } from "./ReportCard";
 import { RadialGauge } from "./RadialGauge";
