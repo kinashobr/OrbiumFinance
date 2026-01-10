@@ -99,15 +99,13 @@ const Index = () => {
     };
 
     const p1 = calc(transacoesPeriodo1);
-    
-    // For comparison we don't necessarily need p2 here for the main cards unless we want specific comparison trends
     return { p1 };
   }, [transacoesPeriodo1]);
 
   const saude = useMemo(() => {
     const temDados = contasMovimento.length > 0;
     const diversificacao = temDados ? 65 : 0; 
-    const estabilidade = 85; // Placeholder
+    const estabilidade = 85; 
     const dependencia = 40;
 
     return {
@@ -166,7 +164,7 @@ const Index = () => {
     }).format(value);
   };
 
-  // --- Dynamic SVG Paths for Patrimonio Líquido Card ---
+  // --- Smooth SVG Path Generation ---
   const dynamicPlPaths = useMemo(() => {
     const now = new Date();
     const points = Array.from({ length: 7 }, (_, i) => {
@@ -178,29 +176,54 @@ const Index = () => {
     const min = Math.min(...points, 0);
     const range = max - min || 1;
     
-    // Normalização para o viewBox 800x250 (usando 50-200 para a linha)
     const coords = points.map((val, i) => {
       const x = (i / (points.length - 1)) * 800;
-      const y = 200 - ((val - min) / range) * 150; 
+      const y = 210 - ((val - min) / range) * 170; // Adjusted for better fit
       return { x, y };
     });
 
-    const isAllZero = points.every(v => v === 0);
-
-    if (isAllZero) {
+    if (points.every(v => v === 0)) {
       return {
         line: "M0,230 L800,230",
         area: "M0,230 L800,230 L800,250 L0,250 Z"
       };
     }
 
-    // Gerar caminho da linha (Linear para precisão)
-    let lineD = `M${coords[0].x},${coords[0].y}`;
-    for (let i = 1; i < coords.length; i++) {
-        lineD += ` L${coords[i].x},${coords[i].y}`;
-    }
+    // Helper function for Catmull-Rom to Cubic Bezier conversion for smoothness
+    const getCurvePath = (data: {x: number, y: number}[]) => {
+      const smoothing = 0.15;
+      
+      const line = (a: {x: number, y: number}, b: {x: number, y: number}) => {
+        const lengthX = b.x - a.x;
+        const lengthY = b.y - a.y;
+        return {
+          length: Math.sqrt(Math.pow(lengthX, 2) + Math.pow(lengthY, 2)),
+          angle: Math.atan2(lengthY, lengthX)
+        };
+      };
 
-    // Gerar caminho da área (fechando o polígono)
+      const controlPoint = (current: {x: number, y: number}, previous: {x: number, y: number}, next: {x: number, y: number}, isEnd?: boolean) => {
+        const p = previous || current;
+        const n = next || current;
+        const o = line(p, n);
+        const angle = o.angle + (isEnd ? Math.PI : 0);
+        const length = o.length * smoothing;
+        const x = current.x + Math.cos(angle) * length;
+        const y = current.y + Math.sin(angle) * length;
+        return [x, y];
+      };
+
+      let path = `M ${data[0].x},${data[0].y}`;
+
+      for (let i = 1; i < data.length; i++) {
+        const cp1 = controlPoint(data[i-1], data[i-2], data[i]);
+        const cp2 = controlPoint(data[i], data[i-1], data[i+1], true);
+        path += ` C ${cp1[0]},${cp1[1]} ${cp2[0]},${cp2[1]} ${data[i].x},${data[i].y}`;
+      }
+      return path;
+    };
+
+    const lineD = getCurvePath(coords);
     const areaD = `${lineD} L800,250 L0,250 Z`;
 
     return { line: lineD, area: areaD };
@@ -234,35 +257,27 @@ const Index = () => {
           <div className="col-span-12 lg:col-span-8 bg-surface-light dark:bg-surface-dark rounded-[32px] p-8 shadow-soft relative overflow-hidden border border-white/60 dark:border-white/5 group h-[420px] flex flex-col justify-between">
             <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent opacity-50"></div>
             
-            {/* Dynamic Background Graph */}
-            <div className="absolute bottom-0 left-0 right-0 h-[280px] pointer-events-none">
+            <div className="absolute bottom-0 left-0 right-0 h-[300px] pointer-events-none">
               <svg className="w-full h-full" preserveAspectRatio="none" viewBox="0 0 800 250">
                 <defs>
                   <linearGradient id="chartFill" x1="0" x2="0" y1="0" y2="1">
-                    <stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity="0.3"></stop>
+                    <stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity="0.4"></stop>
                     <stop offset="100%" stopColor="hsl(var(--primary))" stopOpacity="0"></stop>
                   </linearGradient>
                 </defs>
-                {/* Secondary Fill (lighter) */}
                 <path 
-                  className="transition-all duration-1000 ease-out translate-y-2 group-hover:translate-y-0" 
+                  className="transition-all duration-700 ease-in-out" 
                   d={dynamicPlPaths.area} 
                   fill="url(#chartFill)" 
-                  opacity="0.2"
                 ></path>
-                {/* Main Fill */}
-                <path 
-                  d={dynamicPlPaths.area} 
-                  fill="url(#chartFill)"
-                ></path>
-                {/* Stroke Line */}
                 <path 
                   d={dynamicPlPaths.line} 
                   fill="none" 
                   stroke="hsl(var(--primary))" 
                   strokeLinecap="round" 
-                  strokeWidth="4" 
+                  strokeWidth="5" 
                   vectorEffect="non-scaling-stroke"
+                  className="transition-all duration-700 ease-in-out"
                 ></path>
               </svg>
             </div>
