@@ -4,263 +4,204 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ShoppingCart, Calendar, DollarSign, Hash, Wallet, Tags, FileText, Check, X } from "lucide-react";
-import { useFinance } from "@/contexts/FinanceContext";
-import { ACCOUNT_TYPE_LABELS, CATEGORY_NATURE_LABELS } from "@/types/finance";
+import { Pin, Save, AlertCircle, Check, X } from "lucide-react";
+import { StandardizationRule, ImportedTransaction, Categoria, OperationType, CATEGORY_NATURE_LABELS } from "@/types/finance";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
-import { format } from "date-fns";
-import { OperationType } from "@/types/finance";
 
-// Define and export the constant
-export const STANDARDIZABLE_OPERATIONS: { value: OperationType; label: string; icon: React.ElementType; color: string; bgColor: string }[] = [
-  { value: 'receita', label: 'Receita', icon: Plus, color: 'text-primary', bgColor: 'bg-primary/10' },
-  { value: 'despesa', label: 'Despesa', icon: Minus, color: 'text-primary', bgColor: 'bg-primary/10' },
-  { value: 'transferencia', label: 'Transferência', icon: ArrowLeftRight, color: 'text-primary', bgColor: 'bg-primary/10' },
-  { value: 'aplicacao', label: 'Aplicação', icon: TrendingUp, color: 'text-accent', bgColor: 'bg-accent/10' },
-  { value: 'resgate', label: 'Resgate', icon: TrendingDown, color: 'text-warning', bgColor: 'bg-warning/10' },
-  { value: 'pagamento_emprestimo', label: 'Pag. Empréstimo', icon: CreditCard, color: 'text-warning', bgColor: 'bg-warning/10' },
-  { value: 'liberacao_emprestimo', label: 'Liberação', icon: DollarSign, color: 'text-primary', bgColor: 'bg-primary/10' },
-  { value: 'veiculo', label: 'Veículo', icon: Car, color: 'text-primary', bgColor: 'bg-primary/10' },
-  { value: 'rendimento', label: 'Rendimento', icon: Coins, color: 'text-primary', bgColor: 'bg-primary/10' },
-];
-
-interface AddPurchaseInstallmentDialogProps {
+interface StandardizationRuleFormModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  currentDate: Date;
+  initialTransaction?: ImportedTransaction | null;
+  initialRule?: StandardizationRule | null; // Adicionado para edição
+  categories: Categoria[];
+  onSave: (rule: Omit<StandardizationRule, "id">, ruleId?: string) => void;
 }
 
-export function AddPurchaseInstallmentDialog({
+const STANDARDIZABLE_OPERATIONS: { value: OperationType; label: string; color: string }[] = [
+  { value: 'receita', label: 'Receita', color: 'text-success' },
+  { value: 'despesa', label: 'Despesa', color: 'text-destructive' },
+  { value: 'transferencia', label: 'Transferência', color: 'text-primary' },
+  { value: 'aplicacao', label: 'Aplicação', color: 'text-purple-500' },
+  { value: 'resgate', label: 'Resgate', color: 'text-amber-500' },
+  { value: 'pagamento_emprestimo', label: 'Pag. Empréstimo', color: 'text-orange-500' },
+  { value: 'liberacao_emprestimo', label: 'Liberação Empréstimo', color: 'text-emerald-500' },
+  { value: 'veiculo', label: 'Veículo', color: 'text-blue-500' },
+  { value: 'rendimento', label: 'Rendimento', color: 'text-teal-500' },
+];
+
+export function StandardizationRuleFormModal({
   open,
   onOpenChange,
-  currentDate,
-}: AddPurchaseInstallmentDialogProps) {
-  const { contasMovimento, categoriasV2, addPurchaseInstallments } = useFinance();
+  initialTransaction,
+  initialRule,
+  categories,
+  onSave,
+}: StandardizationRuleFormModalProps) {
+  const [pattern, setPattern] = useState("");
+  const [categoryId, setCategoryId] = useState<string | null>(null);
+  const [operationType, setOperationType] = useState<OperationType | ''>('');
+  const [descriptionTemplate, setDescriptionTemplate] = useState("");
+
+  const NON_CATEGORY_OPERATIONS: OperationType[] = [
+    'transferencia', 
+    'aplicacao', 
+    'resgate', 
+    'pagamento_emprestimo', 
+    'liberacao_emprestimo', 
+    'veiculo'
+  ];
   
-  const [formData, setFormData] = useState({
-    description: "",
-    totalAmount: "",
-    installments: "12",
-    firstDueDate: format(currentDate, 'yyyy-MM-dd'),
-    accountId: "",
-    categoryId: "",
-  });
+  const categoryRequired = operationType && !NON_CATEGORY_OPERATIONS.includes(operationType as OperationType);
 
-  const availableAccounts = useMemo(() => 
-    contasMovimento.filter(c => c.accountType === 'corrente' || c.accountType === 'cartao_credito'),
-    [contasMovimento]
-  );
+  useEffect(() => {
+    if (open) {
+      if (initialRule) {
+        setPattern(initialRule.pattern);
+        setOperationType(initialRule.operationType);
+        setCategoryId(initialRule.categoryId);
+        setDescriptionTemplate(initialRule.descriptionTemplate);
+      } else if (initialTransaction) {
+        setPattern(initialTransaction.originalDescription);
+        setOperationType(initialTransaction.operationType || "");
+        setDescriptionTemplate(initialTransaction.description);
+        setCategoryId(initialTransaction.categoryId || null);
+        if (initialTransaction.operationType && NON_CATEGORY_OPERATIONS.includes(initialTransaction.operationType)) {
+            setCategoryId(null);
+        }
+      }
+    } else {
+      setPattern("");
+      setCategoryId(null);
+      setOperationType("");
+      setDescriptionTemplate("");
+    }
+  }, [open, initialTransaction, initialRule]);
 
-  const expenseCategories = useMemo(() => 
-    categoriasV2.filter(c => c.nature === 'despesa_fixa' || c.nature === 'despesa_variavel'),
-    [categoriasV2]
-  );
+  const getCategoryOptions = useMemo(() => {
+    if (!operationType || !categoryRequired) return categories; 
+    const isIncome = ['receita', 'rendimento', 'liberacao_emprestimo'].includes(operationType);
+    return categories.filter(c => (isIncome && c.nature === 'receita') || (!isIncome && c.nature !== 'receita'));
+  }, [categories, operationType, categoryRequired]);
 
-  const handleAmountChange = (value: string) => {
-    let cleaned = value.replace(/[^\d,]/g, '');
-    const parts = cleaned.split(',');
-    if (parts.length > 2) cleaned = parts[0] + ',' + parts.slice(1).join('');
-    setFormData(prev => ({ ...prev, totalAmount: cleaned }));
-  };
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    const amount = parseFloat(formData.totalAmount.replace('.', '').replace(',', '.'));
-    const installmentsCount = parseInt(formData.installments);
-
-    if (!formData.description || isNaN(amount) || amount <= 0 || isNaN(installmentsCount) || installmentsCount <= 0) {
-      toast.error("Preencha todos os campos obrigatórios corretamente.");
+  const handleSubmit = () => {
+    if (!pattern.trim() || !operationType || !descriptionTemplate.trim()) {
+      toast.error("Preencha todos os campos obrigatórios.");
       return;
     }
-
-    addPurchaseInstallments({
-      description: formData.description,
-      totalAmount: amount,
-      installments: installmentsCount,
-      firstDueDate: formData.firstDueDate,
-      suggestedAccountId: formData.accountId || undefined,
-      suggestedCategoryId: formData.categoryId || undefined,
-    });
-
-    toast.success(`${installmentsCount} parcelas geradas com sucesso!`);
+    if (categoryRequired && !categoryId) {
+        toast.error("A categoria é obrigatória para esta operação.");
+        return;
+    }
+    
+    onSave({
+      pattern: pattern.trim(),
+      categoryId: categoryRequired ? categoryId : null,
+      operationType: operationType as OperationType,
+      descriptionTemplate: descriptionTemplate.trim(),
+    }, initialRule?.id);
+    
     onOpenChange(false);
-    setFormData({
-      description: "",
-      totalAmount: "",
-      installments: "12",
-      firstDueDate: format(currentDate, 'yyyy-MM-dd'),
-      accountId: "",
-      categoryId: "",
-    });
   };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-xl p-0 overflow-hidden">
-        {/* Cabeçalho no padrão Nova Movimentação */}
+      <DialogContent className="max-w-lg p-0 overflow-hidden rounded-[2.5rem]">
         <DialogHeader className="px-6 pt-6 pb-4 bg-primary/10">
           <div className="flex items-start gap-3">
             <div className="w-12 h-12 rounded-xl bg-primary/20 flex items-center justify-center">
-              <ShoppingCart className="w-6 h-6 text-primary" />
+              <Pin className="w-6 h-6 text-primary" />
             </div>
             <div className="flex-1">
-              <DialogTitle className="text-xl font-bold text-foreground">
-                Nova Compra Parcelada
+              <DialogTitle className="text-xl font-bold">
+                {initialRule ? 'Editar Regra' : 'Nova Regra de Padronização'}
               </DialogTitle>
               <DialogDescription className="text-sm text-muted-foreground mt-1">
-                Registre uma compra e gere as parcelas automaticamente no Contas a Pagar
+                Automatize a categorização de transações importadas.
               </DialogDescription>
             </div>
           </div>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="px-6 pb-6 space-y-6 mt-4">
-          {/* Seção 1: Dados da Compra */}
-          <div className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {/* Valor Total */}
-              <div className="space-y-2">
-                <Label className="text-xs font-medium text-muted-foreground flex items-center gap-1">
-                  <DollarSign className="w-3.5 h-3.5" /> Valor Total *
-                </Label>
-                <div className="relative">
-                  <DollarSign className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                  <Input
-                    type="text"
-                    inputMode="decimal"
-                    placeholder="0,00"
-                    value={formData.totalAmount}
-                    onChange={(e) => handleAmountChange(e.target.value)}
-                    className="h-12 pl-10 text-lg font-semibold border-2 rounded-xl"
-                  />
-                </div>
-              </div>
+        <div className="p-6 space-y-6">
+          <div className="space-y-2">
+            <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Padrão de Busca *</Label>
+            <Input
+              value={pattern}
+              onChange={(e) => setPattern(e.target.value)}
+              placeholder="Ex: PAGAMENTO CARTAO"
+              className="h-12 border-2 rounded-xl text-sm"
+            />
+            <p className="text-[10px] text-muted-foreground flex items-center gap-1">
+                <AlertCircle className="w-3 h-3" />
+                Busca parcial na descrição original do extrato.
+            </p>
+          </div>
 
-              {/* Número de Parcelas */}
-              <div className="space-y-2">
-                <Label className="text-xs font-medium text-muted-foreground flex items-center gap-1">
-                  <Hash className="w-3.5 h-3.5" /> Qtd. Parcelas *
-                </Label>
-                <div className="relative">
-                  <Hash className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                  <Input
-                    type="number"
-                    min="1"
-                    max="120"
-                    value={formData.installments}
-                    onChange={(e) => setFormData(prev => ({ ...prev, installments: e.target.value }))}
-                    className="h-12 pl-10 border-2 rounded-xl"
-                  />
-                </div>
-              </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Operação *</Label>
+              <Select
+                value={operationType}
+                onValueChange={(v) => {
+                    setOperationType(v as OperationType);
+                    if (NON_CATEGORY_OPERATIONS.includes(v as OperationType)) setCategoryId(null);
+                }}
+              >
+                <SelectTrigger className="h-12 border-2 rounded-xl">
+                  <SelectValue placeholder="Selecione..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {STANDARDIZABLE_OPERATIONS.map(op => (
+                    <SelectItem key={op.value} value={op.value}>
+                      <span className={cn("flex items-center gap-2", op.color)}>{op.label}</span>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {/* Primeira Parcela */}
-              <div className="space-y-2">
-                <Label className="text-xs font-medium text-muted-foreground flex items-center gap-1">
-                  <Calendar className="w-3.5 h-3.5" /> 1º Vencimento *
-                </Label>
-                <div className="relative">
-                  <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                  <Input
-                    type="date"
-                    value={formData.firstDueDate}
-                    onChange={(e) => setFormData(prev => ({ ...prev, firstDueDate: e.target.value }))}
-                    className="h-12 pl-10 border-2 rounded-xl"
-                  />
-                </div>
-              </div>
-
-              {/* Conta Sugerida */}
-              <div className="space-y-2">
-                <Label className="text-xs font-medium text-muted-foreground flex items-center gap-1">
-                  <Wallet className="w-3.5 h-3.5" /> Conta Sugerida
-                </Label>
-                <Select 
-                  value={formData.accountId} 
-                  onValueChange={(v) => setFormData(prev => ({ ...prev, accountId: v }))}
-                >
-                  <SelectTrigger className="h-12 border-2 rounded-xl">
-                    <SelectValue placeholder="Selecione a conta" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {availableAccounts.map(a => (
-                      <SelectItem key={a.id} value={a.id}>
-                        {a.name} ({ACCOUNT_TYPE_LABELS[a.accountType]})
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+            
+            <div className="space-y-2">
+              <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Categoria {categoryRequired ? '*' : ''}</Label>
+              <Select
+                value={categoryId || ''}
+                onValueChange={setCategoryId}
+                disabled={!categoryRequired}
+              >
+                <SelectTrigger className="h-12 border-2 rounded-xl">
+                  <SelectValue placeholder={categoryRequired ? "Selecione..." : "Não aplicável"} />
+                </SelectTrigger>
+                <SelectContent className="max-h-60">
+                  {getCategoryOptions.map(cat => (
+                    <SelectItem key={cat.id} value={cat.id}>
+                      {cat.icon} {cat.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           </div>
 
-          {/* Seção 2: Classificação */}
-          <div className="space-y-4">
-            <h4 className="font-semibold text-sm text-foreground flex items-center gap-2">
-              <Tags className="w-4 h-4 text-primary" /> Classificação e Detalhes
-            </h4>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {/* Categoria */}
-              <div className="space-y-2">
-                <Label className="text-sm font-medium text-foreground">Categoria Sugerida</Label>
-                <Select 
-                  value={formData.categoryId} 
-                  onValueChange={(v) => setFormData(prev => ({ ...prev, categoryId: v }))}
-                >
-                  <SelectTrigger className="h-12 border-2 rounded-xl">
-                    <SelectValue placeholder="Selecione a categoria" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {expenseCategories.map(c => (
-                      <SelectItem key={c.id} value={c.id}>
-                        {c.icon} {c.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* Descrição */}
-              <div className="space-y-2">
-                <Label className="text-sm font-medium text-foreground">Descrição da Compra *</Label>
-                <div className="relative">
-                  <FileText className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                  <Input
-                    placeholder="Ex: Novo Smartphone"
-                    value={formData.description}
-                    onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
-                    className="h-12 pl-10 border-2 rounded-xl"
-                  />
-                </div>
-              </div>
-            </div>
+          <div className="space-y-2">
+            <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Descrição Padronizada *</Label>
+            <Input
+              value={descriptionTemplate}
+              onChange={(e) => setDescriptionTemplate(e.target.value)}
+              placeholder="Ex: Pagamento Fatura Cartão"
+              className="h-12 border-2 rounded-xl text-sm"
+            />
           </div>
+        </div>
 
-          <DialogFooter className="pt-4">
-            <div className="flex w-full gap-3">
-              <Button 
-                type="button" 
-                variant="outline" 
-                onClick={() => onOpenChange(false)}
-                className="flex-1 h-12 rounded-xl border-2"
-              >
-                Cancelar
-              </Button>
-              <Button 
-                type="submit"
-                className="flex-1 h-12 rounded-xl font-semibold bg-primary hover:bg-primary/90 text-white"
-              >
-                <Check className="w-5 h-5 mr-2" />
-                Gerar Parcelas
-              </Button>
-            </div>
-          </DialogFooter>
-        </form>
+        <DialogFooter className="p-6 bg-muted/20 border-t flex gap-3">
+          <Button variant="ghost" onClick={() => onOpenChange(false)} className="rounded-full h-11 px-6 font-bold">
+            Cancelar
+          </Button>
+          <Button onClick={handleSubmit} className="rounded-full h-11 px-8 font-bold gap-2">
+            <Check className="w-4 h-4" />
+            {initialRule ? 'Atualizar Regra' : 'Salvar Regra'}
+          </Button>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );
