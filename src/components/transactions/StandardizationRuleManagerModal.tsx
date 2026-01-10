@@ -71,40 +71,41 @@ export function StandardizationRuleManagerModal({
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-[min(95vw,56rem)] h-[min(90vh,800px)] p-0 overflow-hidden rounded-[2.5rem]">
-          <DialogHeader className="px-8 pt-8 pb-6 bg-surface-light dark:bg-surface-dark shrink-0">
-            <div className="flex items-center justify-between mb-6">
+        <DialogContent className="max-w-[min(95vw,56rem)] h-[min(90vh,800px)] p-0 overflow-hidden rounded-[2.5rem] overflow-x-hidden">
+          <DialogHeader className="px-4 sm:px-8 pt-8 pb-6 bg-surface-light dark:bg-surface-dark shrink-0">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
               <div className="flex items-center gap-4">
-                <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center text-primary shadow-lg shadow-primary/5">
-                  <Pin className="w-7 h-7" />
+                <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-primary/10 flex items-center justify-center text-primary shadow-lg shadow-primary/5 flex-shrink-0">
+                  <Pin className="w-6 h-6 sm:w-7 sm:h-7" />
                 </div>
-                <div>
-                  <DialogTitle className="text-2xl font-black tracking-tight">Regras de Padronização</DialogTitle>
+                <div className="min-w-0">
+                  <DialogTitle className="text-xl sm:text-2xl font-black tracking-tight break-words">
+                    Regras de Padronização
+                  </DialogTitle>
                   <DialogDescription className="text-sm font-medium text-muted-foreground flex items-center gap-1.5 mt-1">
-                    <Sparkles className="w-3.5 h-3.5 text-accent" />
+                    <Sparkles className="w-3.5 h-3.5 text-accent flex-shrink-0" />
                     Automação inteligente de extratos
                   </DialogDescription>
                 </div>
               </div>
-              <Button onClick={handleAddNew} className="rounded-full gap-2 px-6 font-bold shadow-lg shadow-primary/10">
+              <Button onClick={handleAddNew} className="rounded-full gap-2 px-4 sm:px-6 font-bold shadow-lg shadow-primary/10 w-full sm:w-auto mt-2 sm:mt-0">
                 <Plus className="w-4 h-4" /> Nova Regra
               </Button>
             </div>
 
-            <div className="relative group px-8">
-              <Search className="absolute left-12 top-1/2 -translate-y-1/2 w-4.5 h-4.5 text-muted-foreground group-focus-within:text-primary transition-colors" />
+            <div className="relative group px-4 sm:px-8">
+              <Search className="absolute left-6 sm:left-12 top-1/2 -translate-y-1/2 w-4.5 h-4.5 text-muted-foreground group-focus-within:text-primary transition-colors" />
               <input
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 placeholder="Pesquisar por padrão ou descrição final..."
-                className="w-full h-12 pl-12 pr-4 bg-muted/50 border-2 border-transparent focus:border-primary/30 rounded-2xl text-sm font-medium transition-all outline-none"
+                className="w-full h-12 pl-10 sm:pl-12 pr-4 bg-muted/50 border-2 border-transparent focus:border-primary/30 rounded-2xl text-sm font-medium transition-all outline-none"
               />
             </div>
-
           </DialogHeader>
 
-          <ScrollArea className="flex-1 px-8 pb-8">
-            <div className="space-y-3">
+          <ScrollArea className="flex-1 px-4 sm:px-8 pb-8 overflow-x-hidden">
+            <div className="space-y-3 max-w-full">
               {filteredRules.map((rule) => {
                 const category = rule.categoryId ? categoriesMap.get(rule.categoryId) : null;
                 const operationConfig = STANDARDIZABLE_OPERATIONS.find(op => op.value === rule.operationType);
@@ -112,34 +113,38 @@ export function StandardizationRuleManagerModal({
                 return (
                   <div 
                     key={rule.id} 
-                    className="p-4 rounded-3xl bg-card border border-border/40 hover:border-primary/30 hover:shadow-md transition-all group flex items-center justify-between gap-4"
+                    className="p-4 rounded-3xl bg-card border border-border/40 hover:border-primary/30 hover:shadow-md transition-all flex flex-col sm:flex-row sm:items-center gap-4 max-w-full"
                   >
-                    <div className="flex-1 min-w-0 overflow-hidden">
+                    <div className="flex-1 min-w-0 max-w-full overflow-hidden">
                       <div className="flex items-center gap-2 mb-1 flex-wrap">
-                        <Badge variant="outline" className={cn("text-[10px] font-black uppercase tracking-wider py-0 px-2 rounded-lg", operationConfig?.color.replace('text-', 'bg-') + '/10', operationConfig?.color)}>
+                        <Badge variant="outline" className={cn(
+                          "text-[10px] font-black uppercase tracking-wider py-0 px-2 rounded-lg flex-shrink-0",
+                          operationConfig?.color.replace('text-', 'bg-') + '/10',
+                          operationConfig?.color
+                        )}>
                           {operationConfig?.label || 'N/A'}
                         </Badge>
-                        <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest truncate max-w-full" title={rule.pattern}>
+                        <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest break-words max-w-full">
                           Padrão: "{rule.pattern}"
                         </p>
                       </div>
-                      <div className="flex items-center gap-3 flex-wrap">
-                        <p className="font-bold text-base text-foreground truncate max-w-[300px]" title={rule.descriptionTemplate}>
+                      <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 flex-wrap">
+                        <p className="font-bold text-base text-foreground break-words max-w-full">
                           {rule.descriptionTemplate}
                         </p>
                         {category && (
-                          <span className="text-[11px] font-bold text-muted-foreground bg-muted/50 px-2 py-0.5 rounded-lg flex items-center gap-1 shrink-0">
+                          <span className="text-[11px] font-bold text-muted-foreground bg-muted/50 px-2 py-0.5 rounded-lg flex items-center gap-1 flex-shrink-0 w-fit mt-1 sm:mt-0">
                             {category.icon} {category.label}
                           </span>
                         )}
                       </div>
                     </div>
                     
-                    <div className="flex items-center gap-1 shrink-0">
+                    <div className="flex items-center gap-1 flex-shrink-0 self-start sm:self-center">
                       <Button 
                         variant="ghost" 
                         size="icon" 
-                        className="h-10 w-10 rounded-full text-muted-foreground hover:bg-primary/10 hover:text-primary transition-colors"
+                        className="h-10 w-10 rounded-full text-muted-foreground hover:bg-primary/10 hover:text-primary transition-colors flex-shrink-0"
                         onClick={() => handleEdit(rule)}
                         title="Editar regra"
                       >
@@ -148,7 +153,7 @@ export function StandardizationRuleManagerModal({
                       <Button 
                         variant="ghost" 
                         size="icon" 
-                        className="h-10 w-10 rounded-full text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors"
+                        className="h-10 w-10 rounded-full text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors flex-shrink-0"
                         onClick={() => handleDelete(rule)}
                         title="Excluir regra"
                       >
@@ -169,7 +174,7 @@ export function StandardizationRuleManagerModal({
           </ScrollArea>
 
           <DialogFooter className="p-4 bg-muted/10 border-t shrink-0">
-             <Button variant="ghost" onClick={() => onOpenChange(false)} className="rounded-full px-6 font-bold gap-2">
+             <Button variant="ghost" onClick={() => onOpenChange(false)} className="rounded-full px-6 font-bold gap-2 w-full sm:w-auto">
                 <X className="w-4 h-4" /> Fechar
              </Button>
           </DialogFooter>
