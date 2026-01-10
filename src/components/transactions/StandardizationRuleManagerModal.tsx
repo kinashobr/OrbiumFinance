@@ -90,8 +90,8 @@ export function StandardizationRuleManagerModal({
               </Button>
             </div>
 
-            <div className="relative group">
-              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4.5 h-4.5 text-muted-foreground group-focus-within:text-primary transition-colors" />
+            <div className="relative group px-8">
+              <Search className="absolute left-12 top-1/2 -translate-y-1/2 w-4.5 h-4.5 text-muted-foreground group-focus-within:text-primary transition-colors" />
               <input
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
@@ -99,12 +99,15 @@ export function StandardizationRuleManagerModal({
                 className="w-full h-12 pl-12 pr-4 bg-muted/50 border-2 border-transparent focus:border-primary/30 rounded-2xl text-sm font-medium transition-all outline-none"
               />
             </div>
+
           </DialogHeader>
 
           <ScrollArea className="flex-1 px-8 pb-8">
             <div className="space-y-3">
               {filteredRules.map((rule) => {
                 const category = rule.categoryId ? categoriesMap.get(rule.categoryId) : null;
+                const operationConfig = STANDARDIZABLE_OPERATIONS.find(op => op.value === rule.operationType);
+                
                 return (
                   <div 
                     key={rule.id} 
@@ -112,11 +115,11 @@ export function StandardizationRuleManagerModal({
                   >
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-1">
-                        <Badge variant="outline" className="text-[10px] font-black uppercase tracking-wider py-0 px-2 rounded-lg bg-primary/5 border-primary/20 text-primary">
-                          {OPERATION_TYPE_LABELS[rule.operationType]}
+                        <Badge variant="outline" className={cn("text-[10px] font-black uppercase tracking-wider py-0 px-2 rounded-lg", operationConfig?.color.replace('text-', 'bg-') + '/10', operationConfig?.color)}>
+                          {operationConfig?.label || 'N/A'}
                         </Badge>
                         <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest truncate">
-                          "{rule.pattern}"
+                          Padrão: "{rule.pattern}"
                         </p>
                       </div>
                       <div className="flex items-center gap-3">
