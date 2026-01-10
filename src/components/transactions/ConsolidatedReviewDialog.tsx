@@ -2,7 +2,7 @@ import { useState, useMemo, useCallback, useEffect } from "react";
 import { Dialog, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { FileText, Check, Loader2, AlertCircle, Calendar, ArrowRight, X, Settings } from "lucide-react";
+import { FileText, Check, Loader2, AlertCircle, Calendar, ArrowRight, X, Settings, Sparkles, LayoutDashboard } from "lucide-react";
 import { 
   ContaCorrente, Categoria, ImportedTransaction, StandardizationRule, 
   TransacaoCompleta, TransferGroup, generateTransactionId, generateTransferGroupId, 
@@ -15,13 +15,13 @@ import { toast } from "sonner";
 import { parseDateLocal, cn } from "@/lib/utils";
 import { TransactionReviewTable } from "./TransactionReviewTable";
 import { StandardizationRuleFormModal } from "./StandardizationRuleFormModal";
-import { ReviewContextSidebar } from "./ReviewContextSidebar"; // NEW IMPORT
-import { StandardizationRuleManagerModal } from "./StandardizationRuleManagerModal"; // NEW IMPORT
-import { ResizableSidebar } from "./ResizableSidebar"; // NEW IMPORT
+import { ReviewContextSidebar } from "./ReviewContextSidebar"; 
+import { StandardizationRuleManagerModal } from "./StandardizationRuleManagerModal"; 
+import { ResizableSidebar } from "./ResizableSidebar"; 
 import { startOfMonth, endOfMonth, format, subDays, startOfDay, endOfDay } from "date-fns";
-import { ResizableDialogContent } from "../ui/ResizableDialogContent"; // NEW IMPORT
+import { ResizableDialogContent } from "../ui/ResizableDialogContent"; 
 
-// Interface simplificada para Empréstimo (COMPLETA)
+// Interface simplificada para Empréstimo
 interface LoanInfo {
   id: string;
   institution: string;
@@ -66,7 +66,7 @@ export function ConsolidatedReviewDialog({
     getTransactionsForReview,
     standardizationRules,
     addStandardizationRule,
-    deleteStandardizationRule, // ADDED
+    deleteStandardizationRule,
     addTransacaoV2,
     updateImportedStatement,
     importedStatements,
@@ -78,35 +78,26 @@ export function ConsolidatedReviewDialog({
   
   const account = accounts.find(a => a.id === accountId);
   
-  // Estado para o período de filtro (usa o mês atual como padrão)
+  // Estado para o período de filtro
   const [reviewRange, setReviewRange] = useState<DateRange>(() => ({
     from: startOfMonth(new Date()),
     to: endOfMonth(new Date()),
   }));
   
-  // Estado para as transações em revisão (consolidadas e filtradas)
   const [transactionsToReview, setTransactionsToReview] = useState<ImportedTransaction[]>([]);
   const [loading, setLoading] = useState(false);
   
-  // Estado para o modal de regra
   const [showRuleModal, setShowRuleModal] = useState(false);
   const [txForRule, setTxForRule] = useState<ImportedTransaction | null>(null);
-  
-  // Estado para o gerenciador de regras
   const [showRuleManagerModal, setShowRuleManagerModal] = useState(false);
 
-  // 1. Carregar e filtrar transações pendentes
   const loadTransactions = useCallback(() => {
     if (!reviewRange.from || !reviewRange.to) {
       setTransactionsToReview([]);
       return;
     }
     setLoading(true);
-    
-    // Chama a função do contexto para consolidar e filtrar
     const consolidatedTxs = getTransactionsForReview(accountId, reviewRange);
-    
-    // Clonar para permitir edição local
     setTransactionsToReview(consolidatedTxs.map(tx => ({ ...tx })));
     setLoading(false);
   }, [accountId, reviewRange, getTransactionsForReview]);
@@ -117,29 +108,24 @@ export function ConsolidatedReviewDialog({
     }
   }, [open, loadTransactions]);
   
-  // 2. Handlers para edição local na tabela
   const handleUpdateTransaction = useCallback((id: string, updates: Partial<ImportedTransaction>) => {
     setTransactionsToReview(prev => prev.map(tx => {
       if (tx.id === id) {
         const updatedTx = { ...tx, ...updates };
-        
-        // Lógica de limpeza de campos de vínculo ao mudar o tipo de operação
         if (updates.operationType && updates.operationType !== tx.operationType) {
             updatedTx.destinationAccountId = null;
             updatedTx.tempInvestmentId = null;
             updatedTx.tempLoanId = null;
             updatedTx.tempVehicleOperation = null;
-            updatedTx.tempParcelaId = null; // Limpa a parcela
+            updatedTx.tempParcelaId = null;
             updatedTx.isTransfer = updates.operationType === 'transferencia';
         }
-        
         return updatedTx;
       }
       return tx;
     }));
   }, []);
   
-  // 3. Handler para criar regra
   const handleCreateRule = (tx: ImportedTransaction) => {
     setTxForRule(tx);
     setShowRuleModal(true);
@@ -147,34 +133,26 @@ export function ConsolidatedReviewDialog({
   
   const handleSaveRule = (rule: Omit<StandardizationRule, "id">) => {
     addStandardizationRule(rule);
-    toast.success("Regra salva! Aplicando a transações pendentes...");
-    
-    // Reaplicar regras e recarregar a lista para ver o efeito imediato
+    toast.success("Regra salva!");
     loadTransactions();
   };
 
-  // 4. Contabilização (Processamento final)
   const handleContabilize = () => {
     const txsToContabilize = transactionsToReview.filter(tx => {
-      // IGNORAR DUPLICATAS POTENCIAIS
       if (tx.isPotentialDuplicate) return false; 
-      
-      // Verifica se a transação está pronta para ser contabilizada
       const isCategorized = tx.categoryId || tx.isTransfer || tx.tempInvestmentId || tx.tempLoanId || tx.tempVehicleOperation || tx.operationType === 'liberacao_emprestimo';
       return !!isCategorized;
     });
     
     if (txsToContabilize.length === 0) {
-      toast.error("Nenhuma transação pronta para contabilização. Categorize ou vincule as pendentes (Duplicatas Potenciais são ignoradas).");
+      toast.error("Nenhuma transação pronta.");
       return;
     }
     
     setLoading(true);
     const newTransactions: TransacaoCompleta[] = [];
-    const contabilizedIds = new Set<string>();
     const updatedStatements = new Map<string, ImportedStatement>();
     
-    // Mapeamento de IDs de transações brutas para seus extratos
     const txToStatementMap = new Map<string, string>();
     importedStatements.forEach(s => {
         s.rawTransactions.forEach(t => txToStatementMap.set(t.id, s.id));
@@ -183,17 +161,10 @@ export function ConsolidatedReviewDialog({
     txsToContabilize.forEach(tx => {
       const transactionId = generateTransactionId();
       const now = new Date().toISOString();
-      
       const account = accounts.find(a => a.id === tx.accountId);
       const isCreditCard = account?.accountType === 'cartao_credito';
-      
-      const isIncoming = tx.operationType === 'receita' || tx.operationType === 'resgate' ||
-                         tx.operationType === 'liberacao_emprestimo' || tx.operationType === 'rendimento' ||
-                         (tx.operationType === 'veiculo' && tx.tempVehicleOperation === 'venda');
-      
       let flow = getFlowTypeFromOperation(tx.operationType!, tx.tempVehicleOperation || undefined);
       
-      // Ajuste de fluxo para Cartão de Crédito
       if (isCreditCard) {
         if (tx.operationType === 'despesa') flow = 'out'; 
         else if (tx.operationType === 'transferencia') flow = 'in'; 
@@ -213,10 +184,10 @@ export function ConsolidatedReviewDialog({
           investmentId: tx.tempInvestmentId || null,
           loanId: tx.tempLoanId || null,
           transferGroupId: null,
-          parcelaId: tx.tempParcelaId || null, // USANDO tempParcelaId
+          parcelaId: tx.tempParcelaId || null,
           vehicleTransactionId: null,
         } as TransactionLinks,
-        conciliated: true, // Transações importadas e contabilizadas são consideradas conciliadas
+        conciliated: true,
         attachments: [],
         meta: {
           createdBy: 'system',
@@ -227,16 +198,13 @@ export function ConsolidatedReviewDialog({
         }
       };
       
-      // 1. Transferência
       if (tx.isTransfer && tx.destinationAccountId) {
         const groupId = generateTransferGroupId();
         baseTx.links.transferGroupId = groupId;
-        
         const fromAccount = accounts.find(a => a.id === tx.accountId);
         const toAccount = accounts.find(a => a.id === tx.destinationAccountId);
         const isToCreditCard = toAccount?.accountType === 'cartao_credito';
         
-        // Transação de Saída (Conta Origem - a conta do extrato)
         const outTx: TransacaoCompleta = {
           ...baseTx,
           flow: 'transfer_out',
@@ -244,35 +212,23 @@ export function ConsolidatedReviewDialog({
         };
         newTransactions.push(outTx);
         
-        // Transação de Entrada (Conta Destino - a contraparte)
         const inTx: TransacaoCompleta = {
           ...baseTx,
           id: generateTransactionId(),
           accountId: tx.destinationAccountId,
-          // CORREÇÃO APLICADA AQUI: Se o destino é CC, o fluxo é 'in' (pagamento de fatura)
           flow: isToCreditCard ? 'in' : 'transfer_in', 
           operationType: 'transferencia' as const,
           description: isToCreditCard ? `Pagamento de fatura CC ${toAccount?.name}` : tx.description || `Transferência recebida de ${fromAccount?.name}`,
-          links: {
-            ...baseTx.links,
-            transferGroupId: groupId,
-          },
-          // A transação de contraparte não é considerada conciliada, pois não veio do extrato dela.
+          links: { ...baseTx.links, transferGroupId: groupId },
           conciliated: false, 
         };
         newTransactions.push(inTx);
-        
       } 
-      // 2. Aplicação/Resgate
       else if (tx.operationType === 'aplicacao' || tx.operationType === 'resgate') {
         const isAplicacao = tx.operationType === 'aplicacao';
         const groupId = isAplicacao ? `app_${Date.now()}` : `res_${Date.now()}`;
         baseTx.links.transferGroupId = groupId;
-        
-        // Transação 1: Conta Corrente (Saída/Entrada)
         newTransactions.push(baseTx);
-        
-        // Transação 2: Conta Investimento (Entrada/Saída)
         const secondaryTx: TransacaoCompleta = {
           ...baseTx,
           id: generateTransactionId(),
@@ -281,16 +237,12 @@ export function ConsolidatedReviewDialog({
           operationType: isAplicacao ? 'aplicacao' : 'resgate',
           domain: 'investment',
           description: isAplicacao ? (tx.description || `Aplicação recebida`) : (tx.description || `Resgate enviado`),
-          links: {
-            ...baseTx.links,
-            investmentId: baseTx.accountId, // Link de volta para a conta corrente
-          },
+          links: { ...baseTx.links, investmentId: baseTx.accountId },
           meta: { ...baseTx.meta, createdBy: 'system' },
-          conciliated: false, // Contraparte não conciliada
+          conciliated: false,
         };
         newTransactions.push(secondaryTx);
       }
-      // 3. Liberação Empréstimo
       else if (tx.operationType === 'liberacao_emprestimo') {
         newTransactions.push(baseTx);
         addEmprestimo({
@@ -305,23 +257,18 @@ export function ConsolidatedReviewDialog({
           dataInicio: baseTx.date,
         });
       }
-      // 4. Pagamento Empréstimo
       else if (tx.operationType === 'pagamento_emprestimo' && tx.tempLoanId) {
         newTransactions.push(baseTx);
         const loanIdNum = parseInt(tx.tempLoanId.replace('loan_', ''));
-        // Nota: Usamos tx.tempParcelaId para marcar a parcela paga
         const parcelaNum = tx.tempParcelaId ? parseInt(tx.tempParcelaId) : undefined;
-        if (!isNaN(loanIdNum)) {
-            markLoanParcelPaid(loanIdNum, tx.amount, tx.date, parcelaNum);
-        }
+        if (!isNaN(loanIdNum)) markLoanParcelPaid(loanIdNum, tx.amount, tx.date, parcelaNum);
       }
-      // 5. Compra de Veículo
       else if (tx.operationType === 'veiculo' && tx.tempVehicleOperation === 'compra') {
         newTransactions.push(baseTx);
         addVeiculo({
             modelo: tx.description,
             marca: '',
-            tipo: 'carro', // Default
+            tipo: 'carro', 
             ano: 0,
             dataCompra: tx.date,
             valorVeiculo: tx.amount,
@@ -333,21 +280,15 @@ export function ConsolidatedReviewDialog({
             status: 'pendente_cadastro',
         });
       }
-      // 6. Transação Simples (Receita/Despesa/Rendimento)
       else {
         newTransactions.push(baseTx);
       }
       
-      contabilizedIds.add(tx.id);
-      
-      // 5. Atualizar status dos statements
       const statementId = txToStatementMap.get(tx.id);
       if (statementId) {
           if (!updatedStatements.has(statementId)) {
               const originalStatement = importedStatements.find(s => s.id === statementId);
-              if (originalStatement) {
-                  updatedStatements.set(statementId, { ...originalStatement });
-              }
+              if (originalStatement) updatedStatements.set(statementId, { ...originalStatement });
           }
           const statement = updatedStatements.get(statementId);
           if (statement) {
@@ -358,10 +299,7 @@ export function ConsolidatedReviewDialog({
       }
     });
     
-    // 5. Persistir no contexto
     newTransactions.forEach(t => addTransacaoV2(t));
-    
-    // 6. Atualizar status dos statements
     updatedStatements.forEach(s => {
         const pendingCount = s.rawTransactions.filter(t => !t.isContabilized).length;
         const newStatus = pendingCount === 0 ? 'complete' : 'partial';
@@ -369,45 +307,27 @@ export function ConsolidatedReviewDialog({
     });
     
     setLoading(false);
-    toast.success(`${txsToContabilize.length} transações contabilizadas com sucesso!`);
+    toast.success(`${txsToContabilize.length} transações contabilizadas!`);
     onOpenChange(false);
   };
   
-  // Lógica para o PeriodSelector
   const handlePeriodChange = useCallback((ranges: ComparisonDateRanges) => {
     setReviewRange(ranges.range1);
   }, []);
   
-  const handleApplyFilter = () => {
-    loadTransactions();
-  };
+  const handleApplyFilter = () => loadTransactions();
+  const handleManageRules = () => setShowRuleManagerModal(true);
   
-  const handleManageRules = () => {
-    setShowRuleManagerModal(true);
-  };
+  const readyToContabilizeCount = useMemo(() => transactionsToReview.filter(tx => {
+    if (tx.isPotentialDuplicate) return false; 
+    return tx.categoryId || tx.isTransfer || tx.tempInvestmentId || tx.tempLoanId || tx.tempVehicleOperation || tx.operationType === 'liberacao_emprestimo';
+  }).length, [transactionsToReview]);
   
-  // CORREÇÃO AQUI: Calcular a contagem de transações prontas e pendentes
-  const readyToContabilizeCount = useMemo(() => {
-    return transactionsToReview.filter(tx => {
-      // Ignora duplicatas potenciais
-      if (tx.isPotentialDuplicate) return false; 
-      
-      // Verifica se a transação está pronta para ser contabilizada
-      const isCategorized = tx.categoryId || tx.isTransfer || tx.tempInvestmentId || tx.tempLoanId || tx.tempVehicleOperation || tx.operationType === 'liberacao_emprestimo';
-      return !!isCategorized;
-    }).length;
-  }, [transactionsToReview]);
-  
-  const pendingCount = useMemo(() => {
-    return transactionsToReview.filter(tx => {
-      // Ignora duplicatas potenciais
-      if (tx.isPotentialDuplicate) return false; 
-      
-      // Verifica se a transação NÃO está pronta
-      const isCategorized = tx.categoryId || tx.isTransfer || tx.tempInvestmentId || tx.tempLoanId || tx.tempVehicleOperation || tx.operationType === 'liberacao_emprestimo';
-      return !isCategorized;
-    }).length;
-  }, [transactionsToReview]);
+  const pendingCount = useMemo(() => transactionsToReview.filter(tx => {
+    if (tx.isPotentialDuplicate) return false; 
+    const isCategorized = tx.categoryId || tx.isTransfer || tx.tempInvestmentId || tx.tempLoanId || tx.tempVehicleOperation || tx.operationType === 'liberacao_emprestimo';
+    return !isCategorized;
+  }).length, [transactionsToReview]);
   
   const totalCount = transactionsToReview.length;
 
@@ -416,97 +336,120 @@ export function ConsolidatedReviewDialog({
       <Dialog open={open} onOpenChange={onOpenChange}>
         <ResizableDialogContent 
           storageKey="consolidated_review_modal"
-          initialWidth={1400}
-          initialHeight={850}
-          minWidth={900}
-          minHeight={600}
+          initialWidth={1450}
+          initialHeight={880}
+          minWidth={1000}
+          minHeight={700}
           maxWidth={1800}
           maxHeight={1200}
           hideCloseButton={true} 
+          className="p-0 border-none shadow-3xl bg-card rounded-[3rem] overflow-hidden"
         >
-          <DialogHeader className="px-4 pt-3 pb-2 border-b shrink-0">
+          <DialogHeader className="px-8 pt-8 pb-6 bg-muted/20 border-b border-border/40 shrink-0">
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <FileText className="w-5 h-5 text-primary" />
+              <div className="flex items-center gap-5">
+                <div className="w-16 h-16 rounded-[1.5rem] bg-gradient-to-br from-primary to-primary-dark flex items-center justify-center text-white shadow-lg shadow-primary/20">
+                  <LayoutDashboard className="w-8 h-8" />
+                </div>
                 <div>
-                  <DialogTitle className="text-lg">Revisão Consolidada</DialogTitle>
-                  <DialogDescription className="text-xs">
-                    {account?.name}
-                  </DialogDescription>
+                  <DialogTitle className="text-2xl font-bold tracking-tight">Revisão Consolidada</DialogTitle>
+                  <div className="flex items-center gap-2 mt-1">
+                    <Badge variant="outline" className="bg-primary/5 text-primary border-primary/20 font-bold px-3 py-1 rounded-full">
+                        <Wallet className="w-3 h-3 mr-1.5" />
+                        {account?.name}
+                    </Badge>
+                  </div>
                 </div>
               </div>
               <div className="flex items-center gap-2">
-                {/* Botão de fechar customizado (mantido) */}
                 <Button 
                   variant="ghost" 
                   size="icon" 
-                  className="h-8 w-8"
+                  className="h-10 w-10 rounded-full hover:bg-muted"
                   onClick={() => onOpenChange(false)}
                 >
-                  <X className="w-4 h-4" />
+                  <X className="w-5 h-5" />
                 </Button>
               </div>
             </div>
           </DialogHeader>
 
-          <div className="flex flex-1 overflow-y-auto"> {/* CORREÇÃO 1: A rolagem vertical é gerenciada por este container */}
+          <div className="flex flex-1 overflow-hidden"> 
             
-            {/* Coluna Lateral (Controle e Status) - AGORA REDIMENSIONÁVEL */}
+            {/* Coluna Lateral Redimensionável Expressiva */}
             <ResizableSidebar
-                initialWidth={350}
-                minWidth={200}
-                maxWidth={400}
-                storageKey="review_sidebar_width"
+                initialWidth={360}
+                minWidth={280}
+                maxWidth={450}
+                storageKey="review_sidebar_width_v2"
             >
-                <ReviewContextSidebar
-                    accountId={accountId}
-                    statements={importedStatements.filter(s => s.accountId === accountId)}
-                    pendingCount={pendingCount}
-                    readyToContabilizeCount={readyToContabilizeCount}
-                    totalCount={totalCount}
-                    reviewRange={reviewRange}
-                    onPeriodChange={handlePeriodChange}
-                    onApplyFilter={handleApplyFilter}
-                    onContabilize={handleContabilize}
-                    onClose={() => onOpenChange(false)}
-                    onManageRules={handleManageRules}
-                />
+                <div className="h-full bg-muted/10 border-r border-border/40">
+                    <ReviewContextSidebar
+                        accountId={accountId}
+                        statements={importedStatements.filter(s => s.accountId === accountId)}
+                        pendingCount={pendingCount}
+                        readyToContabilizeCount={readyToContabilizeCount}
+                        totalCount={totalCount}
+                        reviewRange={reviewRange}
+                        onPeriodChange={handlePeriodChange}
+                        onApplyFilter={handleApplyFilter}
+                        onContabilize={handleContabilize}
+                        onClose={() => onOpenChange(false)}
+                        onManageRules={handleManageRules}
+                    />
+                </div>
             </ResizableSidebar>
 
-            {/* Coluna Principal (Tabela de Revisão) */}
-            <div className="flex-1 px-4 pt-2 pb-2"> {/* CORREÇÃO 2: Removido overflow-y-auto daqui */}
-              <h3 className="text-sm font-semibold text-foreground mb-3">
-                Transações Pendentes no Período ({format(reviewRange.from || new Date(), 'dd/MM/yy')} - {format(reviewRange.to || new Date(), 'dd/MM/yy')})
-              </h3>
-              
-              {loading ? (
-                <div className="flex flex-col items-center justify-center h-64 text-muted-foreground">
-                  <Loader2 className="w-8 h-8 animate-spin mb-3" />
-                  Carregando transações...
+            {/* Coluna Principal Expressiva */}
+            <div className="flex-1 flex flex-col bg-background">
+                <div className="px-8 py-5 flex items-center justify-between border-b border-border/40 bg-muted/5">
+                  <div className="flex items-center gap-3">
+                    <Sparkles className="w-5 h-5 text-accent" />
+                    <h3 className="text-sm font-black uppercase tracking-widest text-muted-foreground">
+                        Fila de Processamento
+                    </h3>
+                  </div>
+                  <Badge className="bg-muted text-muted-foreground rounded-full px-4 h-8 font-bold border-none">
+                    {format(reviewRange.from || new Date(), 'dd MMM', { locale: ptBR })} — {format(reviewRange.to || new Date(), 'dd MMM yyyy', { locale: ptBR })}
+                  </Badge>
                 </div>
-              ) : transactionsToReview.length === 0 ? (
-                <div className="flex flex-col items-center justify-center h-64 text-muted-foreground">
-                  <Check className="w-8 h-8 text-success mb-3" />
-                  <p className="text-lg font-medium">Nenhuma transação pendente neste período.</p>
-                  <p className="text-sm">Importe mais extratos ou ajuste o filtro de datas.</p>
+                
+                <div className="flex-1 p-8 overflow-hidden">
+                  {loading ? (
+                    <div className="flex flex-col items-center justify-center h-full text-muted-foreground animate-pulse">
+                      <div className="w-16 h-16 rounded-full border-4 border-muted border-t-primary animate-spin mb-6" />
+                      <p className="text-xl font-bold uppercase tracking-widest">Sincronizando Dados...</p>
+                    </div>
+                  ) : transactionsToReview.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center h-full text-muted-foreground animate-in fade-in zoom-in duration-500">
+                      <div className="w-24 h-24 rounded-full bg-success/10 flex items-center justify-center text-success mb-6">
+                        <Check className="w-12 h-12" />
+                      </div>
+                      <p className="text-2xl font-bold text-foreground">Tudo limpo!</p>
+                      <p className="text-sm mt-2 max-w-sm text-center leading-relaxed">Nenhuma transação pendente detectada para este período de datas.</p>
+                      <Button variant="outline" className="mt-8 rounded-full h-12 px-8 border-border/60" onClick={() => onOpenChange(false)}>Voltar ao Início</Button>
+                    </div>
+                  ) : (
+                    <div className="h-full rounded-[2rem] border border-border/40 overflow-hidden shadow-soft bg-muted/5">
+                        <ScrollArea className="h-full">
+                            <TransactionReviewTable
+                              transactions={transactionsToReview}
+                              accounts={accounts}
+                              categories={categories}
+                              investments={investments}
+                              loans={loans}
+                              onUpdateTransaction={handleUpdateTransaction}
+                              onCreateRule={handleCreateRule}
+                            />
+                        </ScrollArea>
+                    </div>
+                  )}
                 </div>
-              ) : (
-                <TransactionReviewTable
-                  transactions={transactionsToReview}
-                  accounts={accounts}
-                  categories={categories}
-                  investments={investments}
-                  loans={loans}
-                  onUpdateTransaction={handleUpdateTransaction}
-                  onCreateRule={handleCreateRule}
-                />
-              )}
             </div>
           </div>
         </ResizableDialogContent>
       </Dialog>
       
-      {/* Modal de Criação de Regra */}
       <StandardizationRuleFormModal
         open={showRuleModal}
         onOpenChange={setShowRuleModal}
@@ -515,7 +458,6 @@ export function ConsolidatedReviewDialog({
         onSave={handleSaveRule}
       />
       
-      {/* Modal de Gerenciamento de Regras */}
       <StandardizationRuleManagerModal
         open={showRuleManagerModal}
         onOpenChange={setShowRuleManagerModal}
@@ -526,3 +468,6 @@ export function ConsolidatedReviewDialog({
     </>
   );
 }
+
+import { ptBR } from "date-fns/locale";
+import { Wallet } from "lucide-react";
