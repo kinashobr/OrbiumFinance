@@ -4,8 +4,8 @@
 
 @layer base {
   :root {
-    /* Paleta clara inspirada no modelo HTML – fundo bege, acentos marrom/esverdeado */
-    --md-sys-color-primary: 26 72% 42%; /* marrom-dourado principal */
+    /* Paleta clara inspirada no novo modelo - Mocha/Creamy */
+    --md-sys-color-primary: 26 72% 42%; /* #C07638 - Warm Mocha */
     --md-sys-color-on-primary: 0 0% 100%;
     --md-sys-color-primary-container: 28 70% 90%;
     --md-sys-color-on-primary-container: 26 40% 22%;
@@ -15,18 +15,18 @@
     --md-sys-color-secondary-container: 32 30% 92%;
     --md-sys-color-on-secondary-container: 26 28% 20%;
 
-    --md-sys-color-surface: 35 41% 96%; /* fundo geral bege-claro */
-    --md-sys-color-on-surface: 26 25% 18%;
+    --md-sys-color-surface: 35 41% 96%; /* #F5F2EE - Creamy background */
+    --md-sys-color-on-surface: 26 25% 18%; /* #422006 - Dark brown text */
     --md-sys-color-surface-variant: 35 30% 92%; /* cards levemente destacados */
     --md-sys-color-on-surface-variant: 26 15% 32%;
 
     --md-sys-color-outline: 30 22% 80%;
-    --md-sys-color-outline-variant: 35 25% 88%;
+    --md-sys-color-outline-variant: 30 22% 85%; /* Neutral surface light */
 
     --md-sys-color-error: 4 73% 50%;
     --md-sys-color-on-error: 0 0% 100%;
 
-    --md-sys-color-success: 142 45% 38%; /* verde mais sóbrio, menos “neon” */
+    --md-sys-color-success: 158 89% 31%; /* #059669 - Accent Green */
     --md-sys-color-warning: 37 92% 54%;
     --md-sys-color-info: 204 82% 45%;
 
@@ -34,7 +34,7 @@
     --background: var(--md-sys-color-surface);
     --foreground: var(--md-sys-color-on-surface);
 
-    --card: 35 35% 98%;
+    --card: 0 0% 100%; /* White surface for cards */
     --card-foreground: var(--md-sys-color-on-surface);
 
     --popover: var(--md-sys-color-surface);
@@ -67,14 +67,14 @@
     --input: var(--md-sys-color-outline-variant);
     --ring: var(--md-sys-color-primary);
 
-    --radius: 1.5rem;
+    --radius: 1.75rem; /* Default radius for components */
 
     /* Neon accents (light theme, mais sutis) */
-    --neon-cyan: 174 72% 56%;   /* teal-400-ish */
-    --neon-purple: 267 83% 67%; /* purple-400-ish */
-    --neon-blue: 217 91% 60%;   /* blue-500-ish */
-    --neon-pink: 340 82% 72%;   /* pink-400-ish */
-    --neon-green: 142 71% 45%;  /* green-500-ish */
+    --neon-cyan: 174 72% 56%;
+    --neon-purple: 267 83% 67%;
+    --neon-blue: 217 91% 60%;
+    --neon-pink: 340 82% 72%;
+    --neon-green: 142 71% 45%;
 
     /* Sidebar tokens alinhados com o novo fundo bege */
     --sidebar-background: var(--md-sys-color-surface);
@@ -92,56 +92,37 @@
 
   .dark,
   .theme-dark-neon {
-    /* Material Expressive 3 – Dark theme focado em dashboard financeiro */
-    /* Primary */
-    --md-sys-color-primary: 262 100% 88%; /* #D0BCFF */
-    --md-sys-color-on-primary: 262 60% 28%; /* #381E72 */
-    --md-sys-color-primary-container: 262 43% 39%; /* #4F378B */
-    --md-sys-color-on-primary-container: 267 100% 94%; /* #EADDFF */
+    /* Dark theme - Warm dark */
+    --md-sys-color-primary: 26 72% 42%; /* #C07638 - Warm Mocha (mantido) */
+    --md-sys-color-on-primary: 0 0% 100%;
+    --md-sys-color-primary-container: 26 40% 22%;
+    --md-sys-color-on-primary-container: 28 70% 90%;
 
-    /* Secondary */
-    --md-sys-color-secondary: 263 24% 82%; /* #CCC2DC */
-    --md-sys-color-on-secondary: 267 18% 22%; /* #332D41 */
-    --md-sys-color-secondary-container: 267 14% 31%; /* #4A4458 */
-    --md-sys-color-on-secondary-container: 267 52% 92%; /* #E8DEF8 */
+    --md-sys-color-secondary: 24 18% 38%;
+    --md-sys-color-on-secondary: 35 25% 96%;
+    --md-sys-color-secondary-container: 26 28% 20%;
+    --md-sys-color-on-secondary-container: 32 30% 92%;
 
-    /* Tertiary – destaques/insights */
-    --md-sys-color-tertiary: 341 63% 82%; /* #EFB8C8 */
-    --md-sys-color-on-tertiary: 338 36% 23%; /* #492532 */
-    --md-sys-color-tertiary-container: 338 26% 34%; /* #633B48 */
-    --md-sys-color-on-tertiary-container: 338 100% 92%; /* #FFD8E4 */
-
-    /* Superfícies – fundo quase preto marrom (#1C1917) */
-    --md-sys-color-surface: 24 11% 9%;  /* #1C1917 */
-    --md-sys-color-on-surface: 30 9% 90%; /* #E7E5E4 */
-    --md-sys-color-surface-variant: 24 9% 18%;
+    --md-sys-color-surface: 24 11% 9%;  /* #1C1917 - Warm dark background */
+    --md-sys-color-on-surface: 30 9% 90%; /* #E7E5E4 - Light text */
+    --md-sys-color-surface-variant: 24 9% 18%; /* #292524 - Surface dark */
     --md-sys-color-on-surface-variant: 27 9% 70%;
 
-    /* Outline / divisores */
     --md-sys-color-outline: 24 8% 35%;
-    --md-sys-color-outline-variant: 24 11% 25%; /* #44403C */
+    --md-sys-color-outline-variant: 24 11% 25%; /* Neutral surface dark */
 
-    /* Estados semânticos com acentos neon */
-    --md-sys-color-error: 0 91% 71%;   /* red-400 */
+    --md-sys-color-error: 0 91% 71%;
     --md-sys-color-on-error: 0 0% 0%;
 
-    --md-sys-color-success: 142 72% 45%; /* green-500 */
-    --md-sys-color-warning: 35 100% 65%; /* amber-400 */
-    --md-sys-color-info: 188 78% 59%;    /* cyan-400 */
-
-    /* Neon accents (dark theme, mais intensos) */
-    --neon-cyan: 188 78% 59%;
-    --neon-purple: 267 83% 67%;
-    --neon-blue: 217 91% 60%;
-    --neon-pink: 340 82% 72%;
-    --neon-green: 142 72% 45%;
+    --md-sys-color-success: 158 89% 31%; /* #059669 - Accent Green */
+    --md-sys-color-warning: 35 100% 65%;
+    --md-sys-color-info: 188 78% 59%;
 
     /* Mapeamento para tokens da aplicação */
     --background: var(--md-sys-color-surface);
     --foreground: var(--md-sys-color-on-surface);
 
-    /* Cards levemente elevados em relação ao background */
-    --card: 24 10% 11%;
+    --card: var(--md-sys-color-surface-variant); /* Dark surface for cards */
     --card-foreground: var(--md-sys-color-on-surface);
 
     --popover: var(--md-sys-color-surface);
@@ -174,7 +155,7 @@
     --input: var(--md-sys-color-outline-variant);
     --ring: var(--md-sys-color-primary);
 
-    --radius: 0.9rem;
+    --radius: 1.75rem;
 
     /* Sidebar acompanhando superfícies do dark M3 */
     --sidebar-background: var(--md-sys-color-surface);
@@ -195,8 +176,9 @@
   }
 
   body {
+    /* Usando Outfit para display e Plus Jakarta Sans para body */
     @apply bg-background text-foreground antialiased;
-    font-family: "Outfit", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    font-family: "Plus Jakarta Sans", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   }
 }
 
@@ -226,11 +208,12 @@
   }
 
   .glass-card {
-    @apply bg-card/85 backdrop-blur-2xl border border-border/40 rounded-[1.5rem];
+    /* Novo estilo de card Expressivo */
+    @apply bg-card/90 backdrop-blur-2xl border border-border/40 rounded-[var(--radius)];
     box-shadow:
-      0 18px 45px hsl(var(--background) / 0.65),
-      0 0 0 1px hsl(var(--border) / 0.4),
-      inset 0 1px 0 hsl(var(--background) / 0.6);
+      0 12px 40px -12px hsl(var(--primary) / 0.15),
+      0 4px 12px -4px hsl(var(--foreground) / 0.05),
+      inset 0 1px 0 hsl(var(--card) / 0.6);
   }
 
   .stat-card-positive { border-left: 1px solid hsl(var(--success)); }
