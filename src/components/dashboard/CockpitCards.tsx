@@ -1,6 +1,7 @@
 import { Target, TrendingUp, TrendingDown, CalendarClock, ArrowUpRight, ArrowDownRight, Droplets } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { KpiCard, type KpiStatus } from "@/components/ui/KpiCard";
+import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 
 interface CockpitData {
