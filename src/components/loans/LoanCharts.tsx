@@ -281,9 +281,9 @@ export function LoanCharts({ emprestimos, className }: LoanChartsProps) {
                 formatter={(value: number, name: string) => [formatCurrency(value), name]}
               />
               <Legend />
-              <Bar dataKey="valorOriginal" name="Valor Original" fill={colors.mutedForeground} radius={[0, 4, 4, 0]} />
-              <Bar dataKey="saldoDevedor" name="Saldo Devedor" fill={colors.destructive} radius={[0, 4, 4, 0]} />
-              <Bar dataKey="jurosTotal" name="Juros Total" fill={colors.warning} radius={[0, 4, 4, 0]} />
+              <Bar dataKey="valorOriginal" name="Valor Original" fill={colors.mutedForeground} opacity={0.7} radius={[0, 4, 4, 0]} />
+              <Bar dataKey="saldoDevedor" name="Saldo Devedor" fill={colors.destructive} opacity={0.8} radius={[0, 4, 4, 0]} />
+              <Bar dataKey="jurosTotal" name="Juros Total" fill={colors.warning} opacity={0.9} radius={[0, 4, 4, 0]} />
             </BarChart>
           </ResponsiveContainer>
         </div>

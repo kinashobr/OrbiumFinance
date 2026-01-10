@@ -99,11 +99,12 @@ const Emprestimos = () => {
                 onDateRangeChange={handlePeriodChange}
                 className="h-10 rounded-full bg-surface-light dark:bg-surface-dark border-border/40 shadow-sm"
               />
-              <LoanForm 
+              {/* Botão Novo Empréstimo oculto */}
+              {/* <LoanForm 
                 onSubmit={addEmprestimo} 
                 contasCorrentes={getContasCorrentesTipo()} 
                 className="h-10 rounded-full bg-primary text-primary-foreground shadow-lg shadow-primary/20 px-6 font-bold"
-              />
+              /> */}
             </div>
           </header>
 
