@@ -9,11 +9,11 @@ interface SortableAccountCardProps {
   onMovimentar: (accountId: string) => void;
   onViewHistory: (accountId: string) => void;
   onEdit?: (accountId: string) => void;
-  onImport?: (accountId: string) => void; // NOVO PROP
-  isDraggingParent: boolean; // New prop to indicate if parent is dragging
-  longPressActive: boolean; // New prop to conditionally apply listeners
-  onLongPressStart: () => void; // New prop for long press detection
-  onLongPressEnd: () => void; // New prop for long press detection
+  onImport?: (accountId: string) => void;
+  isDraggingParent: boolean;
+  longPressActive: boolean;
+  onLongPressStart: () => void;
+  onLongPressEnd: () => void;
 }
 
 export function SortableAccountCard({
@@ -21,7 +21,7 @@ export function SortableAccountCard({
   onMovimentar,
   onViewHistory,
   onEdit,
-  onImport, // RECEBIDO AQUI
+  onImport,
   isDraggingParent,
   longPressActive,
   onLongPressStart,
@@ -36,7 +36,6 @@ export function SortableAccountCard({
     isDragging,
   } = useSortable({ id: summary.accountId });
 
-  // Aplicamos a transformação CSS para o movimento horizontal
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
@@ -44,8 +43,7 @@ export function SortableAccountCard({
     opacity: isDragging ? 0.9 : 1,
     cursor: isDragging ? 'grabbing' : 'grab',
     boxShadow: isDragging ? "0 4px 20px rgba(0,0,0,0.3)" : "none",
-    // Garante que o elemento arrastado não se desloque verticalmente
-    touchAction: 'pan-y', 
+    touchAction: 'pan-y' as const, 
   };
 
   return (
@@ -54,18 +52,18 @@ export function SortableAccountCard({
       style={style}
       className={cn("shrink-0 transition-transform duration-300 ease-out", isDragging && "scale-[1.05]")}
       {...attributes}
-      {...(longPressActive ? listeners : {})} {/* Conditionally apply listeners */}
+      {...(longPressActive ? listeners : {})}
       onTouchStart={onLongPressStart}
       onTouchEnd={onLongPressEnd}
-      onMouseDown={onLongPressStart} // Also for desktop drag initiation
-      onMouseUp={onLongPressEnd} // Also for desktop drag initiation
+      onMouseDown={onLongPressStart}
+      onMouseUp={onLongPressEnd}
     >
       <AccountCard
         summary={summary}
         onMovimentar={onMovimentar}
         onViewHistory={onViewHistory}
         onEdit={onEdit}
-        onImport={onImport} // PASSADO AQUI
+        onImport={onImport}
       />
     </div>
   );
