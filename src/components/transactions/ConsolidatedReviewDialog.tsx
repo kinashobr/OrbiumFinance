@@ -19,6 +19,8 @@ import { StandardizationRuleManagerModal } from "./StandardizationRuleManagerMod
 import { ResizableSidebar } from "./ResizableSidebar";
 import { startOfMonth, endOfMonth, format, subDays, startOfDay, endOfDay } from "date-fns";
 import { ResizableDialogContent } from "../ui/ResizableDialogContent";
+import { Badge } from "@/components/ui/badge";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 interface LoanInfo {
   id: string;

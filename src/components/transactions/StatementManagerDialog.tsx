@@ -12,6 +12,7 @@ import { parseDateLocal, cn } from "@/lib/utils";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { format } from "date-fns";
+import { Badge } from "@/components/ui/badge";
 
 interface StatementManagerDialogProps {
   open: boolean;

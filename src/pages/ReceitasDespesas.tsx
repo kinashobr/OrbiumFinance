@@ -21,9 +21,10 @@ import { ConsolidatedReviewDialog } from "@/components/transactions/Consolidated
 import { StandardizationRuleManagerModal } from "@/components/transactions/StandardizationRuleManagerModal";
 import { useFinance } from "@/contexts/FinanceContext";
 import { parseDateLocal, cn } from "@/lib/utils";
+import { Badge } from "@/components/ui/badge";
 
 const ReceitasDespesas = () => {
-  const { contasMovimento, setContasMovimento, categoriasV2: categories, setCategoriasV2, transacoesV2, setTransacoesV2, addTransacaoV2, emprestimos, addEmprestimo, markLoanParcelPaid, unmarkLoanParcelPaid, veiculos, addVeiculo, deleteVeiculo, calculateBalanceUpToDate, dateRanges, setDateRanges, markSeguroParcelPaid, unmarkSeguroParcelPaid, standardizationRules, deleteStandardizationRule, uncontabilizeImportedTransaction, segurosVeiculo } = useFinance();
+  const { contasMovimento, setContasMovimento, categoriasV2: categories, setCategoriasV2, transacoesV2, setTransacoesV2, addTransacaoV2, emprestimos, addEmprestimo, markLoanParcelPaid, unmarkLoanParcelPaid, veiculos, addVeiculo, deleteVeiculo, calculateBalanceUpToDate, dateRanges, setDateRanges, markSeguroParcelPaid, unmarkSeguroParcelaid, standardizationRules, deleteStandardizationRule, uncontabilizeImportedTransaction, segurosVeiculo } = useFinance();
 
   const [showMovimentarModal, setShowMovimentarModal] = useState(false);
   const [selectedAccountForModal, setSelectedAccountForModal] = useState<string>();

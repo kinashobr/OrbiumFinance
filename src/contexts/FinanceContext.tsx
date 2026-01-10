@@ -55,29 +55,6 @@ const DEFAULT_RANGES: ComparisonDateRanges = {
     range2: calculateComparisonRange(calculateDefaultRange()),
 };
 
-function parseDateRanges(storedRanges: any): ComparisonDateRanges {
-    const parseDate = (dateStr: string | undefined): Date | undefined => {
-        if (!dateStr) return undefined;
-        try {
-            const date = parseDateLocal(dateStr.split('T')[0]); 
-            return isNaN(date.getTime()) ? undefined : date;
-        } catch {
-            return undefined;
-        }
-    };
-
-    return {
-        range1: {
-            from: parseDate(storedRanges.range1?.from),
-            to: parseDate(storedRanges.range1?.to),
-        },
-        range2: {
-            from: parseDate(storedRanges.range2?.from),
-            to: parseDate(storedRanges.range2?.to),
-        },
-    };
-}
-
 export const getDueDate = (startDateStr: string, installmentNumber: number): Date => {
   const startDate = parseDateLocal(startDateStr);
   const dueDate = new Date(startDate);
@@ -856,6 +833,17 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     return saldoEmprestimos + saldoCartoes + getSegurosAPagar(date);
   }, [emprestimos, contasMovimento, transacoesV2, calculatePaidInstallmentsUpToDate, calculateLoanSchedule, getSegurosAPagar, calculateBalanceUpToDate]);
 
+  const getLoanPrincipalRemaining = useCallback((targetDate?: Date) => {
+    const date = targetDate || new Date(9999, 11, 31);
+    return emprestimos.reduce((a, e) => { 
+        if (e.status === 'quitado' || e.status === 'pendente_config') return a; 
+        const paid = calculatePaidInstallmentsUpToDate(e.id, date); 
+        const s = calculateLoanSchedule(e.id); 
+        const lp = s.find(x => x.parcela === paid); 
+        return a + (lp ? lp.saldoDevedor : e.valorTotal); 
+    }, 0);
+  }, [emprestimos, calculatePaidInstallmentsUpToDate, calculateLoanSchedule]);
+
   const exportData = () => {
     const data = { schemaVersion: "2.0", exportedAt: new Date().toISOString(), data: { accounts: contasMovimento, categories: categoriasV2, transactions: transacoesV2, emprestimos, veiculos, segurosVeiculo, objetivos, billsTracker, standardizationRules, importedStatements, revenueForecasts, alertStartDate } };
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
@@ -1001,7 +989,7 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     getTotalReceitas: (m?: string) => transacoesV2.filter(t => (t.operationType === 'receita' || t.operationType === 'rendimento') && (!m || t.date.startsWith(m))).reduce((a, t) => a + t.amount, 0),
     getTotalDespesas: (m?: string) => transacoesV2.filter(t => (t.operationType === 'despesa' || t.operationType === 'pagamento_emprestimo') && (!m || t.date.startsWith(m))).reduce((a, t) => a + t.amount, 0),
     getTotalDividas: () => emprestimos.reduce((a, e) => a + e.valorTotal, 0), getCustoVeiculos: () => veiculos.filter(v => v.status !== 'vendido').reduce((a, v) => a + v.valorSeguro, 0), getSaldoAtual: () => contasMovimento.reduce((a, c) => a + calculateBalanceUpToDate(c.id, undefined, transacoesV2, contasMovimento), 0),
-    getValorFipeTotal, getSaldoDevedor: (d?: Date) => getLoanPrincipalRemaining(d) + getCreditCardDebt(d), getLoanPrincipalRemaining: (d?: Date) => emprestimos.reduce((a, e) => { if (e.status === 'quitado' || e.status === 'pendente_config') return a; const paid = calculatePaidInstallmentsUpToDate(e.id, d || new Date(9999, 11, 31)); const s = calculateLoanSchedule(e.id); const lp = s.find(x => x.parcela === paid); return a + (lp ? lp.saldoDevedor : e.valorTotal); }, 0), getCreditCardDebt, getJurosTotais, getDespesasFixas,
+    getValorFipeTotal, getSaldoDevedor: (d?: Date) => getLoanPrincipalRemaining(d) + getCreditCardDebt(d), getLoanPrincipalRemaining, getCreditCardDebt, getJurosTotais, getDespesasFixas,
     getPatrimonioLiquido: (d?: Date) => getAtivosTotal(d) - getPassivosTotal(d), getAtivosTotal, getPassivosTotal, getSegurosAApropriar, getSegurosAPagar,
     calculateBalanceUpToDate, calculateTotalInvestmentBalanceAtDate, calculatePaidInstallmentsUpToDate, exportData, importData,
   };
