@@ -14,7 +14,8 @@ import {
   ArrowRight,
   Info,
   TrendingUp,
-  History
+  History,
+  Wallet
 } from "lucide-react";
 import { useFinance } from "@/contexts/FinanceContext";
 import { Emprestimo, ComparisonDateRanges } from "@/types/finance";
