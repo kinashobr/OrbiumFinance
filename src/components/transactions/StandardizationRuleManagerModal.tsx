@@ -9,6 +9,7 @@ import { toast } from "sonner";
 import { StandardizationRuleFormModal } from "./StandardizationRuleFormModal";
 import { useFinance } from "@/contexts/FinanceContext";
 import { Badge } from "@/components/ui/badge";
+import { STANDARDIZABLE_OPERATIONS } from "./StandardizationRuleFormModal"; // Importação adicionada
 
 interface StandardizationRuleManagerModalProps {
   open: boolean;
