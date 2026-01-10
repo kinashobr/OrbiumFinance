@@ -68,6 +68,7 @@ export function ConsolidatedReviewDialog({
     getTransactionsForReview,
     standardizationRules,
     addStandardizationRule,
+    deleteStandardizationRule, // Adicionado para corrigir o erro de compilação
     addTransacaoV2,
     updateImportedStatement,
     importedStatements,
