@@ -10,9 +10,6 @@ import { StandardizationRuleFormModal } from "./StandardizationRuleFormModal";
 import { useFinance } from "@/contexts/FinanceContext";
 import { Badge } from "@/components/ui/badge";
 
-// Import the missing constant
-import { STANDARDIZABLE_OPERATIONS } from "./StandardizationRuleFormModal";
-
 interface StandardizationRuleManagerModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
