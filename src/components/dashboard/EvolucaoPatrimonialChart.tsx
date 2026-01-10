@@ -30,9 +30,7 @@ const lineOptions = [
 export function EvolucaoPatrimonialChart({}: EvolucaoPatrimonialChartProps) {
   const { 
     transacoesV2, 
-    contasMovimento,
-    getPatrimonioLiquido, // Usando a função period-aware
-    calculateBalanceUpToDate,
+    getPatrimonioLiquido,
   } = useFinance();
   
   const [periodo, setPeriodo] = useState("12m");
@@ -49,14 +47,6 @@ export function EvolucaoPatrimonialChart({}: EvolucaoPatrimonialChartProps) {
     });
   };
 
-  const calculatePLAtDate = useCallback((targetDate: Date) => {
-    // Para o gráfico de evolução, usamos o Patrimônio Líquido calculado na data
-    const patrimonioLiquido = getPatrimonioLiquido(targetDate);
-    
-    return { patrimonioLiquido };
-  }, [getPatrimonioLiquido]);
-
-
   const filteredData = useMemo(() => {
     const now = new Date();
     const result: EvolucaoData[] = [];
@@ -68,7 +58,8 @@ export function EvolucaoPatrimonialChart({}: EvolucaoPatrimonialChartProps) {
       const mesLabel = format(data, 'MMM', { locale: ptBR });
 
       // 1. Calcular PL no final do mês (fim)
-      const { patrimonioLiquido } = calculatePLAtDate(fim);
+      // Usando getPatrimonioLiquido diretamente, que é period-aware
+      const patrimonioLiquido = getPatrimonioLiquido(fim);
 
       // 2. Calcular Receitas e Despesas DENTRO do mês
       const transacoesMes = transacoesV2.filter(t => {
@@ -98,7 +89,7 @@ export function EvolucaoPatrimonialChart({}: EvolucaoPatrimonialChartProps) {
       });
     }
     return result;
-  }, [transacoesV2, calculatePLAtDate]);
+  }, [transacoesV2, getPatrimonioLiquido]);
 
   const dataToShow = useMemo(() => {
     switch (periodo) {
