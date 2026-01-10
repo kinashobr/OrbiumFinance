@@ -65,6 +65,21 @@ export const getDueDate = (startDateStr: string, installmentNumber: number): Dat
   return dueDate;
 };
 
+// Helper function to parse stored date range strings back to Date objects
+const parseDateRanges = (storedRanges: any): ComparisonDateRanges => {
+    const parseDate = (dateStr: string | undefined) => dateStr ? parseDateLocal(dateStr) : undefined;
+    return {
+        range1: {
+            from: parseDate(storedRanges.range1.from),
+            to: parseDate(storedRanges.range1.to),
+        },
+        range2: {
+            from: parseDate(storedRanges.range2.from),
+            to: parseDate(storedRanges.range2.to),
+        },
+    };
+};
+
 // ============================================
 // FUNÇÕES DE PARSING
 // ============================================
