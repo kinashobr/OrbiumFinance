@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { AccountSummary } from "@/types/finance";
 import { useFinance } from "@/contexts/FinanceContext";
 import { SortableAccountCard } from "./SortableAccountCard";
-import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, DragEndEvent } from "@dnd-kit/core";
+import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, DragEndEvent, TouchSensor } from "@dnd-kit/core";
 import { SortableContext, sortableKeyboardCoordinates, horizontalListSortingStrategy, arrayMove } from "@dnd-kit/sortable";
 import { restrictToHorizontalAxis } from "@dnd-kit/modifiers";
 import { useMediaQuery } from "@/hooks/useMediaQuery";
@@ -32,21 +32,22 @@ export function AccountsCarousel({
   const { contasMovimento, setContasMovimento } = useFinance();
   const isMobile = useMediaQuery("(max-width: 768px)");
 
-  // State to manage if a long press is active (for mobile drag-and-drop)
-  const [longPressActive, setLongPressActive] = useState(false);
-  const longPressTimeout = useRef<number | null>(null);
-
   const visibleContasMovimento = useMemo(() => contasMovimento.filter(c => !c.hidden), [contasMovimento]);
   const orderedSummaries = useMemo(() => visibleContasMovimento.map(account => accounts.find(s => s.accountId === account.id)).filter((s): s is AccountSummary => !!s), [visibleContasMovimento, accounts]);
   const accountIds = useMemo(() => visibleContasMovimento.map(a => a.id), [visibleContasMovimento]);
 
+  // Configuração refinada dos sensores
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {
-        distance: 8, // Allow a small movement before activating drag
-        delay: isMobile ? 300 : 0, // Long press delay for mobile
-        tolerance: isMobile ? 5 : 0, // Small tolerance for long press
-      }
+        distance: 8, // Permite um pequeno movimento antes de travar como drag
+      },
+    }),
+    useSensor(TouchSensor, {
+      activationConstraint: {
+        delay: 300, // Delay de 300ms para ativar o drag (Long Press)
+        tolerance: 5, // Tolerância de movimento durante o pressionamento
+      },
     }),
     useSensor(KeyboardSensor, {
       coordinateGetter: sortableKeyboardCoordinates
@@ -63,24 +64,8 @@ export function AccountsCarousel({
     }
   };
 
-  const handleDragStart = useCallback(() => {
-    if (isMobile) {
-      setLongPressActive(true);
-      if (scrollContainerRef.current) {
-        scrollContainerRef.current.style.overflowX = 'hidden'; // Disable scroll during drag
-      }
-    }
-  }, [isMobile]);
-
   const handleDragEnd = useCallback((event: DragEndEvent) => {
     const { active, over } = event;
-
-    if (isMobile) {
-      setLongPressActive(false);
-      if (scrollContainerRef.current) {
-        scrollContainerRef.current.style.overflowX = 'auto'; // Re-enable scroll after drag
-      }
-    }
 
     if (active.id !== over?.id) {
       const visibleIds = contasMovimento.filter(c => !c.hidden).map(c => c.id);
@@ -90,54 +75,19 @@ export function AccountsCarousel({
       if (oldIndex !== -1 && newIndex !== -1) {
         const visibleAccounts = contasMovimento.filter(c => !c.hidden);
         const newVisibleOrder = arrayMove(visibleAccounts, oldIndex, newIndex);
-        const hiddenAccounts = contasMovimento.filter(c => c.hidden);
         
-        // Reconstruct the full list, maintaining hidden accounts' positions relative to each other
         const newFullOrder = contasMovimento.map(account => {
           const newIndexInVisible = newVisibleOrder.findIndex(v => v.id === account.id);
           if (newIndexInVisible !== -1) {
             return newVisibleOrder[newIndexInVisible];
           }
-          return account; // Keep hidden accounts in their original relative positions
+          return account;
         });
 
         setContasMovimento(newFullOrder);
       }
     }
-  }, [contasMovimento, isMobile, setContasMovimento]);
-
-  const handleLongPressStart = useCallback(() => {
-    if (isMobile) {
-      longPressTimeout.current = window.setTimeout(() => {
-        setLongPressActive(true);
-        if (scrollContainerRef.current) {
-          scrollContainerRef.current.style.overflowX = 'hidden'; // Disable scroll during long press
-        }
-      }, 300); // 300ms for long press
-    }
-  }, [isMobile]);
-
-  const handleLongPressEnd = useCallback(() => {
-    if (isMobile) {
-      if (longPressTimeout.current) {
-        clearTimeout(longPressTimeout.current);
-        longPressTimeout.current = null;
-      }
-      // If drag was not active, re-enable scroll
-      if (!longPressActive && scrollContainerRef.current) {
-        scrollContainerRef.current.style.overflowX = 'auto';
-      }
-    }
-  }, [isMobile, longPressActive]);
-
-  useEffect(() => {
-    // Cleanup timeout if component unmounts or longPressActive changes
-    return () => {
-      if (longPressTimeout.current) {
-        clearTimeout(longPressTimeout.current);
-      }
-    };
-  }, []);
+  }, [contasMovimento, setContasMovimento]);
 
   return (
     <div className="relative">
@@ -171,14 +121,13 @@ export function AccountsCarousel({
       <DndContext 
         sensors={sensors} 
         collisionDetection={closestCenter} 
-        onDragStart={handleDragStart}
         onDragEnd={handleDragEnd} 
         modifiers={[restrictToHorizontalAxis]}
       >
         <SortableContext items={accountIds} strategy={horizontalListSortingStrategy}>
           <div 
             ref={scrollContainerRef} 
-            className={`flex gap-4 pb-4 overflow-x-auto hide-scrollbar-mobile scroll-smooth ${longPressActive ? 'overflow-x-hidden' : ''}`}
+            className="flex gap-4 pb-4 overflow-x-auto hide-scrollbar-mobile scroll-smooth touch-pan-x"
           >
             {orderedSummaries.map(summary => (
               <SortableAccountCard 
@@ -188,10 +137,6 @@ export function AccountsCarousel({
                 onViewHistory={onViewHistory} 
                 onEdit={onEditAccount} 
                 onImport={onImportAccount} 
-                isDraggingParent={longPressActive} // Pass longPressActive as isDraggingParent
-                longPressActive={longPressActive}
-                onLongPressStart={handleLongPressStart}
-                onLongPressEnd={handleLongPressEnd}
               />
             ))}
  

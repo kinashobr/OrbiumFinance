@@ -10,10 +10,6 @@ interface SortableAccountCardProps {
   onViewHistory: (accountId: string) => void;
   onEdit?: (accountId: string) => void;
   onImport?: (accountId: string) => void;
-  isDraggingParent: boolean;
-  longPressActive: boolean;
-  onLongPressStart: () => void;
-  onLongPressEnd: () => void;
 }
 
 export function SortableAccountCard({
@@ -22,10 +18,6 @@ export function SortableAccountCard({
   onViewHistory,
   onEdit,
   onImport,
-  isDraggingParent,
-  longPressActive,
-  onLongPressStart,
-  onLongPressEnd,
 }: SortableAccountCardProps) {
   const {
     attributes,
@@ -40,23 +32,22 @@ export function SortableAccountCard({
     transform: CSS.Transform.toString(transform),
     transition,
     zIndex: isDragging ? 100 : 1,
-    opacity: isDragging ? 0.9 : 1,
+    opacity: isDragging ? 0.8 : 1,
     cursor: isDragging ? 'grabbing' : 'grab',
-    boxShadow: isDragging ? "0 4px 20px rgba(0,0,0,0.3)" : "none",
-    touchAction: 'pan-y' as const, 
+    // touch-action: none é necessário apenas durante o drag, 
+    // mas o dnd-kit gerencia isso através dos sensores configurados.
   };
 
   return (
     <div
       ref={setNodeRef}
       style={style}
-      className={cn("shrink-0 transition-transform duration-300 ease-out", isDragging && "scale-[1.05]")}
+      className={cn(
+        "shrink-0 transition-transform duration-300 ease-out", 
+        isDragging && "scale-[1.05] shadow-2xl"
+      )}
       {...attributes}
-      {...(longPressActive ? listeners : {})}
-      onTouchStart={onLongPressStart}
-      onTouchEnd={onLongPressEnd}
-      onMouseDown={onLongPressStart}
-      onMouseUp={onLongPressEnd}
+      {...listeners}
     >
       <AccountCard
         summary={summary}
