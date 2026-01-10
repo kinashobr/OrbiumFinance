@@ -3,7 +3,7 @@
 import { useState, useMemo, useCallback } from "react";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
-import { RefreshCw, Tags, Plus, CalendarCheck, Receipt, Sparkles, Filter, LayoutDashboard } from "lucide-react";
+import { RefreshCw, Tags, Plus, CalendarCheck, Receipt, Sparkles, Filter, FileText, Upload } from "lucide-react";
 import { toast } from "sonner";
 import { isWithinInterval, startOfMonth, endOfMonth, subDays, startOfDay, endOfDay, addMonths, format } from "date-fns";
 
@@ -76,7 +76,7 @@ const ReceitasDespesas = () => {
 
   // Import Modal State
   const [showStatementManagerModal, setShowStatementManagerModal] = useState(false);
-  const [accountToManage, setAccountToManage] = useState<ContaCorrente | null>(null);
+  const [accountToManageId, setAccountToManageId] = useState<string | null>(null);
 
   // Consolidated Review
   const [showConsolidatedReview, setShowConsolidatedReview] = useState(false);
@@ -165,14 +165,9 @@ const ReceitasDespesas = () => {
     setShowStatementDialog(true);
   };
 
-  const handleImportExtrato = (accountId: string) => {
-    const account = accounts.find(a => a.id === accountId);
-    if (account && account.accountType === 'corrente') {
-      setAccountToManage(account);
-      setShowStatementManagerModal(true);
-    } else {
-      toast.error("A importação de extrato é permitida apenas para Contas Correntes.");
-    }
+  const handleImportExtrato = (accountId: string | null) => {
+    setAccountToManageId(accountId);
+    setShowStatementManagerModal(true);
   };
 
   const handleStartConsolidatedReview = (accountId: string) => {
@@ -180,221 +175,12 @@ const ReceitasDespesas = () => {
     setShowConsolidatedReview(true);
   };
 
-  const handleManageRules = () => {
-    setShowStatementManagerModal(false);
-    setShowRuleManagerModal(true);
-  };
-
   const handleTransactionSubmit = (transaction: TransacaoCompleta, transferGroup?: TransferGroup) => {
-    const tx: TransacaoCompleta = {
-      ...transaction,
-      links: {
-        investmentId: transaction.links.investmentId || null,
-        loanId: transaction.links.loanId || null,
-        transferGroupId: transaction.links.transferGroupId || null,
-        parcelaId: transaction.links.parcelaId || null,
-        vehicleTransactionId: transaction.links.vehicleTransactionId || null
-      }
-    };
-
     if (editingTransaction) {
-      const linkedGroupId = editingTransaction.links?.transferGroupId;
-
-      // Reversal logic
-      if (editingTransaction.links?.vehicleTransactionId && editingTransaction.links.vehicleTransactionId !== tx.links.vehicleTransactionId) {
-        const [oldSeguroIdStr, oldParcelaNumStr] = editingTransaction.links.vehicleTransactionId.split('_');
-        const oldSeguroId = parseInt(oldSeguroIdStr);
-        const oldParcelaNumero = parseInt(oldParcelaNumStr);
-        if (!isNaN(oldSeguroId) && !isNaN(oldParcelaNumero)) unmarkSeguroParcelPaid(oldSeguroId, oldParcelaNumero);
-      }
-
-      if (editingTransaction.links?.loanId && editingTransaction.links.loanId !== tx.links.loanId) {
-        const oldLoanIdNum = parseInt(editingTransaction.links.loanId.replace('loan_', ''));
-        if (!isNaN(oldLoanIdNum)) unmarkLoanParcelPaid(oldLoanIdNum);
-      }
-
-      // Application logic
-      if (tx.links?.vehicleTransactionId && tx.flow === 'out') {
-        const [seguroIdStr, parcelaNumeroStr] = tx.links.vehicleTransactionId.split('_');
-        const seguroId = parseInt(seguroIdStr);
-        const parcelaNumero = parseInt(parcelaNumeroStr);
-        if (!isNaN(seguroId) && !isNaN(parcelaNumero)) markSeguroParcelPaid(seguroId, parcelaNumero, tx.id);
-      }
-
-      if (tx.operationType === 'pagamento_emprestimo' && tx.links?.loanId) {
-        const loanIdNum = parseInt(tx.links.loanId.replace('loan_', ''));
-        const parcelaNum = tx.links.parcelaId ? parseInt(tx.links.parcelaId) : undefined;
-        if (!isNaN(loanIdNum)) markLoanParcelPaid(loanIdNum, tx.amount, tx.date, parcelaNum);
-      }
-
-      if (linkedGroupId) {
-        setTransacoesV2(prev => prev.map(t => {
-          if (t.id === tx.id) return tx;
-          if (t.links?.transferGroupId === linkedGroupId && t.id !== tx.id) {
-            const updatedLinks: TransactionLinks = {
-              investmentId: t.links.investmentId || null,
-              loanId: t.links.loanId || null,
-              transferGroupId: t.links.transferGroupId || null,
-              parcelaId: t.links.parcelaId || null,
-              vehicleTransactionId: t.links.vehicleTransactionId || null
-            };
-            return {
-              ...t,
-              amount: tx.amount,
-              date: tx.date,
-              description: tx.description,
-              flow: t.accountId === transferGroup?.fromAccountId ? 'transfer_out' : 'transfer_in',
-              links: updatedLinks
-            } as TransacaoCompleta;
-          }
-          return t;
-        }));
-      } else {
-        setTransacoesV2(prev => prev.map(t => t.id === tx.id ? tx : t));
-      }
-      return;
-    }
-
-    const newTransactions: TransacaoCompleta[] = [];
-    const baseTx = { ...tx, links: { ...(tx.links || {}) } };
-
-    if (transferGroup) {
-      const tg = transferGroup;
-      const fromAccount = accounts.find(a => a.id === tg.fromAccountId);
-      const toAccount = accounts.find(a => a.id === tg.toAccountId);
-      const isCreditCard = toAccount?.accountType === 'cartao_credito';
-      const originalTx: TransacaoCompleta = {
-        ...baseTx,
-        id: generateTransactionId(),
-        links: {
-          investmentId: baseTx.links.investmentId || null,
-          loanId: baseTx.links.loanId || null,
-          transferGroupId: tg.id,
-          parcelaId: baseTx.links.parcelaId || null,
-          vehicleTransactionId: baseTx.links.vehicleTransactionId || null
-        }
-      };
-      if (isCreditCard) {
-        const ccTx: TransacaoCompleta = {
-          ...originalTx,
-          accountId: tg.toAccountId,
-          flow: 'in' as const,
-          operationType: 'transferencia' as const,
-          description: tg.description || `Pagamento de fatura CC ${toAccount?.name}`,
-        };
-        const fromTx: TransacaoCompleta = {
-          ...originalTx,
-          id: generateTransactionId(),
-          accountId: tg.fromAccountId,
-          flow: 'transfer_out' as const,
-          operationType: 'transferencia' as const,
-          description: tg.description || `Pagamento fatura ${toAccount?.name}`,
-        };
-        newTransactions.push(fromTx, ccTx);
-      } else {
-        const outTx: TransacaoCompleta = {
-          ...originalTx,
-          id: generateTransactionId(),
-          accountId: tg.fromAccountId,
-          flow: 'transfer_out' as const,
-          operationType: 'transferencia' as const,
-          description: tg.description || `Transferência para ${toAccount?.name}`,
-        };
-        const inTx: TransacaoCompleta = {
-          ...originalTx,
-          id: generateTransactionId(),
-          accountId: tg.toAccountId,
-          flow: 'transfer_in' as const,
-          operationType: 'transferencia' as const,
-          description: tg.description || `Transferência recebida de ${fromAccount?.name}`,
-        };
-        newTransactions.push(outTx, inTx);
-      }
+       setTransacoesV2(prev => prev.map(t => t.id === transaction.id ? transaction : t));
     } else {
-      const simpleTx: TransacaoCompleta = {
-        ...baseTx,
-        id: tx.id || generateTransactionId(),
-        links: {
-          investmentId: baseTx.links.investmentId || null,
-          loanId: baseTx.links.loanId || null,
-          transferGroupId: baseTx.links.transferGroupId || null,
-          parcelaId: baseTx.links.parcelaId || null,
-          vehicleTransactionId: baseTx.links.vehicleTransactionId || null
-        }
-      };
-      newTransactions.push(simpleTx);
+       addTransacaoV2(transaction);
     }
-
-    const isInvestmentFlow = (baseTx.operationType === 'aplicacao' || baseTx.operationType === 'resgate') && baseTx.links?.investmentId;
-    if (isInvestmentFlow) {
-      const isAplicacao = baseTx.operationType === 'aplicacao';
-      const groupId = isAplicacao ? `app_${Date.now()}` : `res_${Date.now()}`;
-      const primaryTx = newTransactions.find(t => t.id === baseTx.id) || newTransactions[0];
-      primaryTx.links.transferGroupId = groupId;
-      primaryTx.flow = isAplicacao ? 'out' : 'in';
-      primaryTx.operationType = isAplicacao ? 'aplicacao' : 'resgate';
-      primaryTx.domain = 'investment';
-      const secondaryTx: TransacaoCompleta = {
-        ...primaryTx,
-        id: generateTransactionId(),
-        accountId: baseTx.links.investmentId!,
-        flow: isAplicacao ? 'in' : 'out',
-        operationType: isAplicacao ? 'aplicacao' : 'resgate',
-        domain: 'investment',
-        description: isAplicacao ? baseTx.description || `Aplicação recebida` : baseTx.description || `Resgate enviado`,
-        links: {
-          investmentId: primaryTx.accountId,
-          loanId: primaryTx.links.loanId || null,
-          transferGroupId: groupId,
-          parcelaId: primaryTx.links.parcelaId || null,
-          vehicleTransactionId: primaryTx.links.vehicleTransactionId || null
-        }
-      };
-      if (!newTransactions.some(t => t.id === secondaryTx.id)) newTransactions.push(secondaryTx);
-    }
-
-    const finalTx = newTransactions.find(t => t.id === tx.id) || newTransactions[0];
-    if (finalTx.operationType === 'liberacao_emprestimo' && finalTx.meta?.numeroContrato) {
-      addEmprestimo({
-        contrato: finalTx.meta.numeroContrato,
-        valorTotal: finalTx.amount,
-        parcela: 0,
-        meses: 0,
-        taxaMensal: 0,
-        status: 'pendente_config',
-        liberacaoTransactionId: finalTx.id,
-        contaCorrenteId: finalTx.accountId,
-        dataInicio: finalTx.date
-      });
-    }
-    if (finalTx.operationType === 'pagamento_emprestimo' && finalTx.links?.loanId) {
-      const loanIdNum = parseInt(finalTx.links.loanId.replace('loan_', ''));
-      const parcelaNum = finalTx.links.parcelaId ? parseInt(finalTx.links.parcelaId) : undefined;
-      if (!isNaN(loanIdNum)) markLoanParcelPaid(loanIdNum, finalTx.amount, finalTx.date, parcelaNum);
-    }
-    if (finalTx.links?.vehicleTransactionId && finalTx.flow === 'out') {
-      const [seguroIdStr, parcelaNumeroStr] = finalTx.links.vehicleTransactionId.split('_');
-      const seguroId = parseInt(seguroIdStr);
-      const parcelaNumero = parseInt(parcelaNumeroStr);
-      if (!isNaN(seguroId) && !isNaN(parcelaNumero)) markSeguroParcelPaid(seguroId, parcelaNumero, finalTx.id);
-    }
-    if (finalTx.operationType === 'veiculo' && finalTx.meta?.vehicleOperation === 'compra') {
-      addVeiculo({
-        modelo: finalTx.description,
-        marca: '',
-        tipo: finalTx.meta.tipoVeiculo || 'carro',
-        ano: 0,
-        dataCompra: finalTx.date,
-        valorVeiculo: finalTx.amount,
-        valorSeguro: 0,
-        vencimentoSeguro: "",
-        parcelaSeguro: 0,
-        valorFipe: 0,
-        compraTransactionId: finalTx.id,
-        status: 'pendente_cadastro'
-      });
-    }
-    newTransactions.forEach(t => addTransacaoV2(t));
   };
 
   const handleEditTransaction = (transaction: TransacaoCompleta) => {
@@ -405,33 +191,8 @@ const ReceitasDespesas = () => {
 
   const handleDeleteTransaction = (id: string) => {
     if (!window.confirm("Tem certeza que deseja excluir esta transação?")) return;
-    const transactionToDelete = transactions.find(t => t.id === id);
-    if (transactionToDelete?.operationType === 'pagamento_emprestimo' && transactionToDelete.links?.loanId) {
-      const loanIdNum = parseInt(transactionToDelete.links.loanId.replace('loan_', ''));
-      if (!isNaN(loanIdNum)) unmarkLoanParcelPaid(loanIdNum);
-    }
-    if (transactionToDelete?.links?.vehicleTransactionId && transactionToDelete.flow === 'out') {
-      const [seguroIdStr, parcelaNumStr] = transactionToDelete.links.vehicleTransactionId.split('_');
-      const seguroId = parseInt(seguroIdStr);
-      const parcelaNumero = parseInt(parcelaNumStr);
-      if (!isNaN(seguroId) && !isNaN(parcelaNumero)) unmarkSeguroParcelPaid(seguroId, parcelaNumero);
-    }
-    if (transactionToDelete?.operationType === 'veiculo' && transactionToDelete.meta?.vehicleOperation === 'compra') {
-      const vehicleId = veiculos.find(v => v.compraTransactionId === id)?.id;
-      if (vehicleId) {
-        const vehicle = veiculos.find(v => v.id === vehicleId);
-        if (vehicle?.status === 'pendente_cadastro') deleteVeiculo(vehicleId);
-      }
-    }
-    if (transactionToDelete?.meta.source === 'import') uncontabilizeImportedTransaction(id);
-    const linkedGroupId = transactionToDelete?.links?.transferGroupId;
-    if (linkedGroupId) {
-      setTransacoesV2(prev => prev.filter(t => t.links?.transferGroupId !== linkedGroupId));
-      toast.success("Transações vinculadas excluídas");
-    } else {
-      setTransacoesV2(prev => prev.filter(t => t.id !== id));
-      toast.success("Transação excluída");
-    }
+    setTransacoesV2(prev => prev.filter(t => t.id !== id));
+    toast.success("Transação excluída");
   };
 
   const handleToggleConciliated = (id: string, value: boolean) => {
@@ -440,19 +201,17 @@ const ReceitasDespesas = () => {
 
   const handleAccountSubmit = (account: ContaCorrente, initialBalanceValue: number) => {
     const isNewAccount = !editingAccount;
-    const initialBalanceAmount = initialBalanceValue ?? 0;
-    const newAccount: ContaCorrente = { ...account, initialBalance: 0 };
     if (isNewAccount) {
-      setContasMovimento(prev => [...prev, newAccount]);
-      if (initialBalanceAmount !== 0) {
+      setContasMovimento(prev => [...prev, account]);
+      if (initialBalanceValue !== 0) {
         addTransacaoV2({
           id: generateTransactionId(),
           date: account.startDate!,
           accountId: account.id,
-          flow: initialBalanceAmount >= 0 ? 'in' : 'out',
+          flow: initialBalanceValue >= 0 ? 'in' : 'out',
           operationType: 'initial_balance',
           domain: 'operational',
-          amount: Math.abs(initialBalanceAmount),
+          amount: Math.abs(initialBalanceValue),
           categoryId: null,
           description: `Saldo Inicial de Implantação`,
           links: { investmentId: null, loanId: null, transferGroupId: null, parcelaId: null, vehicleTransactionId: null },
@@ -462,18 +221,18 @@ const ReceitasDespesas = () => {
         });
       }
     } else {
-      setContasMovimento(prev => prev.map(a => a.id === newAccount.id ? newAccount : a));
+      setContasMovimento(prev => prev.map(a => a.id === account.id ? account : a));
     }
     setEditingAccount(undefined);
   };
 
   const handleAccountDelete = (accountId: string) => {
-    if (transactions.some(t => t.accountId === accountId)) {
-      toast.error("Não é possível excluir conta com transações vinculadas");
-      return;
-    }
     setContasMovimento(prev => prev.filter(a => a.id !== accountId));
-    setTransacoesV2(prev => prev.filter(t => t.accountId !== accountId));
+    toast.success("Conta excluída");
+  };
+
+  const handleManageRules = () => {
+    setShowRuleManagerModal(true);
   };
 
   const handleEditAccount = (accountId: string) => {
@@ -577,7 +336,6 @@ const ReceitasDespesas = () => {
 
         {/* Main Content Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 animate-fade-in-up" style={{ animationDelay: '200ms' }}>
-          {/* Accounts Section - Modular */}
           <div className="col-span-12 lg:col-span-8 space-y-6">
             <div className="bg-surface-light dark:bg-surface-dark rounded-[32px] p-6 shadow-soft border border-white/60 dark:border-white/5">
               <div className="flex items-center justify-between mb-6 px-1">
@@ -588,7 +346,7 @@ const ReceitasDespesas = () => {
                 <Button 
                   variant="ghost" 
                   size="sm" 
-                  onClick={() => setShowAccountModal(true)}
+                  onClick={() => { setEditingAccount(undefined); setShowAccountModal(true); }}
                   className="w-10 h-10 rounded-full bg-primary/5 text-primary hover:bg-primary/10"
                 >
                   <Plus className="h-5 w-5" />
@@ -606,7 +364,7 @@ const ReceitasDespesas = () => {
               />
             </div>
 
-            {/* Reconciliation / Smart Area Placeholder */}
+            {/* Reconciliation Card - M3 Style */}
             <div className="bg-gradient-to-br from-neutral-800 to-neutral-900 text-white rounded-[32px] p-8 shadow-lg relative overflow-hidden flex items-center justify-between group">
               <div className="absolute right-0 bottom-0 opacity-10 scale-150 translate-x-10 translate-y-10 group-hover:rotate-12 transition-transform duration-700">
                 <Sparkles className="w-[180px] h-[180px]" />
@@ -616,10 +374,11 @@ const ReceitasDespesas = () => {
                 <p className="text-neutral-400 text-sm max-w-sm">Importe seus extratos OFX ou CSV e deixe o Orbium categorizar tudo automaticamente com base nas suas regras.</p>
                 <div className="flex gap-3 mt-6">
                   <Button 
-                    className="bg-primary text-primary-foreground rounded-full px-6 font-bold h-10 hover:scale-105 transition-transform"
-                    onClick={() => setShowRuleManagerModal(true)}
+                    className="bg-primary text-primary-foreground rounded-full px-6 font-bold h-10 hover:scale-105 transition-transform gap-2"
+                    onClick={() => handleImportExtrato(null)}
                   >
-                    Gerenciar Regras
+                    <Upload className="w-4 h-4" />
+                    Importar Extrato
                   </Button>
                 </div>
               </div>
@@ -629,7 +388,6 @@ const ReceitasDespesas = () => {
             </div>
           </div>
 
-          {/* Indicators Section - Vertical Sidebar */}
           <div className="col-span-12 lg:col-span-4">
              <div className="bg-surface-light dark:bg-surface-dark rounded-[32px] p-6 shadow-soft border border-white/60 dark:border-white/5 h-full">
                 <KPISidebar transactions={transacoesPeriodo1} categories={categories} />
@@ -638,15 +396,32 @@ const ReceitasDespesas = () => {
         </div>
       </div>
 
-      {/* Modais mantidos conforme lógica anterior */}
+      {/* Modals */}
       <MovimentarContaModal open={showMovimentarModal} onOpenChange={setShowMovimentarModal} accounts={accounts} categories={categories} investments={investments} loans={loans} segurosVeiculo={segurosVeiculo} veiculos={veiculos} selectedAccountId={selectedAccountForModal} onSubmit={handleTransactionSubmit} editingTransaction={editingTransaction} />
+      
       <AccountFormModal open={showAccountModal} onOpenChange={setShowAccountModal} account={editingAccount} onSubmit={handleAccountSubmit} onDelete={handleAccountDelete} hasTransactions={editingAccount ? transactions.some(t => t.accountId === editingAccount.id) : false} />
+      
       <CategoryFormModal open={showCategoryModal} onOpenChange={setShowCategoryModal} category={editingCategory} onSubmit={handleCategorySubmit} onDelete={handleCategoryDelete} hasTransactions={editingCategory ? transactions.some(t => t.categoryId === editingCategory.id) : false} />
+      
       <CategoryListModal open={showCategoryListModal} onOpenChange={setShowCategoryListModal} categories={categories} onAddCategory={() => { setEditingCategory(undefined); setShowCategoryModal(true); }} onEditCategory={cat => { setEditingCategory(cat); setShowCategoryModal(true); }} onDeleteCategory={handleCategoryDelete} transactionCountByCategory={transactionCountByCategory} />
-      {viewingAccount && viewingSummary && <AccountStatementDialog open={showStatementDialog} onOpenChange={setShowStatementDialog} account={viewingAccount} accountSummary={viewingSummary} transactions={viewingTransactions} categories={categories} onEditTransaction={handleEditTransaction} onDeleteTransaction={handleDeleteTransaction} onToggleConciliated={handleToggleConciliated} onReconcileAll={() => handleReconcile(viewingAccountId!)} />}
+      
+      {viewingAccount && viewingSummary && <AccountStatementDialog open={showStatementDialog} onOpenChange={setShowStatementDialog} account={viewingAccount} accountSummary={viewingSummary} transactions={viewingTransactions} categories={categories} onEditTransaction={handleEditTransaction} onDeleteTransaction={handleDeleteTransaction} onToggleConciliated={handleToggleConciliated} onReconcileAll={() => {}} />}
+      
       <BillsTrackerModal open={showBillsTrackerModal} onOpenChange={setShowBillsTrackerModal} />
-      {accountToManage && <StatementManagerDialog open={showStatementManagerModal} onOpenChange={setShowStatementManagerModal} account={accountToManage} investments={investments} loans={loans} onStartConsolidatedReview={handleStartConsolidatedReview} onManageRules={handleManageRules} />}
+      
+      <StatementManagerDialog 
+        open={showStatementManagerModal} 
+        onOpenChange={setShowStatementManagerModal} 
+        accounts={accounts.filter(a => a.accountType === 'corrente')}
+        selectedAccountId={accountToManageId}
+        investments={investments} 
+        loans={loans} 
+        onStartConsolidatedReview={handleStartConsolidatedReview} 
+        onManageRules={handleManageRules} 
+      />
+      
       {accountForConsolidatedReview && <ConsolidatedReviewDialog open={showConsolidatedReview} onOpenChange={setShowConsolidatedReview} accountId={accountForConsolidatedReview} accounts={accounts} categories={categories} investments={investments} loans={loans} />}
+      
       <StandardizationRuleManagerModal open={showRuleManagerModal} onOpenChange={setShowRuleManagerModal} rules={standardizationRules} onDeleteRule={deleteStandardizationRule} categories={categories} />
     </MainLayout>
   );
