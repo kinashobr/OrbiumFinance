@@ -18,7 +18,7 @@ interface StandardizationRuleFormModalProps {
   onSave: (rule: Omit<StandardizationRule, "id">, ruleId?: string) => void;
 }
 
-const STANDARDIZABLE_OPERATIONS: { value: OperationType; label: string; color: string }[] = [
+export const STANDARDIZABLE_OPERATIONS: { value: OperationType; label: string; color: string }[] = [
   { value: 'receita', label: 'Receita', color: 'text-success' },
   { value: 'despesa', label: 'Despesa', color: 'text-destructive' },
   { value: 'transferencia', label: 'Transferência', color: 'text-primary' },
