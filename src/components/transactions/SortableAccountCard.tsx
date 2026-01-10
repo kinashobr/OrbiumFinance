@@ -10,6 +10,10 @@ interface SortableAccountCardProps {
   onViewHistory: (accountId: string) => void;
   onEdit?: (accountId: string) => void;
   onImport?: (accountId: string) => void; // NOVO PROP
+  isDraggingParent: boolean; // New prop to indicate if parent is dragging
+  longPressActive: boolean; // New prop to conditionally apply listeners
+  onLongPressStart: () => void; // New prop for long press detection
+  onLongPressEnd: () => void; // New prop for long press detection
 }
 
 export function SortableAccountCard({
@@ -18,6 +22,10 @@ export function SortableAccountCard({
   onViewHistory,
   onEdit,
   onImport, // RECEBIDO AQUI
+  isDraggingParent,
+  longPressActive,
+  onLongPressStart,
+  onLongPressEnd,
 }: SortableAccountCardProps) {
   const {
     attributes,
@@ -46,7 +54,11 @@ export function SortableAccountCard({
       style={style}
       className={cn("shrink-0 transition-transform duration-300 ease-out", isDragging && "scale-[1.05]")}
       {...attributes}
-      {...listeners}
+      {...(longPressActive ? listeners : {})} {/* Conditionally apply listeners */}
+      onTouchStart={onLongPressStart}
+      onTouchEnd={onLongPressEnd}
+      onMouseDown={onLongPressStart} // Also for desktop drag initiation
+      onMouseUp={onLongPressEnd} // Also for desktop drag initiation
     >
       <AccountCard
         summary={summary}
