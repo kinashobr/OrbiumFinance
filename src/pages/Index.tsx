@@ -13,10 +13,14 @@ import { DateRange, ComparisonDateRanges } from "@/types/finance";
 import { 
   Activity,
   LayoutDashboard,
-  Sparkles
+  Sparkles,
+  Wallet,
+  CalendarDays
 } from "lucide-react";
 import { startOfMonth, endOfMonth, isWithinInterval, format, subMonths, subDays, startOfDay, endOfDay } from "date-fns";
 import { parseDateLocal } from "@/lib/utils";
+import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
 
 const Index = () => {
   const { 
@@ -128,60 +132,42 @@ const Index = () => {
   return (
     <MainLayout>
       <div className="space-y-8 pb-10">
-        {/* Cabeçalho Expressivo */}
-        <header className="space-y-4 animate-fade-in px-1">
-          <div className="flex items-center justify-between">
-            <div className="flex flex-col gap-1">
-              <div className="flex items-center gap-2">
-                <LayoutDashboard className="w-5 h-5 text-primary" />
-                <h1 className="text-xl md:text-2xl font-bold tracking-tight text-foreground">Cockpit Financeiro</h1>
-              </div>
-              <p className="text-xs text-muted-foreground font-medium flex items-center gap-1">
-                <Sparkles className="w-3 h-3 text-warning" />
-                Bem-vindo ao seu centro de comando patrimonial
-              </p>
+        {/* Cabeçalho Expressivo (Desktop/Mobile) */}
+        <header className="sticky top-0 z-10 bg-background/80 backdrop-blur-xl px-1 md:px-6 py-4 md:py-6 flex justify-between items-center border-b border-border/0">
+          <div className="flex items-center gap-4">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center text-white shadow-lg shadow-primary/20 ring-4 ring-primary/10 shrink-0">
+              <Wallet className="w-5 h-5" />
             </div>
-            <PeriodSelector 
-              initialRanges={dateRanges}
-              onDateRangeChange={handlePeriodChange}
-              className="hidden sm:flex h-10 rounded-2xl bg-card border-border/60 shadow-xs"
-            />
+            <div>
+              <h1 className="font-bold text-xl md:text-3xl text-foreground tracking-tight">Visão Geral</h1>
+              <p className="text-xs md:text-sm text-muted-foreground mt-0.5">Bem-vindo de volta, investidor.</p>
+            </div>
           </div>
-          
-          <div className="sm:hidden">
-            <PeriodSelector 
-              initialRanges={dateRanges}
-              onDateRangeChange={handlePeriodChange}
-              className="w-full h-10 rounded-2xl bg-card border-border/60"
-            />
+          <div className="flex items-center gap-4">
+            <Button 
+              variant="outline" 
+              size="sm" 
+              className="hidden md:flex items-center gap-2 bg-card pl-4 pr-3 py-2.5 rounded-full border border-border/60 shadow-sm hover:bg-muted/50 transition-all"
+            >
+              <span className="text-xs font-bold tracking-wide text-primary uppercase">
+                {dateRanges.range1.from ? format(dateRanges.range1.from, 'MMMM yyyy', { locale: new Intl.Locale('pt-BR') }) : 'Selecione o Período'}
+              </span>
+              <CalendarDays className="w-4 h-4 text-muted-foreground" />
+            </Button>
           </div>
         </header>
 
-        {/* KPIs Principais */}
-        <section className="animate-fade-in-up">
-          <CockpitCards data={cockpitData} />
-        </section>
+        {/* Grid Principal (Desktop: 3 colunas, Mobile: 2 colunas) */}
+        <div className="grid grid-cols-2 lg:grid-cols-12 gap-4 md:gap-6">
+          
+          {/* 1. Card Principal (Patrimônio) - Ocupa 2 colunas no mobile, 8 no desktop */}
+          <section className="col-span-2 lg:col-span-8 animate-fade-in-up">
+            <CockpitCards data={cockpitData} />
+          </section>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 md:gap-8">
-          <div className="lg:col-span-2 space-y-8">
-            {/* Lista de Movimentações */}
-            <section className="animate-fade-in-up" style={{ animationDelay: '100ms' }}>
-              <MovimentacoesRelevantes transacoes={transacoesPeriodo1} limit={6} />
-            </section>
-            
-            {/* Mapa de Calor do Fluxo */}
-            <section className="animate-fade-in-up" style={{ animationDelay: '200ms' }}>
-              <FluxoCaixaHeatmap 
-                month={dateRanges.range1.from ? format(dateRanges.range1.from, 'MM') : format(new Date(), 'MM')} 
-                year={dateRanges.range1.from ? dateRanges.range1.from.getFullYear() : new Date().getFullYear()} 
-                transacoes={transacoesPeriodo1} 
-              />
-            </section>
-          </div>
-
-          <div className="space-y-8">
-            {/* Widgets de Contexto Lateral */}
-            <section className="animate-fade-in-up" style={{ animationDelay: '150ms' }}>
+          {/* 2. Liquidez e Carteira (Mobile: 1 coluna cada, Desktop: 4 colunas) */}
+          <section className="col-span-2 lg:col-span-4 grid grid-cols-2 lg:grid-cols-1 gap-4 md:gap-6">
+            <div className="col-span-1 lg:col-span-1 animate-fade-in-up" style={{ animationDelay: '100ms' }}>
               <AcompanhamentoAtivos
                 investimentosRF={saldosPorConta.filter(c => c.accountType === 'renda_fixa' || c.accountType === 'poupanca').reduce((a, c) => a + c.saldo, 0)}
                 criptomoedas={saldosPorConta.filter(c => c.accountType === 'cripto' && !c.name.toLowerCase().includes('stable')).reduce((a, c) => a + c.saldo, 0)}
@@ -189,9 +175,8 @@ const Index = () => {
                 reservaEmergencia={saldosPorConta.filter(c => c.accountType === 'reserva').reduce((a, c) => a + c.saldo, 0)}
                 poupanca={saldosPorConta.filter(c => c.accountType === 'poupanca').reduce((a, c) => a + c.saldo, 0)}
               />
-            </section>
-            
-            <section className="animate-fade-in-up" style={{ animationDelay: '250ms' }}>
+            </div>
+            <div className="col-span-1 lg:col-span-1 animate-fade-in-up" style={{ animationDelay: '200ms' }}>
               <SaudeFinanceira
                 liquidez={liquidezRatio}
                 endividamento={endividamentoPercent}
@@ -199,8 +184,22 @@ const Index = () => {
                 estabilidadeFluxo={mesesPositivos}
                 dependenciaRenda={dependenciaRenda}
               />
-            </section>
-          </div>
+            </div>
+          </section>
+
+          {/* 3. Heatmap e Movimentações (Desktop: 8 colunas) */}
+          <section className="col-span-2 lg:col-span-8 grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
+            <div className="col-span-1 animate-fade-in-up" style={{ animationDelay: '300ms' }}>
+              <FluxoCaixaHeatmap 
+                month={dateRanges.range1.from ? format(dateRanges.range1.from, 'MM') : format(new Date(), 'MM')} 
+                year={dateRanges.range1.from ? dateRanges.range1.from.getFullYear() : new Date().getFullYear()} 
+                transacoes={transacoesPeriodo1} 
+              />
+            </div>
+            <div className="col-span-1 animate-fade-in-up" style={{ animationDelay: '400ms' }}>
+              <MovimentacoesRelevantes transacoes={transacoesPeriodo1} limit={6} />
+            </div>
+          </section>
         </div>
       </div>
     </MainLayout>
