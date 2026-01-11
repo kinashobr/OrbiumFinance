@@ -58,7 +58,7 @@ export function DRETab({ dateRanges }: { dateRanges: ComparisonDateRanges }) {
     <div className="space-y-12 animate-fade-in">
       {/* HERO SECTION - Resultado Líquido */}
       <div className={cn(
-        "rounded-[3.5rem] p-12 shadow-2xl border-4 transition-all duration-700 relative overflow-hidden flex flex-col items-center text-center group",
+        "rounded-[3.5rem] p-12 shadow-soft border-4 transition-all duration-700 relative overflow-hidden flex flex-col items-center text-center group",
         dre1.res >= 0 ? "bg-success/5 border-success/20 shadow-success/10" : "bg-destructive/5 border-destructive/20 shadow-destructive/10"
       )}>
         <div className="absolute inset-0 bg-gradient-to-b from-transparent to-black/[0.02]" />
