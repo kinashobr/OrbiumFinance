@@ -21,7 +21,8 @@ import {
   PieChart,
   LayoutGrid,
   Zap,
-  History
+  History,
+  ArrowRight // Adicionado ArrowRight
 } from "lucide-react";
 import { cn, parseDateLocal } from "@/lib/utils";
 import { useFinance } from "@/contexts/FinanceContext";
