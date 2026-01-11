@@ -4,7 +4,7 @@ import { useMemo, useCallback } from "react";
 import { 
   TrendingUp, TrendingDown, Scale, Wallet, Building2, Car, 
   Banknote, PiggyBank, Target, ShieldCheck, Shield, Bitcoin, 
-  Activity, FileText, ArrowRight, History 
+  Activity, FileText, ArrowRight, History, CreditCard
 } from "lucide-react";
 import { useFinance } from "@/contexts/FinanceContext";
 import { ReportCard } from "./ReportCard";
