@@ -5,11 +5,11 @@ import {
   Activity, ShieldCheck, Zap, Scale, Sparkles, TrendingUp, 
   TrendingDown, Target, Shield, Gauge, Heart, Wallet, 
   Coins, Landmark, BarChart3, Plus, LayoutGrid, User, Minus, Calendar,
-  Settings2
+  Settings2, LineChart
 } from "lucide-react";
 import { useFinance } from "@/contexts/FinanceContext";
 import { ComparisonDateRanges, DateRange, formatCurrency } from "@/types/finance";
-import { startOfDay, endOfDay, isWithinInterval, subMonths } from "date-fns";
+import { startOfDay, endOfDay, isWithinInterval, subMonths, format } from "date-fns";
 import { parseDateLocal, cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { IndicatorCard, IndicatorStatus } from "./IndicatorCard";
@@ -136,23 +136,40 @@ export function IndicadoresTab({ dateRanges }: { dateRanges: ComparisonDateRange
 
   return (
     <div className="space-y-16 animate-fade-in-up pb-20">
-      {/* DESTAQUE PRINCIPAL: SCORE DE SAÚDE */}
+      {/* DESTAQUE PRINCIPAL: SCORE DE SAÚDE (Design unificado com cards principais) */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-        <div className="lg:col-span-5 bg-surface-light dark:bg-surface-dark rounded-[3rem] p-10 border border-white/60 dark:border-white/5 shadow-soft flex flex-col items-center justify-center text-center group">
-          <Badge className="bg-primary/10 text-primary border-none font-black text-[10px] px-4 py-1.5 rounded-full uppercase tracking-[0.2em] mb-8">Score de Saúde Geral</Badge>
-          <RadialGauge 
-            value={m1.poupanca + 50} 
-            label="Saúde Financeira"
-            status={m1.poupanca >= 20 ? "success" : "warning"}
-            size={240}
-          />
-          <div className="mt-8 space-y-2">
-            <p className="text-sm font-bold text-foreground">Seu patrimônio está em expansão</p>
-            <p className="text-xs text-muted-foreground max-w-[240px]">Com base na sua margem de poupança e liquidez atual.</p>
+        <div className="lg:col-span-6">
+          <div className="bg-surface-light dark:bg-surface-dark rounded-[40px] p-8 sm:p-10 shadow-soft relative overflow-hidden border border-white/60 dark:border-white/5 h-[400px] flex flex-col justify-center group">
+             <div className="absolute inset-0 bg-gradient-to-br from-primary/[0.03] to-transparent"></div>
+             <div className="absolute right-0 top-0 opacity-10 scale-150 translate-x-10 -translate-y-10 group-hover:rotate-6 transition-transform duration-1000">
+                <LineChart className="w-[300px] h-[300px] text-primary" />
+             </div>
+
+             <div className="relative z-10 flex flex-col sm:flex-row items-center gap-10">
+                <div className="shrink-0">
+                  <RadialGauge 
+                    value={m1.poupanca + 50} 
+                    label="Score"
+                    status={m1.poupanca >= 20 ? "success" : "warning"}
+                    size={220}
+                  />
+                </div>
+                <div className="flex-1 text-center sm:text-left space-y-4">
+                  <Badge className="bg-primary/10 text-primary border-none font-black text-[10px] px-4 py-1.5 rounded-full uppercase tracking-[0.2em]">Saúde Financeira</Badge>
+                  <h2 className="text-[11px] font-black text-muted-foreground uppercase tracking-[0.2em]">Status do Patrimônio</h2>
+                  <h3 className="font-display font-extrabold text-4xl text-foreground tracking-tighter leading-tight">
+                    {m1.poupanca >= 20 ? "Patrimônio em Expansão" : "Estabilidade Operacional"}
+                  </h3>
+                  <div className="flex items-center justify-center sm:justify-start gap-2">
+                    <Sparkles className="w-3.5 h-3.5 text-accent" />
+                    <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Calculado em {format(range1.to || new Date(), "MM/yyyy")}</span>
+                  </div>
+                </div>
+             </div>
           </div>
         </div>
 
-        <div className="lg:col-span-7 grid grid-cols-1 sm:grid-cols-2 gap-6">
+        <div className="lg:col-span-6 grid grid-cols-1 sm:grid-cols-2 gap-6">
           <IndicatorCard 
             title="Capacidade Poupança" 
             value={`${m1.poupanca.toFixed(1)}%`} 
@@ -170,23 +187,31 @@ export function IndicadoresTab({ dateRanges }: { dateRanges: ComparisonDateRange
             icon={Heart}
             sparklineData={[20, 25, 22, 28, 30, 27, 32]}
           />
-          <div className="sm:col-span-2 flex flex-col sm:flex-row sm:items-center justify-between gap-6 bg-muted/30 p-6 rounded-[2.5rem] border border-border/40">
-            <div className="flex flex-wrap items-center gap-6">
+          
+          {/* Área de Configuração Refinada */}
+          <div className="sm:col-span-2 flex items-center justify-between bg-muted/20 px-6 py-4 rounded-[2rem] border border-border/40">
+            <div className="flex items-center gap-6">
               <div className="flex items-center gap-2">
-                <div className="w-3 h-3 rounded-full bg-success" />
-                <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Saudável</span>
+                <div className="w-2 h-2 rounded-full bg-success" />
+                <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">Saudável</span>
               </div>
               <div className="flex items-center gap-2">
-                <div className="w-3 h-3 rounded-full bg-warning" />
-                <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Atenção</span>
+                <div className="w-2 h-2 rounded-full bg-warning" />
+                <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">Atenção</span>
               </div>
               <div className="flex items-center gap-2">
-                <div className="w-3 h-3 rounded-full bg-destructive" />
-                <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Crítico</span>
+                <div className="w-2 h-2 rounded-full bg-destructive" />
+                <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">Crítico</span>
               </div>
             </div>
-            <Button onClick={() => setShowManagerModal(true)} variant="outline" className="rounded-full h-11 w-11 p-0 border-2 shadow-lg">
-              <Settings2 size={20} />
+            <Button 
+              onClick={() => setShowManagerModal(true)} 
+              variant="ghost" 
+              size="sm"
+              className="rounded-full h-9 gap-2 px-4 font-black text-[10px] uppercase tracking-widest hover:bg-primary/10 hover:text-primary transition-all"
+            >
+              <Settings2 size={14} />
+              Configurar
             </Button>
           </div>
         </div>

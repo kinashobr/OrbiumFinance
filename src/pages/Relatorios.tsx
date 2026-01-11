@@ -2,26 +2,39 @@
 
 import { useState, useCallback } from "react";
 import { MainLayout } from "@/components/layout/MainLayout";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsContent } from "@/components/ui/tabs";
 import { BalancoTab } from "@/components/reports/BalancoTab";
 import { DRETab } from "@/components/reports/DRETab";
 import { IndicadoresTab } from "@/components/reports/IndicadoresTab";
-import { Scale, Receipt, Activity, BarChart3, Sparkles } from "lucide-react";
+import { Scale, Receipt, Activity, BarChart3, Sparkles, ChevronDown } from "lucide-react";
 import { PeriodSelector } from "@/components/dashboard/PeriodSelector";
 import { ComparisonDateRanges } from "@/types/finance";
 import { useFinance } from "@/contexts/FinanceContext";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 export default function Relatorios() {
   const { dateRanges, setDateRanges } = useFinance();
+  const [activeTab, setActiveTab] = useState("balanco");
 
   const handlePeriodChange = useCallback((ranges: ComparisonDateRanges) => {
     setDateRanges(ranges);
   }, [setDateRanges]);
 
+  const tabOptions = [
+    { value: "balanco", label: "Balanço Patrimonial", icon: Scale },
+    { value: "dre", label: "DRE (Resultado)", icon: Receipt },
+    { value: "indicadores", label: "Saúde e Indicadores", icon: Activity },
+  ];
+
   return (
     <MainLayout>
       <div className="space-y-8 pb-12">
-        {/* HEADER LIMPO E FUNCIONAL */}
         <header className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 px-1 animate-fade-in">
           <div className="flex items-center gap-4">
             <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-primary to-primary-dark flex items-center justify-center text-white shadow-xl shadow-primary/20 ring-4 ring-primary/10">
@@ -35,41 +48,36 @@ export default function Relatorios() {
               </div>
             </div>
           </div>
-          <PeriodSelector 
-            initialRanges={dateRanges}
-            onDateRangeChange={handlePeriodChange}
-            className="h-11 rounded-full bg-surface-light dark:bg-surface-dark border-border/40 shadow-sm px-6 font-bold"
-          />
+          
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+            {/* Menu Suspenso para Troca de Relatório */}
+            <Select value={activeTab} onValueChange={setActiveTab}>
+              <SelectTrigger className="h-11 w-full sm:w-[240px] rounded-full bg-card border-border/40 shadow-sm px-6 font-bold text-xs uppercase tracking-widest">
+                <div className="flex items-center gap-2">
+                  <SelectValue placeholder="Selecionar Relatório" />
+                </div>
+              </SelectTrigger>
+              <SelectContent className="rounded-2xl border-border/40 shadow-2xl">
+                {tabOptions.map((opt) => (
+                  <SelectItem key={opt.value} value={opt.value} className="py-3 font-bold text-xs uppercase tracking-widest">
+                    <div className="flex items-center gap-2">
+                      <opt.icon className="w-4 h-4 text-primary" />
+                      {opt.label}
+                    </div>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            <PeriodSelector 
+              initialRanges={dateRanges}
+              onDateRangeChange={handlePeriodChange}
+              className="h-11 rounded-full bg-surface-light dark:bg-surface-dark border-border/40 shadow-sm px-6 font-bold"
+            />
+          </div>
         </header>
 
-        {/* NAVEGAÇÃO DE ALTO NÍVEL */}
-        <Tabs defaultValue="balanco" className="space-y-8">
-          <div className="border-b border-border/40 px-1">
-            <TabsList className="bg-transparent h-auto p-0 gap-10">
-              <TabsTrigger
-                value="balanco"
-                className="bg-transparent rounded-none border-b-4 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent shadow-none px-0 py-4 text-xs font-black uppercase tracking-[0.2em] text-muted-foreground data-[state=active]:text-foreground transition-all"
-              >
-                <Scale className="w-4 h-4 mr-2.5" />
-                Balanço
-              </TabsTrigger>
-              <TabsTrigger
-                value="dre"
-                className="bg-transparent rounded-none border-b-4 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent shadow-none px-0 py-4 text-xs font-black uppercase tracking-[0.2em] text-muted-foreground data-[state=active]:text-foreground transition-all"
-              >
-                <Receipt className="w-4 h-4 mr-2.5" />
-                DRE
-              </TabsTrigger>
-              <TabsTrigger
-                value="indicadores"
-                className="bg-transparent rounded-none border-b-4 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent shadow-none px-0 py-4 text-xs font-black uppercase tracking-[0.2em] text-muted-foreground data-[state=active]:text-foreground transition-all"
-              >
-                <Activity className="w-4 h-4 mr-2.5" />
-                Saúde
-              </TabsTrigger>
-            </TabsList>
-          </div>
-
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-8">
           <TabsContent value="balanco" className="mt-0 focus-visible:outline-none">
             <BalancoTab dateRanges={dateRanges} />
           </TabsContent>
