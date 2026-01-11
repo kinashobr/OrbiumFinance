@@ -4,7 +4,8 @@ import { useMemo, useState, useCallback } from "react";
 import { 
   Activity, ShieldCheck, Zap, Scale, Sparkles, TrendingUp, 
   TrendingDown, Target, Shield, Gauge, Heart, Wallet, 
-  Coins, Landmark, BarChart3, Plus, LayoutGrid, User, Minus, Calendar
+  Coins, Landmark, BarChart3, Plus, LayoutGrid, User, Minus, Calendar,
+  Settings2
 } from "lucide-react";
 import { useFinance } from "@/contexts/FinanceContext";
 import { ComparisonDateRanges, DateRange, formatCurrency } from "@/types/finance";
@@ -12,9 +13,20 @@ import { startOfDay, endOfDay, isWithinInterval, subMonths } from "date-fns";
 import { parseDateLocal, cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { IndicatorCard, IndicatorStatus } from "./IndicatorCard";
-import { CustomIndicatorModal } from "./CustomIndicatorModal";
+import { IndicatorManagerModal } from "./IndicatorManagerModal";
 import { RadialGauge } from "./RadialGauge";
 import { Button } from "@/components/ui/button";
+
+interface CustomIndicator {
+  id: string;
+  name: string;
+  format: string;
+  formula: string;
+  goal: number;
+  alert: number;
+  logic: "higher" | "lower";
+  description: string;
+}
 
 export function IndicadoresTab({ dateRanges }: { dateRanges: ComparisonDateRanges }) {
   const { 
@@ -29,7 +41,8 @@ export function IndicadoresTab({ dateRanges }: { dateRanges: ComparisonDateRange
     categoriasV2
   } = useFinance();
   
-  const [showCustomModal, setShowCustomModal] = useState(false);
+  const [showManagerModal, setShowManagerModal] = useState(false);
+  const [customIndicators, setCustomIndicators] = useState<CustomIndicator[]>([]);
   const { range1, range2 } = dateRanges;
 
   const calculateMetrics = useCallback((range: DateRange) => {
@@ -95,8 +108,17 @@ export function IndicadoresTab({ dateRanges }: { dateRanges: ComparisonDateRange
 
   const getTrend = (v1: number, v2: number) => v2 !== 0 ? ((v1 - v2) / Math.abs(v2)) * 100 : 0;
 
-  // Mock de dados históricos para sparklines
-  const sparkData = [30, 45, 35, 50, 40, 60, 55];
+  const handleSaveIndicator = (indicator: CustomIndicator) => {
+    setCustomIndicators(prev => {
+      const exists = prev.find(i => i.id === indicator.id);
+      if (exists) return prev.map(i => i.id === indicator.id ? indicator : i);
+      return [...prev, indicator];
+    });
+  };
+
+  const handleDeleteIndicator = (id: string) => {
+    setCustomIndicators(prev => prev.filter(i => i.id !== id));
+  };
 
   const SectionHeader = ({ title, subtitle, icon: Icon }: any) => (
     <div className="flex items-center justify-between mb-6 px-2">
@@ -119,7 +141,7 @@ export function IndicadoresTab({ dateRanges }: { dateRanges: ComparisonDateRange
         <div className="lg:col-span-5 bg-surface-light dark:bg-surface-dark rounded-[3rem] p-10 border border-white/60 dark:border-white/5 shadow-soft flex flex-col items-center justify-center text-center group">
           <Badge className="bg-primary/10 text-primary border-none font-black text-[10px] px-4 py-1.5 rounded-full uppercase tracking-[0.2em] mb-8">Score de Saúde Geral</Badge>
           <RadialGauge 
-            value={m1.poupanca + 50} // Exemplo de score composto
+            value={m1.poupanca + 50} 
             label="Saúde Financeira"
             status={m1.poupanca >= 20 ? "success" : "warning"}
             size={240}
@@ -137,7 +159,7 @@ export function IndicadoresTab({ dateRanges }: { dateRanges: ComparisonDateRange
             trend={getTrend(m1.poupanca, m2.poupanca)}
             status={m1.poupanca >= 20 ? "success" : m1.poupanca >= 10 ? "warning" : "danger"}
             icon={ShieldCheck}
-            sparklineData={sparkData}
+            sparklineData={[30, 45, 35, 50, 40, 60, 55]}
             className="h-full"
           />
           <IndicatorCard 
@@ -163,12 +185,30 @@ export function IndicadoresTab({ dateRanges }: { dateRanges: ComparisonDateRange
                 <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Crítico</span>
               </div>
             </div>
-            <Button onClick={() => setShowCustomModal(true)} className="rounded-full h-11 px-8 font-black text-xs gap-2 shadow-lg shadow-primary/20">
-              <Plus size={16} /> NOVO INDICADOR
+            <Button onClick={() => setShowManagerModal(true)} variant="outline" className="rounded-full h-11 w-11 p-0 border-2 shadow-lg">
+              <Settings2 size={20} />
             </Button>
           </div>
         </div>
       </div>
+
+      {/* 1. MEUS INDICADORES (Destaque) */}
+      {customIndicators.length > 0 && (
+        <section>
+          <SectionHeader title="Meus Indicadores" subtitle="Métricas personalizadas" icon={User} />
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            {customIndicators.map(ind => (
+              <IndicatorCard 
+                key={ind.id}
+                title={ind.name} 
+                value={ind.format === 'percent' ? '0.0%' : ind.format === 'currency' ? 'R$ 0,00' : '0.0x'} 
+                status="neutral"
+                icon={LayoutGrid}
+              />
+            ))}
+          </div>
+        </section>
+      )}
 
       {/* 2. LIQUIDEZ */}
       <section>
@@ -220,10 +260,12 @@ export function IndicadoresTab({ dateRanges }: { dateRanges: ComparisonDateRange
         </div>
       </section>
 
-      <CustomIndicatorModal 
-        open={showCustomModal} 
-        onOpenChange={setShowCustomModal} 
-        onSave={(data) => console.log("Novo indicador:", data)} 
+      <IndicatorManagerModal 
+        open={showManagerModal} 
+        onOpenChange={setShowManagerModal} 
+        indicators={customIndicators}
+        onSave={handleSaveIndicator}
+        onDelete={handleDeleteIndicator}
       />
     </div>
   );
