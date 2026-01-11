@@ -5,10 +5,10 @@ import { TrendingUp, TrendingDown, DollarSign, Calculator, Minus, Plus, Sparkles
 import { useFinance } from "@/contexts/FinanceContext";
 import { cn, parseDateLocal } from "@/lib/utils";
 import { ComparisonDateRanges, DateRange, formatCurrency } from "@/types/finance";
-import { startOfDay, endOfDay, isWithinInterval, subMonths, endOfMonth, format } from "date-fns";
+import { startOfDay, endOfDay, isWithinInterval, subMonths, endOfMonth, format, startOfMonth } from "date-fns";
 import { Badge } from "@/components/ui/badge";
 import { DREStatement } from "./DREStatement";
-import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart as RePieChart, Cell, Legend } from "recharts";
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart as RePieChart, Pie, Cell, Legend } from "recharts";
 import { useChartColors } from "@/hooks/useChartColors";
 import { ptBR } from "date-fns/locale";
 
