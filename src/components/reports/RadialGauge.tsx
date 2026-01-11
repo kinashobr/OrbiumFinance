@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
 
 interface RadialGaugeProps {
@@ -23,11 +24,20 @@ export function RadialGauge({
   size = 200,
   className,
 }: RadialGaugeProps) {
+  const [offset, setOffset] = useState(0);
   const radius = size * 0.4;
   const stroke = size * 0.08;
   const percentage = Math.min(Math.max(((value - min) / (max - min)) * 100, 0), 100);
   const circumference = 2 * Math.PI * radius;
-  const strokeDashoffset = circumference - (percentage / 100) * circumference;
+
+  useEffect(() => {
+    // Pequeno delay para garantir que a animação ocorra após a montagem
+    const timer = setTimeout(() => {
+      const progressOffset = circumference - (percentage / 100) * circumference;
+      setOffset(progressOffset);
+    }, 100);
+    return () => clearTimeout(timer);
+  }, [percentage, circumference]);
 
   const statusColors = {
     success: "text-success",
@@ -50,7 +60,7 @@ export function RadialGauge({
             fill="transparent"
             className="text-muted/20"
           />
-          {/* Progress circle */}
+          {/* Progress circle animado */}
           <circle
             cx={size / 2}
             cy={size / 2}
@@ -58,7 +68,7 @@ export function RadialGauge({
             stroke="currentColor"
             strokeWidth={stroke}
             strokeDasharray={circumference}
-            strokeDashoffset={strokeDashoffset}
+            strokeDashoffset={offset === 0 ? circumference : offset}
             strokeLinecap="round"
             fill="transparent"
             className={cn("transition-all duration-1000 ease-out", statusColors[status])}
