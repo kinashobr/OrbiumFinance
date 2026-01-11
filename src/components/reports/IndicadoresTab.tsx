@@ -13,6 +13,7 @@ import { parseDateLocal, cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { IndicatorCard, IndicatorStatus } from "./IndicatorCard";
 import { CustomIndicatorModal } from "./CustomIndicatorModal";
+import { RadialGauge } from "./RadialGauge";
 import { Button } from "@/components/ui/button";
 
 export function IndicadoresTab({ dateRanges }: { dateRanges: ComparisonDateRanges }) {
@@ -23,9 +24,7 @@ export function IndicadoresTab({ dateRanges }: { dateRanges: ComparisonDateRange
     contasMovimento, 
     calculateBalanceUpToDate,
     getValorFipeTotal,
-    getSegurosAApropriar,
     getSegurosAPagar,
-    getLoanPrincipalRemaining,
     getCreditCardDebt,
     categoriasV2
   } = useFinance();
@@ -45,7 +44,6 @@ export function IndicadoresTab({ dateRanges }: { dateRanges: ComparisonDateRange
       } catch { return false; }
     });
 
-    // --- Dados Base ---
     const totalAtivos = getAtivosTotal(date);
     const totalPassivos = getPassivosTotal(date);
     const pl = totalAtivos - totalPassivos;
@@ -58,7 +56,7 @@ export function IndicadoresTab({ dateRanges }: { dateRanges: ComparisonDateRange
       .filter(c => c.accountType === 'corrente')
       .reduce((acc, c) => acc + Math.max(0, calculateBalanceUpToDate(c.id, date, transacoesV2, contasMovimento)), 0);
 
-    const passivoCirculante = getCreditCardDebt(date) + getSegurosAPagar(date); // Simplificado para o exemplo
+    const passivoCirculante = getCreditCardDebt(date) + getSegurosAPagar(date);
 
     const receitas = txs.filter(t => t.operationType === 'receita' || t.operationType === 'rendimento').reduce((a, t) => a + t.amount, 0);
     const despesas = txs.filter(t => t.flow === 'out').reduce((a, t) => a + t.amount, 0);
@@ -71,27 +69,22 @@ export function IndicadoresTab({ dateRanges }: { dateRanges: ComparisonDateRange
 
     const imobilizado = getValorFipeTotal(date);
 
-    // --- Indicadores ---
     return {
       poupanca: receitas > 0 ? (lucro / receitas) * 100 : 0,
       liqCorrente: passivoCirculante > 0 ? ativoCirculante / passivoCirculante : 0,
-      liqSeca: passivoCirculante > 0 ? (ativoCirculante - 0) / passivoCirculante : 0, // Sem estoque em finanças pessoais
+      liqSeca: passivoCirculante > 0 ? ativoCirculante / passivoCirculante : 0,
       solvenciaImediata: passivoCirculante > 0 ? disponibilidades / passivoCirculante : 0,
       liqGeral: totalPassivos > 0 ? totalAtivos / totalPassivos : 0,
-      
       endivTotal: totalAtivos > 0 ? (totalPassivos / totalAtivos) * 100 : 0,
       dividaPatrimonio: pl > 0 ? (totalPassivos / pl) * 100 : 0,
       imobPL: pl > 0 ? (imobilizado / pl) * 100 : 0,
       compDivida: totalPassivos > 0 ? (passivoCirculante / totalPassivos) * 100 : 0,
-      
       margemLiquida: receitas > 0 ? (lucro / receitas) * 100 : 0,
       roa: totalAtivos > 0 ? (lucro / totalAtivos) * 100 : 0,
       roe: pl > 0 ? (lucro / pl) * 100 : 0,
       liberdade: lucro > 0 ? (txs.filter(t => t.operationType === 'rendimento').reduce((a, t) => a + t.amount, 0) / despesas) * 100 : 0,
-      
       partFixas: despesas > 0 ? (fixas / despesas) * 100 : 0,
       burnRate: receitas > 0 ? (despesas / receitas) * 100 : 0,
-      
       margemSeguranca: receitas > 0 ? ((receitas - fixas) / receitas) * 100 : 0,
       sobrevivencia: fixas > 0 ? ativoCirculante / fixas : 0,
     };
@@ -101,6 +94,9 @@ export function IndicadoresTab({ dateRanges }: { dateRanges: ComparisonDateRange
   const m2 = useMemo(() => calculateMetrics(range2), [calculateMetrics, range2]);
 
   const getTrend = (v1: number, v2: number) => v2 !== 0 ? ((v1 - v2) / Math.abs(v2)) * 100 : 0;
+
+  // Mock de dados históricos para sparklines
+  const sparkData = [30, 45, 35, 50, 40, 60, 55];
 
   const SectionHeader = ({ title, subtitle, icon: Icon }: any) => (
     <div className="flex items-center justify-between mb-6 px-2">
@@ -118,43 +114,61 @@ export function IndicadoresTab({ dateRanges }: { dateRanges: ComparisonDateRange
 
   return (
     <div className="space-y-16 animate-fade-in-up pb-20">
-      {/* Legenda e Ações */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 bg-muted/30 p-6 rounded-[2.5rem] border border-border/40">
-        <div className="flex flex-wrap items-center gap-6">
-          <div className="flex items-center gap-2">
-            <div className="w-3 h-3 rounded-full bg-success" />
-            <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Saudável</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="w-3 h-3 rounded-full bg-warning" />
-            <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Atenção</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="w-3 h-3 rounded-full bg-destructive" />
-            <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Crítico</span>
+      {/* DESTAQUE PRINCIPAL: SCORE DE SAÚDE */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+        <div className="lg:col-span-5 bg-surface-light dark:bg-surface-dark rounded-[3rem] p-10 border border-white/60 dark:border-white/5 shadow-soft flex flex-col items-center justify-center text-center group">
+          <Badge className="bg-primary/10 text-primary border-none font-black text-[10px] px-4 py-1.5 rounded-full uppercase tracking-[0.2em] mb-8">Score de Saúde Geral</Badge>
+          <RadialGauge 
+            value={m1.poupanca + 50} // Exemplo de score composto
+            label="Saúde Financeira"
+            status={m1.poupanca >= 20 ? "success" : "warning"}
+            size={240}
+          />
+          <div className="mt-8 space-y-2">
+            <p className="text-sm font-bold text-foreground">Seu patrimônio está em expansão</p>
+            <p className="text-xs text-muted-foreground max-w-[240px]">Com base na sua margem de poupança e liquidez atual.</p>
           </div>
         </div>
-        <Button 
-          onClick={() => setShowCustomModal(true)}
-          className="rounded-full h-11 px-8 font-black text-xs gap-2 shadow-lg shadow-primary/20"
-        >
-          <Plus size={16} /> NOVO INDICADOR
-        </Button>
-      </div>
 
-      {/* 1. MEUS INDICADORES (Destaque) */}
-      <section>
-        <SectionHeader title="Meus Indicadores" subtitle="Métricas criadas por você" icon={User} />
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="lg:col-span-7 grid grid-cols-1 sm:grid-cols-2 gap-6">
           <IndicatorCard 
             title="Capacidade Poupança" 
             value={`${m1.poupanca.toFixed(1)}%`} 
             trend={getTrend(m1.poupanca, m2.poupanca)}
             status={m1.poupanca >= 20 ? "success" : m1.poupanca >= 10 ? "warning" : "danger"}
             icon={ShieldCheck}
+            sparklineData={sparkData}
+            className="h-full"
           />
+          <IndicatorCard 
+            title="Margem de Segurança" 
+            value={`${m1.margemSeguranca.toFixed(1)}%`} 
+            trend={getTrend(m1.margemSeguranca, m2.margemSeguranca)} 
+            status={m1.margemSeguranca >= 30 ? "success" : "warning"} 
+            icon={Heart}
+            sparklineData={[20, 25, 22, 28, 30, 27, 32]}
+          />
+          <div className="sm:col-span-2 flex flex-col sm:flex-row sm:items-center justify-between gap-6 bg-muted/30 p-6 rounded-[2.5rem] border border-border/40">
+            <div className="flex flex-wrap items-center gap-6">
+              <div className="flex items-center gap-2">
+                <div className="w-3 h-3 rounded-full bg-success" />
+                <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Saudável</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-3 h-3 rounded-full bg-warning" />
+                <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Atenção</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-3 h-3 rounded-full bg-destructive" />
+                <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Crítico</span>
+              </div>
+            </div>
+            <Button onClick={() => setShowCustomModal(true)} className="rounded-full h-11 px-8 font-black text-xs gap-2 shadow-lg shadow-primary/20">
+              <Plus size={16} /> NOVO INDICADOR
+            </Button>
+          </div>
         </div>
-      </section>
+      </div>
 
       {/* 2. LIQUIDEZ */}
       <section>
@@ -202,7 +216,6 @@ export function IndicadoresTab({ dateRanges }: { dateRanges: ComparisonDateRange
       <section>
         <SectionHeader title="Indicadores Pessoais" subtitle="Saúde financeira individual" icon={Heart} />
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          <IndicatorCard title="Margem de Segurança" value={`${m1.margemSeguranca.toFixed(1)}%`} trend={getTrend(m1.margemSeguranca, m2.margemSeguranca)} status={m1.margemSeguranca >= 30 ? "success" : "warning"} icon={ShieldCheck} />
           <IndicatorCard title="Meses de Sobrevivência" value={`${m1.sobrevivencia.toFixed(1)} meses`} trend={getTrend(m1.sobrevivencia, m2.sobrevivencia)} status={m1.sobrevivencia >= 6 ? "success" : "warning"} icon={Calendar} />
         </div>
       </section>

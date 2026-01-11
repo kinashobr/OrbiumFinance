@@ -20,16 +20,12 @@ export function RadialGauge({
   label,
   unit = "%",
   status,
-  size = 140, // Default size updated
+  size = 200,
   className,
 }: RadialGaugeProps) {
   const radius = size * 0.4;
   const stroke = size * 0.08;
-  
-  // Normaliza o valor para o cálculo do arco (0 a 100)
-  const normalizedValueForArc = Math.min(Math.max(value, min), max);
-  const percentage = ((normalizedValueForArc - min) / (max - min)) * 100;
-  
+  const percentage = Math.min(Math.max(((value - min) / (max - min)) * 100, 0), 100);
   const circumference = 2 * Math.PI * radius;
   const strokeDashoffset = circumference - (percentage / 100) * circumference;
 
@@ -41,7 +37,7 @@ export function RadialGauge({
   };
 
   return (
-    <div className={cn("flex flex-col items-center justify-center p-4", className)}>
+    <div className={cn("flex flex-col items-center justify-center", className)}>
       <div className="relative" style={{ width: size, height: size }}>
         <svg className="w-full h-full -rotate-90">
           {/* Background circle */}
@@ -69,10 +65,10 @@ export function RadialGauge({
           />
         </svg>
         <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
-          <span className="text-xl font-black tabular-nums">
+          <span className="text-4xl font-black tracking-tighter tabular-nums">
             {value.toFixed(1)}{unit}
           </span>
-          <span className="text-[8px] font-black uppercase tracking-widest text-muted-foreground mt-0.5">
+          <span className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground mt-1">
             {label}
           </span>
         </div>

@@ -3,6 +3,7 @@
 import { cn } from "@/lib/utils";
 import { TrendingUp, TrendingDown, Minus, Info, LucideIcon } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { MiniSparkline } from "./MiniSparkline";
 
 export type IndicatorStatus = "success" | "warning" | "danger" | "neutral";
 
@@ -13,6 +14,7 @@ interface IndicatorCardProps {
   trendLabel?: string;
   status: IndicatorStatus;
   icon: LucideIcon;
+  sparklineData?: number[];
   description?: string;
   className?: string;
 }
@@ -24,6 +26,7 @@ export function IndicatorCard({
   trendLabel,
   status,
   icon: Icon,
+  sparklineData,
   description,
   className
 }: IndicatorCardProps) {
@@ -41,11 +44,6 @@ export function IndicatorCard({
       "bg-gradient-to-br from-neutral-800 to-neutral-900 text-white rounded-[2.5rem] p-6 shadow-xl relative overflow-hidden group hover:-translate-y-1 transition-all duration-500 border border-white/5",
       className
     )}>
-      {/* Background Icon Decor */}
-      <div className="absolute right-0 bottom-0 opacity-[0.03] scale-150 translate-x-6 translate-y-6 group-hover:rotate-12 transition-transform duration-1000">
-        <Icon size={120} />
-      </div>
-
       <div className="relative z-10 flex flex-col h-full justify-between">
         <div className="flex items-start justify-between mb-4">
           <div className="w-10 h-10 rounded-2xl bg-white/10 backdrop-blur-md flex items-center justify-center text-primary border border-white/10">
@@ -56,13 +54,24 @@ export function IndicatorCard({
           </Badge>
         </div>
 
-        <div className="space-y-1">
-          <p className="text-[10px] font-black text-neutral-400 uppercase tracking-[0.2em] truncate" title={title}>
-            {title}
-          </p>
-          <h3 className="text-3xl font-black tracking-tighter tabular-nums leading-none">
-            {value}
-          </h3>
+        <div className="flex items-end justify-between gap-4">
+          <div className="space-y-1">
+            <p className="text-[10px] font-black text-neutral-400 uppercase tracking-[0.2em] truncate" title={title}>
+              {title}
+            </p>
+            <h3 className="text-3xl font-black tracking-tighter tabular-nums leading-none">
+              {value}
+            </h3>
+          </div>
+          
+          {sparklineData && (
+            <div className="pb-1">
+              <MiniSparkline 
+                data={sparklineData} 
+                color={trend && trend >= 0 ? "hsl(var(--success))" : "hsl(var(--destructive))"} 
+              />
+            </div>
+          )}
         </div>
 
         <div className="mt-4 pt-4 border-t border-white/5 flex items-center justify-between">
