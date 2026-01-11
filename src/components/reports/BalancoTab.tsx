@@ -82,6 +82,26 @@ export function BalancoTab({ dateRanges }: { dateRanges: ComparisonDateRanges })
   // Variação de PL
   const plAnterior = getPatrimonioLiquido(prevDate);
   const variacaoPlPerc = plAnterior !== 0 ? ((b1.pl - plAnterior) / Math.abs(plAnterior)) * 100 : 0;
+  
+  // Dados para o gráfico de Evolução Patrimonial (últimos 12 meses)
+  const evolutionData = useMemo(() => {
+    const now = new Date();
+    const result: { mes: string; valor: number }[] = [];
+
+    for (let i = 11; i >= 0; i--) {
+      const data = subMonths(now, i);
+      const fim = endOfMonth(data);
+      const mesLabel = format(data, 'MMM', { locale: ptBR });
+
+      const patrimonioLiquido = getPatrimonioLiquido(fim);
+      
+      result.push({ 
+        mes: mesLabel.charAt(0).toUpperCase() + mesLabel.slice(1), 
+        valor: patrimonioLiquido,
+      });
+    }
+    return result;
+  }, [getPatrimonioLiquido]);
 
   const ItemCard = ({ title, value, subtitle, icon: Icon, colorClass, percent }: any) => (
     <div className="bg-card rounded-[1.75rem] p-5 border border-border/40 hover:shadow-md transition-all group">
