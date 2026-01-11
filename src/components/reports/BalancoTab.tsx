@@ -16,6 +16,35 @@ import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 import { subMonths, endOfMonth, format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { IndicatorRadialCard } from "./IndicatorRadialCard";
+import { BalanceSheetList } from "./BalanceSheetList";
+
+// Helper para obter ícone baseado no tipo de conta/item
+const getIconForType = (type: string): React.ElementType => {
+    switch (type) {
+        case 'corrente':
+        case 'poupanca':
+        case 'reserva':
+            return Building2;
+        case 'renda_fixa':
+        case 'cripto':
+        case 'objetivo':
+            return Shield;
+        case 'imobilizado':
+            return Car;
+        case 'seguros_apropriar':
+            return Shield;
+        case 'cartoes':
+            return CreditCard;
+        case 'emprestimos_curto':
+            return Banknote;
+        case 'emprestimos_longo':
+            return History;
+        case 'seguros_pagar':
+            return Shield;
+        default:
+            return Scale;
+    }
+};
 
 export function BalancoTab({ dateRanges }: { dateRanges: ComparisonDateRanges }) {
   const { 
@@ -60,6 +89,8 @@ export function BalancoTab({ dateRanges }: { dateRanges: ComparisonDateRanges })
       totalAtivos, ativoCirculante, investimentosNaoCirculantes, imobilizadoFipe, segurosAApropriar,
       totalPassivos, passivoCirculante, passivoNaoCirculante, pl,
       dividaCartoes,
+      principalLoans12m,
+      segurosAPagar,
       contasCirculantes: circulantesRaw.map(c => ({ ...c, saldo: saldos[c.id] || 0 })),
       contasInvestimentos: invNaoCirculantesRaw.map(c => ({ ...c, saldo: saldos[c.id] || 0 }))
     };
@@ -103,33 +134,160 @@ export function BalancoTab({ dateRanges }: { dateRanges: ComparisonDateRanges })
     return result;
   }, [getPatrimonioLiquido]);
 
-  const ItemCard = ({ title, value, subtitle, icon: Icon, colorClass, percent }: any) => (
-    <div className="bg-card rounded-[1.75rem] p-5 border border-border/40 hover:shadow-md transition-all group">
-      <div className="flex items-center justify-between mb-4">
-        <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center transition-transform group-hover:scale-110", colorClass.bg, colorClass.text)}>
-          <Icon className="w-5 h-5" />
-        </div>
-        <div className="text-right">
-          <p className="text-[9px] font-black text-muted-foreground uppercase tracking-widest leading-none mb-1">{subtitle}</p>
-          <p className="text-base font-black tabular-nums">{formatCurrency(value)}</p>
-        </div>
-      </div>
-      <div className="space-y-1.5">
-        <div className="flex justify-between items-center text-[9px] font-bold text-muted-foreground uppercase tracking-widest">
-           <span className="truncate max-w-[120px]">{title}</span>
-           <span>{percent.toFixed(0)}%</span>
-        </div>
-        <Progress value={percent} className="h-1 rounded-full" />
-      </div>
-    </div>
-  );
+  // =================================================================
+  // PREPARAÇÃO DOS DADOS PARA BalanceSheetList
+  // =================================================================
 
-  const SmallKpi = ({ label, value, color }: any) => (
-    <div className="p-5 rounded-[2rem] bg-surface-light dark:bg-surface-dark border border-white/60 dark:border-white/5 shadow-sm">
-       <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest mb-1">{label}</p>
-       <p className={cn("text-lg font-black tabular-nums", color)}>{formatCurrency(value)}</p>
-    </div>
-  );
+  const ativoItems = useMemo(() => {
+    const total = b1.totalAtivos;
+    
+    const circulanteDetails = b1.contasCirculantes
+      .filter(c => c.saldo > 0)
+      .map(c => ({
+        id: c.id,
+        name: c.name,
+        typeLabel: ACCOUNT_TYPE_LABELS[c.accountType],
+        value: c.saldo,
+        percent: total > 0 ? (c.saldo / total) * 100 : 0,
+        icon: getIconForType(c.accountType),
+      }));
+      
+    if (b1.segurosAApropriar > 0) {
+        circulanteDetails.push({
+            id: 'seguros_apropriar',
+            name: 'Seguros a Apropriar (Prêmio)',
+            typeLabel: 'Despesa Pré-Paga',
+            value: b1.segurosAApropriar,
+            percent: total > 0 ? (b1.segurosAApropriar / total) * 100 : 0,
+            icon: getIconForType('seguros_apropriar'),
+        });
+    }
+
+    const naoCirculanteDetails = b1.contasInvestimentos
+      .filter(c => c.saldo > 0)
+      .map(c => ({
+        id: c.id,
+        name: c.name,
+        typeLabel: ACCOUNT_TYPE_LABELS[c.accountType],
+        value: c.saldo,
+        percent: total > 0 ? (c.saldo / total) * 100 : 0,
+        icon: getIconForType(c.accountType),
+      }));
+      
+    if (b1.imobilizadoFipe > 0) {
+        naoCirculanteDetails.push({
+            id: 'imobilizado',
+            name: 'Imobilizado (Veículos)',
+            typeLabel: 'Avaliação FIPE',
+            value: b1.imobilizadoFipe,
+            percent: total > 0 ? (b1.imobilizadoFipe / total) * 100 : 0,
+            icon: getIconForType('imobilizado'),
+        });
+    }
+
+    return [
+      {
+        label: 'Ativo Circulante',
+        value: b1.ativoCirculante + b1.segurosAApropriar,
+        percent: total > 0 ? ((b1.ativoCirculante + b1.segurosAApropriar) / total) * 100 : 0,
+        type: 'circulante' as const,
+        details: circulanteDetails,
+      },
+      {
+        label: 'Ativo Não Circulante',
+        value: b1.investimentosNaoCirculantes + b1.imobilizadoFipe,
+        percent: total > 0 ? ((b1.investimentosNaoCirculantes + b1.imobilizadoFipe) / total) * 100 : 0,
+        type: 'nao_circulante' as const,
+        details: naoCirculanteDetails,
+      },
+    ].filter(item => item.value > 0);
+  }, [b1]);
+
+  const passivoItems = useMemo(() => {
+    const totalPassivoPL = b1.totalAtivos; // Total Passivo + PL deve ser igual ao Total Ativo
+    
+    const circulanteDetails = [];
+    if (b1.dividaCartoes > 0) {
+        circulanteDetails.push({
+            id: 'cartoes',
+            name: 'Saldo Devedor Cartões',
+            typeLabel: 'Faturas em aberto',
+            value: b1.dividaCartoes,
+            percent: totalPassivoPL > 0 ? (b1.dividaCartoes / totalPassivoPL) * 100 : 0,
+            icon: getIconForType('cartoes'),
+        });
+    }
+    if (b1.principalLoans12m > 0) {
+        circulanteDetails.push({
+            id: 'emprestimos_curto',
+            name: 'Principal Empréstimos (12 meses)',
+            typeLabel: 'Obrigação Curto Prazo',
+            value: b1.principalLoans12m,
+            percent: totalPassivoPL > 0 ? (b1.principalLoans12m / totalPassivoPL) * 100 : 0,
+            icon: getIconForType('emprestimos_curto'),
+        });
+    }
+    if (b1.segurosAPagar > 0) {
+        circulanteDetails.push({
+            id: 'seguros_pagar',
+            name: 'Seguros a Pagar (12 meses)',
+            typeLabel: 'Obrigação Curto Prazo',
+            value: b1.segurosAPagar,
+            percent: totalPassivoPL > 0 ? (b1.segurosAPagar / totalPassivoPL) * 100 : 0,
+            icon: getIconForType('seguros_pagar'),
+        });
+    }
+    
+    const naoCirculanteDetails = [];
+    if (b1.passivoNaoCirculante > 0) {
+        naoCirculanteDetails.push({
+            id: 'emprestimos_longo',
+            name: 'Principal Empréstimos (Longo Prazo)',
+            typeLabel: 'Obrigação Longo Prazo',
+            value: b1.passivoNaoCirculante,
+            percent: totalPassivoPL > 0 ? (b1.passivoNaoCirculante / totalPassivoPL) * 100 : 0,
+            icon: getIconForType('emprestimos_longo'),
+        });
+    }
+
+    const passivoCirculanteTotal = b1.passivoCirculante;
+    const passivoNaoCirculanteTotal = b1.passivoNaoCirculante;
+    const totalPassivo = passivoCirculanteTotal + passivoNaoCirculanteTotal;
+
+    const sections = [];
+    
+    if (passivoCirculanteTotal > 0) {
+        sections.push({
+            label: 'Passivo Circulante',
+            value: passivoCirculanteTotal,
+            percent: totalPassivoPL > 0 ? (passivoCirculanteTotal / totalPassivoPL) * 100 : 0,
+            type: 'circulante' as const,
+            details: circulanteDetails,
+        });
+    }
+    
+    if (passivoNaoCirculanteTotal > 0) {
+        sections.push({
+            label: 'Passivo Não Circulante',
+            value: passivoNaoCirculanteTotal,
+            percent: totalPassivoPL > 0 ? (passivoNaoCirculanteTotal / totalPassivoPL) * 100 : 0,
+            type: 'nao_circulante' as const,
+            details: naoCirculanteDetails,
+        });
+    }
+    
+    // Patrimônio Líquido (PL)
+    sections.push({
+        label: 'Patrimônio Líquido',
+        value: b1.pl,
+        percent: totalPassivoPL > 0 ? (b1.pl / totalPassivoPL) * 100 : 0,
+        type: 'patrimonio' as const,
+    });
+
+    return sections;
+  }, [b1]);
+
+  // ItemCard e SmallKpi removidos pois não são mais usados no novo layout
 
   return (
     <div className="space-y-10 animate-fade-in-up">
@@ -219,83 +377,51 @@ export function BalancoTab({ dateRanges }: { dateRanges: ComparisonDateRanges })
 
       {/* GRID DE INDICADORES TÉCNICOS (RAW VALUES) */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-         <SmallKpi label="Total Ativos" value={b1.totalAtivos} color="text-success" />
-         <SmallKpi label="Ativos Circulantes" value={b1.ativoCirculante} color="text-success/80" />
-         <SmallKpi label="Inv. Não Circulantes" value={b1.investimentosNaoCirculantes} color="text-indigo-500" />
-         <SmallKpi label="Total Passivos" value={b1.totalPassivos} color="text-destructive" />
-         <SmallKpi label="Patrimônio Líquido" value={b1.pl} color="text-primary" />
-         <SmallKpi label="Variação PL" value={b1.pl - plAnterior} color={b1.pl >= plAnterior ? "text-success" : "text-destructive"} />
+         <div className="p-5 rounded-[2rem] bg-surface-light dark:bg-surface-dark border border-white/60 dark:border-white/5 shadow-sm">
+            <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest mb-1">Total Ativos</p>
+            <p className={cn("text-lg font-black tabular-nums", "text-success")}>{formatCurrency(b1.totalAtivos)}</p>
+         </div>
+         <div className="p-5 rounded-[2rem] bg-surface-light dark:bg-surface-dark border border-white/60 dark:border-white/5 shadow-sm">
+            <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest mb-1">Ativos Circulantes</p>
+            <p className={cn("text-lg font-black tabular-nums", "text-success/80")}>{formatCurrency(b1.ativoCirculante)}</p>
+         </div>
+         <div className="p-5 rounded-[2rem] bg-surface-light dark:bg-surface-dark border border-white/60 dark:border-white/5 shadow-sm">
+            <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest mb-1">Inv. Não Circulantes</p>
+            <p className={cn("text-lg font-black tabular-nums", "text-indigo-500")}>{formatCurrency(b1.investimentosNaoCirculantes)}</p>
+         </div>
+         <div className="p-5 rounded-[2rem] bg-surface-light dark:bg-surface-dark border border-white/60 dark:border-white/5 shadow-sm">
+            <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest mb-1">Total Passivos</p>
+            <p className={cn("text-lg font-black tabular-nums", "text-destructive")}>{formatCurrency(b1.totalPassivos)}</p>
+         </div>
+         <div className="p-5 rounded-[2rem] bg-surface-light dark:bg-surface-dark border border-white/60 dark:border-white/5 shadow-sm">
+            <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest mb-1">Patrimônio Líquido</p>
+            <p className={cn("text-lg font-black tabular-nums", "text-primary")}>{formatCurrency(b1.pl)}</p>
+         </div>
+         <div className="p-5 rounded-[2rem] bg-surface-light dark:bg-surface-dark border border-white/60 dark:border-white/5 shadow-sm">
+            <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest mb-1">Variação PL</p>
+            <p className={cn("text-lg font-black tabular-nums", b1.pl >= plAnterior ? "text-success" : "text-destructive")}>{formatCurrency(b1.pl - plAnterior)}</p>
+         </div>
       </div>
 
-      {/* LEDGER COMPARATIVO (ATIVO VS PASSIVO) */}
+      {/* LEDGER COMPARATIVO (ATIVO VS PASSIVO) - NOVO FORMATO DE LISTA */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
         
-        {/* COLUNA ATIVOS (VERDE) */}
-        <div className="space-y-8">
-           <div className="flex items-center justify-between px-2">
-              <div className="flex items-center gap-3">
-                 <div className="p-2 bg-success/10 rounded-2xl text-success"><TrendingUp className="w-6 h-6" /></div>
-                 <div><h3 className="font-display font-black text-2xl uppercase tracking-tight">Ativo Total</h3><p className="text-[10px] font-bold text-success/60 uppercase tracking-widest">Disponibilidade e Bens</p></div>
-              </div>
-              <p className="text-3xl font-black text-success tracking-tighter tabular-nums">{formatCurrency(b1.totalAtivos)}</p>
-           </div>
+        {/* COLUNA ATIVOS */}
+        <BalanceSheetList
+            title="ATIVO"
+            totalValue={b1.totalAtivos}
+            items={ativoItems}
+            isAsset={true}
+        />
 
-           <div className="bg-surface-light dark:bg-surface-dark rounded-[3rem] p-8 border border-success/10 space-y-10">
-              <div className="space-y-4">
-                 <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground px-1">Ativo Circulante (Disponível)</p>
-                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    {b1.contasCirculantes.map(c => (
-                      <ItemCard key={c.id} title={c.name} value={c.saldo} subtitle={ACCOUNT_TYPE_LABELS[c.accountType]} icon={Building2} colorClass={{ bg: 'bg-green-100/50 dark:bg-green-900/20', text: 'text-success' }} percent={b1.totalAtivos > 0 ? (c.saldo / b1.totalAtivos) * 100 : 0} />
-                    ))}
-                 </div>
-              </div>
-
-              <div className="space-y-4">
-                 <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground px-1">Ativo Não Circulante (Realizável)</p>
-                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    {b1.contasInvestimentos.map(c => (
-                      <ItemCard key={c.id} title={c.name} value={c.saldo} subtitle={ACCOUNT_TYPE_LABELS[c.accountType]} icon={Shield} colorClass={{ bg: 'bg-indigo-100/50 dark:bg-indigo-900/20', text: 'text-indigo-600' }} percent={b1.totalAtivos > 0 ? (c.saldo / b1.totalAtivos) * 100 : 0} />
-                    ))}
-                    {b1.imobilizadoFipe > 0 && <ItemCard title="Imobilizado" value={b1.imobilizadoFipe} subtitle="Avaliação FIPE" icon={Car} colorClass={{ bg: 'bg-primary/10', text: 'text-primary' }} percent={(b1.imobilizadoFipe / b1.totalAtivos) * 100} />}
-                 </div>
-              </div>
-           </div>
-        </div>
-
-        {/* COLUNA PASSIVOS (VERMELHO) */}
-        <div className="space-y-8">
-           <div className="flex items-center justify-between px-2">
-              <div className="flex items-center gap-3">
-                 <div className="p-2 bg-destructive/10 rounded-2xl text-destructive"><TrendingDown className="w-6 h-6" /></div>
-                 <div><h3 className="font-display font-black text-2xl uppercase tracking-tight">Passivo Total</h3><p className="text-[10px] font-bold text-destructive/60 uppercase tracking-widest">Obrigações e Dívidas</p></div>
-              </div>
-              <p className="text-3xl font-black text-destructive tracking-tighter tabular-nums">{formatCurrency(b1.totalPassivos)}</p>
-           </div>
-
-           <div className="bg-surface-light dark:bg-surface-dark rounded-[3rem] p-8 border border-destructive/10 space-y-10">
-              <div className="space-y-4">
-                 <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground px-1">Passivo Circulante (Curto Prazo)</p>
-                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    {b1.dividaCartoes > 0 && <ItemCard title="Cartões" value={b1.dividaCartoes} subtitle="Faturas em aberto" icon={CreditCard} colorClass={{ bg: 'bg-red-100/50 dark:bg-red-900/20', text: 'text-destructive' }} percent={(b1.dividaCartoes / b1.totalPassivos) * 100} />}
-                    {b1.passivoCirculante > b1.dividaCartoes && <ItemCard title="Financiamentos 12m" value={b1.passivoCirculante - b1.dividaCartoes} subtitle="Parcelas curto prazo" icon={Banknote} colorClass={{ bg: 'bg-orange-100/50 dark:bg-orange-900/20', text: 'text-orange-600' }} percent={((b1.passivoCirculante - b1.dividaCartoes) / b1.totalPassivos) * 100} />}
-                 </div>
-              </div>
-
-              <div className="space-y-4">
-                 <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground px-1">Passivo Não Circulante (Longo Prazo)</p>
-                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    {b1.passivoNaoCirculante > 0 && <ItemCard title="Dívidas Longas" value={b1.passivoNaoCirculante} subtitle="Excedente a 1 ano" icon={History} colorClass={{ bg: 'bg-neutral-100 dark:bg-neutral-800', text: 'text-muted-foreground' }} percent={(b1.passivoNaoCirculante / b1.totalPassivos) * 100} />}
-                 </div>
-              </div>
-
-              <div className="pt-6 border-t border-border/40">
-                 <div className="bg-gradient-to-r from-primary to-primary-dark rounded-[2rem] p-7 text-white shadow-xl shadow-primary/20 relative overflow-hidden group">
-                    <div className="absolute right-0 bottom-0 opacity-10 scale-125 translate-x-4 translate-y-4 group-hover:rotate-12 transition-transform duration-700"><Scale className="w-32 h-32" /></div>
-                    <div className="relative z-10"><p className="text-[10px] font-black uppercase tracking-[0.3em] mb-1 opacity-80">Riqueza Líquida</p><p className="text-3xl font-black tabular-nums">{formatCurrency(b1.pl)}</p></div>
-                 </div>
-              </div>
-           </div>
-        </div>
+        {/* COLUNA PASSIVOS + PL */}
+        <BalanceSheetList
+            title="PASSIVO + PL"
+            totalValue={b1.totalAtivos} // Total Passivo + PL é igual ao Total Ativo
+            items={passivoItems}
+            isAsset={false}
+            plValue={b1.pl}
+        />
       </div>
 
       {/* EVOLUÇÃO E COMPOSIÇÃO */}
