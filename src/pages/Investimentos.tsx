@@ -22,15 +22,16 @@ import {
   LayoutGrid,
   Zap,
   History,
-  ArrowRight // Adicionado ArrowRight
+  ArrowRight
 } from "lucide-react";
 import { cn, parseDateLocal } from "@/lib/utils";
 import { useFinance } from "@/contexts/FinanceContext";
 import { PeriodSelector } from "@/components/dashboard/PeriodSelector";
-import { ComparisonDateRanges, formatCurrency } from "@/types/finance";
-import { subMonths, endOfMonth, format } from "date-fns";
+import { ComparisonDateRanges, formatCurrency, ContaCorrente, AccountSummary, TransacaoCompleta } from "@/types/finance";
+import { subMonths, endOfMonth, format, subDays, isWithinInterval, startOfDay, endOfDay } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { useChartColors } from "@/hooks/useChartColors";
+import { AccountStatementDialog } from "@/components/transactions/AccountStatementDialog";
 
 export default function Investimentos() {
   const { 
@@ -41,11 +42,16 @@ export default function Investimentos() {
     setDateRanges,
     calculateTotalInvestmentBalanceAtDate,
     transacoesV2,
-    getPatrimonioLiquido
+    setTransacoesV2,
+    categoriasV2
   } = useFinance();
   
   const colors = useChartColors();
   const [activeTab, setActiveTab] = useState("visao-geral");
+  
+  // Estado para o modal de detalhes
+  const [viewingAccountId, setViewingAccountId] = useState<string | null>(null);
+  const [showStatementDialog, setShowStatementDialog] = useState(false);
 
   const handlePeriodChange = useCallback((ranges: ComparisonDateRanges) => {
     setDateRanges(ranges);
@@ -89,6 +95,57 @@ export default function Investimentos() {
     { name: 'Criptoativos', value: metricas.cripto, color: colors.accent },
     { name: 'Imobilizado', value: getValorFipeTotal(targetDate), color: colors.success },
   ].filter(d => d.value > 0), [metricas, getValorFipeTotal, targetDate, colors]);
+
+  // --- Helpers para o Modal de Detalhes ---
+  const viewingAccount = useMemo(() => 
+    viewingAccountId ? contasMovimento.find(a => a.id === viewingAccountId) : undefined
+  , [viewingAccountId, contasMovimento]);
+
+  const viewingSummary = useMemo((): AccountSummary | undefined => {
+    if (!viewingAccount) return undefined;
+    
+    const periodStart = dateRanges.range1.from;
+    const periodEnd = dateRanges.range1.to;
+    
+    const periodInitialBalance = periodStart 
+      ? calculateBalanceUpToDate(viewingAccount.id, subDays(periodStart, 1), transacoesV2, contasMovimento) 
+      : 0;
+      
+    const accountTx = transacoesV2.filter(t => 
+      t.accountId === viewingAccount.id && 
+      (!periodStart || isWithinInterval(parseDateLocal(t.date), { 
+        start: startOfDay(periodStart), 
+        end: endOfDay(periodEnd || new Date()) 
+      }))
+    );
+
+    let totalIn = 0, totalOut = 0;
+    accountTx.forEach(t => {
+      if (t.flow === 'in' || t.flow === 'transfer_in') totalIn += t.amount;
+      else totalOut += t.amount;
+    });
+
+    const finalBal = periodInitialBalance + totalIn - totalOut;
+
+    return {
+      accountId: viewingAccount.id,
+      accountName: viewingAccount.name,
+      accountType: viewingAccount.accountType,
+      institution: viewingAccount.institution,
+      initialBalance: periodInitialBalance,
+      currentBalance: finalBal,
+      projectedBalance: finalBal,
+      totalIn,
+      totalOut,
+      reconciliationStatus: accountTx.every(t => t.conciliated) ? 'ok' : 'warning',
+      transactionCount: accountTx.length
+    };
+  }, [viewingAccount, transacoesV2, dateRanges, calculateBalanceUpToDate, contasMovimento]);
+
+  const handleOpenDetails = (accountId: string) => {
+    setViewingAccountId(accountId);
+    setShowStatementDialog(true);
+  };
 
   return (
     <MainLayout>
@@ -354,7 +411,12 @@ export default function Investimentos() {
                         <div className="flex items-center gap-1 text-success font-black text-[10px]">
                           <ArrowUpRight className="w-3 h-3" /> +0.85%
                         </div>
-                        <Button variant="ghost" size="sm" className="h-8 rounded-full text-[10px] font-black uppercase tracking-widest hover:bg-primary/10">
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          className="h-8 rounded-full text-[10px] font-black uppercase tracking-widest hover:bg-primary/10"
+                          onClick={() => handleOpenDetails(account.id)}
+                        >
                           Detalhes <ArrowRight className="w-3.5 h-3.5 ml-1" />
                         </Button>
                       </div>
@@ -365,6 +427,31 @@ export default function Investimentos() {
           </TabsContent>
         </Tabs>
       </div>
+
+      {/* Modal de Extrato Detalhado */}
+      {viewingAccount && viewingSummary && (
+        <AccountStatementDialog
+          open={showStatementDialog}
+          onOpenChange={setShowStatementDialog}
+          account={viewingAccount}
+          accountSummary={viewingSummary}
+          transactions={transacoesV2.filter(t => t.accountId === viewingAccountId)}
+          categories={categoriasV2}
+          onEditTransaction={(t) => {
+            // Lógica de edição se necessário, ou apenas visualização
+            toast.info("Edição disponível na aba de Movimentação.");
+          }}
+          onDeleteTransaction={(id) => {
+            // Lógica de exclusão se necessário
+          }}
+          onToggleConciliated={(id, val) => {
+            setTransacoesV2(prev => prev.map(t => t.id === id ? { ...t, conciliated: val } : t));
+          }}
+          onReconcileAll={() => {
+            setTransacoesV2(prev => prev.map(t => t.accountId === viewingAccountId ? { ...t, conciliated: true } : t));
+          }}
+        />
+      )}
     </MainLayout>
   );
 }
