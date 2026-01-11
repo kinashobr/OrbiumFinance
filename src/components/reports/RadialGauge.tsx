@@ -20,13 +20,16 @@ export function RadialGauge({
   label,
   unit = "%",
   status,
-  size = 120,
+  size = 140, // Default size updated
   className,
 }: RadialGaugeProps) {
   const radius = size * 0.4;
   const stroke = size * 0.08;
-  const normalizedValue = Math.min(Math.max(value, min), max);
-  const percentage = ((normalizedValue - min) / (max - min)) * 100;
+  
+  // Normaliza o valor para o cálculo do arco (0 a 100)
+  const normalizedValueForArc = Math.min(Math.max(value, min), max);
+  const percentage = ((normalizedValueForArc - min) / (max - min)) * 100;
+  
   const circumference = 2 * Math.PI * radius;
   const strokeDashoffset = circumference - (percentage / 100) * circumference;
 

@@ -40,7 +40,7 @@ export function IndicatorRadialCard({
           label={label} 
           unit={unit} 
           status={status} 
-          size={100} 
+          size={140} // Aumentado para 140px
         />
       </div>
     </div>
