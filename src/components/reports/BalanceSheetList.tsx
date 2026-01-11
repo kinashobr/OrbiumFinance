@@ -83,8 +83,8 @@ export function BalanceSheetList({ title, totalValue, items, isAsset, plValue }:
         </p>
       </div>
 
-      <div className="bg-surface-light dark:bg-surface-dark rounded-[3rem] p-8 border border-border/40 shadow-soft">
-        <div className="rounded-2xl border border-border/40 overflow-hidden">
+      <div className="glass-card p-0"> {/* Aplicando glass-card e removendo padding interno */}
+        <div className="rounded-2xl overflow-hidden">
           <table className="w-full table-auto">
             <thead className="bg-muted/50">
               <tr>
