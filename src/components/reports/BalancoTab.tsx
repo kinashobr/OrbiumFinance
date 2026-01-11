@@ -4,7 +4,8 @@ import { useMemo } from "react";
 import { 
   TrendingUp, TrendingDown, Scale, Building2, Car, 
   Banknote, Shield, History, CreditCard, ArrowUpRight, 
-  Info, LineChart, PieChart, LayoutGrid, Sparkles
+  Info, LineChart, PieChart, LayoutGrid, Sparkles,
+  Zap, Target, Gauge, Activity
 } from "lucide-react";
 import { useFinance } from "@/contexts/FinanceContext";
 import { cn } from "@/lib/utils";
@@ -14,6 +15,7 @@ import { Badge } from "@/components/ui/badge";
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart as RePieChart, Pie, Cell } from "recharts";
 import { subMonths, endOfMonth, format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { IndicatorRadialCard } from "./IndicatorRadialCard";
 
 export function BalancoTab({ dateRanges }: { dateRanges: ComparisonDateRanges }) {
   const { 
@@ -63,17 +65,23 @@ export function BalancoTab({ dateRanges }: { dateRanges: ComparisonDateRanges })
     };
   }, [contasMovimento, transacoesV2, calculateBalanceUpToDate, getValorFipeTotal, getSegurosAApropriar, getSegurosAPagar, calculateLoanPrincipalDueInNextMonths, getLoanPrincipalRemaining, getCreditCardDebt, finalDate]);
 
+  // Cálculos de Indicadores
+  const indicadores = useMemo(() => {
+    const { pl, totalAtivos, totalPassivos, ativoCirculante, passivoCirculante, imobilizadoFipe } = b1;
+    
+    const equityRatio = totalAtivos > 0 ? (pl / totalAtivos) * 100 : 0;
+    const liqGeral = totalPassivos > 0 ? (totalAtivos / totalPassivos) : 0;
+    const liqCorrente = passivoCirculante > 0 ? (ativoCirculante / passivoCirculante) : 0;
+    const endividamento = totalAtivos > 0 ? (totalPassivos / totalAtivos) * 100 : 0;
+    const assetCoverage = totalPassivos > 0 ? (pl / totalPassivos) : 0;
+    const fixedAssetEquity = pl > 0 ? (imobilizadoFipe / pl) * 100 : 0;
+
+    return { equityRatio, liqGeral, liqCorrente, endividamento, assetCoverage, fixedAssetEquity };
+  }, [b1]);
+
   // Variação de PL
   const plAnterior = getPatrimonioLiquido(prevDate);
   const variacaoPlPerc = plAnterior !== 0 ? ((b1.pl - plAnterior) / Math.abs(plAnterior)) * 100 : 0;
-
-  // Gráfico de Evolução (Mock/Calculado)
-  const evolutionData = useMemo(() => {
-    return Array.from({ length: 7 }, (_, i) => {
-      const d = endOfMonth(subMonths(finalDate, 6 - i));
-      return { mes: format(d, 'MMM', { locale: ptBR }), valor: getPatrimonioLiquido(d) };
-    });
-  }, [getPatrimonioLiquido, finalDate]);
 
   const ItemCard = ({ title, value, subtitle, icon: Icon, colorClass, percent }: any) => (
     <div className="bg-card rounded-[1.75rem] p-5 border border-border/40 hover:shadow-md transition-all group">
@@ -105,30 +113,91 @@ export function BalancoTab({ dateRanges }: { dateRanges: ComparisonDateRanges })
 
   return (
     <div className="space-y-10 animate-fade-in-up">
-      {/* HERO CARD - PATRIMÔNIO LÍQUIDO */}
-      <div className="bg-surface-light dark:bg-surface-dark rounded-[40px] p-10 shadow-soft relative overflow-hidden border border-white/60 dark:border-white/5 h-[320px] flex flex-col justify-center group">
-         <div className="absolute inset-0 bg-gradient-to-br from-primary/[0.03] to-transparent"></div>
-         <div className="absolute right-0 top-0 opacity-10 scale-150 translate-x-10 -translate-y-10 group-hover:rotate-6 transition-transform duration-1000">
-            <LineChart className="w-[300px] h-[300px] text-primary" />
-         </div>
+      {/* SEÇÃO SUPERIOR: PL + INDICADORES PATRIMONIAIS */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        
+        {/* Card PL (50% no desktop) */}
+        <div className="lg:col-span-6">
+          <div className="bg-surface-light dark:bg-surface-dark rounded-[40px] p-8 sm:p-10 shadow-soft relative overflow-hidden border border-white/60 dark:border-white/5 h-[400px] flex flex-col justify-center group">
+             <div className="absolute inset-0 bg-gradient-to-br from-primary/[0.03] to-transparent"></div>
+             <div className="absolute right-0 top-0 opacity-10 scale-150 translate-x-10 -translate-y-10 group-hover:rotate-6 transition-transform duration-1000">
+                <LineChart className="w-[300px] h-[300px] text-primary" />
+             </div>
 
-         <div className="relative z-10">
-            <div className="flex items-center gap-3 mb-6">
-              <Badge className="bg-primary/10 text-primary border-none font-black text-[10px] px-3 py-1 rounded-lg uppercase tracking-widest">Consolidado Patrimonial</Badge>
-              <div className="flex items-center gap-1.5"><Sparkles className="w-3.5 h-3.5 text-accent" /><span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Orbium Insights</span></div>
-            </div>
-            <h2 className="text-[11px] font-black text-muted-foreground uppercase tracking-[0.2em] mb-4">Patrimônio Líquido Final</h2>
-            <div className="flex flex-col sm:flex-row sm:items-end gap-4 sm:gap-8">
-               <h3 className="font-display font-extrabold text-6xl sm:text-7xl text-foreground tracking-tighter leading-none tabular-nums">{formatCurrency(b1.pl)}</h3>
-               <Badge className={cn("rounded-xl px-4 py-2 font-black text-sm gap-2 mb-2", variacaoPlPerc >= 0 ? "bg-success/10 text-success" : "bg-destructive/10 text-destructive")}>
-                  {variacaoPlPerc >= 0 ? <TrendingUp className="w-4 h-4" /> : <TrendingDown className="w-4 h-4" />}
-                  {Math.abs(variacaoPlPerc).toFixed(1)}% evolução
-               </Badge>
-            </div>
-         </div>
+             <div className="relative z-10">
+                <div className="flex items-center gap-3 mb-6">
+                  <Badge className="bg-primary/10 text-primary border-none font-black text-[10px] px-3 py-1 rounded-lg uppercase tracking-widest">Consolidado Patrimonial</Badge>
+                </div>
+                <h2 className="text-[11px] font-black text-muted-foreground uppercase tracking-[0.2em] mb-4">Patrimônio Líquido Final</h2>
+                <div className="flex flex-col sm:flex-row sm:items-end gap-4 sm:gap-6">
+                   <h3 className="font-display font-extrabold text-5xl sm:text-6xl text-foreground tracking-tighter leading-none tabular-nums">{formatCurrency(b1.pl)}</h3>
+                   <Badge className={cn("rounded-xl px-4 py-2 font-black text-xs gap-2 mb-2 w-fit", variacaoPlPerc >= 0 ? "bg-success/10 text-success" : "bg-destructive/10 text-destructive")}>
+                      {variacaoPlPerc >= 0 ? <TrendingUp className="w-3.5 h-3.5" /> : <TrendingDown className="w-3.5 h-3.5" />}
+                      {Math.abs(variacaoPlPerc).toFixed(1)}% evolução
+                   </Badge>
+                </div>
+                <div className="mt-8 flex items-center gap-2">
+                   <Sparkles className="w-3.5 h-3.5 text-accent" />
+                   <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Performance Orbium calculada em {format(finalDate, "MM/yyyy")}</span>
+                </div>
+             </div>
+          </div>
+        </div>
+
+        {/* Grade de Indicadores (50% no desktop) */}
+        <div className="lg:col-span-6 grid grid-cols-2 sm:grid-cols-3 gap-4">
+          <IndicatorRadialCard 
+            title="Equity Ratio" 
+            description="PL / Ativos"
+            value={indicadores.equityRatio} 
+            label="Particip." 
+            unit="%"
+            status={indicadores.equityRatio >= 40 ? "success" : "warning"}
+          />
+          <IndicatorRadialCard 
+            title="Liquidez Geral" 
+            description="Total / Dívidas"
+            value={indicadores.liqGeral} 
+            label="Razão" 
+            unit="x"
+            status={indicadores.liqGeral >= 1.5 ? "success" : "warning"}
+          />
+          <IndicatorRadialCard 
+            title="Liq. Corrente" 
+            description="Disp / Curto P."
+            value={indicadores.liqCorrente} 
+            label="Razão" 
+            unit="x"
+            status={indicadores.liqCorrente >= 1.2 ? "success" : "warning"}
+          />
+          <IndicatorRadialCard 
+            title="Endividamento" 
+            description="Dívida / Ativos"
+            value={indicadores.endividamento} 
+            label="Risco" 
+            unit="%"
+            status={indicadores.endividamento <= 30 ? "success" : "warning"}
+          />
+          <IndicatorRadialCard 
+            title="Solvência" 
+            description="PL / Passivos"
+            value={indicadores.assetCoverage} 
+            label="Cobert." 
+            unit="x"
+            status={indicadores.assetCoverage >= 2 ? "success" : "warning"}
+          />
+          <IndicatorRadialCard 
+            title="Imobilização" 
+            description="Bens / PL"
+            value={indicadores.fixedAssetEquity} 
+            label="Peso" 
+            unit="%"
+            status={indicadores.fixedAssetEquity <= 60 ? "success" : "warning"}
+          />
+        </div>
       </div>
 
-      {/* GRID DE INDICADORES TÉCNICOS */}
+      {/* GRID DE INDICADORES TÉCNICOS (RAW VALUES) */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
          <SmallKpi label="Total Ativos" value={b1.totalAtivos} color="text-success" />
          <SmallKpi label="Ativos Circulantes" value={b1.ativoCirculante} color="text-success/80" />
@@ -152,7 +221,6 @@ export function BalancoTab({ dateRanges }: { dateRanges: ComparisonDateRanges })
            </div>
 
            <div className="bg-surface-light dark:bg-surface-dark rounded-[3rem] p-8 border border-success/10 space-y-10">
-              {/* Ativo Circulante */}
               <div className="space-y-4">
                  <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground px-1">Ativo Circulante (Disponível)</p>
                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -162,7 +230,6 @@ export function BalancoTab({ dateRanges }: { dateRanges: ComparisonDateRanges })
                  </div>
               </div>
 
-              {/* Ativo Não Circulante */}
               <div className="space-y-4">
                  <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground px-1">Ativo Não Circulante (Realizável)</p>
                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -186,7 +253,6 @@ export function BalancoTab({ dateRanges }: { dateRanges: ComparisonDateRanges })
            </div>
 
            <div className="bg-surface-light dark:bg-surface-dark rounded-[3rem] p-8 border border-destructive/10 space-y-10">
-              {/* Passivo Circulante */}
               <div className="space-y-4">
                  <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground px-1">Passivo Circulante (Curto Prazo)</p>
                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -195,7 +261,6 @@ export function BalancoTab({ dateRanges }: { dateRanges: ComparisonDateRanges })
                  </div>
               </div>
 
-              {/* Passivo Não Circulante */}
               <div className="space-y-4">
                  <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground px-1">Passivo Não Circulante (Longo Prazo)</p>
                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -203,7 +268,6 @@ export function BalancoTab({ dateRanges }: { dateRanges: ComparisonDateRanges })
                  </div>
               </div>
 
-              {/* Destaque PL no rodapé do Passivo */}
               <div className="pt-6 border-t border-border/40">
                  <div className="bg-gradient-to-r from-primary to-primary-dark rounded-[2rem] p-7 text-white shadow-xl shadow-primary/20 relative overflow-hidden group">
                     <div className="absolute right-0 bottom-0 opacity-10 scale-125 translate-x-4 translate-y-4 group-hover:rotate-12 transition-transform duration-700"><Scale className="w-32 h-32" /></div>
@@ -214,7 +278,7 @@ export function BalancoTab({ dateRanges }: { dateRanges: ComparisonDateRanges })
         </div>
       </div>
 
-      {/* SEÇÃO DE GRÁFICOS REINTRODUZIDOS */}
+      {/* EVOLUÇÃO E COMPOSIÇÃO */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
          <div className="lg:col-span-2 bg-surface-light dark:bg-surface-dark rounded-[3rem] p-8 border border-white/60 dark:border-white/5 shadow-soft">
             <div className="flex items-center gap-3 mb-8 px-2">
