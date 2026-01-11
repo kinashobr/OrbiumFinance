@@ -4,17 +4,32 @@ import { useState, useMemo, useCallback } from "react";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
-import { TrendingUp, Wallet, Target, CircleDollarSign, Landmark, Coins, Bitcoin, ArrowUpRight, ArrowDownRight, MoreVertical } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { PieChart as RePieChart, Pie, Cell, ResponsiveContainer, Tooltip, AreaChart, Area, XAxis, YAxis, CartesianGrid } from "recharts";
+import { 
+  TrendingUp, 
+  Wallet, 
+  Target, 
+  CircleDollarSign, 
+  Landmark, 
+  Coins, 
+  Bitcoin, 
+  ArrowUpRight, 
+  ArrowDownRight, 
+  Sparkles,
+  LineChart,
+  PieChart,
+  LayoutGrid,
+  Zap,
+  History
+} from "lucide-react";
+import { cn, parseDateLocal } from "@/lib/utils";
 import { useFinance } from "@/contexts/FinanceContext";
 import { PeriodSelector } from "@/components/dashboard/PeriodSelector";
-import { ComparisonDateRanges } from "@/types/finance";
-import { InvestmentEvolutionChart } from "@/components/investments/InvestmentEvolutionChart";
-
-const STABLECOIN_NAMES = ['usdt', 'usdc', 'dai', 'busd', 'tusd'];
+import { ComparisonDateRanges, formatCurrency } from "@/types/finance";
+import { subMonths, endOfMonth, format } from "date-fns";
+import { ptBR } from "date-fns/locale";
+import { useChartColors } from "@/hooks/useChartColors";
 
 export default function Investimentos() {
   const { 
@@ -25,162 +40,326 @@ export default function Investimentos() {
     setDateRanges,
     calculateTotalInvestmentBalanceAtDate,
     transacoesV2,
+    getPatrimonioLiquido
   } = useFinance();
   
-  const [activeTab, setActiveTab] = useState("carteira");
+  const colors = useChartColors();
+  const [activeTab, setActiveTab] = useState("visao-geral");
 
   const handlePeriodChange = useCallback((ranges: ComparisonDateRanges) => {
     setDateRanges(ranges);
   }, [setDateRanges]);
 
-  const calculateAccountBalance = useCallback((accountId: string, targetDate: Date | undefined): number => {
-    return calculateBalanceUpToDate(accountId, targetDate, transacoesV2, contasMovimento);
-  }, [calculateBalanceUpToDate, transacoesV2, contasMovimento]);
+  const targetDate = dateRanges.range1.to || new Date();
 
-  const investmentAccounts = useMemo(() => {
-    return contasMovimento.filter(c => ['renda_fixa', 'poupanca', 'cripto', 'reserva', 'objetivo'].includes(c.accountType));
-  }, [contasMovimento]);
-
-  const calculos = useMemo(() => {
-    const targetDate = dateRanges.range1.to;
-    const patrimonioInvestimentos = calculateTotalInvestmentBalanceAtDate(targetDate);
+  // --- Cálculos de Patrimônio ---
+  const metricas = useMemo(() => {
+    const totalInvestido = calculateTotalInvestmentBalanceAtDate(targetDate);
     const valorVeiculos = getValorFipeTotal(targetDate);
-    const patrimonioTotal = patrimonioInvestimentos + valorVeiculos;
+    const patrimonioTotal = totalInvestido + valorVeiculos;
     
-    return { patrimonioTotal, patrimonioInvestimentos };
-  }, [calculateTotalInvestmentBalanceAtDate, getValorFipeTotal, dateRanges.range1.to]);
+    const rf = contasMovimento
+      .filter(c => ['renda_fixa', 'poupanca', 'reserva'].includes(c.accountType))
+      .reduce((a, c) => a + Math.max(0, calculateBalanceUpToDate(c.id, targetDate, transacoesV2, contasMovimento)), 0);
+      
+    const cripto = contasMovimento
+      .filter(c => c.accountType === 'cripto')
+      .reduce((a, c) => a + Math.max(0, calculateBalanceUpToDate(c.id, targetDate, transacoesV2, contasMovimento)), 0);
 
-  const formatCurrency = (value: number) => `R$ ${value.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`;
+    return { patrimonioTotal, totalInvestido, rf, cripto };
+  }, [calculateTotalInvestmentBalanceAtDate, getValorFipeTotal, targetDate, contasMovimento, calculateBalanceUpToDate, transacoesV2]);
 
-  const AssetListItem = ({ account }: { account: any }) => {
-    const saldo = calculateAccountBalance(account.id, dateRanges.range1.to);
-    const Icon = account.accountType === 'cripto' ? Bitcoin : (account.accountType === 'poupanca' ? Coins : Landmark);
-    
-    return (
-      <div className="flex items-center justify-between p-4 rounded-2xl bg-muted/20 hover:bg-muted/40 transition-colors group">
-        <div className="flex items-center gap-4">
-          <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary group-hover:scale-110 transition-transform">
-            <Icon className="w-5 h-5" />
-          </div>
-          <div>
-            <p className="font-bold text-sm text-foreground leading-tight">{account.name}</p>
-            <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider">{account.institution || account.accountType}</p>
-          </div>
-        </div>
-        <div className="text-right">
-          <p className="font-black text-sm text-foreground leading-tight">{formatCurrency(saldo)}</p>
-          <div className="flex items-center justify-end gap-1 text-[10px] text-success font-bold">
-            <ArrowUpRight className="w-3 h-3" /> 0.8%
-          </div>
-        </div>
-      </div>
-    );
-  };
+  // --- Dados para Gráfico de Evolução ---
+  const evolutionData = useMemo(() => {
+    const result = [];
+    for (let i = 6; i >= 0; i--) {
+      const date = endOfMonth(subMonths(new Date(), i));
+      result.push({
+        mes: format(date, 'MMM', { locale: ptBR }).toUpperCase(),
+        valor: calculateTotalInvestmentBalanceAtDate(date)
+      });
+    }
+    return result;
+  }, [calculateTotalInvestmentBalanceAtDate]);
+
+  // --- Dados para Distribuição ---
+  const distributionData = useMemo(() => [
+    { name: 'Renda Fixa', value: metricas.rf, color: colors.primary },
+    { name: 'Criptoativos', value: metricas.cripto, color: colors.accent },
+    { name: 'Imobilizado', value: getValorFipeTotal(targetDate), color: colors.success },
+  ].filter(d => d.value > 0), [metricas, getValorFipeTotal, targetDate, colors]);
 
   return (
     <MainLayout>
-      <div className="space-y-6">
-        <header className="space-y-3 animate-fade-in border-0">
-          <div className="flex items-center justify-between text-xs text-muted-foreground">
-            <div className="inline-flex items-start gap-3">
-              <div className="flex flex-col">
-                <span className="text-sm font-semibold text-foreground">Gestão de Ativos</span>
-                <span className="text-[11px]">Performance de Carteira</span>
-              </div>
+      <div className="space-y-10 pb-12">
+        {/* Header Expressivo */}
+        <header className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 px-1 animate-fade-in">
+          <div className="flex items-center gap-4">
+            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-primary to-primary-dark flex items-center justify-center text-white shadow-xl shadow-primary/20 ring-4 ring-primary/10">
+              <TrendingUp className="w-7 h-7" />
+            </div>
+            <div>
+              <h1 className="font-display font-bold text-3xl leading-none tracking-tight">Investimentos</h1>
+              <p className="text-sm text-muted-foreground font-bold tracking-widest mt-1 uppercase opacity-60">Gestão de Ativos e Patrimônio</p>
             </div>
           </div>
-          <div className="flex flex-wrap items-stretch gap-2 max-w-full">
+          <div className="flex items-center gap-3">
             <PeriodSelector 
               initialRanges={dateRanges}
               onDateRangeChange={handlePeriodChange}
-              className="h-8 rounded-full border-none bg-card px-3 text-[11px] font-medium text-secondary shadow-xs"
+              className="h-11 rounded-full bg-surface-light dark:bg-surface-dark border-border/40 shadow-sm px-6 font-bold"
             />
           </div>
         </header>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {/* Patrimônio Total Card - Estilo conta */}
-          <div className="glass-card p-6 rounded-[1.75rem] border-l-4 border-l-primary flex flex-col justify-between h-40">
-            <div className="flex items-center justify-between">
-              <div className="w-10 h-10 rounded-2xl bg-primary/10 flex items-center justify-center text-primary">
-                <CircleDollarSign className="w-6 h-6" />
+        {/* Hero Section: Patrimônio Total */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 animate-fade-in-up">
+          <div className="col-span-12 lg:col-span-8">
+            <div className="bg-surface-light dark:bg-surface-dark rounded-[40px] p-10 shadow-soft relative overflow-hidden border border-white/60 dark:border-white/5 h-[420px] flex flex-col justify-between group">
+              <div className="absolute inset-0 bg-gradient-to-br from-primary/[0.03] to-transparent opacity-50"></div>
+              
+              <div className="relative z-10">
+                <div className="flex items-center gap-3 mb-6">
+                  <div className="p-2.5 bg-orange-100 dark:bg-orange-900/30 rounded-2xl text-primary shadow-sm">
+                    <CircleDollarSign className="w-6 h-6" />
+                  </div>
+                  <div>
+                    <span className="text-xs font-black text-muted-foreground uppercase tracking-[0.2em] opacity-70">Patrimônio Bruto</span>
+                    <p className="text-[10px] font-bold text-primary/60 uppercase tracking-widest mt-0.5">Ativos Totais</p>
+                  </div>
+                </div>
+                
+                <h2 className="font-display font-extrabold text-6xl sm:text-7xl text-foreground tracking-tighter leading-none tabular-nums">
+                  {formatCurrency(metricas.patrimonioTotal)}
+                </h2>
+                
+                <div className="flex flex-wrap items-center gap-4 mt-8">
+                  <Badge variant="outline" className="bg-success/10 text-success border-none px-4 py-1.5 rounded-xl font-black text-xs">
+                    <ArrowUpRight className="w-3 h-3 mr-1" /> +2.4% ESTE MÊS
+                  </Badge>
+                  <div className="flex items-center gap-2 text-muted-foreground font-bold text-sm">
+                    <Sparkles className="w-4 h-4 text-accent opacity-60" />
+                    <span>Portfólio otimizado pelo Orbium</span>
+                  </div>
+                </div>
               </div>
-              <Badge variant="outline" className="bg-success/10 text-success border-none text-[10px] font-bold">+2.4%</Badge>
-            </div>
-            <div>
-              <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-1">Patrimônio Líquido</p>
-              <p className="text-2xl font-black text-foreground">{formatCurrency(calculos.patrimonioTotal)}</p>
+
+              <div className="h-[180px] w-full mt-4">
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart data={evolutionData}>
+                    <defs>
+                      <linearGradient id="colorVal" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.3}/>
+                        <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0}/>
+                      </linearGradient>
+                    </defs>
+                    <Area type="monotone" dataKey="valor" stroke="hsl(var(--primary))" strokeWidth={4} fillOpacity={1} fill="url(#colorVal)" />
+                  </AreaChart>
+                </ResponsiveContainer>
+              </div>
             </div>
           </div>
 
-          <div className="glass-card p-6 rounded-[1.75rem] border-l-4 border-l-success flex flex-col justify-between h-40">
-            <div className="flex items-center justify-between">
-              <div className="w-10 h-10 rounded-2xl bg-success/10 flex items-center justify-center text-success">
-                <Landmark className="w-6 h-6" />
+          {/* Cockpit de Ativos */}
+          <div className="col-span-12 lg:col-span-4 flex flex-col gap-6">
+            <div className="bg-surface-light dark:bg-surface-dark rounded-[32px] p-8 shadow-soft border border-white/60 dark:border-white/5 flex flex-col justify-between h-[200px] hover:-translate-y-1 transition-transform cursor-help">
+              <div className="flex items-start justify-between">
+                <div className="w-12 h-12 rounded-2xl bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center text-blue-600 shadow-sm">
+                  <Landmark className="w-6 h-6" />
+                </div>
+                <Badge className="bg-blue-100 text-blue-700 border-none font-black text-[10px] px-3 py-1 rounded-lg uppercase">Renda Fixa</Badge>
               </div>
-              <Badge variant="outline" className="bg-success/10 text-success border-none text-[10px] font-bold">+1.2k</Badge>
+              <div>
+                <p className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.15em] mb-1">Total Alocado</p>
+                <p className="font-display font-black text-3xl text-foreground tabular-nums">{formatCurrency(metricas.rf)}</p>
+              </div>
             </div>
-            <div>
-              <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-1">Total em Investimentos</p>
-              <p className="text-2xl font-black text-foreground">{formatCurrency(calculos.patrimonioInvestimentos)}</p>
+
+            <div className="bg-surface-light dark:bg-surface-dark rounded-[32px] p-8 shadow-soft border border-white/60 dark:border-white/5 flex flex-col justify-between h-[194px] hover:-translate-y-1 transition-transform cursor-help">
+               <div className="flex items-start justify-between">
+                <div className="w-12 h-12 rounded-2xl bg-orange-100 dark:bg-orange-900/30 flex items-center justify-center text-orange-600 shadow-sm">
+                  <Bitcoin className="w-6 h-6" />
+                </div>
+                <Badge className="bg-orange-100 text-orange-700 border-none font-black text-[10px] px-3 py-1 rounded-lg uppercase">Criptoativos</Badge>
+              </div>
+              <div>
+                <p className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.15em] mb-1">Exposição Digital</p>
+                <p className="font-display font-black text-3xl text-foreground tabular-nums">{formatCurrency(metricas.cripto)}</p>
+              </div>
             </div>
           </div>
         </div>
 
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <div className="border-b border-border/40">
-            <TabsList className="bg-transparent h-auto p-0 gap-6">
-              <TabsTrigger value="carteira" className="bg-transparent rounded-none border-b-2 border-transparent data-[state=active]:border-primary px-0 py-3 text-xs font-bold uppercase">Visão Geral</TabsTrigger>
-              <TabsTrigger value="ativos" className="bg-transparent rounded-none border-b-2 border-transparent data-[state=active]:border-primary px-0 py-3 text-xs font-bold uppercase">Meus Ativos</TabsTrigger>
+        {/* Navegação de Abas */}
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-10">
+          <div className="flex justify-center">
+            <TabsList className="bg-muted/30 p-1.5 rounded-[2rem] h-14 border border-border/40 max-w-md w-full grid grid-cols-2">
+              <TabsTrigger value="visao-geral" className="rounded-[1.5rem] text-[10px] font-black uppercase tracking-widest data-[state=active]:bg-card data-[state=active]:shadow-lg transition-all gap-2">
+                <LayoutGrid className="w-4 h-4" /> Visão Geral
+              </TabsTrigger>
+              <TabsTrigger value="meus-ativos" className="rounded-[1.5rem] text-[10px] font-black uppercase tracking-widest data-[state=active]:bg-card data-[state=active]:shadow-lg transition-all gap-2">
+                <Wallet className="w-4 h-4" /> Meus Ativos
+              </TabsTrigger>
             </TabsList>
           </div>
 
-          <TabsContent value="carteira" className="space-y-6 animate-fade-in-up">
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              <div className="lg:col-span-2 glass-card p-5 rounded-[1.75rem]">
-                <h4 className="text-sm font-bold text-foreground mb-4">Evolução Histórica</h4>
-                <InvestmentEvolutionChart />
-              </div>
-              <div className="glass-card p-5 rounded-[1.75rem] flex flex-col items-center justify-center">
-                <h4 className="text-sm font-bold text-foreground mb-4 w-full">Distribuição</h4>
-                <div className="h-48 w-full">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                      <Pie 
-                        data={[
-                          { name: 'RF', value: 70 },
-                          { name: 'Cripto', value: 20 },
-                          { name: 'Liquidez', value: 10 }
-                        ]} 
-                        innerRadius={60} 
-                        outerRadius={80} 
-                        paddingAngle={5} 
-                        dataKey="value"
-                      >
-                        <Cell fill="hsl(var(--primary))" />
-                        <Cell fill="hsl(var(--success))" />
-                        <Cell fill="hsl(var(--warning))" />
-                      </Pie>
-                    </PieChart>
-                  </ResponsiveContainer>
+          <TabsContent value="visao-geral" className="space-y-10 animate-in fade-in duration-500">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
+              {/* Gráfico de Distribuição */}
+              <div className="lg:col-span-2 bg-surface-light dark:bg-surface-dark rounded-[48px] p-10 shadow-soft border border-white/60 dark:border-white/5">
+                <div className="flex items-center gap-4 mb-10">
+                  <div className="p-3 bg-primary/10 rounded-2xl text-primary shadow-sm">
+                    <PieChart className="w-6 h-6" />
+                  </div>
+                  <div>
+                    <h3 className="font-display font-black text-2xl text-foreground">Alocação de Capital</h3>
+                    <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest mt-1">Distribuição por Classe de Ativo</p>
+                  </div>
                 </div>
-                <div className="grid grid-cols-3 gap-2 mt-4">
-                   <Badge className="bg-primary/10 text-primary border-none text-[9px]">Renda Fixa</Badge>
-                   <Badge className="bg-success/10 text-success border-none text-[9px]">Cripto</Badge>
-                   <Badge className="bg-warning/10 text-warning border-none text-[9px]">Outros</Badge>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-10 items-center">
+                  <div className="h-[300px] relative">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <RePieChart>
+                        <Pie
+                          data={distributionData}
+                          innerRadius={80}
+                          outerRadius={110}
+                          paddingAngle={8}
+                          dataKey="value"
+                          stroke="none"
+                          cornerRadius={12}
+                        >
+                          {distributionData.map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={entry.color} />
+                          ))}
+                        </Pie>
+                        <Tooltip 
+                          contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 10px 30px rgba(0,0,0,0.1)' }}
+                          formatter={(v: number) => [formatCurrency(v), "Valor"]}
+                        />
+                      </RePieChart>
+                    </ResponsiveContainer>
+                    <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                      <span className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Total</span>
+                      <p className="text-2xl font-black text-foreground">{formatCurrency(metricas.patrimonioTotal)}</p>
+                    </div>
+                  </div>
+
+                  <div className="space-y-4">
+                    {distributionData.map((item, idx) => (
+                      <div key={idx} className="flex items-center justify-between p-4 rounded-2xl bg-muted/20 border border-border/40">
+                        <div className="flex items-center gap-3">
+                          <div className="w-3 h-3 rounded-full" style={{ backgroundColor: item.color }} />
+                          <span className="text-sm font-bold text-foreground">{item.name}</span>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-sm font-black">{formatCurrency(item.value)}</p>
+                          <p className="text-[10px] font-bold text-muted-foreground">{((item.value / metricas.patrimonioTotal) * 100).toFixed(1)}%</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* Card de Metas/Insights */}
+              <div className="bg-surface-light dark:bg-surface-dark rounded-[40px] p-8 shadow-soft border border-white/60 dark:border-white/5 space-y-8">
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 bg-accent/10 rounded-2xl flex items-center justify-center text-accent shadow-sm">
+                    <Target className="w-6 h-6" />
+                  </div>
+                  <div>
+                    <h3 className="font-display font-bold text-xl text-foreground">Objetivos</h3>
+                    <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Progresso de Metas</p>
+                  </div>
+                </div>
+
+                <div className="space-y-6">
+                  <div className="space-y-2">
+                    <div className="flex justify-between text-xs font-bold uppercase tracking-widest">
+                      <span className="text-muted-foreground">Reserva de Emergência</span>
+                      <span className="text-primary">85%</span>
+                    </div>
+                    <div className="h-2.5 bg-muted/50 rounded-full overflow-hidden">
+                      <div className="h-full bg-primary rounded-full w-[85%]" />
+                    </div>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <div className="flex justify-between text-xs font-bold uppercase tracking-widest">
+                      <span className="text-muted-foreground">Liberdade Financeira</span>
+                      <span className="text-accent">12%</span>
+                    </div>
+                    <div className="h-2.5 bg-muted/50 rounded-full overflow-hidden">
+                      <div className="h-full bg-accent rounded-full w-[12%]" />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="pt-6 border-t border-border/40">
+                  <div className="p-4 rounded-2xl bg-primary/5 border border-primary/10 flex gap-3">
+                    <Zap className="w-5 h-5 text-primary shrink-0" />
+                    <p className="text-[11px] font-bold text-primary-dark leading-tight uppercase">
+                      Sua exposição em Cripto está acima da média recomendada (15%). Considere rebalancear.
+                    </p>
+                  </div>
                 </div>
               </div>
             </div>
           </TabsContent>
 
-          <TabsContent value="ativos" className="animate-fade-in-up">
-            <div className="glass-card p-5 rounded-[1.75rem] space-y-3">
-              <h4 className="text-sm font-bold text-foreground mb-4">Portfólio Detalhado</h4>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                {investmentAccounts.map(account => (
-                  <AssetListItem key={account.id} account={account} />
-                ))}
-              </div>
+          <TabsContent value="meus-ativos" className="animate-in fade-in duration-500">
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8">
+              {contasMovimento
+                .filter(c => ['renda_fixa', 'poupanca', 'cripto', 'reserva', 'objetivo'].includes(c.accountType))
+                .map((account) => {
+                  const saldo = calculateBalanceUpToDate(account.id, targetDate, transacoesV2, contasMovimento);
+                  const isCripto = account.accountType === 'cripto';
+                  const Icon = isCripto ? Bitcoin : Landmark;
+                  
+                  return (
+                    <div 
+                      key={account.id}
+                      className="bg-card hover:bg-muted/20 transition-all duration-500 rounded-[2.5rem] p-8 border border-border/40 shadow-sm hover:shadow-2xl hover:-translate-y-2 group relative overflow-hidden"
+                    >
+                      <div className="absolute top-0 right-0 p-8 opacity-5 group-hover:scale-125 group-hover:rotate-12 transition-transform duration-700">
+                          <Icon className="w-32 h-32" />
+                      </div>
+
+                      <div className="flex items-start justify-between mb-10 relative z-10">
+                        <div className="flex items-center gap-5">
+                          <div className={cn(
+                            "w-14 h-14 rounded-[1.25rem] flex items-center justify-center transition-all duration-500",
+                            isCripto ? "bg-orange-100 text-orange-600 group-hover:bg-orange-600 group-hover:text-white" : "bg-primary/10 text-primary group-hover:bg-primary group-hover:text-white"
+                          )}>
+                            <Icon className="w-7 h-7" />
+                          </div>
+                          <div className="space-y-1">
+                            <p className="font-black text-lg text-foreground leading-tight tracking-tight">{account.name}</p>
+                            <Badge variant="outline" className="text-[9px] font-black uppercase bg-muted/50 border-none px-2 py-0.5">
+                              {account.institution || account.accountType}
+                            </Badge>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="space-y-1 relative z-10">
+                        <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Saldo Atual</p>
+                        <p className="font-black text-3xl text-foreground tabular-nums">{formatCurrency(saldo)}</p>
+                      </div>
+
+                      <div className="mt-8 pt-6 border-t border-border/40 flex items-center justify-between relative z-10">
+                        <div className="flex items-center gap-1 text-success font-black text-[10px]">
+                          <ArrowUpRight className="w-3 h-3" /> +0.85%
+                        </div>
+                        <Button variant="ghost" size="sm" className="h-8 rounded-full text-[10px] font-black uppercase tracking-widest hover:bg-primary/10">
+                          Detalhes <ArrowRight className="w-3.5 h-3.5 ml-1" />
+                        </Button>
+                      </div>
+                    </div>
+                  );
+                })}
             </div>
           </TabsContent>
         </Tabs>
