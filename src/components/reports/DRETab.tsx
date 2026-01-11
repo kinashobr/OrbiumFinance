@@ -7,7 +7,7 @@ import {
 } from "lucide-react";
 import { useFinance } from "@/contexts/FinanceContext";
 import { cn, parseDateLocal } from "@/lib/utils";
-import { ComparisonDateRanges, DateRange, formatCurrency } from "@/types/finance";
+import { ACCOUNT_TYPE_LABELS, ComparisonDateRanges, DateRange, formatCurrency } from "@/types/finance";
 import { startOfDay, endOfDay, isWithinInterval, subMonths, endOfMonth, format, startOfMonth } from "date-fns";
 import { Badge } from "@/components/ui/badge";
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart as RePieChart, Pie, Cell, Legend } from "recharts";
@@ -159,7 +159,6 @@ export function DRETab({ dateRanges }: { dateRanges: ComparisonDateRanges }) {
     return result;
   }, [calculateDRE]);
 
-  // Gráfico de Composição Detalhado por Categoria
   const compositionData = useMemo(() => {
     const palette = [
         colors.primary, 'hsl(var(--neon-purple))', 'hsl(var(--neon-blue))',
@@ -176,16 +175,18 @@ export function DRETab({ dateRanges }: { dateRanges: ComparisonDateRanges }) {
         allExpenses.push({ name: 'Juros e Encargos', value: dre1.juros });
     }
 
-    return allExpenses
-        .filter(d => d.value > 0) // Filtra categorias com valor zero
+    const filtered = allExpenses
+        .filter(d => d.value > 0)
         .sort((a, b) => b.value - a.value)
-        .slice(0, 8) // Top 8 categorias
-        .map((d, i) => ({ ...d, color: palette[i % palette.length] }));
+        .slice(0, 8);
+
+    if (filtered.length === 0) return [];
+
+    return filtered.map((d, i) => ({ ...d, color: palette[i % palette.length] }));
   }, [dre1, colors]);
 
   return (
     <div className="space-y-10 animate-fade-in-up">
-      {/* SEÇÃO SUPERIOR: RESULTADO + INDICADORES */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         <div className="lg:col-span-6">
           <div className={cn(
@@ -256,19 +257,13 @@ export function DRETab({ dateRanges }: { dateRanges: ComparisonDateRanges }) {
          </div>
       </div>
 
-      {/* GRID PRINCIPAL: DRE À ESQUERDA, GRÁFICOS À DIREITA */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 items-start">
-        
-        {/* COLUNA ESQUERDA: LISTAGEM DRE (7/12) */}
         <div className="lg:col-span-7 space-y-10">
           <BalanceSheetList title="RECEITAS & CRÉDITOS" totalValue={dre1.rec} items={receitaItems} isAsset={true} />
           <BalanceSheetList title="DESPESAS & CUSTOS" totalValue={dre1.fix + dre1.var + dre1.juros} items={despesaItems} isAsset={false} plValue={dre1.res} />
         </div>
 
-        {/* COLUNA DIREITA: GRÁFICOS (5/12) */}
         <div className="lg:col-span-5 space-y-10 lg:sticky lg:top-24">
-          
-          {/* Fluxo de Caixa Histórico */}
           <div className="bg-surface-light dark:bg-surface-dark rounded-[3rem] p-8 border border-white/60 dark:border-white/5 shadow-soft">
             <div className="flex items-center gap-3 mb-8 px-2">
                <div className="p-2 bg-primary/10 rounded-xl text-primary"><BarChart3 className="w-5 h-5" /></div>
@@ -293,45 +288,52 @@ export function DRETab({ dateRanges }: { dateRanges: ComparisonDateRanges }) {
             </div>
           </div>
 
-          {/* Composição Gastos Detalhada */}
           <div className="bg-surface-light dark:bg-surface-dark rounded-[3rem] p-8 border border-white/60 dark:border-white/5 shadow-soft flex flex-col">
             <div className="flex items-center gap-3 mb-8 px-2">
                <div className="p-2 bg-accent/10 rounded-xl text-accent"><PieChart className="w-5 h-5" /></div>
                <h4 className="font-display font-black text-xl text-foreground uppercase tracking-tight">Top Gastos por Categoria</h4>
             </div>
-            <div className="flex-1 min-h-[300px]">
-               <ResponsiveContainer width="100%" height="100%">
-                  <RePieChart>
-                     <Pie 
-                        data={compositionData} 
-                        cx="50%" 
-                        cy="50%" 
-                        innerRadius={70} 
-                        outerRadius={100} 
-                        paddingAngle={4} 
-                        dataKey="value" 
-                        nameKey="name" // Adiciona nameKey para Tooltip
-                        stroke="none"
-                     >
-                        {compositionData.map((entry, index) => <Cell key={index} fill={entry.color} />)}
-                     </Pie>
-                     <Tooltip 
-                        contentStyle={{borderRadius: '16px', border: 'none', boxShadow: '0 10px 25px rgba(0,0,0,0.1)', backgroundColor: 'hsl(var(--card))'}}
-                        formatter={(value: number, name: string) => [formatCurrency(value), name]} // Formata para mostrar nome e valor
-                     />
-                  </RePieChart>
-               </ResponsiveContainer>
+            <div className="flex-1 min-h-[300px] w-full">
+               {compositionData.length > 0 ? (
+                 <ResponsiveContainer width="100%" height={300}>
+                    <RePieChart>
+                       <Pie 
+                          data={compositionData} 
+                          cx="50%" 
+                          cy="50%" 
+                          innerRadius={70} 
+                          outerRadius={100} 
+                          paddingAngle={4} 
+                          dataKey="value" 
+                          nameKey="name"
+                          stroke="none"
+                       >
+                          {compositionData.map((entry, index) => <Cell key={index} fill={entry.color} />)}
+                       </Pie>
+                       <Tooltip 
+                          contentStyle={{borderRadius: '16px', border: 'none', boxShadow: '0 10px 25px rgba(0,0,0,0.1)', backgroundColor: 'hsl(var(--card))'}}
+                          formatter={(value: number, name: string) => [formatCurrency(value), name]}
+                       />
+                    </RePieChart>
+                 </ResponsiveContainer>
+               ) : (
+                 <div className="flex flex-col items-center justify-center h-full opacity-30 py-10">
+                    <PieChart className="w-12 h-12 mb-2" />
+                    <p className="text-xs font-black uppercase tracking-widest">Sem dados no período</p>
+                 </div>
+               )}
             </div>
-            <div className="grid grid-cols-2 gap-x-4 gap-y-2 mt-6">
-               {compositionData.map((d) => (
-                  <div key={d.name} className="flex items-center gap-2">
-                     <div className="h-2 w-2 rounded-full shrink-0" style={{ backgroundColor: d.color }} />
-                     <span className="text-[10px] font-bold text-foreground truncate uppercase tracking-tight">{d.name}</span>
-                  </div>
-               ))}
-            </div>
+            {compositionData.length > 0 && (
+              <div className="grid grid-cols-2 gap-x-4 gap-y-2 mt-6">
+                 {compositionData.map((d) => (
+                    <div key={d.name} className="flex items-center gap-2">
+                       <div className="h-2 w-2 rounded-full shrink-0" style={{ backgroundColor: d.color }} />
+                       <span className="text-[10px] font-bold text-foreground truncate uppercase tracking-tight">{d.name}</span>
+                    </div>
+                 ))}
+              </div>
+            )}
           </div>
-
         </div>
       </div>
     </div>
