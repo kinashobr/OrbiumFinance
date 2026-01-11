@@ -87,7 +87,7 @@ export function Sidebar() {
     const transacoesFluxo = transacoesV2.filter(t => {
       try {
         const d = parseDateLocal(t.date);
-        return isAfter(d, parsedAlertStartDate) || isSameDay(d, parsedStart);
+        return isAfter(d, parsedAlertStartDate) || isSameDay(d, parsedAlertStartDate);
       } catch { return false; }
     });
 
@@ -237,7 +237,6 @@ export function Sidebar() {
             </button>
           </PopoverTrigger>
           <PopoverContent side="right" sideOffset={12} className="p-0 border-border/40 shadow-2xl rounded-[1.75rem] w-80 bg-card/98 backdrop-blur-xl">
-            {/* Removed the duplicate header here */}
             <div className="px-3 pb-5">
               <SidebarAlertas collapsed={false} />
             </div>
