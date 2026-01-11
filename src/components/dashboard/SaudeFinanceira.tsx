@@ -1,5 +1,3 @@
-"use client";
-
 import { 
   Wallet, 
   Scale, 
@@ -23,6 +21,39 @@ interface SaudeFinanceiraProps {
   dependenciaRenda: number;
 }
 
+// Define the structure for status objects
+interface StatusConfig {
+  label: string;
+  color: string;
+  bg: string;
+  border: string;
+}
+
+const getLiquidezStatus = (val: number): StatusConfig => {
+  if (val >= 2) return { label: "ÓTIMO", color: "text-green-800", bg: "bg-green-50/80 dark:bg-green-900/10", border: "border-green-100 dark:border-green-900/20" };
+  if (val >= 1.2) return { label: "BOM", color: "text-blue-800", bg: "bg-blue-50/80 dark:bg-blue-900/10", border: "border-blue-100 dark:border-blue-900/20" };
+  return { label: "ATENÇÃO", color: "text-orange-800", bg: "bg-orange-50/80 dark:bg-orange-900/10", border: "border-orange-100 dark:border-orange-900/20" };
+};
+
+const getEndividamentoStatus = (val: number): StatusConfig => {
+  if (val <= 25) return { label: "ÓTIMO", color: "text-green-800", bg: "bg-green-50/80 dark:bg-green-900/10", border: "border-green-100 dark:border-green-900/20" };
+  if (val <= 45) return { label: "ALERTA", color: "text-orange-800", bg: "bg-orange-50/80 dark:bg-orange-900/10", border: "border-orange-100 dark:border-orange-900/20" };
+  return { label: "ALTO", color: "text-red-800", bg: "bg-red-50/80 dark:bg-red-900/10", border: "border-red-100 dark:border-red-900/20" };
+};
+
+const getDiversificacaoStatus = (val: number): StatusConfig => {
+  if (val >= 60) return { label: "ALTA", color: "text-green-800", bg: "bg-green-50/80 dark:bg-green-900/10", border: "border-green-100 dark:border-green-900/20" };
+  return { label: "BAIXA", color: "text-orange-800", bg: "bg-orange-50/80 dark:bg-orange-900/10", border: "border-orange-100 dark:border-orange-900/20" };
+};
+
+// NOVO: Status para Estabilidade
+const getEstabilidadeStatus = (val: number): StatusConfig => {
+    if (val >= 80) return { label: "ALTA", color: "text-green-800", bg: "bg-green-50/80 dark:bg-green-900/10", border: "border-green-100 dark:border-green-900/20" };
+    // Usando cores primárias/neutras para o status MÉDIA
+    return { label: "MÉDIA", color: "text-primary", bg: "bg-primary/5 dark:bg-primary/10", border: "border-primary/20 dark:border-primary/30" };
+};
+
+
 export function SaudeFinanceira({
   liquidez,
   endividamento,
@@ -31,26 +62,10 @@ export function SaudeFinanceira({
   dependenciaRenda,
 }: SaudeFinanceiraProps) {
   
-  const getLiquidezStatus = (val: number) => {
-    if (val >= 2) return { label: "ÓTIMO", color: "text-green-800", bg: "bg-green-50/80 dark:bg-green-900/10", border: "border-green-100 dark:border-green-900/20" };
-    if (val >= 1.2) return { label: "BOM", color: "text-blue-800", bg: "bg-blue-50/80 dark:bg-blue-900/10", border: "border-blue-100 dark:border-blue-900/20" };
-    return { label: "ATENÇÃO", color: "text-orange-800", bg: "bg-orange-50/80 dark:bg-orange-900/10", border: "border-orange-100 dark:border-orange-900/20" };
-  };
-
-  const getEndividamentoStatus = (val: number) => {
-    if (val <= 25) return { label: "ÓTIMO", color: "text-green-800", bg: "bg-green-50/80 dark:bg-green-900/10", border: "border-green-100 dark:border-green-900/20" };
-    if (val <= 45) return { label: "ALERTA", color: "text-orange-800", bg: "bg-orange-50/80 dark:bg-orange-900/10", border: "border-orange-100 dark:border-orange-900/20" };
-    return { label: "ALTO", color: "text-red-800", bg: "bg-red-50/80 dark:bg-red-900/10", border: "border-red-100 dark:border-red-900/20" };
-  };
-
-  const getDiversificacaoStatus = (val: number) => {
-    if (val >= 60) return { label: "ALTA", color: "text-green-800", bg: "bg-green-50/80 dark:bg-green-900/10" };
-    return { label: "BAIXA", color: "text-orange-800", bg: "bg-orange-50/80 dark:bg-orange-900/10" };
-  };
-
   const liq = getLiquidezStatus(liquidez);
   const end = getEndividamentoStatus(endividamento);
   const div = getDiversificacaoStatus(diversificacao);
+  const est = getEstabilidadeStatus(estabilidadeFluxo); // NEW
 
   return (
     <TooltipProvider>
@@ -133,19 +148,19 @@ export function SaudeFinanceira({
             </TooltipContent>
           </Tooltip>
 
-          {/* Estabilidade Fluxo */}
+          {/* Estabilidade Fluxo - FIXADO */}
           <Tooltip>
             <TooltipTrigger asChild>
-              <div className="bg-white dark:bg-surface-dark rounded-3xl p-5 border border-neutral-100 dark:border-neutral-800 shadow-sm transition-all hover:scale-[1.02] cursor-help">
+              <div className={cn("rounded-3xl p-5 border transition-all hover:scale-[1.02] group relative overflow-hidden cursor-help", est.bg, est.border)}>
                 <div className="flex justify-between items-start mb-4">
-                  <div className="w-10 h-10 rounded-full bg-neutral-50 dark:bg-neutral-900 flex items-center justify-center text-muted-foreground">
-                    <Shield className="w-5 h-5" />
+                  <div className="w-10 h-10 rounded-full bg-white dark:bg-black/20 flex items-center justify-center shadow-sm">
+                    <Shield className={cn("w-5 h-5", est.color)} />
                   </div>
-                  <span className="text-[9px] font-bold bg-neutral-100 dark:bg-neutral-800 px-2 py-0.5 rounded-full text-muted-foreground">
-                    {estabilidadeFluxo >= 80 ? "ALTA" : "MÉDIA"}
+                  <span className={cn("text-[9px] font-bold px-2 py-0.5 rounded-full border border-black/5 dark:border-white/5", est.bg.replace('50/80', '100').replace('900/10', '900/40').replace('primary/5', 'primary/20'))}>
+                    {est.label}
                   </span>
                 </div>
-                <p className="text-3xl font-display font-bold text-foreground">{estabilidadeFluxo.toFixed(0)}%</p>
+                <p className={cn("text-3xl font-display font-bold text-foreground", est.color.replace('800', '600'))}>{estabilidadeFluxo.toFixed(0)}%</p>
                 <div className="flex items-center gap-1 mt-1">
                   <p className="text-[10px] font-bold uppercase tracking-tight text-muted-foreground">Estabilidade</p>
                   <Info className="w-2.5 h-2.5 opacity-40" />
