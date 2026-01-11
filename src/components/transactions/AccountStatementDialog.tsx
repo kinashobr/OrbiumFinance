@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -8,7 +8,7 @@ import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { 
   Building2, Calendar, TrendingUp, TrendingDown, 
-  CheckCircle2, AlertTriangle, Download, RefreshCw, X
+  CheckCircle2, AlertTriangle, Download, RefreshCw, X, ArrowRight
 } from "lucide-react";
 import { 
   ContaCorrente, TransacaoCompleta, Categoria, AccountSummary, 
@@ -86,31 +86,32 @@ export function AccountStatementDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-[min(95vw,80rem)] h-[min(90vh,900px)] p-0 overflow-hidden flex flex-col">
-        <DialogHeader className="px-4 sm:px-6 pt-4 sm:pt-6 pb-3 sm:pb-4 border-b shrink-0">
+      <DialogContent className="max-w-[min(95vw,80rem)] h-[min(90vh,900px)] p-0 overflow-hidden flex flex-col rounded-[3rem] border-none shadow-2xl bg-background">
+        <DialogHeader className="px-8 pt-10 pb-6 border-b shrink-0 bg-primary/5">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
-                <Building2 className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
+            <div className="flex items-center gap-4">
+              <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center shrink-0 text-primary shadow-lg shadow-primary/5">
+                <Building2 className="w-7 h-7" />
               </div>
               <div className="min-w-0">
-                <DialogTitle className="text-base sm:text-xl truncate">{account.name}</DialogTitle>
-                <div className="flex items-center gap-2 text-xs sm:text-sm text-muted-foreground mt-0.5 sm:mt-1 flex-wrap">
-                  <Badge variant="outline" className="text-[10px] sm:text-xs">{ACCOUNT_TYPE_LABELS[account.accountType]}</Badge>
+                <DialogTitle className="text-2xl font-black tracking-tight truncate">{account.name}</DialogTitle>
+                <div className="flex items-center gap-2 text-xs sm:text-sm text-muted-foreground mt-1 flex-wrap">
+                  <Badge variant="outline" className="text-[10px] sm:text-xs font-bold uppercase tracking-widest bg-muted/50 border-none">{ACCOUNT_TYPE_LABELS[account.accountType]}</Badge>
                   {account.institution && <span className="truncate">• {account.institution}</span>}
                 </div>
               </div>
             </div>
-            <div className="flex items-center gap-2 shrink-0">
-              <Button variant="outline" size="sm" onClick={onReconcileAll} className="h-8 text-xs sm:text-sm">
-                <RefreshCw className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
-                <span className="hidden sm:inline">Conciliar Tudo</span>
-                <span className="sm:hidden">Conciliar</span>
+            <div className="flex items-center gap-3 shrink-0">
+              <Button variant="outline" size="sm" onClick={onReconcileAll} className="h-10 rounded-full text-xs sm:text-sm font-bold gap-2 px-5 border-border/40 bg-card/50 backdrop-blur-sm">
+                <RefreshCw className="w-4 h-4" />
+                Conciliar Tudo
               </Button>
-              <Button variant="outline" size="sm" className="h-8 text-xs sm:text-sm">
-                <Download className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
-                <span className="hidden sm:inline">Exportar</span>
-                <span className="sm:hidden">Exp.</span>
+              <Button variant="outline" size="sm" className="h-10 rounded-full text-xs sm:text-sm font-bold gap-2 px-5 border-border/40 bg-card/50 backdrop-blur-sm">
+                <Download className="w-4 h-4" />
+                Exportar
+              </Button>
+              <Button variant="ghost" size="icon" onClick={() => onOpenChange(false)} className="h-10 w-10 rounded-full hover:bg-black/5 transition-colors">
+                <X className="w-5 h-5" />
               </Button>
             </div>
           </div>
@@ -118,46 +119,76 @@ export function AccountStatementDialog({
 
         {/* Conteúdo rolável */}
         <ScrollArea className="flex-1 hide-scrollbar-mobile">
-          <div className="p-4 sm:p-6 space-y-4 sm:space-y-6">
+          <div className="p-6 sm:p-8 space-y-6 sm:space-y-8">
+            {/* Status de Conciliação */}
+            <div className={cn(
+              "p-5 rounded-[2rem] border-2 flex items-center justify-between transition-all",
+              periodSummary.pendingCount === 0 ? "bg-success/5 border-success/20" : "bg-warning/5 border-warning/20"
+            )}>
+              <div className="flex items-center gap-4">
+                <div className={cn("flex items-center gap-2", statusColor)}>
+                  {periodSummary.pendingCount === 0 ? (
+                    <CheckCircle2 className="w-6 h-6" />
+                  ) : (
+                    <AlertTriangle className="w-6 h-6" />
+                  )}
+                  <span className="font-black text-sm uppercase tracking-widest">
+                    {periodSummary.pendingCount === 0 
+                      ? "Conciliação Completa" 
+                      : `${periodSummary.pendingCount} PENDENTE(S)`}
+                  </span>
+                </div>
+                <Separator orientation="vertical" className="h-6 bg-border/50 hidden sm:block" />
+                <span className="text-sm text-muted-foreground hidden sm:block">
+                  {periodSummary.conciliatedCount}/{transactions.length} transações
+                </span>
+              </div>
+
+              <Badge variant="outline" className={cn(
+                "font-black text-sm px-4 py-1.5 rounded-xl",
+                periodSummary.netChange >= 0 ? "bg-primary/10 text-primary border-primary/20" : "bg-destructive/10 text-destructive border-destructive/20"
+              )}>
+                {periodSummary.netChange >= 0 ? "+" : ""}{formatCurrency(periodSummary.netChange)}
+              </Badge>
+            </div>
+
             {/* Resumo de Saldos */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-4">
-              <Card className="glass-card">
-                <CardContent className="p-3 sm:pt-4">
-                  <div className="text-xs sm:text-sm text-muted-foreground mb-1">Saldo Inicial</div>
-                  <div className="text-sm sm:text-lg font-bold">{formatCurrency(periodSummary.initialBalance)}</div>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+              <Card className="glass-card p-4 rounded-[2rem]">
+                <CardContent className="p-0">
+                  <div className="text-[10px] font-black text-muted-foreground uppercase tracking-widest mb-1">Saldo Inicial</div>
+                  <div className="text-lg font-black">{formatCurrency(periodSummary.initialBalance)}</div>
                 </CardContent>
               </Card>
               
-              <Card className="glass-card">
-                <CardContent className="p-3 sm:pt-4">
-                  <div className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm text-muted-foreground mb-1">
-                    <TrendingUp className="w-3 h-3 sm:w-4 sm:h-4 text-success" />
-                    Entradas
+              <Card className="glass-card p-4 rounded-[2rem] bg-success/5 border-success/20">
+                <CardContent className="p-0">
+                  <div className="flex items-center gap-1 text-[10px] font-black text-success uppercase tracking-widest mb-1">
+                    <TrendingUp className="w-3 h-3" /> Entradas
                   </div>
-                  <div className="text-sm sm:text-lg font-bold text-success">
+                  <div className="text-lg font-black text-success">
                     +{formatCurrency(periodSummary.totalIn)}
                   </div>
                 </CardContent>
               </Card>
 
-              <Card className="glass-card">
-                <CardContent className="p-3 sm:pt-4">
-                  <div className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm text-muted-foreground mb-1">
-                    <TrendingDown className="w-3 h-3 sm:w-4 sm:h-4 text-destructive" />
-                    Saídas
+              <Card className="glass-card p-4 rounded-[2rem] bg-destructive/5 border-destructive/20">
+                <CardContent className="p-0">
+                  <div className="flex items-center gap-1 text-[10px] font-black text-destructive uppercase tracking-widest mb-1">
+                    <TrendingDown className="w-3 h-3" /> Saídas
                   </div>
-                  <div className="text-sm sm:text-lg font-bold text-destructive">
+                  <div className="text-lg font-black text-destructive">
                     -{formatCurrency(periodSummary.totalOut)}
                   </div>
                 </CardContent>
               </Card>
 
-              <Card className="glass-card border-2 border-primary/20">
-                <CardContent className="p-3 sm:pt-4">
-                  <div className="text-xs sm:text-sm text-muted-foreground mb-1">Saldo Final</div>
+              <Card className="glass-card p-4 rounded-[2rem] border-primary/20 bg-primary/5">
+                <CardContent className="p-0">
+                  <div className="text-[10px] font-black text-muted-foreground uppercase tracking-widest mb-1">Saldo Final</div>
                   <div className={cn(
-                    "text-sm sm:text-lg font-bold",
-                    periodSummary.finalBalance >= 0 ? "text-foreground" : "text-destructive"
+                    "text-lg font-black",
+                    periodSummary.finalBalance >= 0 ? "text-primary" : "text-destructive"
                   )}>
                     {formatCurrency(periodSummary.finalBalance)}
                   </div>
@@ -165,90 +196,61 @@ export function AccountStatementDialog({
               </Card>
             </div>
 
-            {/* Status de Conciliação */}
-            <Card className="glass-card">
-              <CardContent className="py-3">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-4">
-                    <div className={cn("flex items-center gap-2", statusColor)}>
-                      {periodSummary.pendingCount === 0 ? (
-                        <CheckCircle2 className="w-5 h-5" />
-                      ) : (
-                        <AlertTriangle className="w-5 h-5" />
-                      )}
-                      <span className="font-medium text-sm">
-                        {periodSummary.pendingCount === 0 
-                          ? "Todas conciliadas" 
-                          : `${periodSummary.pendingCount} pendentes`}
-                      </span>
-                    </div>
-                    <Separator orientation="vertical" className="h-5" />
-                    <span className="text-sm text-muted-foreground">
-                      {periodSummary.conciliatedCount}/{transactions.length}
-                    </span>
-                  </div>
-
-                  <Badge variant={periodSummary.netChange >= 0 ? "default" : "destructive"}>
-                    {periodSummary.netChange >= 0 ? "+" : ""}{formatCurrency(periodSummary.netChange)}
-                  </Badge>
-                </div>
-              </CardContent>
-            </Card>
-
             {/* Filtro de Período */}
-            <Card className="glass-card">
-              <CardHeader className="pb-2 px-3 sm:px-6 pt-3 sm:pt-4">
-                <CardTitle className="text-xs sm:text-sm flex items-center gap-2">
-                  <Calendar className="w-3 h-3 sm:w-4 sm:h-4" />
-                  Período do Extrato
+            <div className="glass-card p-6 rounded-[2rem] space-y-4">
+              <div className="flex items-center gap-2">
+                <Calendar className="w-4 h-4 text-primary" />
+                <CardTitle className="text-sm font-black uppercase tracking-widest text-foreground">
+                  Filtro de Período
                 </CardTitle>
-              </CardHeader>
-              <CardContent className="px-3 sm:px-6 pb-3 sm:pb-4">
-                <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 flex-wrap">
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs sm:text-sm text-muted-foreground">De:</span>
-                    <Input
-                      type="date"
-                      value={dateFrom}
-                      onChange={(e) => setDateFrom(e.target.value)}
-                      className="flex-1 sm:w-[150px] h-8 sm:h-9 text-sm"
-                    />
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs sm:text-sm text-muted-foreground">Até:</span>
-                    <Input
-                      type="date"
-                      value={dateTo}
-                      onChange={(e) => setDateTo(e.target.value)}
-                      className="flex-1 sm:w-[150px] h-8 sm:h-9 text-sm"
-                    />
-                  </div>
-                  <div className="flex items-center justify-between sm:justify-start gap-2 sm:ml-auto">
-                    {(dateFrom || dateTo) && (
-                      <Button 
-                        variant="ghost" 
-                        size="sm"
-                        className="h-8 text-xs sm:text-sm"
-                        onClick={() => { setDateFrom(""); setDateTo(""); }}
-                      >
-                        Limpar
-                      </Button>
-                    )}
-                    <span className="text-xs sm:text-sm text-muted-foreground">
-                      {filteredTransactions.length} transações
-                    </span>
-                  </div>
+              </div>
+              <div className="flex flex-col sm:flex-row sm:items-center gap-4 flex-wrap">
+                <div className="flex items-center gap-2 flex-1 min-w-[150px]">
+                  <span className="text-xs sm:text-sm text-muted-foreground font-bold">De:</span>
+                  <Input
+                    type="date"
+                    value={dateFrom}
+                    onChange={(e) => setDateFrom(e.target.value)}
+                    className="flex-1 h-10 text-sm rounded-xl border-2 bg-muted/50"
+                  />
                 </div>
-              </CardContent>
-            </Card>
+                <div className="flex items-center gap-2 flex-1 min-w-[150px]">
+                  <span className="text-xs sm:text-sm text-muted-foreground font-bold">Até:</span>
+                  <Input
+                    type="date"
+                    value={dateTo}
+                    onChange={(e) => setDateTo(e.target.value)}
+                    className="flex-1 h-10 text-sm rounded-xl border-2 bg-muted/50"
+                  />
+                </div>
+                <div className="flex items-center justify-between sm:justify-start gap-4 sm:ml-auto">
+                  {(dateFrom || dateTo) && (
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      className="h-10 text-xs sm:text-sm rounded-xl font-bold gap-2"
+                      onClick={() => { setDateFrom(""); setDateTo(""); }}
+                    >
+                      <X className="w-4 h-4" /> Limpar
+                    </Button>
+                  )}
+                  <span className="text-xs sm:text-sm text-muted-foreground font-bold">
+                    {filteredTransactions.length} transações
+                  </span>
+                </div>
+              </div>
+            </div>
 
             {/* Tabela de Transações */}
-            <Card className="glass-card">
-              <CardHeader className="pb-2 px-3 sm:px-6 pt-3 sm:pt-4">
-                <CardTitle className="text-xs sm:text-sm">Movimentações</CardTitle>
+            <div className="glass-card p-0 rounded-[2rem]">
+              <CardHeader className="pb-4 px-6 sm:px-8 pt-6 sm:pt-8">
+                <CardTitle className="text-sm font-black uppercase tracking-widest text-foreground flex items-center gap-2">
+                  <ArrowRight className="w-4 h-4 text-primary" />
+                  Movimentações Detalhadas
+                </CardTitle>
               </CardHeader>
-              <CardContent className="overflow-x-auto px-0 sm:px-6 pb-3 sm:pb-4 -mx-4 sm:mx-0">
-                <div className="min-w-[600px] px-4 sm:px-0">
+              <CardContent className="overflow-x-auto px-0 sm:px-0 pb-6 sm:pb-8">
+                <div className="min-w-[1000px] px-6 sm:px-8">
                   <TransactionTable
                     transactions={filteredTransactions}
                     accounts={[account]}
@@ -259,7 +261,7 @@ export function AccountStatementDialog({
                   />
                 </div>
               </CardContent>
-            </Card>
+            </div>
           </div>
         </ScrollArea>
       </DialogContent>
