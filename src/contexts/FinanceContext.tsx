@@ -27,6 +27,10 @@ import {
   PotentialFixedBill,
   ExternalPaidBill,
   BillDisplayItem,
+  Imovel, // Importado
+  Terreno, // Importado
+  generateImovelId, // Importado
+  generateTerrenoId, // Importado
 } from "@/types/finance";
 import { parseISO, startOfMonth, endOfMonth, subDays, differenceInDays, differenceInMonths, addMonths, isBefore, isAfter, isSameDay, isSameMonth, isSameYear, startOfDay, endOfDay, subMonths, format, isWithinInterval } from "date-fns";
 import { parseDateLocal } from "@/lib/utils";
@@ -271,6 +275,18 @@ interface FinanceContextType {
   deleteVeiculo: (id: number) => void;
   getPendingVehicles: () => Veiculo[];
   
+  // Imóveis
+  imoveis: Imovel[];
+  addImovel: (imovel: Omit<Imovel, "id">) => void;
+  updateImovel: (id: number, imovel: Partial<Imovel>) => void;
+  deleteImovel: (id: number) => void;
+  
+  // Terrenos
+  terrenos: Terreno[];
+  addTerreno: (terreno: Omit<Terreno, "id">) => void;
+  updateTerreno: (id: number, terreno: Partial<Terreno>) => void;
+  deleteTerreno: (id: number) => void;
+  
   // Seguros de Veículo
   segurosVeiculo: SeguroVeiculo[];
   addSeguroVeiculo: (seguro: Omit<SeguroVeiculo, "id">) => void;
@@ -353,6 +369,7 @@ interface FinanceContextType {
   
   // Cálculos avançados para relatórios
   getValorFipeTotal: (targetDate?: Date) => number;
+  getValorImoveisTerrenos: (targetDate?: Date) => number; // NOVO
   getSaldoDevedor: (targetDate?: Date) => number;
   getLoanPrincipalRemaining: (targetDate?: Date) => number;
   getCreditCardDebt: (targetDate?: Date) => number;
@@ -391,6 +408,8 @@ const STORAGE_KEYS = {
   DATE_RANGES: "fin_date_ranges_v1",
   ALERT_START_DATE: "fin_alert_start_date_v1",
   REVENUE_FORECASTS: "fin_revenue_forecasts_v1",
+  IMOVEIS: "neon_finance_imoveis", // NOVO
+  TERRENOS: "neon_finance_terrenos", // NOVO
 };
 
 const initialEmprestimos: Emprestimo[] = [];
@@ -400,6 +419,8 @@ const initialObjetivos: ObjetivoFinanceiro[] = [];
 const initialBillsTracker: BillTracker[] = [];
 const initialStandardizationRules: StandardizationRule[] = [];
 const initialImportedStatements: ImportedStatement[] = [];
+const initialImoveis: Imovel[] = []; // NOVO
+const initialTerrenos: Terreno[] = []; // NOVO
 
 const defaultAlertStartDate = subMonths(new Date(), 6).toISOString().split('T')[0];
 
@@ -444,6 +465,8 @@ function saveToStorage<T>(key: string, data: T): void {
 export function FinanceProvider({ children }: { children: ReactNode }) {
   const [emprestimos, setEmprestimos] = useState<Emprestimo[]>(() => loadFromStorage(STORAGE_KEYS.EMPRESTIMOS, initialEmprestimos));
   const [veiculos, setVeiculos] = useState<Veiculo[]>(() => loadFromStorage(STORAGE_KEYS.VEICULOS, initialVeiculos));
+  const [imoveis, setImoveis] = useState<Imovel[]>(() => loadFromStorage(STORAGE_KEYS.IMOVEIS, initialImoveis)); // NOVO
+  const [terrenos, setTerrenos] = useState<Terreno[]>(() => loadFromStorage(STORAGE_KEYS.TERRENOS, initialTerrenos)); // NOVO
   const [segurosVeiculo, setSegurosVeiculo] = useState<SeguroVeiculo[]>(() => loadFromStorage(STORAGE_KEYS.SEGUROS_VEICULO, initialSegurosVeiculo));
   const [objetivos, setObjetivos] = useState<ObjetivoFinanceiro[]>(() => loadFromStorage(STORAGE_KEYS.OBJETIVOS, initialObjetivos));
   const [billsTracker, setBillsTracker] = useState<BillTracker[]>(() => loadFromStorage(STORAGE_KEYS.BILLS_TRACKER, initialBillsTracker));
@@ -458,6 +481,8 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => { saveToStorage(STORAGE_KEYS.EMPRESTIMOS, emprestimos); }, [emprestimos]);
   useEffect(() => { saveToStorage(STORAGE_KEYS.VEICULOS, veiculos); }, [veiculos]);
+  useEffect(() => { saveToStorage(STORAGE_KEYS.IMOVEIS, imoveis); }, [imoveis]); // NOVO
+  useEffect(() => { saveToStorage(STORAGE_KEYS.TERRENOS, terrenos); }, [terrenos]); // NOVO
   useEffect(() => { saveToStorage(STORAGE_KEYS.SEGUROS_VEICULO, segurosVeiculo); }, [segurosVeiculo]);
   useEffect(() => { saveToStorage(STORAGE_KEYS.OBJETIVOS, objetivos); }, [objetivos]);
   useEffect(() => { saveToStorage(STORAGE_KEYS.BILLS_TRACKER, billsTracker); }, [billsTracker]);
@@ -814,6 +839,32 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     const newId = Math.max(0, ...veiculos.map(v => v.id)) + 1;
     setVeiculos([...veiculos, { ...veiculo, id: newId, status: veiculo.status || 'ativo' }]);
   };
+  
+  const addImovel = (imovel: Omit<Imovel, "id">) => { // NOVO
+    const newId = generateImovelId();
+    setImoveis([...imoveis, { ...imovel, id: newId, status: imovel.status || 'ativo' }]);
+  };
+  
+  const updateImovel = (id: number, updates: Partial<Imovel>) => { // NOVO
+    setImoveis(imoveis.map(i => i.id === id ? { ...i, ...updates } : i));
+  };
+  
+  const deleteImovel = (id: number) => { // NOVO
+    setImoveis(imoveis.filter(i => i.id !== id));
+  };
+  
+  const addTerreno = (terreno: Omit<Terreno, "id">) => { // NOVO
+    const newId = generateTerrenoId();
+    setTerrenos([...terrenos, { ...terreno, id: newId, status: terreno.status || 'ativo' }]);
+  };
+  
+  const updateTerreno = (id: number, updates: Partial<Terreno>) => { // NOVO
+    setTerrenos(terrenos.map(t => t.id === id ? { ...t, ...updates } : t));
+  };
+  
+  const deleteTerreno = (id: number) => { // NOVO
+    setTerrenos(terrenos.filter(t => t.id !== id));
+  };
 
   const addTransacaoV2 = (transaction: TransacaoCompleta) => { setTransacoesV2(prev => [...prev, transaction]); };
   
@@ -829,11 +880,18 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     setStandardizationRules(prev => prev.filter(r => r.id !== id));
   }, []);
 
+  const getValorImoveisTerrenos = useCallback((targetDate?: Date) => { // NOVO
+    const date = targetDate || new Date(9999, 11, 31);
+    const imoveisValor = imoveis.filter(i => i.status === 'ativo' && parseDateLocal(i.dataAquisicao) <= date).reduce((acc, i) => acc + i.valorAvaliacao, 0);
+    const terrenosValor = terrenos.filter(t => t.status === 'ativo' && parseDateLocal(t.dataAquisicao) <= date).reduce((acc, t) => acc + t.valorAvaliacao, 0);
+    return imoveisValor + terrenosValor;
+  }, [imoveis, terrenos]);
+
   const getAtivosTotal = useCallback((targetDate?: Date) => {
     const date = targetDate || new Date(9999, 11, 31);
     const saldoContas = contasMovimento.filter(c => c.accountType !== 'cartao_credito').reduce((acc, c) => acc + Math.max(0, calculateBalanceUpToDate(c.id, date, transacoesV2, contasMovimento)), 0);
-    return saldoContas + veiculos.filter(v => v.status !== 'vendido' && parseDateLocal(v.dataCompra) <= date).reduce((acc, v) => acc + v.valorFipe, 0) + getSegurosAApropriar(date);
-  }, [contasMovimento, transacoesV2, veiculos, calculateBalanceUpToDate, getSegurosAApropriar]);
+    return saldoContas + veiculos.filter(v => v.status !== 'vendido' && parseDateLocal(v.dataCompra) <= date).reduce((acc, v) => acc + v.valorFipe, 0) + getSegurosAApropriar(date) + getValorImoveisTerrenos(date); // Adicionado Imóveis/Terrenos
+  }, [contasMovimento, transacoesV2, veiculos, calculateBalanceUpToDate, getSegurosAApropriar, getValorImoveisTerrenos]);
 
   const getPassivosTotal = useCallback((targetDate?: Date) => {
     const date = targetDate || new Date(9999, 11, 31);
@@ -860,7 +918,7 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
   }, [emprestimos, calculatePaidInstallmentsUpToDate, calculateLoanSchedule]);
 
   const exportData = () => {
-    const data = { schemaVersion: "2.0", exportedAt: new Date().toISOString(), data: { accounts: contasMovimento, categories: categoriasV2, transactions: transacoesV2, emprestimos, veiculos, segurosVeiculo, objetivos, billsTracker, standardizationRules, importedStatements, revenueForecasts, alertStartDate } };
+    const data = { schemaVersion: "2.0", exportedAt: new Date().toISOString(), data: { accounts: contasMovimento, categories: categoriasV2, transactions: transacoesV2, emprestimos, veiculos, segurosVeiculo, objetivos, billsTracker, standardizationRules, importedStatements, revenueForecasts, alertStartDate, imoveis, terrenos } };
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a'); a.href = url; a.download = `finance_backup_${new Date().toISOString().split('T')[0]}.json`; a.click();
@@ -882,6 +940,8 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
         if (data.data.importedStatements) setImportedStatements(data.data.importedStatements);
         if (data.data.revenueForecasts) setRevenueForecasts(data.data.revenueForecasts);
         if (data.data.alertStartDate) setAlertStartDate(data.data.alertStartDate);
+        if (data.data.imoveis) setImoveis(data.data.imoveis); // NOVO
+        if (data.data.terrenos) setTerrenos(data.data.terrenos); // NOVO
         return { success: true, message: "Dados importados!" };
       }
       return { success: false, message: "Schema incompatível." };
@@ -993,6 +1053,8 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
   const value = {
     emprestimos, addEmprestimo, updateEmprestimo, deleteEmprestimo: (id: number) => setEmprestimos(p => p.filter(e => e.id !== id)), getPendingLoans: () => emprestimos.filter(e => e.status === 'pendente_config'), markLoanParcelPaid, unmarkLoanParcelPaid, calculateLoanSchedule, calculateLoanAmortizationAndInterest, calculateLoanPrincipalDueInNextMonths,
     veiculos, addVeiculo, updateVeiculo: (id: number, u: any) => setVeiculos(p => p.map(v => v.id === id ? { ...v, ...u } : v)), deleteVeiculo: (id: number) => setVeiculos(p => p.filter(v => v.id !== id)), getPendingVehicles: () => veiculos.filter(v => v.status === 'pendente_cadastro'),
+    imoveis, addImovel, updateImovel, deleteImovel, // NOVO
+    terrenos, addTerreno, updateTerreno, deleteTerreno, // NOVO
     segurosVeiculo, addSeguroVeiculo: (s: any) => setSegurosVeiculo(p => [...p, { ...s, id: Math.max(0, ...p.map(x => x.id)) + 1 }]), updateSeguroVeiculo: (id: number, s: any) => setSegurosVeiculo(p => p.map(x => x.id === id ? { ...x, ...s } : x)), deleteSeguroVeiculo: (id: number) => setSegurosVeiculo(p => p.filter(x => x.id !== id)), markSeguroParcelPaid, unmarkSeguroParcelPaid,
     objetivos, addObjetivo: (o: any) => setObjetivos(p => [...p, { ...o, id: Math.max(0, ...p.map(x => x.id)) + 1 }]), updateObjetivo: (id: number, o: any) => setObjetivos(p => p.map(x => x.id === id ? { ...x, ...o } : x)), deleteObjetivo: (id: number) => setObjetivos(p => p.filter(x => x.id !== id)),
     billsTracker, setBillsTracker, updateBill, deleteBill, addPurchaseInstallments, getBillsForMonth, getPotentialFixedBillsForMonth, getFutureFixedBills, getOtherPaidExpensesForMonth,
@@ -1004,7 +1066,7 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     getTotalReceitas: (m?: string) => transacoesV2.filter(t => (t.operationType === 'receita' || t.operationType === 'rendimento') && (!m || t.date.startsWith(m))).reduce((a, t) => a + t.amount, 0),
     getTotalDespesas: (m?: string) => transacoesV2.filter(t => (t.operationType === 'despesa' || t.operationType === 'pagamento_emprestimo') && (!m || t.date.startsWith(m))).reduce((a, t) => a + t.amount, 0),
     getTotalDividas: () => emprestimos.reduce((a, e) => a + e.valorTotal, 0), getCustoVeiculos: () => veiculos.filter(v => v.status !== 'vendido').reduce((a, v) => a + v.valorSeguro, 0), getSaldoAtual: () => contasMovimento.reduce((a, c) => a + calculateBalanceUpToDate(c.id, undefined, transacoesV2, contasMovimento), 0),
-    getValorFipeTotal, getSaldoDevedor: (d?: Date) => getLoanPrincipalRemaining(d) + getCreditCardDebt(d), getLoanPrincipalRemaining, getCreditCardDebt, getJurosTotais, getDespesasFixas,
+    getValorFipeTotal, getValorImoveisTerrenos, getSaldoDevedor: (d?: Date) => getLoanPrincipalRemaining(d) + getCreditCardDebt(d), getLoanPrincipalRemaining, getCreditCardDebt, getJurosTotais, getDespesasFixas,
     getPatrimonioLiquido: (d?: Date) => getAtivosTotal(d) - getPassivosTotal(d), getAtivosTotal, getPassivosTotal, getSegurosAApropriar, getSegurosAPagar,
     calculateBalanceUpToDate, calculateTotalInvestmentBalanceAtDate, calculatePaidInstallmentsUpToDate, exportData, importData,
   };

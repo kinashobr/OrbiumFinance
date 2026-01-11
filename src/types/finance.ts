@@ -180,6 +180,33 @@ export interface Veiculo {
   status?: 'ativo' | 'pendente_cadastro' | 'vendido';
 }
 
+// NOVO: Imóvel V2
+export interface Imovel {
+  id: number;
+  descricao: string;
+  tipo: 'casa' | 'apartamento' | 'comercial';
+  endereco: string;
+  dataAquisicao: string;
+  valorAquisicao: number;
+  valorAvaliacao: number;
+  status: 'ativo' | 'vendido';
+  compraTransactionId?: string;
+  vendaTransactionId?: string;
+}
+
+// NOVO: Terreno V2
+export interface Terreno {
+  id: number;
+  descricao: string;
+  endereco: string;
+  dataAquisicao: string;
+  valorAquisicao: number;
+  valorAvaliacao: number;
+  status: 'ativo' | 'vendido';
+  compraTransactionId?: string;
+  vendaTransactionId?: string;
+}
+
 // Seguro de Veículo V2
 export interface SeguroVeiculo {
   id: number;
@@ -354,6 +381,8 @@ export interface FinanceExportV2 {
     billsTracker: BillTracker[];
     standardizationRules: StandardizationRule[];
     importedStatements: ImportedStatement[];
+    imoveis: Imovel[]; // ADICIONADO
+    terrenos: Terreno[]; // ADICIONADO
     
     // Configuration/Context States
     monthlyRevenueForecast: number;
@@ -441,6 +470,14 @@ export function generateRuleId(): string {
 
 export function generateStatementId(): string {
   return `stmt_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+}
+
+export function generateImovelId(): number {
+  return Math.floor(Date.now() / 1000);
+}
+
+export function generateTerrenoId(): number {
+  return Math.floor(Date.now() / 1000);
 }
 
 export function formatCurrency(value: number, currency = 'BRL'): string {

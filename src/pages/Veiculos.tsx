@@ -22,17 +22,21 @@ import {
   Zap,
   ShieldCheck,
   Calendar,
-  TrendingDown, // Adicionado TrendingDown
-  RefreshCw, // Adicionado RefreshCw
-  PieChart, // Adicionado PieChart
+  TrendingDown, 
+  RefreshCw, 
+  PieChart, 
+  Home, // Adicionado Home
+  Map, // Adicionado Map
+  Plus, // Adicionado Plus
 } from "lucide-react";
 import { useFinance } from "@/contexts/FinanceContext";
 import { cn, parseDateLocal } from "@/lib/utils";
 import { PeriodSelector } from "@/components/dashboard/PeriodSelector";
 import { FipeConsultaDialog } from "@/components/vehicles/FipeConsultaDialog";
-import { formatCurrency, Veiculo, SeguroVeiculo } from "@/types/finance";
+import { ImovelFormModal } from "@/components/vehicles/ImovelFormModal"; // Importado
+import { formatCurrency, Veiculo, SeguroVeiculo, Imovel, Terreno } from "@/types/finance";
 import { 
-  PieChart as RePieChart, // Alias para evitar conflito com Lucide
+  PieChart as RePieChart, 
   Pie, 
   Cell, 
   ResponsiveContainer, 
@@ -44,38 +48,55 @@ import {
   CartesianGrid 
 } from "recharts";
 import { useChartColors } from "@/hooks/useChartColors";
-import { format } from "date-fns"; // Adicionado format
-import { ptBR } from "date-fns/locale"; // Adicionado ptBR
+import { format } from "date-fns"; 
+import { ptBR } from "date-fns/locale"; 
+import { toast } from "sonner"; 
 
-const Veiculos = () => {
+const BensImobilizados = () => {
   const { 
     veiculos, 
     deleteVeiculo, 
     getPendingVehicles,
     segurosVeiculo,
     getValorFipeTotal,
+    getValorImoveisTerrenos, // NOVO
+    imoveis, // NOVO
+    terrenos, // NOVO
+    addImovel, // NOVO
+    updateImovel, // NOVO
+    deleteImovel, // NOVO
+    addTerreno, // NOVO
+    updateTerreno, // NOVO
+    deleteTerreno, // NOVO
     dateRanges,
     setDateRanges
   } = useFinance();
   
   const colors = useChartColors();
-  const [activeTab, setActiveTab] = useState("meus-carros");
+  const [activeTab, setActiveTab] = useState("veiculos");
   const [showFipeDialog, setShowFipeDialog] = useState(false);
   const [selectedVeiculoForFipe, setSelectedVeiculoForFipe] = useState<Veiculo | undefined>();
+  
+  // Estados para Imóveis/Terrenos
+  const [showImovelModal, setShowImovelModal] = useState(false);
+  const [editingImovel, setEditingImovel] = useState<Imovel | Terreno | undefined>(undefined);
+  const [imovelModalType, setImovelModalType] = useState<'imovel' | 'terreno'>('imovel');
 
   const pendingVehicles = getPendingVehicles();
   const totalFipe = getValorFipeTotal(dateRanges.range1.to);
+  const totalImoveisTerrenos = getValorImoveisTerrenos(dateRanges.range1.to);
+  const patrimonioImobilizadoTotal = totalFipe + totalImoveisTerrenos;
 
   // --- Dados para Gráficos ---
   const distributionData = useMemo(() => {
-    return veiculos
-      .filter(v => v.status === 'ativo')
-      .map((v, i) => ({
-        name: v.modelo,
-        value: v.valorFipe,
-        color: [colors.primary, colors.accent, colors.success, colors.warning][i % 4]
-      }));
-  }, [veiculos, colors]);
+    const data = [
+      { name: 'Veículos', value: totalFipe, color: colors.primary },
+      { name: 'Imóveis', value: imoveis.reduce((acc, i) => acc + i.valorAvaliacao, 0), color: colors.success },
+      { name: 'Terrenos', value: terrenos.reduce((acc, t) => acc + t.valorAvaliacao, 0), color: colors.accent },
+    ].filter(d => d.value > 0);
+    
+    return data;
+  }, [totalFipe, imoveis, terrenos, colors]);
 
   const insuranceTimeline = useMemo(() => {
     return segurosVeiculo.flatMap(s => 
@@ -91,6 +112,26 @@ const Veiculos = () => {
     setSelectedVeiculoForFipe(v);
     setShowFipeDialog(true);
   };
+  
+  const handleViewDetails = (veiculo: Veiculo) => {
+    toast.info(`Detalhes do veículo ${veiculo.modelo} em desenvolvimento.`);
+  };
+  
+  const handleOpenImovelModal = (type: 'imovel' | 'terreno', asset?: Imovel | Terreno) => {
+    setImovelModalType(type);
+    setEditingImovel(asset);
+    setShowImovelModal(true);
+  };
+  
+  const handleSaveImovel = (asset: Imovel | Terreno) => {
+    if (asset.id) {
+      if (imovelModalType === 'imovel') updateImovel(asset.id, asset as Imovel);
+      else updateTerreno(asset.id, asset as Terreno);
+    } else {
+      if (imovelModalType === 'imovel') addImovel(asset as Omit<Imovel, 'id'>);
+      else addTerreno(asset as Omit<Terreno, 'id'>);
+    }
+  };
 
   return (
     <MainLayout>
@@ -99,10 +140,10 @@ const Veiculos = () => {
         <header className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 px-1 animate-fade-in">
           <div className="flex items-center gap-4">
             <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-700 flex items-center justify-center text-white shadow-xl shadow-blue-500/20 ring-4 ring-blue-500/10">
-              <Car className="w-7 h-7" />
+              <Home className="w-7 h-7" />
             </div>
             <div>
-              <h1 className="font-display font-bold text-3xl leading-none tracking-tight">Bens e Veículos</h1>
+              <h1 className="font-display font-bold text-3xl leading-none tracking-tight">Bens Imobilizados</h1>
               <p className="text-sm text-muted-foreground font-bold tracking-widest mt-1 uppercase opacity-60">Gestão Patrimonial Imobilizada</p>
             </div>
           </div>
@@ -114,11 +155,11 @@ const Veiculos = () => {
             />
             <Button 
               variant="tonal" 
-              onClick={() => handleOpenFipe()}
+              onClick={() => handleOpenImovelModal('imovel')}
               className="h-11 rounded-full gap-2 px-6 font-bold bg-primary text-primary-foreground shadow-lg shadow-primary/20"
             >
-              <Search className="h-4 w-4" />
-              <span>Consulta FIPE</span>
+              <Plus className="h-4 w-4" />
+              <span>Novo Imóvel</span>
             </Button>
           </div>
         </header>
@@ -135,13 +176,13 @@ const Veiculos = () => {
                     <DollarSign className="w-6 h-6" />
                   </div>
                   <div>
-                    <span className="text-xs font-black text-muted-foreground uppercase tracking-[0.2em] opacity-70">Avaliação Total da Frota</span>
-                    <p className="text-[10px] font-bold text-blue-500/60 uppercase tracking-widest mt-0.5">Referência FIPE</p>
+                    <span className="text-xs font-black text-muted-foreground uppercase tracking-[0.2em] opacity-70">Avaliação Total Imobilizada</span>
+                    <p className="text-[10px] font-bold text-blue-500/60 uppercase tracking-widest mt-0.5">Veículos, Imóveis e Terrenos</p>
                   </div>
                 </div>
                 
                 <h2 className="font-display font-extrabold text-6xl sm:text-7xl text-foreground tracking-tighter leading-none tabular-nums">
-                  {formatCurrency(totalFipe)}
+                  {formatCurrency(patrimonioImobilizadoTotal)}
                 </h2>
                 
                 <div className="flex flex-wrap items-center gap-4 mt-8">
@@ -158,11 +199,11 @@ const Veiculos = () => {
               <div className="relative z-10 flex justify-end">
                  <div className="p-4 rounded-3xl bg-white/40 dark:bg-black/20 backdrop-blur-md border border-white/40 dark:border-white/5 flex items-center gap-4">
                     <div className="text-right">
-                       <p className="text-[9px] font-black text-muted-foreground uppercase tracking-widest leading-none mb-1">Seguros Ativos</p>
-                       <p className="font-black text-lg text-foreground leading-none">{segurosVeiculo.length} Apólices</p>
+                       <p className="text-[9px] font-black text-muted-foreground uppercase tracking-widest leading-none mb-1">Veículos / Imóveis</p>
+                       <p className="font-black text-lg text-foreground leading-none">{veiculos.length} / {imoveis.length + terrenos.length} Ativos</p>
                     </div>
                     <div className="w-10 h-10 rounded-2xl bg-blue-500/10 flex items-center justify-center text-blue-600">
-                       <Shield className="w-5 h-5" />
+                       <LayoutGrid className="w-5 h-5" />
                     </div>
                  </div>
               </div>
@@ -230,9 +271,12 @@ const Veiculos = () => {
         {/* Navegação de Abas */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-10">
           <div className="flex justify-center">
-            <TabsList className="bg-muted/30 p-1.5 rounded-[2rem] h-14 border border-border/40 max-w-md w-full grid grid-cols-2">
-              <TabsTrigger value="meus-carros" className="rounded-[1.5rem] text-[10px] font-black uppercase tracking-widest data-[state=active]:bg-card data-[state=active]:shadow-lg transition-all gap-2">
-                <LayoutGrid className="w-4 h-4" /> Meus Carros
+            <TabsList className="bg-muted/30 p-1.5 rounded-[2rem] h-14 border border-border/40 max-w-xl w-full grid grid-cols-3">
+              <TabsTrigger value="veiculos" className="rounded-[1.5rem] text-[10px] font-black uppercase tracking-widest data-[state=active]:bg-card data-[state=active]:shadow-lg transition-all gap-2">
+                <Car className="w-4 h-4" /> Veículos
+              </TabsTrigger>
+              <TabsTrigger value="imoveis" className="rounded-[1.5rem] text-[10px] font-black uppercase tracking-widest data-[state=active]:bg-card data-[state=active]:shadow-lg transition-all gap-2">
+                <Home className="w-4 h-4" /> Imóveis
               </TabsTrigger>
               <TabsTrigger value="seguros" className="rounded-[1.5rem] text-[10px] font-black uppercase tracking-widest data-[state=active]:bg-card data-[state=active]:shadow-lg transition-all gap-2">
                 <Shield className="w-4 h-4" /> Seguros
@@ -240,7 +284,7 @@ const Veiculos = () => {
             </TabsList>
           </div>
 
-          <TabsContent value="meus-carros" className="space-y-10 animate-in fade-in duration-500">
+          <TabsContent value="veiculos" className="space-y-10 animate-in fade-in duration-500">
             {/* Grid de Veículos */}
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8">
               {veiculos.filter(v => v.status === 'ativo').map((v) => {
@@ -252,7 +296,8 @@ const Veiculos = () => {
                 return (
                   <div 
                     key={v.id}
-                    className="bg-card hover:bg-muted/20 transition-all duration-500 rounded-[2.5rem] p-8 border border-border/40 shadow-sm hover:shadow-2xl hover:-translate-y-2 group relative overflow-hidden"
+                    onClick={() => handleViewDetails(v)} 
+                    className="bg-card hover:bg-muted/20 transition-all duration-500 rounded-[2.5rem] p-8 border border-border/40 shadow-sm hover:shadow-2xl hover:-translate-y-2 group relative overflow-hidden cursor-pointer"
                   >
                     <div className="absolute top-0 right-0 p-8 opacity-5 group-hover:scale-125 group-hover:rotate-12 transition-transform duration-700">
                         <Car className="w-32 h-32" />
@@ -271,7 +316,7 @@ const Veiculos = () => {
                           </div>
                         </div>
                       </div>
-                      <Button variant="ghost" size="icon" onClick={() => deleteVeiculo(v.id)} className="h-10 w-10 rounded-full text-destructive/40 hover:text-destructive hover:bg-destructive/10 transition-all">
+                      <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); deleteVeiculo(v.id); }} className="h-10 w-10 rounded-full text-destructive/40 hover:text-destructive hover:bg-destructive/10 transition-all">
                         <Trash2 className="w-5 h-5" />
                       </Button>
                     </div>
@@ -285,7 +330,7 @@ const Veiculos = () => {
                         <Button 
                           variant="ghost" 
                           size="sm" 
-                          onClick={() => handleOpenFipe(v)}
+                          onClick={(e) => { e.stopPropagation(); handleOpenFipe(v); }}
                           className="h-8 rounded-full text-[9px] font-black uppercase tracking-widest hover:bg-primary/10 text-primary"
                         >
                           Atualizar <RefreshCw className="w-3 h-3 ml-1" />
@@ -388,6 +433,181 @@ const Veiculos = () => {
               </div>
             </div>
           </TabsContent>
+          
+          <TabsContent value="imoveis" className="space-y-10 animate-in fade-in duration-500">
+            <div className="flex items-center justify-between px-2">
+                <h3 className="font-display font-black text-2xl text-foreground">Imóveis e Terrenos</h3>
+                <div className="flex gap-3">
+                    <Button 
+                        variant="outline" 
+                        onClick={() => handleOpenImovelModal('terreno')}
+                        className="h-10 rounded-full gap-2 px-5 font-bold border-border/40 bg-card/50 backdrop-blur-sm"
+                    >
+                        <Map className="w-4 h-4" /> Novo Terreno
+                    </Button>
+                    <Button 
+                        variant="outline" 
+                        onClick={() => handleOpenImovelModal('imovel')}
+                        className="h-10 rounded-full gap-2 px-5 font-bold border-border/40 bg-card/50 backdrop-blur-sm"
+                    >
+                        <Home className="w-4 h-4" /> Novo Imóvel
+                    </Button>
+                </div>
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8">
+                {imoveis.filter(i => i.status === 'ativo').map(i => (
+                    <div 
+                        key={i.id}
+                        onClick={() => handleOpenImovelModal('imovel', i)}
+                        className="bg-card hover:bg-muted/20 transition-all duration-500 rounded-[2.5rem] p-8 border border-border/40 shadow-sm hover:shadow-2xl hover:-translate-y-2 group relative overflow-hidden cursor-pointer"
+                    >
+                        <div className="absolute top-0 right-0 p-8 opacity-5 group-hover:scale-125 group-hover:rotate-12 transition-transform duration-700">
+                            <Home className="w-32 h-32" />
+                        </div>
+                        <div className="flex items-start justify-between mb-10 relative z-10">
+                            <div className="flex items-center gap-5">
+                                <div className="w-14 h-14 rounded-[1.25rem] bg-success/10 flex items-center justify-center text-success group-hover:scale-110 group-hover:bg-success group-hover:text-white transition-all duration-500">
+                                    <Home className="w-7 h-7" />
+                                </div>
+                                <div className="space-y-1">
+                                    <p className="font-black text-lg text-foreground leading-tight tracking-tight">{i.descricao}</p>
+                                    <Badge variant="outline" className="text-[9px] font-black uppercase bg-muted/50 border-none px-2 py-0.5">{i.tipo}</Badge>
+                                </div>
+                            </div>
+                            <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); deleteImovel(i.id); }} className="h-10 w-10 rounded-full text-destructive/40 hover:text-destructive hover:bg-destructive/10 transition-all">
+                                <Trash2 className="w-5 h-5" />
+                            </Button>
+                        </div>
+                        <div className="space-y-1 relative z-10">
+                            <p className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">Avaliação Atual</p>
+                            <p className="font-black text-3xl text-success tabular-nums">{formatCurrency(i.valorAvaliacao)}</p>
+                        </div>
+                        <div className="mt-8 pt-6 border-t border-border/40 flex items-center justify-between relative z-10">
+                            <div className="flex items-center gap-2">
+                                <div className="w-2 h-2 rounded-full bg-success animate-pulse" />
+                                <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Ativo</span>
+                            </div>
+                            <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.2em] text-primary opacity-0 group-hover:opacity-100 translate-x-4 group-hover:translate-x-0 transition-all duration-500">
+                                DETALHES <ArrowRight className="w-4 h-4" />
+                            </div>
+                        </div>
+                    </div>
+                ))}
+                
+                {terrenos.filter(t => t.status === 'ativo').map(t => (
+                    <div 
+                        key={t.id}
+                        onClick={() => handleOpenImovelModal('terreno', t)}
+                        className="bg-card hover:bg-muted/20 transition-all duration-500 rounded-[2.5rem] p-8 border border-border/40 shadow-sm hover:shadow-2xl hover:-translate-y-2 group relative overflow-hidden cursor-pointer"
+                    >
+                        <div className="absolute top-0 right-0 p-8 opacity-5 group-hover:scale-125 group-hover:rotate-12 transition-transform duration-700">
+                            <Map className="w-32 h-32" />
+                        </div>
+                        <div className="flex items-start justify-between mb-10 relative z-10">
+                            <div className="flex items-center gap-5">
+                                <div className="w-14 h-14 rounded-[1.25rem] bg-accent/10 flex items-center justify-center text-accent group-hover:scale-110 group-hover:bg-accent group-hover:text-white transition-all duration-500">
+                                    <Map className="w-7 h-7" />
+                                </div>
+                                <div className="space-y-1">
+                                    <p className="font-black text-lg text-foreground leading-tight tracking-tight">{t.descricao}</p>
+                                    <Badge variant="outline" className="text-[9px] font-black uppercase bg-muted/50 border-none px-2 py-0.5">Terreno</Badge>
+                                </div>
+                            </div>
+                            <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); deleteTerreno(t.id); }} className="h-10 w-10 rounded-full text-destructive/40 hover:text-destructive hover:bg-destructive/10 transition-all">
+                                <Trash2 className="w-5 h-5" />
+                            </Button>
+                        </div>
+                        <div className="space-y-1 relative z-10">
+                            <p className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">Avaliação Atual</p>
+                            <p className="font-black text-3xl text-success tabular-nums">{formatCurrency(t.valorAvaliacao)}</p>
+                        </div>
+                        <div className="mt-8 pt-6 border-t border-border/40 flex items-center justify-between relative z-10">
+                            <div className="flex items-center gap-2">
+                                <div className="w-2 h-2 rounded-full bg-success animate-pulse" />
+                                <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Ativo</span>
+                            </div>
+                            <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.2em] text-primary opacity-0 group-hover:opacity-100 translate-x-4 group-hover:translate-x-0 transition-all duration-500">
+                                DETALHES <ArrowRight className="w-4 h-4" />
+                            </div>
+                        </div>
+                    </div>
+                ))}
+                
+                {imoveis.length === 0 && terrenos.length === 0 && (
+                    <div className="lg:col-span-3 py-20 text-center opacity-30">
+                        <Home className="w-16 h-16 mx-auto mb-4" />
+                        <p className="font-black uppercase tracking-widest text-xs">Nenhum imóvel ou terreno registrado</p>
+                    </div>
+                )}
+            </div>
+            
+            {/* Gráfico de Composição Imóveis/Terrenos */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
+              <div className="lg:col-span-2 bg-surface-light dark:bg-surface-dark rounded-[48px] p-10 shadow-soft border border-white/60 dark:border-white/5">
+                <div className="flex items-center gap-4 mb-10">
+                  <div className="p-3 bg-primary/10 rounded-2xl text-primary shadow-sm">
+                    <PieChart className="w-6 h-6" />
+                  </div>
+                  <div>
+                    <h3 className="font-display font-black text-2xl text-foreground">Composição Imobilizada</h3>
+                    <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest mt-1">Distribuição de Valor por Classe</p>
+                  </div>
+                </div>
+                
+                <div className="h-[300px] w-full">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <RePieChart>
+                      <Pie
+                        data={distributionData}
+                        innerRadius={80}
+                        outerRadius={110}
+                        paddingAngle={8}
+                        dataKey="value"
+                        stroke="none"
+                        cornerRadius={12}
+                      >
+                        {distributionData.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={entry.color} />
+                        ))}
+                      </Pie>
+                      <Tooltip 
+                        contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 10px 30px rgba(0,0,0,0.1)' }}
+                        formatter={(v: number) => [formatCurrency(v), "Valor"]}
+                      />
+                    </RePieChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+              
+              <div className="bg-surface-light dark:bg-surface-dark rounded-[40px] p-8 shadow-soft border border-white/60 dark:border-white/5 space-y-8">
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 bg-accent/10 rounded-2xl flex items-center justify-center text-accent shadow-sm">
+                    <Sparkles className="w-6 h-6" />
+                  </div>
+                  <div>
+                    <h3 className="font-display font-bold text-xl text-foreground">Insights</h3>
+                    <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Imóveis</p>
+                  </div>
+                </div>
+
+                <div className="space-y-4">
+                  <div className="p-4 rounded-2xl bg-primary/5 border border-primary/10 flex gap-3">
+                    <TrendingDown className="w-5 h-5 text-primary shrink-0" />
+                    <p className="text-[11px] font-bold text-primary-dark leading-tight uppercase">
+                      A avaliação média dos seus imóveis está 5% abaixo do valor de aquisição.
+                    </p>
+                  </div>
+                  <div className="p-4 rounded-2xl bg-success/5 border border-success/10 flex gap-3">
+                    <ShieldCheck className="w-5 h-5 text-success shrink-0" />
+                    <p className="text-[11px] font-bold text-success-dark leading-tight uppercase">
+                      {terrenos.length} terrenos registrados, potencial para construção.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </TabsContent>
 
           <TabsContent value="seguros" className="space-y-8 animate-in fade-in duration-500">
             <div className="bg-surface-light dark:bg-surface-dark rounded-[3rem] p-8 border border-white/60 dark:border-white/5 shadow-soft">
@@ -481,8 +701,17 @@ const Veiculos = () => {
         onOpenChange={setShowFipeDialog} 
         veiculo={selectedVeiculoForFipe}
       />
+      
+      <ImovelFormModal
+        open={showImovelModal}
+        onOpenChange={setShowImovelModal}
+        type={imovelModalType}
+        editingAsset={editingImovel}
+        onSubmit={handleSaveImovel}
+        onDelete={imovelModalType === 'imovel' ? deleteImovel : deleteTerreno}
+      />
     </MainLayout>
   );
 };
 
-export default Veiculos;
+export default BensImobilizados;
