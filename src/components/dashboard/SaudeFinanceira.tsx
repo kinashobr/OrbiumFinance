@@ -27,30 +27,29 @@ interface StatusConfig {
   color: string;
   bg: string;
   border: string;
+  badgeClass: string; // NOVO: Classe para o badge de status
 }
 
 const getLiquidezStatus = (val: number): StatusConfig => {
-  if (val >= 2) return { label: "ÓTIMO", color: "text-green-800", bg: "bg-green-50/80 dark:bg-green-900/10", border: "border-green-100 dark:border-green-900/20" };
-  if (val >= 1.2) return { label: "BOM", color: "text-blue-800", bg: "bg-blue-50/80 dark:bg-blue-900/10", border: "border-blue-100 dark:border-blue-900/20" };
-  return { label: "ATENÇÃO", color: "text-orange-800", bg: "bg-orange-50/80 dark:bg-orange-900/10", border: "border-orange-100 dark:border-orange-900/20" };
+  if (val >= 2) return { label: "ÓTIMO", color: "text-green-800", bg: "bg-green-50/80 dark:bg-green-900/10", border: "border-green-100 dark:border-green-900/20", badgeClass: "bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400" };
+  if (val >= 1.2) return { label: "BOM", color: "text-blue-800", bg: "bg-blue-50/80 dark:bg-blue-900/10", border: "border-blue-100 dark:border-blue-900/20", badgeClass: "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-400" };
+  return { label: "ATENÇÃO", color: "text-orange-800", bg: "bg-orange-50/80 dark:bg-orange-900/10", border: "border-orange-100 dark:border-orange-900/20", badgeClass: "bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-400" };
 };
 
 const getEndividamentoStatus = (val: number): StatusConfig => {
-  if (val <= 25) return { label: "ÓTIMO", color: "text-green-800", bg: "bg-green-50/80 dark:bg-green-900/10", border: "border-green-100 dark:border-green-900/20" };
-  if (val <= 45) return { label: "ALERTA", color: "text-orange-800", bg: "bg-orange-50/80 dark:bg-orange-900/10", border: "border-orange-100 dark:border-orange-900/20" };
-  return { label: "ALTO", color: "text-red-800", bg: "bg-red-50/80 dark:bg-red-900/10", border: "border-red-100 dark:border-red-900/20" };
+  if (val <= 25) return { label: "ÓTIMO", color: "text-green-800", bg: "bg-green-50/80 dark:bg-green-900/10", border: "border-green-100 dark:border-green-900/20", badgeClass: "bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400" };
+  if (val <= 45) return { label: "ALERTA", color: "text-orange-800", bg: "bg-orange-50/80 dark:bg-orange-900/10", border: "border-orange-100 dark:border-orange-900/20", badgeClass: "bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-400" };
+  return { label: "ALTO", color: "text-red-800", bg: "bg-red-50/80 dark:bg-red-900/10", border: "border-red-100 dark:border-red-900/20", badgeClass: "bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-400" };
 };
 
 const getDiversificacaoStatus = (val: number): StatusConfig => {
-  if (val >= 60) return { label: "ALTA", color: "text-green-800", bg: "bg-green-50/80 dark:bg-green-900/10", border: "border-green-100 dark:border-green-900/20" };
-  return { label: "BAIXA", color: "text-orange-800", bg: "bg-orange-50/80 dark:bg-orange-900/10", border: "border-orange-100 dark:border-orange-900/20" };
+  if (val >= 60) return { label: "ALTA", color: "text-green-800", bg: "bg-green-50/80 dark:bg-green-900/10", border: "border-green-100 dark:border-green-900/20", badgeClass: "bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400" };
+  return { label: "BAIXA", color: "text-orange-800", bg: "bg-orange-50/80 dark:bg-orange-900/10", border: "border-orange-100 dark:border-orange-900/20", badgeClass: "bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-400" };
 };
 
-// NOVO: Status para Estabilidade
 const getEstabilidadeStatus = (val: number): StatusConfig => {
-    if (val >= 80) return { label: "ALTA", color: "text-green-800", bg: "bg-green-50/80 dark:bg-green-900/10", border: "border-green-100 dark:border-green-900/20" };
-    // Usando cores primárias/neutras para o status MÉDIA
-    return { label: "MÉDIA", color: "text-primary", bg: "bg-primary/5 dark:bg-primary/10", border: "border-primary/20 dark:border-primary/30" };
+    if (val >= 80) return { label: "ALTA", color: "text-green-800", bg: "bg-green-50/80 dark:bg-green-900/10", border: "border-green-100 dark:border-green-900/20", badgeClass: "bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400" };
+    return { label: "MÉDIA", color: "text-primary", bg: "bg-primary/5 dark:bg-primary/10", border: "border-primary/20 dark:border-primary/30", badgeClass: "bg-primary/10 text-primary dark:bg-primary/20 dark:text-primary" };
 };
 
 
@@ -84,7 +83,7 @@ export function SaudeFinanceira({
                   <div className="w-10 h-10 rounded-full bg-white dark:bg-black/20 flex items-center justify-center shadow-sm">
                     <Wallet className={cn("w-5 h-5", liq.color)} />
                   </div>
-                  <span className={cn("text-[9px] font-bold px-2 py-0.5 rounded-full border border-black/5 dark:border-white/5", liq.bg.replace('50/80', '100').replace('900/10', '900/40'))}>
+                  <span className={cn("text-[9px] font-bold px-2 py-0.5 rounded-full border border-black/5 dark:border-white/5", liq.badgeClass)}>
                     {liq.label}
                   </span>
                 </div>
@@ -108,7 +107,7 @@ export function SaudeFinanceira({
                   <div className="w-10 h-10 rounded-full bg-white dark:bg-black/20 flex items-center justify-center shadow-sm">
                     <Scale className={cn("w-5 h-5", end.color)} />
                   </div>
-                  <span className={cn("text-[9px] font-bold px-2 py-0.5 rounded-full border border-black/5 dark:border-white/5", end.bg.replace('50/80', '100').replace('900/10', '900/40'))}>
+                  <span className={cn("text-[9px] font-bold px-2 py-0.5 rounded-full border border-black/5 dark:border-white/5", end.badgeClass)}>
                     {end.label}
                   </span>
                 </div>
@@ -132,7 +131,7 @@ export function SaudeFinanceira({
                   <div className="w-10 h-10 rounded-full bg-white dark:bg-black/20 flex items-center justify-center shadow-sm">
                     <Activity className={cn("w-5 h-5", div.color)} />
                   </div>
-                  <span className={cn("text-[9px] font-bold px-2 py-0.5 rounded-full border border-black/5 dark:border-white/5", div.color === 'text-green-800' ? 'text-green-800 bg-green-100/50' : 'text-orange-800 bg-orange-100/50')}>
+                  <span className={cn("text-[9px] font-bold px-2 py-0.5 rounded-full border border-black/5 dark:border-white/5", div.badgeClass)}>
                     {div.label}
                   </span>
                 </div>
@@ -156,7 +155,7 @@ export function SaudeFinanceira({
                   <div className="w-10 h-10 rounded-full bg-white dark:bg-black/20 flex items-center justify-center shadow-sm">
                     <Shield className={cn("w-5 h-5", est.color)} />
                   </div>
-                  <span className={cn("text-[9px] font-bold px-2 py-0.5 rounded-full border border-black/5 dark:border-white/5", est.bg.replace('50/80', '100').replace('900/10', '900/40').replace('primary/5', 'primary/20'))}>
+                  <span className={cn("text-[9px] font-bold px-2 py-0.5 rounded-full border border-black/5 dark:border-white/5", est.badgeClass)}>
                     {est.label}
                   </span>
                 </div>
