@@ -32,6 +32,7 @@ import { subMonths, endOfMonth, format, subDays, isWithinInterval, startOfDay, e
 import { ptBR } from "date-fns/locale";
 import { useChartColors } from "@/hooks/useChartColors";
 import { AccountStatementDialog } from "@/components/transactions/AccountStatementDialog";
+import { toast } from "sonner"; // Importação adicionada
 
 export default function Investimentos() {
   const { 
