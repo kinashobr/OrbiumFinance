@@ -21,7 +21,10 @@ import {
   History,
   Zap,
   ShieldCheck,
-  Calendar
+  Calendar,
+  TrendingDown, // Adicionado TrendingDown
+  RefreshCw, // Adicionado RefreshCw
+  PieChart, // Adicionado PieChart
 } from "lucide-react";
 import { useFinance } from "@/contexts/FinanceContext";
 import { cn, parseDateLocal } from "@/lib/utils";
@@ -29,7 +32,7 @@ import { PeriodSelector } from "@/components/dashboard/PeriodSelector";
 import { FipeConsultaDialog } from "@/components/vehicles/FipeConsultaDialog";
 import { formatCurrency, Veiculo, SeguroVeiculo } from "@/types/finance";
 import { 
-  PieChart as RePieChart, 
+  PieChart as RePieChart, // Alias para evitar conflito com Lucide
   Pie, 
   Cell, 
   ResponsiveContainer, 
@@ -41,6 +44,8 @@ import {
   CartesianGrid 
 } from "recharts";
 import { useChartColors } from "@/hooks/useChartColors";
+import { format } from "date-fns"; // Adicionado format
+import { ptBR } from "date-fns/locale"; // Adicionado ptBR
 
 const Veiculos = () => {
   const { 
@@ -481,5 +486,3 @@ const Veiculos = () => {
 };
 
 export default Veiculos;
-
-import { RefreshCw } from "lucide-react";
