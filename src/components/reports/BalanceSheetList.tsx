@@ -84,7 +84,7 @@ export function BalanceSheetList({ title, totalValue, items, isAsset, plValue }:
       </div>
 
       <div className="bg-surface-light dark:bg-surface-dark rounded-[3rem] p-8 border border-border/40 shadow-soft">
-        <div className="rounded-xl border border-border/40 overflow-hidden">
+        <div className="rounded-2xl border border-border/40 overflow-hidden">
           <table className="w-full table-auto">
             <thead className="bg-muted/50">
               <tr>
