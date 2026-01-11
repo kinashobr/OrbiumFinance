@@ -153,14 +153,6 @@ const BensImobilizados = () => {
               onDateRangeChange={setDateRanges}
               className="h-11 rounded-full bg-surface-light dark:bg-surface-dark border-border/40 shadow-sm px-6 font-bold"
             />
-            <Button 
-              variant="tonal" 
-              onClick={() => handleOpenImovelModal('imovel')}
-              className="h-11 rounded-full gap-2 px-6 font-bold bg-primary text-primary-foreground shadow-lg shadow-primary/20"
-            >
-              <Plus className="h-4 w-4" />
-              <span>Novo Imóvel</span>
-            </Button>
           </div>
         </header>
 
@@ -271,7 +263,7 @@ const BensImobilizados = () => {
         {/* Navegação de Abas */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-10">
           <div className="flex justify-center">
-            <TabsList className="bg-muted/30 p-1.5 rounded-[2rem] h-14 border border-border/40 max-w-xl w-full grid grid-cols-3">
+            <TabsList className="grid w-full grid-cols-3 h-14 bg-muted/30 p-1.5 rounded-[2rem] border border-border/40 max-w-xl">
               <TabsTrigger value="veiculos" className="rounded-[1.5rem] text-[10px] font-black uppercase tracking-widest data-[state=active]:bg-card data-[state=active]:shadow-lg transition-all gap-2">
                 <Car className="w-4 h-4" /> Veículos
               </TabsTrigger>
