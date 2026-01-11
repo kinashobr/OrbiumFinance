@@ -57,6 +57,7 @@ export function BalancoTab({ dateRanges }: { dateRanges: ComparisonDateRanges })
     return {
       totalAtivos, ativoCirculante, investimentosNaoCirculantes, imobilizadoFipe, segurosAApropriar,
       totalPassivos, passivoCirculante, passivoNaoCirculante, pl,
+      dividaCartoes,
       contasCirculantes: circulantesRaw.map(c => ({ ...c, saldo: saldos[c.id] || 0 })),
       contasInvestimentos: invNaoCirculantesRaw.map(c => ({ ...c, saldo: saldos[c.id] || 0 }))
     };
