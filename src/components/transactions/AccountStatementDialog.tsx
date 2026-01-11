@@ -74,12 +74,8 @@ export function AccountStatementDialog({
     const pendingCount = filteredTransactions.length - conciliatedCount;
     
     // Cálculo dinâmico baseado no filtro atual
-    const totalIn = filteredTransactions
-      .filter(t => t.flow === 'in' || t.flow === 'transfer_in')
-      .reduce((acc, t) => acc + t.amount, 0);
-    const totalOut = filteredTransactions
-      .filter(t => t.flow === 'out' || t.flow === 'transfer_out')
-      .reduce((acc, t) => acc + t.amount, 0);
+    const totalIn = accountSummary.totalIn;
+    const totalOut = accountSummary.totalOut;
 
     return {
       initialBalance: accountSummary.initialBalance, // Mantemos o inicial da conta ou poderíamos calcular retroativo
@@ -96,8 +92,11 @@ export function AccountStatementDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-[min(95vw,80rem)] h-[min(90vh,900px)] p-0 overflow-hidden flex flex-col rounded-[3rem] border-none shadow-2xl bg-background">
-        <DialogHeader className="px-8 pt-8 pb-4 border-b shrink-0 bg-primary/5">
+      <DialogContent className={cn(
+        "max-w-[min(95vw,80rem)] h-[min(90vh,900px)] p-0 overflow-hidden flex flex-col rounded-[3rem] border-none shadow-2xl bg-background",
+        "[&>button]:hidden" // Esconde o botão de fechar padrão do DialogContent
+      )}>
+        <DialogHeader className="px-8 pt-10 pb-6 border-b shrink-0 bg-primary/5">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
             <div className="flex items-center gap-4">
               <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center shrink-0 text-primary shadow-sm">
@@ -120,7 +119,7 @@ export function AccountStatementDialog({
                 <Download className="w-3.5 h-3.5" />
                 Exportar
               </Button>
-              <Button variant="ghost" size="icon" onClick={() => onOpenChange(false)} className="h-9 w-9 rounded-full hover:bg-black/5">
+              <Button variant="ghost" size="icon" onClick={() => onOpenChange(false)} className="h-9 w-9 rounded-full hover:bg-black/5 transition-colors">
                 <X className="w-5 h-5" />
               </Button>
             </div>
