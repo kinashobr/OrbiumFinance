@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import { 
   Activity, ShieldCheck, Zap, Scale, Sparkles, TrendingUp, 
   TrendingDown, Target, Shield, Gauge, Heart, Wallet, 
-  Coins, Landmark, BarChart3, Plus, LayoutGrid, User
+  Coins, Landmark, BarChart3, Plus, LayoutGrid, User, Minus, Calendar // Adicionado Minus e Calendar
 } from "lucide-react";
 import { useFinance } from "@/contexts/FinanceContext";
 import { ComparisonDateRanges, DateRange, formatCurrency } from "@/types/finance";
@@ -215,6 +215,3 @@ export function IndicadoresTab({ dateRanges }: { dateRanges: ComparisonDateRange
     </div>
   );
 }
-
-import { useCallback } from "react";
-import { Calendar } from "lucide-react";
