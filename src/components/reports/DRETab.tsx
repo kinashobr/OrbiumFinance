@@ -3,12 +3,11 @@
 import React, { useMemo, useCallback } from "react";
 import { 
   TrendingUp, TrendingDown, DollarSign, Calculator, Minus, Plus, 
-  Sparkles, ArrowDownRight, ArrowUpRight, Receipt, Zap, 
-  PieChart, BarChart3, LineChart, Target, Activity, Gauge
+  Sparkles, Receipt, Zap, PieChart, BarChart3, LineChart, Activity, Gauge
 } from "lucide-react";
 import { useFinance } from "@/contexts/FinanceContext";
 import { cn, parseDateLocal } from "@/lib/utils";
-import { CATEGORY_NATURE_LABELS, ComparisonDateRanges, DateRange, formatCurrency } from "@/types/finance";
+import { ComparisonDateRanges, DateRange, formatCurrency } from "@/types/finance";
 import { startOfDay, endOfDay, isWithinInterval, subMonths, endOfMonth, format, startOfMonth } from "date-fns";
 import { Badge } from "@/components/ui/badge";
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart as RePieChart, Pie, Cell, Legend } from "recharts";
@@ -36,6 +35,15 @@ export function DRETab({ dateRanges }: { dateRanges: ComparisonDateRanges }) {
   const { range1, range2 } = dateRanges;
   const colors = useChartColors();
   const categoriesMap = useMemo(() => new Map(categoriasV2.map(c => [c.id, c])), [categoriasV2]);
+
+  // Helper para renderizar emoji como ícone compatível com o BalanceSheetList
+  const getCategoryIcon = useCallback((label: string, defaultIcon: React.ElementType) => {
+    const cat = categoriasV2.find(c => c.label === label);
+    if (cat?.icon) {
+      return () => <span className="text-lg leading-none flex items-center justify-center">{cat.icon}</span>;
+    }
+    return defaultIcon;
+  }, [categoriasV2]);
 
   const finalDate = range1.to || new Date();
   const prevDate = range2.to || subMonths(finalDate, 1);
@@ -69,9 +77,8 @@ export function DRETab({ dateRanges }: { dateRanges: ComparisonDateRanges }) {
       }
     });
     
-    const resultadoFinanceiro = rendimentos - juros;
     const resultadoOperacional = receitaBruta - fix - var_;
-    const resultadoLiquido = resultadoOperacional + resultadoFinanceiro;
+    const resultadoLiquido = resultadoOperacional + rendimentos - juros;
     
     const groupDetails = (nature: 'receita' | 'despesa_fixa' | 'despesa_variavel') => {
       const filteredTxs = txs.filter(t => categoriesMap.get(t.categoryId || '')?.nature === nature);
@@ -94,11 +101,9 @@ export function DRETab({ dateRanges }: { dateRanges: ComparisonDateRanges }) {
 
   const variacaoRL = dre2.res !== 0 ? ((dre1.res - dre2.res) / Math.abs(dre2.res)) * 100 : 0;
   
-  // Indicadores de Performance
   const indicadores = useMemo(() => {
     const { res, rec, fix, var: v, juros } = dre1;
     const totalDespesas = fix + v + juros;
-    
     return {
       margemLiquida: rec > 0 ? (res / rec) * 100 : 0,
       eficienciaOp: rec > 0 ? ((rec - fix) / rec) * 100 : 0,
@@ -109,42 +114,40 @@ export function DRETab({ dateRanges }: { dateRanges: ComparisonDateRanges }) {
     };
   }, [dre1]);
 
-  // Preparação de dados para as listas no estilo Balanço
   const receitaItems = useMemo(() => {
     const total = dre1.rec;
     const details = dre1.details.receitas.map(d => ({
         id: d.id, name: d.label, typeLabel: 'Receita Operacional', value: d.value, 
-        percent: total > 0 ? (d.value / total) * 100 : 0, icon: TrendingUp
+        percent: total > 0 ? (d.value / total) * 100 : 0, 
+        icon: getCategoryIcon(d.label, TrendingUp)
     }));
     if (dre1.rendimentos > 0) {
         details.push({ id: 'rendimentos', name: 'Rendimentos Financeiros', typeLabel: 'Aplicação/Invest.', value: dre1.rendimentos, percent: total > 0 ? (dre1.rendimentos / total) * 100 : 0, icon: Sparkles });
     }
     return [{ label: 'FONTES DE RENDA', value: total, percent: 100, type: 'circulante' as const, details }];
-  }, [dre1]);
+  }, [dre1, getCategoryIcon]);
 
   const despesaItems = useMemo(() => {
     const total = dre1.fix + dre1.var + dre1.juros;
-    
     const fixDetails = dre1.details.despesasFixas.map(d => ({
         id: d.id, name: d.label, typeLabel: 'Custo Fixo', value: d.value, 
-        percent: total > 0 ? (d.value / total) * 100 : 0, icon: TrendingDown
+        percent: total > 0 ? (d.value / total) * 100 : 0, 
+        icon: getCategoryIcon(d.label, TrendingDown)
     }));
-    
     const varDetails = dre1.details.despesasVariaveis.map(d => ({
         id: d.id, name: d.label, typeLabel: 'Consumo Variável', value: d.value, 
-        percent: total > 0 ? (d.value / total) * 100 : 0, icon: Activity
+        percent: total > 0 ? (d.value / total) * 100 : 0, 
+        icon: getCategoryIcon(d.label, Activity)
     }));
-    
     if (dre1.juros > 0) {
         varDetails.push({ id: 'juros', name: 'Juros e Encargos', typeLabel: 'Custo Financeiro', value: dre1.juros, percent: total > 0 ? (dre1.juros / total) * 100 : 0, icon: Gauge });
     }
-
     return [
         { label: 'DESPESAS FIXAS', value: dre1.fix, percent: total > 0 ? (dre1.fix / total) * 100 : 0, type: 'circulante' as const, details: fixDetails },
         { label: 'DESPESAS VARIÁVEIS & JUROS', value: dre1.var + dre1.juros, percent: total > 0 ? ((dre1.var + dre1.juros) / total) * 100 : 0, type: 'nao_circulante' as const, details: varDetails },
         { label: 'RESULTADO LÍQUIDO', value: dre1.res, percent: 0, type: 'patrimonio' as const }
     ];
-  }, [dre1]);
+  }, [dre1, getCategoryIcon]);
 
   const evolutionData = useMemo(() => {
     const now = new Date();
@@ -167,10 +170,7 @@ export function DRETab({ dateRanges }: { dateRanges: ComparisonDateRanges }) {
 
   return (
     <div className="space-y-10 animate-fade-in-up">
-      {/* SEÇÃO SUPERIOR: RESULTADO + INDICADORES DE PERFORMANCE */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        
-        {/* Card Resultado Líquido (Hero) */}
         <div className="lg:col-span-6">
           <div className={cn(
             "rounded-[40px] p-8 sm:p-10 shadow-soft relative overflow-hidden border-4 h-[400px] flex flex-col justify-center group transition-all duration-700",
@@ -180,14 +180,13 @@ export function DRETab({ dateRanges }: { dateRanges: ComparisonDateRanges }) {
              <div className="absolute right-0 top-0 opacity-10 scale-150 translate-x-10 -translate-y-10 group-hover:rotate-6 transition-transform duration-1000">
                 <Receipt className="w-[300px] h-[300px] text-primary" />
              </div>
-
              <div className="relative z-10">
                 <div className="flex items-center gap-3 mb-6">
                   <Badge className={cn("border-none font-black text-[10px] px-3 py-1 rounded-lg uppercase tracking-widest", dre1.res >= 0 ? "bg-success/10 text-success" : "bg-destructive/10 text-destructive")}>
                     {dre1.res >= 0 ? "Lucro Operacional" : "Déficit Mensal"}
                   </Badge>
                 </div>
-                <h2 className="text-[11px] font-black text-muted-foreground uppercase tracking-[0.2em] mb-4">Resultado Líquido do Período</h2>
+                <h2 className="text-[11px] font-black text-muted-foreground uppercase tracking-[0.2em] mb-4">Resultado Líquido Final</h2>
                 <div className="flex flex-col sm:flex-row sm:items-end gap-4 sm:gap-6">
                    <h3 className={cn("font-display font-extrabold text-5xl sm:text-6xl tracking-tighter leading-none tabular-nums", dre1.res >= 0 ? "text-success" : "text-destructive")}>
                      {formatCurrency(dre1.res)}
@@ -204,8 +203,6 @@ export function DRETab({ dateRanges }: { dateRanges: ComparisonDateRanges }) {
              </div>
           </div>
         </div>
-
-        {/* Grade de Indicadores Radiais */}
         <div className="lg:col-span-6 grid grid-cols-2 sm:grid-cols-3 gap-4">
           <IndicatorRadialCard title="Margem Líquida" description="RL / Receita" value={indicadores.margemLiquida} label="Margem" status={indicadores.margemLiquida >= 20 ? "success" : "warning"} />
           <IndicatorRadialCard title="Eficiência" description="Bruto / Receita" value={indicadores.eficienciaOp} label="Eficiência" status={indicadores.eficienciaOp >= 70 ? "success" : "warning"} />
@@ -216,7 +213,6 @@ export function DRETab({ dateRanges }: { dateRanges: ComparisonDateRanges }) {
         </div>
       </div>
 
-      {/* GRID DE KPIS DE FLUXO (RAW VALUES) */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
          <div className="p-5 rounded-[2rem] bg-surface-light dark:bg-surface-dark border border-white/60 dark:border-white/5 shadow-sm">
             <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest mb-1">Receita Bruta</p>
@@ -244,13 +240,11 @@ export function DRETab({ dateRanges }: { dateRanges: ComparisonDateRanges }) {
          </div>
       </div>
 
-      {/* LEDGER COMPARATIVO (RECEITAS VS DESPESAS) */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
+      <div className="grid grid-cols-1 gap-10">
         <BalanceSheetList title="RECEITAS & CRÉDITOS" totalValue={dre1.rec} items={receitaItems} isAsset={true} />
         <BalanceSheetList title="DESPESAS & CUSTOS" totalValue={dre1.fix + dre1.var + dre1.juros} items={despesaItems} isAsset={false} plValue={dre1.res} />
       </div>
 
-      {/* EVOLUÇÃO E COMPOSIÇÃO DE FLUXO */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
          <div className="lg:col-span-2 bg-surface-light dark:bg-surface-dark rounded-[3rem] p-8 border border-white/60 dark:border-white/5 shadow-soft">
             <div className="flex items-center gap-3 mb-8 px-2">
@@ -275,7 +269,6 @@ export function DRETab({ dateRanges }: { dateRanges: ComparisonDateRanges }) {
                </ResponsiveContainer>
             </div>
          </div>
-
          <div className="bg-surface-light dark:bg-surface-dark rounded-[3rem] p-8 border border-white/60 dark:border-white/5 shadow-soft flex flex-col">
             <div className="flex items-center gap-3 mb-8 px-2">
                <div className="p-2 bg-accent/10 rounded-xl text-accent"><PieChart className="w-5 h-5" /></div>
