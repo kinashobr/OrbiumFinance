@@ -3,7 +3,7 @@
 import React, { useMemo, useCallback } from "react";
 import { 
   TrendingUp, TrendingDown, DollarSign, Calculator, Minus, Plus, 
-  Sparkles, Receipt, Zap, PieChart, BarChart3, LineChart, Activity, Gauge
+  Sparkles, Receipt, Zap, PieChart, BarChart3, LineChart, Activity, Gauge, ArrowUpRight, ArrowDownRight
 } from "lucide-react";
 import { useFinance } from "@/contexts/FinanceContext";
 import { cn, parseDateLocal } from "@/lib/utils";
@@ -36,7 +36,6 @@ export function DRETab({ dateRanges }: { dateRanges: ComparisonDateRanges }) {
   const colors = useChartColors();
   const categoriesMap = useMemo(() => new Map(categoriasV2.map(c => [c.id, c])), [categoriasV2]);
 
-  // Helper para renderizar emoji como ícone compatível com o BalanceSheetList
   const getCategoryIcon = useCallback((label: string, defaultIcon: React.ElementType) => {
     const cat = categoriasV2.find(c => c.label === label);
     if (cat?.icon) {
@@ -160,16 +159,32 @@ export function DRETab({ dateRanges }: { dateRanges: ComparisonDateRanges }) {
     return result;
   }, [calculateDRE]);
 
+  // Gráfico de Composição Detalhado por Categoria
   const compositionData = useMemo(() => {
-    return [
-      { name: 'Fixas', value: dre1.fix, color: colors.primary },
-      { name: 'Variáveis', value: dre1.var, color: colors.destructive },
-      { name: 'Juros', value: dre1.juros, color: colors.warning },
-    ].filter(d => d.value > 0);
+    const palette = [
+        colors.primary, 'hsl(var(--neon-purple))', 'hsl(var(--neon-blue))',
+        colors.destructive, 'hsl(var(--neon-pink))', colors.warning,
+        colors.success, 'hsl(var(--neon-cyan))', 'hsl(var(--indigo-500))'
+    ];
+
+    const allExpenses = [
+        ...dre1.details.despesasFixas.map(d => ({ name: d.label, value: d.value })),
+        ...dre1.details.despesasVariaveis.map(d => ({ name: d.label, value: d.value }))
+    ];
+    
+    if (dre1.juros > 0) {
+        allExpenses.push({ name: 'Juros e Encargos', value: dre1.juros });
+    }
+
+    return allExpenses
+        .sort((a, b) => b.value - a.value)
+        .slice(0, 8) // Top 8 categorias
+        .map((d, i) => ({ ...d, color: palette[i % palette.length] }));
   }, [dre1, colors]);
 
   return (
     <div className="space-y-10 animate-fade-in-up">
+      {/* SEÇÃO SUPERIOR: RESULTADO + INDICADORES */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         <div className="lg:col-span-6">
           <div className={cn(
@@ -213,45 +228,25 @@ export function DRETab({ dateRanges }: { dateRanges: ComparisonDateRanges }) {
         </div>
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-         <div className="p-5 rounded-[2rem] bg-surface-light dark:bg-surface-dark border border-white/60 dark:border-white/5 shadow-sm">
-            <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest mb-1">Receita Bruta</p>
-            <p className="text-lg font-black tabular-nums text-success">{formatCurrency(dre1.rec)}</p>
-         </div>
-         <div className="p-5 rounded-[2rem] bg-surface-light dark:bg-surface-dark border border-white/60 dark:border-white/5 shadow-sm">
-            <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest mb-1">Despesas Fixas</p>
-            <p className="text-lg font-black tabular-nums text-destructive/80">{formatCurrency(dre1.fix)}</p>
-         </div>
-         <div className="p-5 rounded-[2rem] bg-surface-light dark:bg-surface-dark border border-white/60 dark:border-white/5 shadow-sm">
-            <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest mb-1">Variáveis & Juros</p>
-            <p className="text-lg font-black tabular-nums text-destructive">{formatCurrency(dre1.var + dre1.juros)}</p>
-         </div>
-         <div className="p-5 rounded-[2rem] bg-surface-light dark:bg-surface-dark border border-white/60 dark:border-white/5 shadow-sm">
-            <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest mb-1">Resultado Bruto</p>
-            <p className="text-lg font-black tabular-nums text-primary">{formatCurrency(dre1.rec - dre1.fix)}</p>
-         </div>
-         <div className="p-5 rounded-[2rem] bg-surface-light dark:bg-surface-dark border border-white/60 dark:border-white/5 shadow-sm">
-            <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest mb-1">Res. Financeiro</p>
-            <p className={cn("text-lg font-black tabular-nums", (dre1.rendimentos - dre1.juros) >= 0 ? "text-success" : "text-destructive")}>{formatCurrency(dre1.rendimentos - dre1.juros)}</p>
-         </div>
-         <div className="p-5 rounded-[2rem] bg-surface-light dark:bg-surface-dark border border-white/60 dark:border-white/5 shadow-sm">
-            <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest mb-1">Variac. RL</p>
-            <p className={cn("text-lg font-black tabular-nums", dre1.res >= dre2.res ? "text-success" : "text-destructive")}>{formatCurrency(dre1.res - dre2.res)}</p>
-         </div>
-      </div>
+      {/* GRID PRINCIPAL: DRE À ESQUERDA, GRÁFICOS À DIREITA */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 items-start">
+        
+        {/* COLUNA ESQUERDA: LISTAGEM DRE (7/12) */}
+        <div className="lg:col-span-7 space-y-10">
+          <BalanceSheetList title="RECEITAS & CRÉDITOS" totalValue={dre1.rec} items={receitaItems} isAsset={true} />
+          <BalanceSheetList title="DESPESAS & CUSTOS" totalValue={dre1.fix + dre1.var + dre1.juros} items={despesaItems} isAsset={false} plValue={dre1.res} />
+        </div>
 
-      <div className="grid grid-cols-1 gap-10">
-        <BalanceSheetList title="RECEITAS & CRÉDITOS" totalValue={dre1.rec} items={receitaItems} isAsset={true} />
-        <BalanceSheetList title="DESPESAS & CUSTOS" totalValue={dre1.fix + dre1.var + dre1.juros} items={despesaItems} isAsset={false} plValue={dre1.res} />
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-         <div className="lg:col-span-2 bg-surface-light dark:bg-surface-dark rounded-[3rem] p-8 border border-white/60 dark:border-white/5 shadow-soft">
+        {/* COLUNA DIREITA: GRÁFICOS (5/12) */}
+        <div className="lg:col-span-5 space-y-10 lg:sticky lg:top-24">
+          
+          {/* Fluxo de Caixa Histórico */}
+          <div className="bg-surface-light dark:bg-surface-dark rounded-[3rem] p-8 border border-white/60 dark:border-white/5 shadow-soft">
             <div className="flex items-center gap-3 mb-8 px-2">
                <div className="p-2 bg-primary/10 rounded-xl text-primary"><BarChart3 className="w-5 h-5" /></div>
-               <h4 className="font-display font-black text-xl text-foreground uppercase tracking-tight">Fluxo de Caixa Histórico</h4>
+               <h4 className="font-display font-black text-xl text-foreground uppercase tracking-tight">Histórico de Fluxo</h4>
             </div>
-            <div className="h-[300px]">
+            <div className="h-[280px]">
                <ResponsiveContainer width="100%" height="100%">
                   <AreaChart data={evolutionData}>
                      <defs>
@@ -268,31 +263,35 @@ export function DRETab({ dateRanges }: { dateRanges: ComparisonDateRanges }) {
                   </AreaChart>
                </ResponsiveContainer>
             </div>
-         </div>
-         <div className="bg-surface-light dark:bg-surface-dark rounded-[3rem] p-8 border border-white/60 dark:border-white/5 shadow-soft flex flex-col">
+          </div>
+
+          {/* Composição Gastos Detalhada */}
+          <div className="bg-surface-light dark:bg-surface-dark rounded-[3rem] p-8 border border-white/60 dark:border-white/5 shadow-soft flex flex-col">
             <div className="flex items-center gap-3 mb-8 px-2">
                <div className="p-2 bg-accent/10 rounded-xl text-accent"><PieChart className="w-5 h-5" /></div>
-               <h4 className="font-display font-black text-xl text-foreground uppercase tracking-tight">Composição Gastos</h4>
+               <h4 className="font-display font-black text-xl text-foreground uppercase tracking-tight">Top Gastos por Categoria</h4>
             </div>
-            <div className="flex-1 min-h-[240px]">
+            <div className="flex-1 min-h-[300px]">
                <ResponsiveContainer width="100%" height="100%">
                   <RePieChart>
-                     <Pie data={compositionData} cx="50%" cy="50%" innerRadius={60} outerRadius={85} paddingAngle={8} dataKey="value" stroke="none">
+                     <Pie data={compositionData} cx="50%" cy="50%" innerRadius={70} outerRadius={100} paddingAngle={4} dataKey="value" stroke="none">
                         {compositionData.map((entry, index) => <Cell key={index} fill={entry.color} />)}
                      </Pie>
                      <Tooltip formatter={(v: number) => formatCurrency(v)} />
                   </RePieChart>
                </ResponsiveContainer>
             </div>
-            <div className="grid grid-cols-3 gap-2 mt-4">
-               {compositionData.map((d, i) => (
-                  <div key={d.name} className="text-center">
-                     <p className="text-[9px] font-black text-muted-foreground uppercase">{d.name}</p>
-                     <div className="h-1 rounded-full mt-1" style={{ backgroundColor: d.color }} />
+            <div className="grid grid-cols-2 gap-x-4 gap-y-2 mt-6">
+               {compositionData.map((d) => (
+                  <div key={d.name} className="flex items-center gap-2">
+                     <div className="h-2 w-2 rounded-full shrink-0" style={{ backgroundColor: d.color }} />
+                     <span className="text-[10px] font-bold text-foreground truncate uppercase tracking-tight">{d.name}</span>
                   </div>
                ))}
             </div>
-         </div>
+          </div>
+
+        </div>
       </div>
     </div>
   );
