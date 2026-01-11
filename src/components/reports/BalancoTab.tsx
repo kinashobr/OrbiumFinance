@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import React, { useMemo } from "react";
 import { 
   TrendingUp, TrendingDown, Scale, Building2, Car, 
   Banknote, Shield, History, CreditCard, ArrowUpRight, 
@@ -8,7 +8,7 @@ import {
   Zap, Target, Gauge, Activity
 } from "lucide-react";
 import { useFinance } from "@/contexts/FinanceContext";
-import { cn } from "@/lib/utils";
+import { cn, parseDateLocal } from "@/lib/utils";
 import { ACCOUNT_TYPE_LABELS, ComparisonDateRanges, formatCurrency } from "@/types/finance";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
