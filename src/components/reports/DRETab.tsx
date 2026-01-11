@@ -177,6 +177,7 @@ export function DRETab({ dateRanges }: { dateRanges: ComparisonDateRanges }) {
     }
 
     return allExpenses
+        .filter(d => d.value > 0) // Filtra categorias com valor zero
         .sort((a, b) => b.value - a.value)
         .slice(0, 8) // Top 8 categorias
         .map((d, i) => ({ ...d, color: palette[i % palette.length] }));
@@ -201,7 +202,7 @@ export function DRETab({ dateRanges }: { dateRanges: ComparisonDateRanges }) {
                     {dre1.res >= 0 ? "Lucro Operacional" : "Déficit Mensal"}
                   </Badge>
                 </div>
-                <h2 className="text-[11px] font-black text-muted-foreground uppercase tracking-[0.2em] mb-4">Resultado Líquido Final</h2>
+                <h2 className="text-[11px] font-black text-muted-foreground uppercase tracking-[0.2em] mb-4">Resultado Líquido do Período</h2>
                 <div className="flex flex-col sm:flex-row sm:items-end gap-4 sm:gap-6">
                    <h3 className={cn("font-display font-extrabold text-5xl sm:text-6xl tracking-tighter leading-none tabular-nums", dre1.res >= 0 ? "text-success" : "text-destructive")}>
                      {formatCurrency(dre1.res)}
@@ -228,6 +229,33 @@ export function DRETab({ dateRanges }: { dateRanges: ComparisonDateRanges }) {
         </div>
       </div>
 
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+         <div className="p-5 rounded-[2rem] bg-surface-light dark:bg-surface-dark border border-white/60 dark:border-white/5 shadow-sm">
+            <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest mb-1">Receita Bruta</p>
+            <p className="text-lg font-black tabular-nums text-success">{formatCurrency(dre1.rec)}</p>
+         </div>
+         <div className="p-5 rounded-[2rem] bg-surface-light dark:bg-surface-dark border border-white/60 dark:border-white/5 shadow-sm">
+            <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest mb-1">Despesas Fixas</p>
+            <p className="text-lg font-black tabular-nums text-destructive/80">{formatCurrency(dre1.fix)}</p>
+         </div>
+         <div className="p-5 rounded-[2rem] bg-surface-light dark:bg-surface-dark border border-white/60 dark:border-white/5 shadow-sm">
+            <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest mb-1">Variáveis & Juros</p>
+            <p className="text-lg font-black tabular-nums text-destructive">{formatCurrency(dre1.var + dre1.juros)}</p>
+         </div>
+         <div className="p-5 rounded-[2rem] bg-surface-light dark:bg-surface-dark border border-white/60 dark:border-white/5 shadow-sm">
+            <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest mb-1">Resultado Bruto</p>
+            <p className="text-lg font-black tabular-nums text-primary">{formatCurrency(dre1.rec - dre1.fix)}</p>
+         </div>
+         <div className="p-5 rounded-[2rem] bg-surface-light dark:bg-surface-dark border border-white/60 dark:border-white/5 shadow-sm">
+            <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest mb-1">Res. Financeiro</p>
+            <p className={cn("text-lg font-black tabular-nums", (dre1.rendimentos - dre1.juros) >= 0 ? "text-success" : "text-destructive")}>{formatCurrency(dre1.rendimentos - dre1.juros)}</p>
+         </div>
+         <div className="p-5 rounded-[2rem] bg-surface-light dark:bg-surface-dark border border-white/60 dark:border-white/5 shadow-sm">
+            <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest mb-1">Variac. RL</p>
+            <p className={cn("text-lg font-black tabular-nums", dre1.res >= dre2.res ? "text-success" : "text-destructive")}>{formatCurrency(dre1.res - dre2.res)}</p>
+         </div>
+      </div>
+
       {/* GRID PRINCIPAL: DRE À ESQUERDA, GRÁFICOS À DIREITA */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 items-start">
         
@@ -244,7 +272,7 @@ export function DRETab({ dateRanges }: { dateRanges: ComparisonDateRanges }) {
           <div className="bg-surface-light dark:bg-surface-dark rounded-[3rem] p-8 border border-white/60 dark:border-white/5 shadow-soft">
             <div className="flex items-center gap-3 mb-8 px-2">
                <div className="p-2 bg-primary/10 rounded-xl text-primary"><BarChart3 className="w-5 h-5" /></div>
-               <h4 className="font-display font-black text-xl text-foreground uppercase tracking-tight">Histórico de Fluxo</h4>
+               <h4 className="font-display font-black text-xl text-foreground uppercase tracking-tight">Fluxo de Caixa Histórico</h4>
             </div>
             <div className="h-[280px]">
                <ResponsiveContainer width="100%" height="100%">
@@ -274,10 +302,23 @@ export function DRETab({ dateRanges }: { dateRanges: ComparisonDateRanges }) {
             <div className="flex-1 min-h-[300px]">
                <ResponsiveContainer width="100%" height="100%">
                   <RePieChart>
-                     <Pie data={compositionData} cx="50%" cy="50%" innerRadius={70} outerRadius={100} paddingAngle={4} dataKey="value" stroke="none">
+                     <Pie 
+                        data={compositionData} 
+                        cx="50%" 
+                        cy="50%" 
+                        innerRadius={70} 
+                        outerRadius={100} 
+                        paddingAngle={4} 
+                        dataKey="value" 
+                        nameKey="name" // Adiciona nameKey para Tooltip
+                        stroke="none"
+                     >
                         {compositionData.map((entry, index) => <Cell key={index} fill={entry.color} />)}
                      </Pie>
-                     <Tooltip formatter={(v: number) => formatCurrency(v)} />
+                     <Tooltip 
+                        contentStyle={{borderRadius: '16px', border: 'none', boxShadow: '0 10px 25px rgba(0,0,0,0.1)', backgroundColor: 'hsl(var(--card))'}}
+                        formatter={(value: number, name: string) => [formatCurrency(value), name]} // Formata para mostrar nome e valor
+                     />
                   </RePieChart>
                </ResponsiveContainer>
             </div>
