@@ -1,10 +1,10 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, useCallback } from "react";
 import { 
   Activity, ShieldCheck, Zap, Scale, Sparkles, TrendingUp, 
   TrendingDown, Target, Shield, Gauge, Heart, Wallet, 
-  Coins, Landmark, BarChart3, Plus, LayoutGrid, User, Minus, Calendar // Adicionado Minus e Calendar
+  Coins, Landmark, BarChart3, Plus, LayoutGrid, User, Minus, Calendar
 } from "lucide-react";
 import { useFinance } from "@/contexts/FinanceContext";
 import { ComparisonDateRanges, DateRange, formatCurrency } from "@/types/finance";
