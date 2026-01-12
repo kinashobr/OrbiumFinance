@@ -114,7 +114,7 @@ export function Sidebar() {
     if (segurosVencendo > 0) count++;
     
     const contasLiquidez = contasMovimento.filter(c => 
-      ['conta_corrente', 'poupanca', 'reserva_emergencia', 'aplicacao_renda_fixa'].includes(c.accountType)
+      ['corrente', 'poupanca', 'reserva', 'renda_fixa'].includes(c.accountType)
     );
     const saldoLiquidez = contasLiquidez.reduce((acc, c) => acc + calculateBalanceUpToDate(c.id, now, transacoesV2, contasMovimento), 0);
     if (saldoLiquidez < 0) count++;

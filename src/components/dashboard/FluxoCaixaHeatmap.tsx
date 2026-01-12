@@ -97,8 +97,8 @@ export function FluxoCaixaHeatmap({ month, year, transacoes }: FluxoCaixaHeatmap
         </div>
 
         <div className="grid grid-cols-7 gap-3 text-center mb-4 pb-4 border-b border-neutral-100 dark:border-white/5">
-          {weekDays.map(d => (
-            <span key={d} className="text-xs font-bold text-muted-foreground uppercase">{d}</span>
+          {weekDays.map((d, index) => (
+            <span key={`weekday-${index}`} className="text-xs font-bold text-muted-foreground uppercase">{d}</span>
           ))}
         </div>
 

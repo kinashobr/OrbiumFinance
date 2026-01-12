@@ -1,5 +1,6 @@
 import { useState, useMemo, useCallback } from "react";
 import { useFinance } from "@/contexts/FinanceContext";
+import { MainLayout } from "@/components/layout/MainLayout";
 import { FixedBillSelectorModal } from "@/components/bills/FixedBillSelectorModal";
 import { BillsTrackerList } from "@/components/bills/BillsTrackerList";
 import { BillsSidebarKPIs } from "@/components/bills/BillsSidebarKPIs";
@@ -70,7 +71,8 @@ export default function BillsTracker() {
   }, [setBillsTracker, contasMovimento, categoriasV2]);
 
   return (
-    <div className="container mx-auto p-3 md:p-6 space-y-4 md:space-y-6">
+    <MainLayout>
+    <div className="space-y-4 md:space-y-6">
       <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
         <div>
           <h1 className="text-xl md:text-3xl font-bold">Contas a Pagar</h1>
@@ -146,5 +148,6 @@ export default function BillsTracker() {
         currentDate={currentDate}
       />
     </div>
+    </MainLayout>
   );
 }
