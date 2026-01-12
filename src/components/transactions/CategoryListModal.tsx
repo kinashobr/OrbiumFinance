@@ -111,11 +111,11 @@ export function CategoryListModal({
                           {transactionCountByCategory[cat.id] || 0} lançamentos
                         </p>
                       </div>
-                      <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <Button variant="ghost" size="icon" className="h-9 w-9 rounded-full hover:bg-primary/10 hover:text-primary" onClick={() => onEditCategory(cat)}>
+                      <div className="flex gap-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
+                        <Button variant="ghost" size="icon" className="h-10 w-10 sm:h-9 sm:w-9 rounded-full hover:bg-primary/10 hover:text-primary active:bg-primary/10 active:text-primary" onClick={() => onEditCategory(cat)}>
                           <Pencil className="w-4 h-4" />
                         </Button>
-                        <Button variant="ghost" size="icon" className="h-9 w-9 rounded-full hover:bg-destructive/10 hover:text-destructive" onClick={() => handleDelete(cat)}>
+                        <Button variant="ghost" size="icon" className="h-10 w-10 sm:h-9 sm:w-9 rounded-full hover:bg-destructive/10 hover:text-destructive active:bg-destructive/10 active:text-destructive" onClick={() => handleDelete(cat)}>
                           <Trash2 className="w-4 h-4" />
                         </Button>
                       </div>

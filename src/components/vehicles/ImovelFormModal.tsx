@@ -192,7 +192,7 @@ export function ImovelFormModal({
           </div>
 
           {/* Valores */}
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground px-1 flex items-center gap-2">
                 <DollarSign className="w-3 h-3" /> Valor de Aquisição
@@ -222,16 +222,16 @@ export function ImovelFormModal({
           </div>
         </div>
 
-        <DialogFooter className="p-8 bg-muted/10 border-t flex gap-3">
+        <DialogFooter className="p-6 sm:p-8 bg-muted/10 border-t flex flex-col-reverse sm:flex-row gap-3">
           {isEditing && onDelete && (
-            <Button variant="destructive" onClick={handleDelete} className="rounded-full h-12 px-6 font-bold text-sm mr-auto">
+            <Button variant="destructive" onClick={handleDelete} className="rounded-full h-12 px-6 font-bold text-sm sm:mr-auto w-full sm:w-auto">
               <Trash2 className="w-4 h-4 mr-2" /> Excluir
             </Button>
           )}
-          <Button variant="ghost" onClick={() => onOpenChange(false)} className="rounded-full h-12 px-6 font-bold text-muted-foreground">
+          <Button variant="ghost" onClick={() => onOpenChange(false)} className="rounded-full h-12 px-6 font-bold text-muted-foreground w-full sm:w-auto">
             Cancelar
           </Button>
-          <Button onClick={handleSubmit} className="rounded-full h-12 bg-primary text-primary-foreground font-black text-sm gap-2 shadow-xl shadow-primary/20">
+          <Button onClick={handleSubmit} className="rounded-full h-12 bg-primary text-primary-foreground font-black text-sm gap-2 shadow-xl shadow-primary/20 w-full sm:w-auto">
             <Check className="w-5 h-5" />
             {isEditing ? "SALVAR" : "ADICIONAR"}
           </Button>
