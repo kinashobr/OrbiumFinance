@@ -126,14 +126,14 @@ export function CategoryFormModal({
 
           <div className="space-y-4">
             <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground px-1">Ícone (Emoji)</Label>
-            <div className="p-4 rounded-3xl bg-muted/20 border border-border/40 grid grid-cols-6 gap-2">
+            <div className="p-4 rounded-3xl bg-muted/20 border border-border/40 grid grid-cols-5 sm:grid-cols-6 gap-2">
               {(EMOJI_BY_CATEGORY[nature] || EMOJI_BY_CATEGORY.despesa_variavel).map(emoji => (
                 <button
                   key={emoji}
                   onClick={() => setIcon(emoji)}
                   className={cn(
-                    "w-10 h-10 flex items-center justify-center text-xl rounded-xl transition-all",
-                    icon === emoji ? "bg-primary shadow-lg scale-110" : "hover:bg-card"
+                    "w-11 h-11 sm:w-10 sm:h-10 flex items-center justify-center text-xl rounded-xl transition-all active:scale-95",
+                    icon === emoji ? "bg-primary shadow-lg scale-110" : "hover:bg-card active:bg-card"
                   )}
                 >
                   {emoji}
@@ -143,8 +143,8 @@ export function CategoryFormModal({
           </div>
         </div>
 
-        <DialogFooter className="p-8 bg-muted/10 border-t flex gap-3">
-          <Button variant="ghost" onClick={() => onOpenChange(false)} className="rounded-full h-12 px-6 font-bold text-muted-foreground">
+        <DialogFooter className="p-6 sm:p-8 bg-muted/10 border-t flex flex-col-reverse sm:flex-row gap-3">
+          <Button variant="ghost" onClick={() => onOpenChange(false)} className="rounded-full h-12 px-6 font-bold text-muted-foreground w-full sm:w-auto">
             Cancelar
           </Button>
           <Button onClick={handleSubmit} className="flex-1 rounded-full h-12 bg-primary text-primary-foreground font-black text-sm gap-2 shadow-xl shadow-primary/20 hover:scale-[1.02] active:scale-[0.98] transition-all">

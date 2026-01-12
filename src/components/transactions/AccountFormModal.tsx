@@ -199,7 +199,7 @@ export function AccountFormModal({
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="initialBalance">Saldo Inicial</Label>
               <Input
@@ -209,12 +209,13 @@ export function AccountFormModal({
                 placeholder="0,00"
                 value={initialBalanceInput}
                 onChange={(e) => handleBalanceChange(e.target.value)}
+                className="h-12"
               />
             </div>
             <div className="space-y-2">
               <Label htmlFor="currency">Moeda</Label>
               <Select value={currency} onValueChange={setCurrency}>
-                <SelectTrigger>
+                <SelectTrigger className="h-12">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -241,21 +242,21 @@ export function AccountFormModal({
           </div>
         </div>
 
-        <DialogFooter className="flex gap-2">
+        <DialogFooter className="flex flex-col-reverse sm:flex-row gap-2">
           {isEditing && onDelete && (
             <Button 
               variant="destructive" 
               onClick={handleDelete}
               disabled={hasTransactions}
-              className="mr-auto"
+              className="sm:mr-auto w-full sm:w-auto h-12 sm:h-10"
             >
               Excluir
             </Button>
           )}
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
+          <Button variant="outline" onClick={() => onOpenChange(false)} className="w-full sm:w-auto h-12 sm:h-10">
             Cancelar
           </Button>
-          <Button onClick={handleSubmit}>
+          <Button onClick={handleSubmit} className="w-full sm:w-auto h-12 sm:h-10">
             {isEditing ? "Salvar" : "Criar Conta"}
           </Button>
         </DialogFooter>

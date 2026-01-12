@@ -398,13 +398,13 @@ export function MovimentarContaModal({
           </div>
         </form>
 
-        <DialogFooter className="p-8 bg-muted/20 border-t flex gap-3">
-          <Button variant="ghost" onClick={() => onOpenChange(false)} className="rounded-full h-12 px-6 font-bold text-muted-foreground">
+        <DialogFooter className="p-4 sm:p-8 bg-muted/20 border-t flex flex-col-reverse sm:flex-row gap-3">
+          <Button variant="ghost" onClick={() => onOpenChange(false)} className="rounded-full h-12 px-6 font-bold text-muted-foreground w-full sm:w-auto">
             Cancelar
           </Button>
           <Button onClick={handleSubmit} className="flex-1 rounded-full h-12 bg-primary text-primary-foreground font-black text-sm gap-2 shadow-xl shadow-primary/20 hover:scale-[1.02] active:scale-[0.98] transition-all">
             <Check className="w-5 h-5" />
-            {isEditing ? "SALVAR ALTERAÇÕES" : "CONFIRMAR REGISTRO"}
+            {isEditing ? "SALVAR" : "CONFIRMAR"}
           </Button>
         </DialogFooter>
       </DialogContent>

@@ -112,38 +112,38 @@ export function AlertasConfigDialog({
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-[min(95vw,42rem)] h-[min(90vh,850px)] p-0 overflow-hidden rounded-[3rem] border-none shadow-2xl flex flex-col bg-background">
-          <DialogHeader className="px-8 pt-10 pb-4 bg-primary/5 shrink-0">
-            <div className="flex items-center justify-between mb-6">
-              <div className="flex items-center gap-5">
-                <div className="w-16 h-16 rounded-[1.5rem] bg-primary/10 flex items-center justify-center text-primary shadow-lg shadow-primary/5">
-                  <Bell className="w-8 h-8" />
+        <DialogContent className="max-w-[min(95vw,42rem)] h-[min(90vh,850px)] p-0 overflow-hidden rounded-[2rem] sm:rounded-[3rem] border-none shadow-2xl flex flex-col bg-background">
+          <DialogHeader className="px-4 sm:px-8 pt-6 sm:pt-10 pb-4 bg-primary/5 shrink-0">
+            <div className="flex items-center justify-between mb-4 sm:mb-6 gap-3">
+              <div className="flex items-center gap-3 sm:gap-5 min-w-0">
+                <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-xl sm:rounded-[1.5rem] bg-primary/10 flex items-center justify-center text-primary shadow-lg shadow-primary/5 shrink-0">
+                  <Bell className="w-6 h-6 sm:w-8 sm:h-8" />
                 </div>
-                <div>
-                  <DialogTitle className="text-3xl font-black tracking-tighter">Performance & Alertas</DialogTitle>
-                  <DialogDescription className="text-sm font-bold text-muted-foreground flex items-center gap-2 mt-1 uppercase tracking-wider">
-                    <Zap className="w-4 h-4 text-accent" />
-                    Configuração de Inteligência
+                <div className="min-w-0">
+                  <DialogTitle className="text-xl sm:text-3xl font-black tracking-tighter truncate">Performance & Alertas</DialogTitle>
+                  <DialogDescription className="text-xs sm:text-sm font-bold text-muted-foreground flex items-center gap-2 mt-1 uppercase tracking-wider">
+                    <Zap className="w-3 h-3 sm:w-4 sm:h-4 text-accent shrink-0" />
+                    <span className="truncate">Configuração de Inteligência</span>
                   </DialogDescription>
                 </div>
               </div>
               <Button 
                 variant="ghost" 
                 size="icon" 
-                className="h-12 w-12 rounded-full bg-muted/50 hover:bg-primary/10 hover:text-primary transition-all"
+                className="h-10 w-10 sm:h-12 sm:w-12 rounded-full bg-muted/50 hover:bg-primary/10 hover:text-primary transition-all shrink-0"
                 onClick={() => setShowIndicatorManager(true)}
               >
-                <Settings2 className="w-6 h-6" />
+                <Settings2 className="w-5 h-5 sm:w-6 sm:h-6" />
               </Button>
             </div>
 
             <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-              <TabsList className="grid w-full grid-cols-2 h-12 bg-muted/50 p-1 rounded-2xl border border-border/40">
-                <TabsTrigger value="alertas" className="rounded-xl font-black text-[10px] uppercase tracking-widest data-[state=active]:bg-card data-[state=active]:shadow-sm">
-                  <AlertTriangle className="w-3.5 h-3.5 mr-2" /> Gatilhos de Risco
+              <TabsList className="grid w-full grid-cols-2 h-11 sm:h-12 bg-muted/50 p-1 rounded-xl sm:rounded-2xl border border-border/40">
+                <TabsTrigger value="alertas" className="rounded-lg sm:rounded-xl font-black text-[9px] sm:text-[10px] uppercase tracking-widest data-[state=active]:bg-card data-[state=active]:shadow-sm gap-1 sm:gap-2 px-2 sm:px-4">
+                  <AlertTriangle className="w-3 h-3 sm:w-3.5 sm:h-3.5" /> <span className="hidden sm:inline">Gatilhos de</span> Risco
                 </TabsTrigger>
-                <TabsTrigger value="metas" className="rounded-xl font-black text-[10px] uppercase tracking-widest data-[state=active]:bg-card data-[state=active]:shadow-sm">
-                  <Trophy className="w-3.5 h-3.5 mr-2" /> Metas de Sucesso
+                <TabsTrigger value="metas" className="rounded-lg sm:rounded-xl font-black text-[9px] sm:text-[10px] uppercase tracking-widest data-[state=active]:bg-card data-[state=active]:shadow-sm gap-1 sm:gap-2 px-2 sm:px-4">
+                  <Trophy className="w-3 h-3 sm:w-3.5 sm:h-3.5" /> Metas <span className="hidden sm:inline">de Sucesso</span>
                 </TabsTrigger>
               </TabsList>
             </Tabs>
@@ -251,10 +251,10 @@ export function AlertasConfigDialog({
             </Tabs>
           </ScrollArea>
 
-          <DialogFooter className="p-8 bg-surface-light dark:bg-surface-dark border-t flex gap-3">
-            <Button variant="ghost" onClick={() => onOpenChange(false)} className="rounded-full h-12 px-8 font-bold text-muted-foreground">Cancelar</Button>
+          <DialogFooter className="p-4 sm:p-8 bg-surface-light dark:bg-surface-dark border-t flex flex-col-reverse sm:flex-row gap-3">
+            <Button variant="ghost" onClick={() => onOpenChange(false)} className="rounded-full h-12 px-8 font-bold text-muted-foreground w-full sm:w-auto">Cancelar</Button>
             <Button onClick={handleSave} className="flex-1 rounded-full h-12 bg-primary text-primary-foreground font-black text-sm gap-2 shadow-xl shadow-primary/20 hover:scale-[1.02] transition-all">
-              <Save className="w-5 h-5" /> SALVAR CONFIGURAÇÕES
+              <Save className="w-5 h-5" /> <span className="hidden sm:inline">SALVAR</span> CONFIGURAÇÕES
             </Button>
           </DialogFooter>
         </DialogContent>
