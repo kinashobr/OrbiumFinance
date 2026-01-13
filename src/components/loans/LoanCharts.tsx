@@ -84,7 +84,7 @@ export function LoanCharts({ emprestimos, className }: LoanChartsProps) {
             <div className="p-2 bg-accent/10 rounded-xl text-accent">
               <PieChart className="w-5 h-5" />
             </div>
-            <h4 className="text-[11px] font-black uppercase tracking-[0.2em] text-muted-foreground">Distribuição de Peso</h4>
+            <h4 className="text-[11px] font-black uppercase tracking-[0.2em] text-muted-foreground">Distribuição das Dívidas</h4>
           </div>
 
           <div className="flex-1 bg-muted/20 rounded-[3rem] border border-border/40 p-8 flex flex-col items-center justify-center relative min-h-[400px]">
@@ -120,7 +120,7 @@ export function LoanCharts({ emprestimos, className }: LoanChartsProps) {
 
               {/* Valor Centralizado */}
               <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                <span className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em] mb-1">Dívida Total</span>
+                <span className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em] mb-1">Total em Dívidas</span>
                 <p className="text-3xl font-black text-foreground tracking-tighter">
                   {formatCurrency(totalSaldo)}
                 </p>
@@ -151,13 +151,13 @@ export function LoanCharts({ emprestimos, className }: LoanChartsProps) {
             <div className="p-2 bg-success/10 rounded-xl text-success">
               <BarChart3 className="w-5 h-5" />
             </div>
-            <h4 className="text-[11px] font-black uppercase tracking-[0.2em] text-muted-foreground">Eficiência de Crédito</h4>
+            <h4 className="text-[11px] font-black uppercase tracking-[0.2em] text-muted-foreground">Custo dos Empréstimos</h4>
           </div>
 
           <div className="flex-1 bg-muted/20 rounded-[3rem] border border-border/40 p-10 flex flex-col min-h-[400px]">
             <div className="mb-6">
-              <p className="text-sm font-bold text-foreground">Custo de Capital</p>
-              <p className="text-[11px] text-muted-foreground">Principal (Verde) vs Juros contratados (Vermelho)</p>
+              <p className="text-sm font-bold text-foreground">Análise de Custos</p>
+              <p className="text-[11px] text-muted-foreground">Valor Emprestado (Verde) vs Juros Pagos (Vermelho)</p>
             </div>
 
             <div className="flex-1 w-full">
@@ -207,7 +207,7 @@ export function LoanCharts({ emprestimos, className }: LoanChartsProps) {
               <div className="space-y-1">
                 <div className="flex items-center gap-1.5">
                   <div className="w-1.5 h-1.5 rounded-full bg-success" />
-                  <span className="text-[9px] font-black text-muted-foreground uppercase">Média Principal</span>
+                  <span className="text-[9px] font-black text-muted-foreground uppercase">Média do Valor Original</span>
                 </div>
                 <p className="text-sm font-black">
                   {((efficiencyData.reduce((a, b) => a + b.capital, 0) / efficiencyData.reduce((a, b) => a + b.total, 0)) * 100).toFixed(1)}%
@@ -216,7 +216,7 @@ export function LoanCharts({ emprestimos, className }: LoanChartsProps) {
               <div className="space-y-1">
                 <div className="flex items-center gap-1.5">
                   <div className="w-1.5 h-1.5 rounded-full bg-destructive" />
-                  <span className="text-[9px] font-black text-muted-foreground uppercase">Taxa de Juros Real</span>
+                  <span className="text-[9px] font-black text-muted-foreground uppercase">Custo Real dos Juros</span>
                 </div>
                 <p className="text-sm font-black text-destructive">
                   {((efficiencyData.reduce((a, b) => a + b.juros, 0) / efficiencyData.reduce((a, b) => a + b.capital, 0)) * 100).toFixed(1)}%

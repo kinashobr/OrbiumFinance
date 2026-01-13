@@ -78,8 +78,8 @@ export function FluxoCaixaHeatmap({ month, year, transacoes }: FluxoCaixaHeatmap
       <div className="bg-surface-light dark:bg-surface-dark rounded-[40px] p-8 shadow-soft border border-white/60 dark:border-white/5">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4">
           <div>
-            <h3 className="font-display font-bold text-2xl text-foreground">Intensidade de Caixa</h3>
-            <p className="text-sm text-muted-foreground mt-1">Visualização de densidade de movimentações financeiras no período</p>
+            <h3 className="font-display font-bold text-2xl text-foreground">Movimentação Diária</h3>
+            <p className="text-sm text-muted-foreground mt-1">Quanto mais escuro, maior o volume de entradas e saídas no dia</p>
           </div>
           <div className="flex items-center gap-4 bg-neutral-50 dark:bg-neutral-900/50 px-4 py-2 rounded-full border border-neutral-100 dark:border-white/5">
             <span className="text-xs font-bold text-muted-foreground">Volume:</span>
