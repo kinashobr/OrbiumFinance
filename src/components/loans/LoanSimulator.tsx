@@ -113,16 +113,16 @@ export function LoanSimulator({ emprestimos, className }: LoanSimulatorProps) {
           <Calculator className="w-6 h-6" />
         </div>
         <div>
-           <h3 className="font-display font-bold text-2xl text-foreground">Laboratório de Crédito</h3>
-           <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Simulações de Amortização</p>
+           <h3 className="font-display font-bold text-2xl text-foreground">Simulador de Empréstimos</h3>
+           <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Simule amortizações e compare cenários</p>
         </div>
       </div>
 
       <Tabs defaultValue="aumentar" className="space-y-10">
         <TabsList className="bg-muted/30 w-full grid grid-cols-3 p-1.5 rounded-[2rem] h-16 border border-border/40">
-          <TabsTrigger value="aumentar" className="rounded-[1.5rem] text-[10px] font-black uppercase tracking-widest data-[state=active]:bg-card data-[state=active]:shadow-lg transition-all">Aporte</TabsTrigger>
-          <TabsTrigger value="quitar" className="rounded-[1.5rem] text-[10px] font-black uppercase tracking-widest data-[state=active]:bg-card data-[state=active]:shadow-lg transition-all">Quitar</TabsTrigger>
-          <TabsTrigger value="refinanciar" className="rounded-[1.5rem] text-[10px] font-black uppercase tracking-widest data-[state=active]:bg-card data-[state=active]:shadow-lg transition-all">Troca</TabsTrigger>
+          <TabsTrigger value="aumentar" className="rounded-[1.5rem] text-[10px] font-black uppercase tracking-widest data-[state=active]:bg-card data-[state=active]:shadow-lg transition-all">Aporte Extra</TabsTrigger>
+          <TabsTrigger value="quitar" className="rounded-[1.5rem] text-[10px] font-black uppercase tracking-widest data-[state=active]:bg-card data-[state=active]:shadow-lg transition-all">Amortizar</TabsTrigger>
+          <TabsTrigger value="refinanciar" className="rounded-[1.5rem] text-[10px] font-black uppercase tracking-widest data-[state=active]:bg-card data-[state=active]:shadow-lg transition-all">Portabilidade</TabsTrigger>
         </TabsList>
 
         <TabsContent value="aumentar" className="space-y-8 animate-in fade-in duration-500">
@@ -186,7 +186,7 @@ export function LoanSimulator({ emprestimos, className }: LoanSimulatorProps) {
              <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center text-muted-foreground mb-4">
                 <RefreshCw className="w-8 h-8" />
              </div>
-             <p className="font-bold text-foreground">Funcionalidade em Desenvolvimento</p>
+             <p className="font-bold text-foreground">Em Desenvolvimento</p>
              <p className="text-xs text-muted-foreground mt-2 max-w-[200px]">Em breve você poderá simular a portabilidade da sua dívida para taxas menores.</p>
           </div>
         </TabsContent>

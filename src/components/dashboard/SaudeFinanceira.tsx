@@ -70,8 +70,8 @@ export function SaudeFinanceira({
     <TooltipProvider>
       <div className="space-y-4">
         <div className="flex justify-between items-center px-1">
-          <h3 className="font-display font-bold text-lg text-foreground">Saúde Financeira</h3>
-          <span className="text-[10px] font-bold text-primary bg-orange-100 dark:bg-orange-900/30 px-3 py-1.5 rounded-full uppercase tracking-wide">Performance</span>
+          <h3 className="font-display font-bold text-lg text-foreground">Indicadores de Saúde</h3>
+          <span className="text-[10px] font-bold text-primary bg-orange-100 dark:bg-orange-900/30 px-3 py-1.5 rounded-full uppercase tracking-wide">Desempenho</span>
         </div>
 
         <div className="grid grid-cols-2 gap-3">
@@ -87,15 +87,20 @@ export function SaudeFinanceira({
                     {liq.label}
                   </span>
                 </div>
-                <p className={cn("text-3xl font-display font-bold", liq.color.replace('800', '600'))}>{liquidez.toFixed(1)}</p>
+                <p className={cn("text-3xl font-display font-bold", liq.color.replace('800', '600'))}>{liquidez.toFixed(1)}x</p>
                 <div className="flex items-center gap-1 mt-1">
-                  <p className="text-[10px] font-bold uppercase tracking-tight opacity-60">Liquidez Geral</p>
+                  <p className="text-[10px] font-bold uppercase tracking-tight opacity-60">Folga Financeira</p>
                   <Info className="w-2.5 h-2.5 opacity-40" />
                 </div>
               </div>
             </TooltipTrigger>
-            <TooltipContent className="max-w-[220px] p-3 rounded-2xl">
-              <p className="text-xs">Relação entre tudo o que você possui (Ativos) e tudo o que deve (Passivos). Ideal: acima de 1.2.</p>
+            <TooltipContent className="max-w-[240px] p-3 rounded-2xl">
+              <p className="text-xs font-bold mb-1">O que é:</p>
+              <p className="text-xs text-muted-foreground mb-2">Quantas vezes seu patrimônio cobre suas dívidas.</p>
+              <p className="text-xs font-bold mb-1">Como é calculado:</p>
+              <p className="text-xs text-muted-foreground mb-2">Bens ÷ Dívidas</p>
+              <p className="text-xs font-bold mb-1">Faixa ideal:</p>
+              <p className="text-xs text-muted-foreground">Acima de 1.5 é saudável</p>
             </TooltipContent>
           </Tooltip>
 
@@ -113,13 +118,18 @@ export function SaudeFinanceira({
                 </div>
                 <p className={cn("text-3xl font-display font-bold", end.color.replace('800', '600'))}>{endividamento.toFixed(0)}%</p>
                 <div className="flex items-center gap-1 mt-1">
-                  <p className="text-[10px] font-bold uppercase tracking-tight opacity-60">Endividamento</p>
+                  <p className="text-[10px] font-bold uppercase tracking-tight opacity-60">Nível de Dívidas</p>
                   <Info className="w-2.5 h-2.5 opacity-40" />
                 </div>
               </div>
             </TooltipTrigger>
-            <TooltipContent className="max-w-[220px] p-3 rounded-2xl">
-              <p className="text-xs">Percentual do seu patrimônio total que está comprometido com dívidas. Ideal: abaixo de 30%.</p>
+            <TooltipContent className="max-w-[240px] p-3 rounded-2xl">
+              <p className="text-xs font-bold mb-1">O que é:</p>
+              <p className="text-xs text-muted-foreground mb-2">Quanto do seu patrimônio está comprometido com dívidas.</p>
+              <p className="text-xs font-bold mb-1">Como é calculado:</p>
+              <p className="text-xs text-muted-foreground mb-2">(Dívidas ÷ Bens) × 100</p>
+              <p className="text-xs font-bold mb-1">Faixa ideal:</p>
+              <p className="text-xs text-muted-foreground">Abaixo de 30%</p>
             </TooltipContent>
           </Tooltip>
 
@@ -137,13 +147,18 @@ export function SaudeFinanceira({
                 </div>
                 <p className={cn("text-3xl font-display font-bold", div.color.replace('800', '600'))}>{diversificacao.toFixed(0)}%</p>
                 <div className="flex items-center gap-1 mt-1">
-                  <p className="text-[10px] font-bold uppercase tracking-tight opacity-60">Diversificação</p>
+                  <p className="text-[10px] font-bold uppercase tracking-tight opacity-60">Variedade de Ativos</p>
                   <Info className="w-2.5 h-2.5 opacity-40" />
                 </div>
               </div>
             </TooltipTrigger>
-            <TooltipContent className="max-w-[220px] p-3 rounded-2xl">
-              <p className="text-xs">Mede o equilíbrio entre diferentes classes de ativos (Renda Fixa, Variável, Cripto, etc) no seu portfólio.</p>
+            <TooltipContent className="max-w-[240px] p-3 rounded-2xl">
+              <p className="text-xs font-bold mb-1">O que é:</p>
+              <p className="text-xs text-muted-foreground mb-2">Equilíbrio entre diferentes tipos de investimento.</p>
+              <p className="text-xs font-bold mb-1">Para que serve:</p>
+              <p className="text-xs text-muted-foreground mb-2">Quanto mais diversificado, menor o risco da sua carteira.</p>
+              <p className="text-xs font-bold mb-1">Faixa ideal:</p>
+              <p className="text-xs text-muted-foreground">Acima de 60%</p>
             </TooltipContent>
           </Tooltip>
 
@@ -161,13 +176,18 @@ export function SaudeFinanceira({
                 </div>
                 <p className={cn("text-3xl font-display font-bold text-foreground", est.color.replace('800', '600'))}>{estabilidadeFluxo.toFixed(0)}%</p>
                 <div className="flex items-center gap-1 mt-1">
-                  <p className="text-[10px] font-bold uppercase tracking-tight text-muted-foreground">Estabilidade</p>
+                  <p className="text-[10px] font-bold uppercase tracking-tight text-muted-foreground">Consistência</p>
                   <Info className="w-2.5 h-2.5 opacity-40" />
                 </div>
               </div>
             </TooltipTrigger>
-            <TooltipContent className="max-w-[220px] p-3 rounded-2xl">
-              <p className="text-xs">Mede a consistência das suas sobras de caixa mensais ao longo do tempo.</p>
+            <TooltipContent className="max-w-[240px] p-3 rounded-2xl">
+              <p className="text-xs font-bold mb-1">O que é:</p>
+              <p className="text-xs text-muted-foreground mb-2">Regularidade das suas sobras de caixa mensais.</p>
+              <p className="text-xs font-bold mb-1">Para que serve:</p>
+              <p className="text-xs text-muted-foreground mb-2">Mostra se você consegue manter uma rotina de economia.</p>
+              <p className="text-xs font-bold mb-1">Faixa ideal:</p>
+              <p className="text-xs text-muted-foreground">Acima de 80%</p>
             </TooltipContent>
           </Tooltip>
         </div>
