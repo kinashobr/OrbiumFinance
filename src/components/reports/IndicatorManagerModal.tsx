@@ -152,10 +152,27 @@ export function IndicatorManagerModal({
           </ScrollArea>
         ) : (
           <div className="p-8 space-y-6 max-h-[500px] overflow-y-auto no-scrollbar">
+            {/* Seção de Ajuda */}
+            <div className="p-4 rounded-2xl bg-primary/5 border border-primary/20">
+              <p className="text-[10px] font-black text-primary uppercase tracking-widest mb-2">💡 Como criar fórmulas</p>
+              <div className="grid grid-cols-2 gap-2 text-[10px] text-muted-foreground">
+                <div><span className="font-mono text-primary">RENDA</span> = Total de entradas</div>
+                <div><span className="font-mono text-primary">GASTOS</span> = Total de saídas</div>
+                <div><span className="font-mono text-primary">SOBRA</span> = Renda - Gastos</div>
+                <div><span className="font-mono text-primary">BENS</span> = Total de ativos</div>
+                <div><span className="font-mono text-primary">DIVIDAS</span> = Total de passivos</div>
+                <div><span className="font-mono text-primary">CAPITAL</span> = Bens - Dívidas</div>
+                <div><span className="font-mono text-primary">FIXOS</span> = Despesas fixas</div>
+                <div><span className="font-mono text-primary">VARIAVEIS</span> = Despesas variáveis</div>
+              </div>
+              <p className="text-[9px] text-muted-foreground mt-2">Operações: + (somar), - (subtrair), * (multiplicar), / (dividir)</p>
+              <p className="text-[9px] text-primary font-medium mt-1">Exemplo: (SOBRA / RENDA) * 100 = Taxa de Economia</p>
+            </div>
+
             <div className="space-y-2">
               <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground px-1">Nome do Indicador</Label>
               <Input 
-                placeholder="Ex: Margem de Economia" 
+                placeholder="Ex: Taxa de Economia" 
                 className="h-12 border-2 rounded-2xl font-bold"
                 value={formData.name}
                 onChange={e => setFormData(p => ({ ...p, name: e.target.value }))}
@@ -195,8 +212,8 @@ export function IndicatorManagerModal({
               <div className="relative">
                 <Calculator className="absolute left-4 top-4 w-4 h-4 text-muted-foreground" />
                 <Textarea 
-                  placeholder="Ex: (LUCRO / RECEITAS) * 100" 
-                  className="min-h-[100px] pl-12 border-2 rounded-2xl font-mono text-sm pt-4"
+                  placeholder="Ex: (SOBRA / RENDA) * 100" 
+                  className="min-h-[80px] pl-12 border-2 rounded-2xl font-mono text-sm pt-4"
                   value={formData.formula}
                   onChange={e => setFormData(p => ({ ...p, formula: e.target.value }))}
                 />
