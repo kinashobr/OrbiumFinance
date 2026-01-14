@@ -134,8 +134,23 @@ export function IndicadoresTab({ dateRanges }: { dateRanges: ComparisonDateRange
     </div>
   );
 
+  // Verifica se há dados suficientes para calcular o score
+  const hasData = useMemo(() => {
+    const date = range1.to || new Date();
+    const totalAtivos = getAtivosTotal(date);
+    const totalPassivos = getPassivosTotal(date);
+    const hasTransactions = transacoesV2.length > 0;
+    const hasAccounts = contasMovimento.length > 0;
+    
+    // Considera que há dados se tiver contas ou transações ou ativos/passivos
+    return hasTransactions || hasAccounts || totalAtivos > 0 || totalPassivos > 0;
+  }, [range1, getAtivosTotal, getPassivosTotal, transacoesV2, contasMovimento]);
+
   // Cálculo do Score de Saúde Patrimonial (real, não hardcoded)
   const scorePatrimonial = useMemo(() => {
+    // Se não há dados, retorna null para indicar que não deve exibir
+    if (!hasData) return null;
+    
     // Pesos: Liquidez Geral (25%), Endividamento (25%), Taxa Poupança (25%), Meses Sobrevivência (25%)
     const liqScore = Math.min(100, (m1.liqGeral / 2) * 100); // 2x = 100%
     const endivScore = Math.max(0, 100 - m1.endivTotal); // 0% = 100 pontos
@@ -143,7 +158,7 @@ export function IndicadoresTab({ dateRanges }: { dateRanges: ComparisonDateRange
     const sobrevScore = Math.min(100, (m1.sobrevivencia / 12) * 100); // 12 meses = 100 pontos
     
     return (liqScore * 0.25) + (endivScore * 0.25) + (poupScore * 0.25) + (sobrevScore * 0.25);
-  }, [m1]);
+  }, [m1, hasData]);
 
   return (
     <div className="space-y-16 animate-fade-in-up pb-20">
@@ -158,22 +173,41 @@ export function IndicadoresTab({ dateRanges }: { dateRanges: ComparisonDateRange
 
              <div className="relative z-10 flex flex-col sm:flex-row items-center gap-10">
                 <div className="shrink-0">
-                  <RadialGauge 
-                    value={scorePatrimonial} 
-                    label="Score"
-                    status={scorePatrimonial >= 70 ? "success" : scorePatrimonial >= 40 ? "warning" : "danger"}
-                    size={220}
-                  />
+                  {scorePatrimonial !== null ? (
+                    <RadialGauge 
+                      value={scorePatrimonial} 
+                      label="Score"
+                      status={scorePatrimonial >= 70 ? "success" : scorePatrimonial >= 40 ? "warning" : "danger"}
+                      size={220}
+                    />
+                  ) : (
+                    <div className="w-[220px] h-[220px] rounded-full border-4 border-dashed border-muted-foreground/20 flex items-center justify-center">
+                      <div className="text-center space-y-2">
+                        <Activity className="w-10 h-10 text-muted-foreground/30 mx-auto" />
+                        <span className="text-xs text-muted-foreground/50 font-medium">Sem dados</span>
+                      </div>
+                    </div>
+                  )}
                 </div>
                 <div className="flex-1 text-center sm:text-left space-y-4">
                   <Badge className="bg-primary/10 text-primary border-none font-black text-[10px] px-4 py-1.5 rounded-full uppercase tracking-[0.2em]">Saúde Patrimonial</Badge>
                   <h2 className="text-[11px] font-black text-muted-foreground uppercase tracking-[0.2em]">Score de Saúde Financeira</h2>
                   <h3 className="font-display font-extrabold text-4xl text-foreground tracking-tighter leading-tight">
-                    {scorePatrimonial >= 70 ? "Patrimônio Saudável" : scorePatrimonial >= 40 ? "Atenção Necessária" : "Situação Crítica"}
+                    {scorePatrimonial === null 
+                      ? "Cadastre seus dados" 
+                      : scorePatrimonial >= 70 
+                        ? "Patrimônio Saudável" 
+                        : scorePatrimonial >= 40 
+                          ? "Atenção Necessária" 
+                          : "Situação Crítica"}
                   </h3>
                   <div className="flex items-center justify-center sm:justify-start gap-2">
                     <Sparkles className="w-3.5 h-3.5 text-accent" />
-                    <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Calculado em {format(range1.to || new Date(), "MM/yyyy")}</span>
+                    <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
+                      {scorePatrimonial !== null 
+                        ? `Calculado em ${format(range1.to || new Date(), "MM/yyyy")}`
+                        : "Adicione contas e transações para calcular"}
+                    </span>
                   </div>
                 </div>
              </div>
