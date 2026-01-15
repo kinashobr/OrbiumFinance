@@ -123,10 +123,10 @@ export function ImovelFormModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-[min(95vw,36rem)] p-0 overflow-hidden rounded-[3rem] border-none shadow-2xl bg-background z-[130]">
-        <DialogHeader className="px-8 pt-10 pb-6 bg-primary/5 shrink-0">
+      <DialogContent className="max-w-[min(95vw,36rem)] p-0 overflow-hidden rounded-[3rem] border-none shadow-2xl bg-card dark:bg-[hsl(24_8%_14%)] z-[130]">
+        <DialogHeader className="px-8 pt-10 pb-6 bg-muted/50 dark:bg-black/30 shrink-0 border-b border-border/40 dark:border-white/5">
           <div className="flex items-center gap-4">
-            <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center text-primary shadow-lg shadow-primary/5">
+            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-primary to-primary-dark flex items-center justify-center text-white shadow-xl shadow-primary/30">
               <Icon className="w-7 h-7" />
             </div>
             <div>
@@ -222,7 +222,7 @@ export function ImovelFormModal({
           </div>
         </div>
 
-        <DialogFooter className="p-6 sm:p-8 bg-muted/10 border-t flex flex-col-reverse sm:flex-row gap-3">
+        <DialogFooter className="p-6 sm:p-8 bg-muted/10 dark:bg-black/20 border-t dark:border-white/5 flex flex-col-reverse sm:flex-row gap-3">
           {isEditing && onDelete && (
             <Button variant="destructive" onClick={handleDelete} className="rounded-full h-12 px-6 font-bold text-sm sm:mr-auto w-full sm:w-auto">
               <Trash2 className="w-4 h-4 mr-2" /> Excluir

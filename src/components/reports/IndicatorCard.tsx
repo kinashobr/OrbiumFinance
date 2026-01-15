@@ -111,24 +111,24 @@ export function IndicatorCard({
                 </TooltipTrigger>
                 <TooltipContent 
                   side="top" 
-                  className="max-w-[280px] p-4 rounded-2xl bg-neutral-900 border border-white/10 shadow-2xl"
+                  className="max-w-[280px] p-4 rounded-2xl bg-popover border border-border/40 shadow-2xl"
                 >
                   <div className="space-y-2">
                     {description && (
                       <div>
-                        <p className="text-[9px] font-black text-neutral-500 uppercase tracking-widest mb-1">O que é?</p>
-                        <p className="text-xs text-white leading-relaxed">{description}</p>
+                        <p className="text-[9px] font-black text-muted-foreground uppercase tracking-widest mb-1">O que é?</p>
+                        <p className="text-xs text-popover-foreground leading-relaxed">{description}</p>
                       </div>
                     )}
                     {formula && (
                       <div>
-                        <p className="text-[9px] font-black text-neutral-500 uppercase tracking-widest mb-1">Fórmula</p>
+                        <p className="text-[9px] font-black text-muted-foreground uppercase tracking-widest mb-1">Fórmula</p>
                         <p className="text-xs text-primary font-mono">{formula}</p>
                       </div>
                     )}
                     {idealRange && (
                       <div>
-                        <p className="text-[9px] font-black text-neutral-500 uppercase tracking-widest mb-1">Ideal</p>
+                        <p className="text-[9px] font-black text-muted-foreground uppercase tracking-widest mb-1">Ideal</p>
                         <p className="text-xs text-success">{idealRange}</p>
                       </div>
                     )}

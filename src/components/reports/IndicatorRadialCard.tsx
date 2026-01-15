@@ -54,17 +54,26 @@ export function IndicatorRadialCard({
               </TooltipTrigger>
               <TooltipContent 
                 side="top" 
-                className="max-w-[260px] p-3 rounded-xl"
+                className="max-w-[280px] p-4 rounded-2xl bg-popover border border-border/40 shadow-2xl"
               >
-                <div className="space-y-1.5">
+                <div className="space-y-2">
                   {description && (
-                    <p className="text-xs leading-relaxed">{description}</p>
+                    <div>
+                      <p className="text-[9px] font-black text-muted-foreground uppercase tracking-widest mb-1">O que é?</p>
+                      <p className="text-xs text-foreground leading-relaxed">{description}</p>
+                    </div>
                   )}
                   {formula && (
-                    <p className="text-[10px] text-primary font-mono">Fórmula: {formula}</p>
+                    <div>
+                      <p className="text-[9px] font-black text-muted-foreground uppercase tracking-widest mb-1">Fórmula</p>
+                      <p className="text-xs text-primary font-mono">{formula}</p>
+                    </div>
                   )}
                   {idealRange && (
-                    <p className="text-[10px] text-success">Ideal: {idealRange}</p>
+                    <div>
+                      <p className="text-[9px] font-black text-muted-foreground uppercase tracking-widest mb-1">Ideal</p>
+                      <p className="text-xs text-success">{idealRange}</p>
+                    </div>
                   )}
                 </div>
               </TooltipContent>

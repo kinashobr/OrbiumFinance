@@ -82,10 +82,16 @@ export function IndicadoresTab({ dateRanges }: { dateRanges: ComparisonDateRange
 
     const imobilizado = getValorFipeTotal(date);
 
+    // Novos indicadores pessoais
+    const variaveis = despesas - fixas;
+    const parcelas = txs.filter(t => t.operationType === 'pagamento_emprestimo').reduce((a, t) => a + t.amount, 0);
+    const rendimentos = txs.filter(t => t.operationType === 'rendimento').reduce((a, t) => a + t.amount, 0);
+    const reservaMinima = fixas * 3; // 3 meses de gastos fixos como reserva mínima
+
     return {
       poupanca: receitas > 0 ? (lucro / receitas) * 100 : 0,
       liqCorrente: passivoCirculante > 0 ? ativoCirculante / passivoCirculante : 0,
-      liqSeca: passivoCirculante > 0 ? ativoCirculante / passivoCirculante : 0,
+      // liqSeca removido - era duplicado de liqCorrente
       solvenciaImediata: passivoCirculante > 0 ? disponibilidades / passivoCirculante : 0,
       liqGeral: totalPassivos > 0 ? totalAtivos / totalPassivos : 0,
       endivTotal: totalAtivos > 0 ? (totalPassivos / totalAtivos) * 100 : 0,
@@ -95,11 +101,15 @@ export function IndicadoresTab({ dateRanges }: { dateRanges: ComparisonDateRange
       margemLiquida: receitas > 0 ? (lucro / receitas) * 100 : 0,
       roa: totalAtivos > 0 ? (lucro / totalAtivos) * 100 : 0,
       roe: pl > 0 ? (lucro / pl) * 100 : 0,
-      liberdade: lucro > 0 ? (txs.filter(t => t.operationType === 'rendimento').reduce((a, t) => a + t.amount, 0) / despesas) * 100 : 0,
+      liberdade: despesas > 0 ? (rendimentos / despesas) * 100 : 0,
       partFixas: despesas > 0 ? (fixas / despesas) * 100 : 0,
       burnRate: receitas > 0 ? (despesas / receitas) * 100 : 0,
       margemSeguranca: receitas > 0 ? ((receitas - fixas) / receitas) * 100 : 0,
       sobrevivencia: fixas > 0 ? ativoCirculante / fixas : 0,
+      // Novos indicadores para finanças pessoais
+      comprometimentoRenda: receitas > 0 ? ((parcelas + fixas) / receitas) * 100 : 0,
+      custoVida: receitas > 0 ? (variaveis / receitas) * 100 : 0,
+      capacidadeInvestimento: receitas > 0 && lucro > reservaMinima ? ((lucro - reservaMinima) / receitas) * 100 : 0,
     };
   }, [transacoesV2, getAtivosTotal, getPassivosTotal, contasMovimento, calculateBalanceUpToDate, getCreditCardDebt, getSegurosAPagar, getValorFipeTotal, categoriasV2]);
 
@@ -451,6 +461,43 @@ export function IndicadoresTab({ dateRanges }: { dateRanges: ComparisonDateRange
             description="Quantos meses você sobrevive sem renda usando suas reservas."
             formula="Disponível ÷ Gastos Mensais"
             idealRange="Acima de 6 meses"
+          />
+        </div>
+      </section>
+
+      {/* 6. INDICADORES PESSOAIS (Novos) */}
+      <section>
+        <SectionHeader title="Indicadores Pessoais" subtitle="Métricas para o dia a dia" icon={User} />
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <IndicatorCard 
+            title="Comprometimento de Renda" 
+            value={`${m1.comprometimentoRenda.toFixed(1)}%`} 
+            trend={getTrend(m1.comprometimentoRenda, m2.comprometimentoRenda)} 
+            status={m1.comprometimentoRenda <= 50 ? "success" : m1.comprometimentoRenda <= 70 ? "warning" : "danger"} 
+            icon={Target}
+            description="Quanto da sua renda está comprometida com parcelas e contas fixas."
+            formula="(Parcelas + Fixos) ÷ Renda × 100"
+            idealRange="Abaixo de 50%"
+          />
+          <IndicatorCard 
+            title="Custo de Vida" 
+            value={`${m1.custoVida.toFixed(1)}%`} 
+            trend={getTrend(m1.custoVida, m2.custoVida)} 
+            status={m1.custoVida <= 30 ? "success" : m1.custoVida <= 50 ? "warning" : "danger"} 
+            icon={Wallet}
+            description="Gastos variáveis com estilo de vida em relação à renda."
+            formula="Variáveis ÷ Renda × 100"
+            idealRange="Abaixo de 30%"
+          />
+          <IndicatorCard 
+            title="Capacidade de Investimento" 
+            value={`${m1.capacidadeInvestimento.toFixed(1)}%`} 
+            trend={getTrend(m1.capacidadeInvestimento, m2.capacidadeInvestimento)} 
+            status={m1.capacidadeInvestimento >= 15 ? "success" : m1.capacidadeInvestimento >= 5 ? "warning" : "danger"} 
+            icon={Plus}
+            description="Quanto você pode investir após garantir a reserva mínima."
+            formula="(Sobra - Reserva Mínima) ÷ Renda × 100"
+            idealRange="Acima de 15%"
           />
         </div>
       </section>

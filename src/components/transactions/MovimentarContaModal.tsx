@@ -227,7 +227,7 @@ export function MovimentarContaModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-[min(95vw,42rem)] p-0 overflow-hidden rounded-[3rem] border-none shadow-2xl bg-background">
+      <DialogContent className="max-w-[min(95vw,42rem)] p-0 overflow-hidden rounded-[3rem] border-none shadow-2xl bg-card">
         <DialogHeader className={cn("px-8 pt-10 pb-8 shrink-0 transition-colors duration-500", headerBg)}>
           <div className="flex items-center gap-5">
             <div className={cn("w-16 h-16 rounded-[1.5rem] flex items-center justify-center shadow-lg bg-card", headerIconColor)}>

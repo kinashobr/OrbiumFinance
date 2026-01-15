@@ -96,11 +96,11 @@ export function IndicatorManagerModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-[min(95vw,36rem)] p-0 overflow-hidden rounded-[2.5rem] border-none shadow-2xl bg-background">
-        <DialogHeader className="px-8 pt-8 pb-6 bg-primary/5 shrink-0">
+      <DialogContent className="max-w-[min(95vw,36rem)] p-0 overflow-hidden rounded-[2.5rem] border-none shadow-2xl bg-card dark:bg-[hsl(24_8%_14%)]">
+        <DialogHeader className="px-8 pt-8 pb-6 bg-muted/50 dark:bg-black/30 shrink-0 border-b border-border/40 dark:border-white/5">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
-              <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center text-primary shadow-lg shadow-primary/5">
+              <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-primary to-primary-dark flex items-center justify-center text-white shadow-xl shadow-primary/30">
                 <Settings2 className="w-7 h-7" />
               </div>
               <div>
@@ -243,7 +243,7 @@ export function IndicatorManagerModal({
           </div>
         )}
 
-        <DialogFooter className="p-8 bg-muted/10 border-t flex gap-3">
+        <DialogFooter className="p-8 bg-muted/10 dark:bg-black/20 border-t dark:border-white/5 flex gap-3">
           {view === "form" ? (
             <>
               <Button variant="ghost" onClick={() => setView("list")} className="rounded-full h-12 px-6 font-bold text-muted-foreground">
