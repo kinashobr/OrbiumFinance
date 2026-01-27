@@ -2,7 +2,7 @@ import { useState, useMemo } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Pin, Trash2, Pencil, Search, Sparkles, X, Plus } from "lucide-react";
+import { Pin, Trash2, Pencil, Search, Sparkles, Plus, ArrowLeft } from "lucide-react";
 import { StandardizationRule, Categoria } from "@/types/finance";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -10,7 +10,7 @@ import { StandardizationRuleFormModal } from "./StandardizationRuleFormModal";
 import { useFinance } from "@/contexts/FinanceContext";
 import { Badge } from "@/components/ui/badge";
 import { STANDARDIZABLE_OPERATIONS } from "./StandardizationRuleFormModal";
-import { useMediaQuery } from "@/hooks/useMediaQuery"; // Import useMediaQuery
+import { useMediaQuery } from "@/hooks/useMediaQuery";
 
 interface StandardizationRuleManagerModalProps {
   open: boolean;
@@ -18,7 +18,7 @@ interface StandardizationRuleManagerModalProps {
   rules: StandardizationRule[];
   onDeleteRule: (id: string) => void;
   categories: Categoria[];
-  onCloseAndReturn?: () => void; // Novo prop para retornar à tela anterior no mobile
+  onCloseAndReturn?: () => void;
 }
 
 export function StandardizationRuleManagerModal({
@@ -29,11 +29,11 @@ export function StandardizationRuleManagerModal({
   categories,
   onCloseAndReturn,
 }: StandardizationRuleManagerModalProps) {
+  const isMobile = useMediaQuery("(max-width: 768px)");
   const { addStandardizationRule, updateStandardizationRule } = useFinance();
   const [searchTerm, setSearchTerm] = useState("");
   const [editingRule, setEditingRule] = useState<StandardizationRule | null>(null);
   const [showFormModal, setShowFormModal] = useState(false);
-  const isMobile = useMediaQuery("(max-width: 768px)"); // Use the hook
   
   const categoriesMap = useMemo(() => new Map(categories.map(c => [c.id, c])), [categories]);
 
@@ -72,7 +72,6 @@ export function StandardizationRuleManagerModal({
     setShowFormModal(true);
   };
 
-  // Função para truncar o texto
   const truncateText = (text: string, maxLength: number) => {
     if (text.length <= maxLength) return text;
     return text.substring(0, maxLength) + "...";
@@ -81,41 +80,61 @@ export function StandardizationRuleManagerModal({
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-[min(95vw,56rem)] h-[min(90vh,800px)] p-0 overflow-hidden rounded-[2.5rem] overflow-x-hidden z-[110]"> {/* Adicionado z-[110] */}
-          <DialogHeader className="px-4 sm:px-8 pt-8 pb-6 bg-surface-light dark:bg-surface-dark shrink-0">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
-              <div className="flex items-center gap-4">
-                <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-primary/10 flex items-center justify-center text-primary shadow-lg shadow-primary/5 flex-shrink-0">
-                  <Pin className="w-6 h-6 sm:w-7 sm:h-7" />
+        <DialogContent 
+          hideCloseButton 
+          fullscreen={isMobile}
+          className={cn(
+            "p-0 shadow-2xl bg-card flex flex-col z-[110]",
+            !isMobile && "max-w-[min(95vw,56rem)] h-[min(90vh,800px)] rounded-[2.5rem]"
+          )}
+        >
+          <DialogHeader className={cn(
+            "px-4 sm:px-8 pt-6 sm:pt-8 pb-4 sm:pb-6 bg-surface-light dark:bg-surface-dark shrink-0 relative",
+            isMobile && "pt-4"
+          )}>
+            {isMobile && (
+              <Button variant="ghost" size="icon" className="absolute left-4 top-4 rounded-full h-10 w-10 z-10" onClick={() => onOpenChange(false)}>
+                <ArrowLeft className="h-6 w-6" />
+              </Button>
+            )}
+            
+            <div className={cn(
+              "flex flex-col gap-4",
+              isMobile && "pl-12"
+            )}>
+              <div className="flex items-center gap-3 sm:gap-4">
+                <div className="w-10 h-10 sm:w-14 sm:h-14 rounded-2xl bg-primary/10 flex items-center justify-center text-primary shadow-lg shadow-primary/5 flex-shrink-0">
+                  <Pin className="w-5 h-5 sm:w-7 sm:h-7" />
                 </div>
-                <div className="min-w-0">
-                  <DialogTitle className="text-xl sm:text-2xl font-black tracking-tight break-words">
+                <div className="min-w-0 flex-1">
+                  <DialogTitle className="text-lg sm:text-2xl font-black tracking-tight break-words">
                     Regras de Padronização
                   </DialogTitle>
-                  <DialogDescription className="text-sm font-medium text-muted-foreground flex items-center gap-1.5 mt-1">
-                    <Sparkles className="w-3.5 h-3.5 text-accent flex-shrink-0" />
-                    Automação inteligente de extratos
+                  <DialogDescription className="text-xs sm:text-sm font-medium text-muted-foreground flex items-center gap-1.5 mt-0.5 sm:mt-1">
+                    <Sparkles className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-accent flex-shrink-0" />
+                    Automação inteligente
                   </DialogDescription>
                 </div>
               </div>
-              <Button onClick={handleAddNew} className="rounded-full gap-2 px-4 sm:px-6 font-bold shadow-lg shadow-primary/10 w-full sm:w-auto mt-2 sm:mt-0">
+              
+              <Button onClick={handleAddNew} className="rounded-full gap-2 px-4 sm:px-6 font-bold shadow-lg shadow-primary/10 w-full sm:w-auto h-11">
                 <Plus className="w-4 h-4" /> Nova Regra
               </Button>
             </div>
 
-            <div className="relative group px-4 sm:px-8">
-              <Search className="absolute left-6 sm:left-12 top-1/2 -translate-y-1/2 w-4.5 h-4.5 text-muted-foreground group-focus-within:text-primary transition-colors" />
+            <div className="relative group mt-4">
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
               <input
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                placeholder="Pesquisar por padrão ou descrição final..."
-                className="w-full h-12 pl-10 sm:pl-12 pr-4 bg-muted/50 border-2 border-transparent focus:border-primary/30 rounded-2xl text-sm font-medium transition-all outline-none"
+                placeholder="Pesquisar padrão..."
+                className="w-full h-11 sm:h-12 pl-11 sm:pl-12 pr-4 bg-muted/50 border-2 border-transparent focus:border-primary/30 rounded-xl sm:rounded-2xl text-sm font-medium transition-all outline-none"
               />
             </div>
           </DialogHeader>
 
           <ScrollArea className="flex-1 px-4 sm:px-8 pb-8 overflow-x-hidden">
-            <div className="space-y-3 max-w-full">
+            <div className="space-y-3 max-w-full py-4">
               {filteredRules.map((rule) => {
                 const category = rule.categoryId ? categoriesMap.get(rule.categoryId) : null;
                 const operationConfig = STANDARDIZABLE_OPERATIONS.find(op => op.value === rule.operationType);
@@ -183,9 +202,9 @@ export function StandardizationRuleManagerModal({
             </div>
           </ScrollArea>
 
-          <DialogFooter className="p-4 bg-muted/10 border-t shrink-0">
-             <Button variant="ghost" onClick={() => { onOpenChange(false); onCloseAndReturn?.(); }} className="rounded-full px-6 font-bold gap-2 w-full sm:w-auto">
-                <X className="w-4 h-4" /> Fechar
+          <DialogFooter className={cn("p-4 bg-muted/10 border-t shrink-0", isMobile && "hidden")}>
+             <Button variant="ghost" onClick={() => { onOpenChange(false); onCloseAndReturn?.(); }} className="w-full rounded-full h-12 font-black text-[10px] uppercase tracking-widest text-muted-foreground hover:text-foreground">
+                FECHAR
              </Button>
           </DialogFooter>
         </DialogContent>

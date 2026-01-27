@@ -1,16 +1,15 @@
 "use client";
 
+import React from 'react';
 import { cn } from "@/lib/utils";
-import { formatCurrency, ContaCorrente, AccountType, ACCOUNT_TYPE_LABELS } from "@/types/finance";
-import { Building2, Car, Shield, CreditCard, Banknote, History, TrendingUp, TrendingDown, Scale } from "lucide-react";
-import { Separator } from "@/components/ui/separator";
-
-interface AccountItem {
-  id: string;
-  name: string;
-  accountType: AccountType;
-  saldo: number;
-}
+import { formatCurrency } from "@/types/finance";
+import { 
+  TrendingUp, 
+  TrendingDown, 
+  ArrowRight, 
+  LayoutGrid,
+} from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 
 interface BalanceSheetListProps {
   title: string;
@@ -33,136 +32,160 @@ interface BalanceSheetListProps {
   plValue?: number;
 }
 
-const getIconForType = (type: string): React.ElementType => {
-    switch (type) {
-        case 'corrente':
-        case 'poupanca':
-        case 'reserva':
-            return Building2;
-        case 'renda_fixa':
-        case 'cripto':
-        case 'objetivo':
-            return Shield;
-        case 'imobilizado':
-            return Car;
-        case 'seguros_apropriar':
-            return Shield;
-        case 'cartoes':
-            return CreditCard;
-        case 'emprestimos_curto':
-            return Banknote;
-        case 'emprestimos_longo':
-            return History;
-        case 'seguros_pagar':
-            return Shield;
-        default:
-            return Scale;
-    }
-};
-
 export function BalanceSheetList({ title, totalValue, items, isAsset, plValue }: BalanceSheetListProps) {
   const totalPassivo = items.filter(i => i.type !== 'patrimonio').reduce((acc, i) => acc + i.value, 0);
-  const totalPassivoPL = totalValue; // No lado do passivo, o total é Passivo + PL
+  const totalGeral = isAsset ? totalValue : (totalValue);
 
   return (
-    <div className="space-y-8">
-      <div className="flex items-center justify-between px-2">
-        <div className="flex items-center gap-3">
-          <div className={cn("p-2 rounded-2xl", isAsset ? "bg-success/10 text-success" : "bg-destructive/10 text-destructive")}>
-            {isAsset ? <TrendingUp className="w-6 h-6" /> : <TrendingDown className="w-6 h-6" />}
+    <div className="space-y-8 animate-fade-in">
+      {/* Header da Seção */}
+      <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-3 px-2">
+        <div className="space-y-0.5">
+          <div className="flex items-center gap-2">
+            <div className={cn(
+              "w-1.5 h-1.5 rounded-full animate-pulse",
+              isAsset ? "bg-success" : "bg-destructive"
+            )} />
+            <h3 className="text-[9px] font-black uppercase tracking-[0.2em] text-muted-foreground opacity-70">
+              {isAsset ? "Estrutura de Bens" : "Origens de Capital"}
+            </h3>
           </div>
-          <div>
-            <h3 className="font-display font-black text-2xl uppercase tracking-tight">{title}</h3>
-            <p className={cn("text-[10px] font-bold uppercase tracking-widest", isAsset ? "text-success/60" : "text-destructive/60")}>
-              {isAsset ? "Bens e direitos" : "Obrigações e capital próprio"}
-            </p>
-          </div>
+          <h2 className="font-display font-black text-xl sm:text-2xl tracking-tight text-foreground uppercase">
+            {title}
+          </h2>
         </div>
-        <p className={cn("text-3xl font-black tracking-tighter tabular-nums", isAsset ? "text-success" : "text-destructive")}>
-          {formatCurrency(totalValue)}
-        </p>
+        <div className="text-left sm:text-right">
+          <p className="text-[9px] font-black text-muted-foreground uppercase tracking-widest opacity-60">Total Consolidado</p>
+          <p className={cn(
+            "text-lg sm:text-xl font-black tracking-tighter tabular-nums leading-none",
+            isAsset ? "text-success" : "text-foreground"
+          )}>
+            {formatCurrency(totalGeral)}
+          </p>
+        </div>
       </div>
 
-      <div className="glass-card p-0"> {/* Aplicando glass-card e removendo padding interno */}
-        <div className="rounded-2xl overflow-hidden">
-          <table className="w-full table-auto">
-            <thead className="bg-muted/50">
-              <tr>
-                <th className="text-left text-[10px] font-black uppercase tracking-widest text-muted-foreground p-3 w-1/2">Conta</th>
-                <th className="text-right text-[10px] font-black uppercase tracking-widest text-muted-foreground p-3 w-1/4">Valor</th>
-                <th className="text-right text-[10px] font-black uppercase tracking-widest text-muted-foreground p-3 w-1/4">%</th>
-              </tr>
-            </thead>
-            <tbody>
-              {items.map((section, index) => (
-                <React.Fragment key={index}>
-                  <tr className={cn(
-                    "border-t border-border/40",
-                    section.type === 'circulante' ? "bg-muted/20" : section.type === 'nao_circulante' ? "bg-muted/10" : "bg-transparent"
-                  )}>
-                    <td colSpan={3} className="p-3">
-                      <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">
-                        {section.type === 'circulante' ? (isAsset ? 'ATIVO CIRCULANTE (Alta Liquidez)' : 'PASSIVO CIRCULANTE (Curto Prazo)') :
-                         section.type === 'nao_circulante' ? (isAsset ? 'ATIVO NÃO CIRCULANTE (Longo Prazo / Imobilizado)' : 'PASSIVO NÃO CIRCULANTE (Longo Prazo)') :
-                         'PATRIMÔNIO LÍQUIDO'}
-                      </p>
-                    </td>
-                  </tr>
-                  
-                  {section.details?.map((detail, dIndex) => (
-                    <tr key={dIndex} className="border-b border-border/20 last:border-b-0 hover:bg-muted/30 transition-colors">
-                      <td className="p-3">
-                        <div className="flex items-center gap-3">
-                          <div className="w-6 h-6 rounded-full flex items-center justify-center text-muted-foreground">
-                            <detail.icon className="w-4 h-4" />
-                          </div>
-                          <div>
-                            <p className="text-sm font-medium text-foreground">{detail.name}</p>
-                            <p className="text-[10px] text-muted-foreground">{detail.typeLabel}</p>
-                          </div>
-                        </div>
-                      </td>
-                      <td className="text-right text-sm font-bold tabular-nums">{formatCurrency(detail.value)}</td>
-                      <td className="text-right text-sm font-bold tabular-nums text-muted-foreground">{isNaN(detail.percent) || !isFinite(detail.percent) ? "0.0" : detail.percent.toFixed(1)}%</td>
-                    </tr>
-                  ))}
-
-                  {/* Subtotal */}
-                  <tr className={cn(
-                    "font-black",
-                    section.type === 'patrimonio' ? "bg-primary/10 text-primary" : "bg-muted/50 text-foreground"
-                  )}>
-                    <td className="p-3 text-sm uppercase tracking-tight">{section.type === 'patrimonio' ? 'Capital Próprio (Ativos - Passivos)' : `Subtotal ${section.type === 'circulante' ? 'Circulante' : 'Longo Prazo'}`}</td>
-                    <td className="text-right p-3 text-sm tabular-nums">{formatCurrency(section.value)}</td>
-                    <td className="text-right p-3 text-sm tabular-nums">{isNaN(section.percent) || !isFinite(section.percent) ? "0.0" : section.percent.toFixed(1)}%</td>
-                  </tr>
-                </React.Fragment>
-              ))}
-              
-              {/* Total Geral */}
-              <tr className={cn(
-                "font-black text-base",
-                isAsset ? "bg-success/20 text-success" : "bg-destructive/20 text-destructive"
-              )}>
-                <td className="p-3 uppercase tracking-tight">{isAsset ? 'TOTAL DO ATIVO' : 'TOTAL DO PASSIVO'}</td>
-                <td className="text-right p-3 tabular-nums">{formatCurrency(totalPassivo)}</td>
-                <td className="text-right p-3 tabular-nums">{totalPassivoPL > 0 ? ((totalPassivo / totalPassivoPL) * 100).toFixed(1) : "0.0"}%</td>
-              </tr>
-              
-              {/* Total Passivo + PL (Apenas no lado do Passivo) */}
-              {!isAsset && plValue !== undefined && (
-                <tr className="font-black text-base bg-primary/20 text-primary">
-                  <td className="p-3 uppercase tracking-tight">TOTAL PASSIVO + PL</td>
-                  <td className="text-right p-3 tabular-nums">{formatCurrency(totalPassivoPL)}</td>
-                  <td className="text-right p-3 tabular-nums">100.0%</td>
-                </tr>
+      {/* Conteúdo Integrado (Sem balão externo) */}
+      <div className="space-y-12 relative">
+        {items.map((section, idx) => {
+          const isPL = section.type === 'patrimonio';
+          
+          return (
+            <div key={idx} className="space-y-4">
+              {/* Subtotal da Seção */}
+              {!isPL && (
+                <div className="flex items-center justify-between px-2">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary shadow-sm ring-2 ring-primary/5">
+                      <LayoutGrid size={20} />
+                    </div>
+                    <div>
+                      <h4 className="font-display font-black text-base sm:text-lg text-foreground tracking-tight uppercase leading-none">
+                        {section.label}
+                      </h4>
+                      <div className="flex items-center gap-2 mt-1">
+                        <Badge variant="outline" className="rounded-md border-none bg-primary/10 text-primary font-black text-[8px] px-1.5 py-0 uppercase tracking-tighter">
+                          {section.percent.toFixed(1)}%
+                        </Badge>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <p className="font-black text-base sm:text-lg text-foreground tabular-nums tracking-tighter leading-none">
+                      {formatCurrency(section.value)}
+                    </p>
+                  </div>
+                </div>
               )}
-            </tbody>
-          </table>
+
+              {/* Lista de Itens */}
+              <div className="grid grid-cols-1 gap-2 pl-2 sm:pl-6">
+                {section.details?.map((detail) => (
+                  <div 
+                    key={detail.id}
+                    className="flex items-center justify-between p-3 sm:p-4 rounded-2xl bg-card/40 backdrop-blur-sm border border-border/30 hover:border-primary/30 hover:bg-card transition-all duration-300 group/item cursor-default"
+                  >
+                    <div className="flex items-center gap-4 min-w-0">
+                      <div className="w-9 h-9 rounded-xl bg-muted/40 flex items-center justify-center text-muted-foreground group-hover/item:text-primary transition-all">
+                        <detail.icon size={18} />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="font-bold text-sm text-foreground truncate leading-tight">
+                          {detail.name}
+                        </p>
+                        <p className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest mt-1 opacity-50">
+                          {detail.typeLabel}
+                        </p>
+                      </div>
+                    </div>
+                    
+                    <div className="text-right shrink-0">
+                      <p className="font-black text-sm sm:text-base text-foreground tabular-nums leading-none">
+                        {formatCurrency(detail.value)}
+                      </p>
+                      <p className="text-[9px] font-black text-primary/60 uppercase mt-1 tracking-tighter">
+                        {detail.percent.toFixed(1)}%
+                      </p>
+                    </div>
+                  </div>
+                ))}
+
+                {/* Patrimônio Líquido */}
+                {isPL && (
+                  <div className="p-6 sm:p-8 rounded-[2rem] bg-primary text-white shadow-xl shadow-primary/20 relative overflow-hidden group/pl mt-2">
+                    <div className="absolute right-0 top-0 p-6 opacity-10 rotate-12 group-hover/pl:scale-110 transition-transform duration-1000">
+                      <TrendingUp size={100} />
+                    </div>
+                    <div className="relative z-10 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                      <div className="space-y-1.5">
+                        <div className="flex items-center gap-2">
+                          <div className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
+                          <p className="text-[8px] font-black uppercase tracking-[0.3em] text-white/60">Capital Próprio</p>
+                        </div>
+                        <h4 className="text-2xl sm:text-3xl font-black tracking-tighter tabular-nums leading-none">
+                          {formatCurrency(section.value)}
+                        </h4>
+                      </div>
+                      <div className="flex items-center gap-4">
+                        <div className="text-right">
+                          <p className="text-[8px] font-black uppercase tracking-widest text-white/60 mb-0.5">Participação</p>
+                          <p className="text-lg font-black">{section.percent.toFixed(1)}%</p>
+                        </div>
+                        <div className="w-10 h-10 rounded-xl bg-white/10 backdrop-blur-md flex items-center justify-center shadow-inner">
+                          <ArrowRight size={20} />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Indicador de Fechamento */}
+      <div className="mt-12 pt-6 border-t border-border/30 flex items-center justify-between relative z-10 px-2">
+        <div className="flex items-center gap-3">
+          <div className={cn(
+            "w-8 h-8 rounded-full flex items-center justify-center shadow-inner",
+            isAsset ? "bg-success/10 text-success" : "bg-destructive/10 text-destructive"
+          )}>
+            {isAsset ? <TrendingUp size={16} /> : <TrendingDown size={16} />}
+          </div>
+          <div>
+            <span className="text-[9px] font-black uppercase tracking-[0.2em] text-muted-foreground block">
+              {isAsset ? "Total Ativo" : "Total Passivo"}
+            </span>
+          </div>
         </div>
+        <p className={cn(
+          "text-xl sm:text-2xl font-black tabular-nums tracking-tighter",
+          isAsset ? "text-success" : "text-destructive"
+        )}>
+          {formatCurrency(isAsset ? totalValue : totalPassivo)}
+        </p>
       </div>
     </div>
   );
 }
-
-import React from 'react';

@@ -9,8 +9,6 @@ import {
   CheckCircle,
   AlertTriangle,
   XCircle,
-  TrendingUp,
-  Target
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
@@ -19,6 +17,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { Badge } from "@/components/ui/badge";
 
 interface SaudeFinanceiraProps {
   liquidez: number;
@@ -59,48 +58,11 @@ const getEstabilidadeStatus = (val: number): StatusConfig => {
   return { label: "MÉDIA", color: "text-primary", bg: "bg-primary/5 dark:bg-primary/10", border: "border-primary/20 dark:border-primary/30", badgeClass: "bg-primary/10 text-primary dark:bg-primary/20 dark:text-primary", statusIcon: AlertTriangle };
 };
 
-// Estrutura de indicadores com metadados
 const indicadoresConfig = [
-  {
-    id: 'liquidez',
-    label: 'Índice de Liquidez',
-    icon: Wallet,
-    format: 'decimal' as const,
-    getStatus: getLiquidezStatus,
-    description: 'Capacidade de pagar todas as dívidas com seus ativos',
-    formula: 'Total de Ativos ÷ Total de Passivos',
-    idealRange: 'Acima de 1.5x é considerado saudável'
-  },
-  {
-    id: 'endividamento',
-    label: 'Nível de Dívidas',
-    icon: Scale,
-    format: 'percent' as const,
-    getStatus: getEndividamentoStatus,
-    description: 'Quanto do seu patrimônio está comprometido com dívidas',
-    formula: '(Total de Passivos ÷ Total de Ativos) × 100',
-    idealRange: 'Abaixo de 30% é ideal'
-  },
-  {
-    id: 'diversificacao',
-    label: 'Mix de Ativos',
-    icon: Activity,
-    format: 'percent' as const,
-    getStatus: getDiversificacaoStatus,
-    description: 'Distribuição entre diferentes classes de investimento',
-    formula: 'Índice de diversificação por tipo de ativo',
-    idealRange: 'Acima de 60% indica boa diversificação'
-  },
-  {
-    id: 'estabilidade',
-    label: 'Consistência',
-    icon: Shield,
-    format: 'percent' as const,
-    getStatus: getEstabilidadeStatus,
-    description: 'Regularidade do seu fluxo de caixa ao longo do tempo',
-    formula: 'Variação média do saldo mensal',
-    idealRange: 'Acima de 80% indica fluxo estável'
-  }
+  { id: 'liquidez', label: 'Liquidez', icon: Wallet, format: 'decimal' as const, getStatus: getLiquidezStatus },
+  { id: 'endividamento', label: 'Dívidas', icon: Scale, format: 'percent' as const, getStatus: getEndividamentoStatus },
+  { id: 'diversificacao', label: 'Mix Ativos', icon: Activity, format: 'percent' as const, getStatus: getDiversificacaoStatus },
+  { id: 'estabilidade', label: 'Consistência', icon: Shield, format: 'percent' as const, getStatus: getEstabilidadeStatus }
 ];
 
 export function SaudeFinanceira({
@@ -118,58 +80,51 @@ export function SaudeFinanceira({
   };
 
   return (
-    <TooltipProvider>
-      <div className="space-y-4">
-        <div className="flex justify-between items-center px-1">
-          <h3 className="font-display font-bold text-lg text-foreground">Indicadores de Saúde</h3>
-          <span className="text-[10px] font-bold text-primary bg-orange-100 dark:bg-orange-900/30 px-3 py-1.5 rounded-full uppercase tracking-wide">Desempenho</span>
+    <div className="space-y-4">
+      <div className="flex justify-between items-center px-1">
+        <div className="flex items-center gap-2">
+           <Activity className="w-4 h-4 text-primary" />
+           <h3 className="font-display font-black text-lg text-foreground uppercase tracking-tight">Indicadores de Saúde</h3>
         </div>
-
-        <div className="grid grid-cols-2 gap-3">
-          {indicadoresConfig.map((config) => {
-            const value = valores[config.id as keyof typeof valores];
-            const status = config.getStatus(value);
-            const StatusIcon = status.statusIcon;
-
-            return (
-              <Tooltip key={config.id}>
-                <TooltipTrigger asChild>
-                  <div className={cn("rounded-3xl p-5 border transition-all hover:scale-[1.02] group relative overflow-hidden cursor-help", status.bg, status.border)}>
-                    <div className="flex justify-between items-start mb-4">
-                      <div className="w-10 h-10 rounded-full bg-white dark:bg-black/20 flex items-center justify-center shadow-sm">
-                        <config.icon className={cn("w-5 h-5", status.color)} />
-                      </div>
-                      <div className="flex items-center gap-1.5">
-                        <StatusIcon className={cn("w-3 h-3", status.color)} />
-                        <span className={cn("text-[9px] font-bold px-2 py-0.5 rounded-full border border-black/5 dark:border-white/5", status.badgeClass)}>
-                          {status.label}
-                        </span>
-                      </div>
-                    </div>
-                    <p className={cn("text-3xl font-display font-bold", status.color)}>
-                      {config.format === 'decimal' ? `${value.toFixed(1)}x` : `${value.toFixed(0)}%`}
-                    </p>
-                    <div className="flex items-center gap-1 mt-1">
-                      <p className="text-[10px] font-bold uppercase tracking-tight opacity-60">{config.label}</p>
-                      <Info className="w-2.5 h-2.5 opacity-40" />
-                    </div>
-                  </div>
-                </TooltipTrigger>
-                <TooltipContent className="max-w-[260px] p-4 rounded-2xl">
-                  <div className="space-y-2">
-                    <p className="text-xs font-bold text-foreground">{config.label}</p>
-                    <p className="text-xs text-muted-foreground">{config.description}</p>
-                    <div className="pt-2 border-t border-border/40 space-y-1">
-                      <p className="text-[10px] text-muted-foreground"><strong>Cálculo:</strong> {config.formula}</p>
-                      <p className="text-[10px] text-primary font-medium">{config.idealRange}</p>
-                    </div>
-                  </div>
-                </TooltipContent>
-              </Tooltip>
-            );
-          })}
-        </div>
+        <Badge variant="outline" className="text-[9px] font-black text-primary bg-primary/5 border-primary/20 px-3 py-1 rounded-full uppercase tracking-widest">Diagnóstico</Badge>
       </div>
-    </TooltipProvider>
+
+      <div className="grid grid-cols-2 gap-4 sm:gap-6">
+        {indicadoresConfig.map((config, index) => {
+          const value = valores[config.id as keyof typeof valores];
+          const status = config.getStatus(value);
+
+          return (
+            <div 
+              key={config.id} 
+              className={cn(
+                "rounded-[2.5rem] p-5 sm:p-6 border-2 transition-all duration-500 hover:shadow-soft-lg hover:-translate-y-1 group relative overflow-hidden cursor-help animate-fade-in-up", 
+                status.bg, 
+                status.border
+              )}
+              style={{ animationDelay: `${(index + 3) * 100}ms` }}
+            >
+              {/* Ícone Decorativo de Fundo */}
+              <config.icon className={cn("absolute -right-4 -bottom-4 w-24 h-24 opacity-[0.05] transition-transform duration-700 group-hover:scale-125 group-hover:rotate-6", status.color)} />
+
+              <div className="flex justify-between items-start mb-6 relative z-10">
+                <div className="w-10 h-10 rounded-xl bg-white dark:bg-black/20 flex items-center justify-center shadow-sm group-hover:scale-110 transition-transform">
+                  <config.icon className={cn("w-5 h-5", status.color)} />
+                </div>
+                <span className={cn("text-[9px] font-black px-2 py-0.5 rounded-lg border border-black/5 dark:border-white/5 uppercase tracking-widest", status.badgeClass)}>
+                  {status.label}
+                </span>
+              </div>
+              <div className="relative z-10">
+                <p className={cn("text-3xl sm:text-4xl font-display font-black tabular-nums leading-none tracking-tighter", status.color)}>
+                  {config.format === 'decimal' ? `${value.toFixed(1)}x` : `${value.toFixed(0)}%`}
+                </p>
+                <p className="text-[10px] font-black uppercase tracking-widest opacity-60 mt-1">{config.label}</p>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
   );
 }

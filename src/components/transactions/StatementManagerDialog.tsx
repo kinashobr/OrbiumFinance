@@ -1,18 +1,18 @@
 import { useState, useMemo } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Upload, FileText, Check, X, Loader2, Pin, Eye, Trash2, Sparkles, Building2, Calendar } from "lucide-react";
-import { ContaCorrente, ImportedStatement, ACCOUNT_TYPE_LABELS } from "@/types/finance";
+import { Upload, FileText, Check, Loader2, Pin, Eye, Trash2, Sparkles, Building2, Calendar, ArrowLeft } from "lucide-react";
+import { ImportedStatement } from "@/types/finance";
 import { useFinance } from "@/contexts/FinanceContext";
 import { toast } from "sonner";
 import { parseDateLocal, cn } from "@/lib/utils";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { format } from "date-fns";
 import { Badge } from "@/components/ui/badge";
+import { useMediaQuery } from "@/hooks/useMediaQuery";
 
 interface StatementManagerDialogProps {
   open: boolean;
@@ -23,6 +23,7 @@ interface StatementManagerDialogProps {
 }
 
 export function StatementManagerDialog({ open, onOpenChange, initialAccountId, onStartConsolidatedReview, onManageRules }: StatementManagerDialogProps) {
+  const isMobile = useMediaQuery("(max-width: 768px)");
   const { 
     contasMovimento,
     importedStatements, 
@@ -35,7 +36,6 @@ export function StatementManagerDialog({ open, onOpenChange, initialAccountId, o
   const [error, setError] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   
-  // Escolha da conta dentro do modal
   const [selectedAccountId, setSelectedAccountId] = useState(initialAccountId || '');
 
   const corrienteAccounts = useMemo(() => 
@@ -84,17 +84,30 @@ export function StatementManagerDialog({ open, onOpenChange, initialAccountId, o
   
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-[min(95vw,52rem)] max-h-[min(95vh,900px)] p-0 overflow-hidden rounded-[2.5rem] flex flex-col">
-        <DialogHeader className="shrink-0 px-8 pt-8 pb-6 bg-surface-light dark:bg-surface-dark">
-          <div className="flex items-center gap-4 mb-4">
+      <DialogContent 
+        hideCloseButton 
+        fullscreen={isMobile}
+        className={cn(
+          "p-0 shadow-2xl bg-card flex flex-col",
+          !isMobile && "max-w-[52rem] max-h-[90vh] rounded-[2.5rem]"
+        )}
+      >
+        <DialogHeader className="shrink-0 px-4 sm:px-8 pt-4 sm:pt-8 pb-4 sm:pb-6 bg-surface-light dark:bg-surface-dark relative">
+          {isMobile && (
+            <Button variant="ghost" size="icon" className="absolute left-4 top-4 rounded-full h-10 w-10" onClick={() => onOpenChange(false)}>
+              <ArrowLeft className="h-6 w-6" />
+            </Button>
+          )}
+          
+          <div className={cn("flex items-center gap-4 mb-4", isMobile && "pl-12")}>
             <div className="w-14 h-14 rounded-2xl bg-accent/10 flex items-center justify-center text-accent shadow-lg shadow-accent/5">
               <FileText className="w-7 h-7" />
             </div>
             <div>
-              <DialogTitle className="text-2xl font-black tracking-tight">Importação de Extratos</DialogTitle>
+              <DialogTitle className="text-2xl font-black tracking-tight">Importação</DialogTitle>
               <DialogDescription className="text-sm font-medium text-muted-foreground flex items-center gap-1.5 mt-1">
                 <Sparkles className="w-3.5 h-3.5 text-primary" />
-                Alimente sua inteligência financeira
+                Alimente sua inteligência
               </DialogDescription>
             </div>
           </div>
@@ -103,7 +116,7 @@ export function StatementManagerDialog({ open, onOpenChange, initialAccountId, o
             <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground px-1">Conta Alvo</Label>
             <Select value={selectedAccountId} onValueChange={setSelectedAccountId}>
               <SelectTrigger className="h-12 border-2 rounded-2xl bg-card hover:border-primary/30 transition-all">
-                <SelectValue placeholder="Escolha a conta movimento..." />
+                <SelectValue placeholder="Escolha a conta..." />
               </SelectTrigger>
               <SelectContent>
                 {corrienteAccounts.map(a => (
@@ -119,8 +132,7 @@ export function StatementManagerDialog({ open, onOpenChange, initialAccountId, o
           </div>
         </DialogHeader>
         
-        <div className="flex-1 overflow-y-auto px-8 pb-8 space-y-8">
-            {/* Dropzone */}
+        <div className="flex-1 overflow-y-auto px-4 sm:px-8 pb-4 sm:pb-8 space-y-6 sm:space-y-8">
             <div 
               className={cn(
                   "p-8 border-3 border-dashed rounded-[2rem] text-center space-y-4 transition-all",
@@ -151,11 +163,10 @@ export function StatementManagerDialog({ open, onOpenChange, initialAccountId, o
               )}
             </div>
             
-            {/* Lista de Arquivos Pendentes na Conta */}
             {selectedAccountId && (
               <div className="space-y-4">
                 <div className="flex items-center justify-between px-1">
-                  <h3 className="text-[11px] font-black uppercase tracking-widest text-muted-foreground">Histórico de Cargas ({statementsForAccount.length})</h3>
+                  <h3 className="text-[11px] font-black uppercase tracking-widest text-muted-foreground">Histórico ({statementsForAccount.length})</h3>
                   <Button variant="ghost" size="sm" className="h-7 text-[10px] font-black uppercase text-primary gap-1" onClick={onManageRules}>
                     <Pin className="w-3 h-3" /> Regras
                   </Button>
@@ -169,16 +180,16 @@ export function StatementManagerDialog({ open, onOpenChange, initialAccountId, o
                                 <div className="flex items-center gap-3">
                                     <div className="p-2 rounded-lg bg-muted/50"><FileText className="w-4 h-4 text-muted-foreground" /></div>
                                     <div>
-                                        <p className="text-sm font-bold text-foreground truncate max-w-[200px]">{stmt.fileName}</p>
+                                        <p className="text-sm font-bold text-foreground truncate max-w-[120px] sm:max-w-[200px]">{stmt.fileName}</p>
                                         <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
                                             <Calendar className="w-3 h-3" />
-                                            {format(parseDateLocal(stmt.startDate), 'dd/MM/yy')} - {format(parseDateLocal(stmt.endDate), 'dd/MM/yy')}
+                                            {format(parseDateLocal(stmt.startDate), 'dd/MM/yy')}
                                         </div>
                                     </div>
                                 </div>
                                 <div className="flex items-center gap-3">
                                     <Badge variant="outline" className={cn("text-[9px] font-black border-none", pending === 0 ? "bg-success/10 text-success" : "bg-warning/10 text-warning")}>
-                                        {pending === 0 ? "CONCLUÍDO" : `${pending} PENDENTES`}
+                                        {pending === 0 ? "OK" : `${pending} P`}
                                     </Badge>
                                     <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full opacity-0 group-hover:opacity-100 text-destructive hover:bg-destructive/10" onClick={() => deleteImportedStatement(stmt.id)}>
                                         <Trash2 className="w-4 h-4" />
@@ -187,27 +198,25 @@ export function StatementManagerDialog({ open, onOpenChange, initialAccountId, o
                             </div>
                         );
                     })}
-                    {statementsForAccount.length === 0 && (
-                        <div className="py-10 text-center opacity-40">
-                            <p className="text-xs font-bold uppercase tracking-widest">Nenhum extrato para esta conta</p>
-                        </div>
-                    )}
                 </div>
               </div>
             )}
         </div>
         
-        {/* Footer Expressivo */}
-        <div className="p-6 bg-surface-light dark:bg-surface-dark border-t flex gap-3">
-          <Button variant="ghost" onClick={() => onOpenChange(false)} className="rounded-full h-11 px-6 font-bold text-muted-foreground">Cancelar</Button>
+        <DialogFooter className="p-4 sm:p-6 bg-surface-light dark:bg-surface-dark border-t flex flex-col sm:flex-row gap-2 sm:gap-3">
+          {!isMobile && (
+            <Button variant="ghost" onClick={() => onOpenChange(false)} className="rounded-full h-11 px-6 font-black text-[10px] uppercase tracking-widest text-muted-foreground hover:text-foreground">
+              FECHAR
+            </Button>
+          )}
           <Button 
             disabled={statementsForAccount.length === 0 || !selectedAccountId}
             onClick={() => { onOpenChange(false); onStartConsolidatedReview(selectedAccountId); }}
-            className="flex-1 rounded-full h-11 bg-neutral-800 text-white dark:bg-white dark:text-black font-bold text-sm gap-2 hover:scale-[1.02] transition-transform shadow-xl shadow-black/10"
+            className="flex-1 rounded-full h-11 bg-neutral-800 text-white dark:bg-white dark:text-black font-bold text-sm gap-2 hover:scale-[1.02] transition-transform shadow-xl shadow-black/10 order-1 sm:order-2"
           >
-            <Eye className="w-4 h-4" /> Revisar Transações
+            <Eye className="w-4 h-4" /> Revisar
           </Button>
-        </div>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );

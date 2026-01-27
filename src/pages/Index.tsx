@@ -17,6 +17,10 @@ import {
   Sparkles,
   LineChart,
   Info,
+  ArrowUpRight,
+  Zap,
+  ShieldCheck,
+  Activity
 } from "lucide-react";
 import { format, startOfDay, endOfDay, isWithinInterval, subMonths, endOfMonth } from "date-fns";
 import { parseDateLocal, cn } from "@/lib/utils";
@@ -124,44 +128,6 @@ const Index = () => {
     };
   }, [metricasPatrimoniais, contasMovimento]);
 
-  const scoreOrbium = useMemo(() => {
-    if (contasMovimento.length === 0) return 0;
-    
-    let score = 0;
-    const liqRatio = saude.liquidez;
-    if (liqRatio >= 2) score += 250;
-    else if (liqRatio >= 1.2) score += 150;
-    else if (liqRatio > 0) score += 50;
-
-    const endRatio = saude.endividamento;
-    if (metricasPatrimoniais.ativosAtuais > 0) {
-      if (endRatio <= 25) score += 250;
-      else if (endRatio <= 45) score += 150;
-      else score += 50;
-    }
-
-    const savingsRate = fluxo.p1.rec > 0 ? (fluxo.p1.saldo / fluxo.p1.rec) * 100 : 0;
-    if (fluxo.p1.rec > 0) {
-      if (savingsRate >= 20) score += 250;
-      else if (savingsRate >= 10) score += 150;
-      else score += 50;
-    }
-
-    if (metricasPatrimoniais.variacaoAbs > 0) score += 250;
-    else if (metricasPatrimoniais.variacaoAbs === 0 && metricasPatrimoniais.plAtual > 0) score += 125;
-    else if (metricasPatrimoniais.variacaoAbs < 0) score += 25;
-
-    return score;
-  }, [saude, fluxo, metricasPatrimoniais, contasMovimento]);
-
-  const scoreInfo = useMemo(() => {
-    if (contasMovimento.length === 0) return { label: "Iniciante", status: "Crítico" };
-    if (scoreOrbium >= 800) return { label: "Excelente", status: "Premium" };
-    if (scoreOrbium >= 600) return { label: "Bom", status: "Prêmio" };
-    if (scoreOrbium >= 400) return { label: "Regular", status: "Padrão" };
-    return { label: "Atenção", status: "Básico" };
-  }, [scoreOrbium, contasMovimento]);
-
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', {
       style: 'currency',
@@ -171,7 +137,6 @@ const Index = () => {
     }).format(value);
   };
 
-  // --- Smooth SVG Path Generation ---
   const dynamicPlPaths = useMemo(() => {
     const now = new Date();
     const points = Array.from({ length: 7 }, (_, i) => {
@@ -185,7 +150,7 @@ const Index = () => {
     
     const coords = points.map((val, i) => {
       const x = (i / (points.length - 1)) * 800;
-      const y = 210 - ((val - min) / range) * 170; // Adjusted for better fit
+      const y = 210 - ((val - min) / range) * 170; 
       return { x, y };
     });
 
@@ -196,10 +161,8 @@ const Index = () => {
       };
     }
 
-    // Helper function for Catmull-Rom to Cubic Bezier conversion for smoothness
     const getCurvePath = (data: {x: number, y: number}[]) => {
       const smoothing = 0.15;
-      
       const line = (a: {x: number, y: number}, b: {x: number, y: number}) => {
         const lengthX = b.x - a.x;
         const lengthY = b.y - a.y;
@@ -208,7 +171,6 @@ const Index = () => {
           angle: Math.atan2(lengthY, lengthX)
         };
       };
-
       const controlPoint = (current: {x: number, y: number}, previous: {x: number, y: number}, next: {x: number, y: number}, isEnd?: boolean) => {
         const p = previous || current;
         const n = next || current;
@@ -219,9 +181,7 @@ const Index = () => {
         const y = current.y + Math.sin(angle) * length;
         return [x, y];
       };
-
       let path = `M ${data[0].x},${data[0].y}`;
-
       for (let i = 1; i < data.length; i++) {
         const cp1 = controlPoint(data[i-1], data[i-2], data[i]);
         const cp2 = controlPoint(data[i], data[i-1], data[i+1], true);
@@ -232,43 +192,44 @@ const Index = () => {
 
     const lineD = getCurvePath(coords);
     const areaD = `${lineD} L800,250 L0,250 Z`;
-
     return { line: lineD, area: areaD };
-  }, [getPatrimonioLiquido, transacoesV2, contasMovimento, veiculos]);
+  }, [getPatrimonioLiquido, transacoesV2, contasMovimento]);
 
   return (
     <MainLayout>
       <TooltipProvider>
-        <div className="space-y-8 pb-10">
-          <header className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 px-1 animate-fade-in">
+        <div className="space-y-4 sm:space-y-6 pb-10">
+          <header className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-1 animate-fade-in text-center sm:text-left">
             <div>
-              <div className="flex items-center gap-3">
-                <div className="w-12 h-12 rounded-full bg-gradient-to-br from-primary to-primary-dark flex items-center justify-center text-white shadow-lg shadow-primary/20 ring-4 ring-primary/10">
-                  <LayoutDashboard className="w-6 h-6" />
-                </div>
+              <div className="flex flex-col sm:flex-row items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary to-primary-dark flex items-center justify-center text-white shadow-lg shadow-primary/20"><LayoutDashboard className="w-5 h-5" /></div>
                 <div>
-                  <h1 className="font-display font-bold text-2xl leading-none tracking-tight">Orbium</h1>
-                  <p className="text-xs text-muted-foreground font-medium tracking-wide mt-0.5">Visão Premium</p>
+                  <h1 className="font-display font-bold text-xl leading-none tracking-tight">Orbium</h1>
+                  <p className="text-[10px] text-muted-foreground font-medium tracking-wide mt-0.5">Visão Premium</p>
                 </div>
               </div>
             </div>
-            <div className="flex items-center gap-3">
+            <div className="flex justify-center">
               <PeriodSelector 
                 initialRanges={dateRanges}
                 onDateRangeChange={handlePeriodChange}
-                className="h-10 rounded-full bg-surface-light dark:bg-surface-dark border-border/40 shadow-sm"
+                className="h-8 sm:h-9 rounded-full bg-surface-light dark:bg-surface-dark border-border/40 shadow-sm"
               />
             </div>
           </header>
 
-          <div className="grid grid-cols-1 md:grid-cols-12 gap-6 animate-fade-in-up">
-            <div className="col-span-12 lg:col-span-8">
+          <div className="grid grid-cols-1 xl:grid-cols-12 gap-4 sm:gap-6 animate-fade-in-up">
+            <div className="col-span-12 xl:col-span-8">
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <div className="bg-surface-light dark:bg-surface-dark rounded-[32px] p-8 shadow-soft relative overflow-hidden border border-white/60 dark:border-white/5 group h-[420px] flex flex-col justify-between cursor-help">
-                    <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent opacity-50"></div>
+                  <div className="bg-surface-light dark:bg-surface-dark rounded-[24px] sm:rounded-[32px] p-5 sm:p-8 lg:p-10 shadow-soft relative overflow-hidden border border-white/60 dark:border-white/5 group min-h-[280px] sm:h-[320px] lg:h-[350px] flex flex-col justify-between cursor-help transition-all hover:shadow-soft-lg">
+                    <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-transparent to-transparent opacity-50"></div>
                     
-                    <div className="absolute bottom-0 left-0 right-0 h-[300px] pointer-events-none">
+                    <div className="absolute top-0 right-0 p-10 opacity-[0.03] dark:opacity-[0.07] group-hover:scale-110 transition-transform duration-1000">
+                      <ShieldCheck className="w-64 h-64 text-primary" />
+                    </div>
+
+                    <div className="absolute bottom-0 left-0 right-0 h-[180px] sm:h-[220px] pointer-events-none">
                       <svg className="w-full h-full" preserveAspectRatio="none" viewBox="0 0 800 250">
                         <defs>
                           <linearGradient id="chartFill" x1="0" x2="0" y1="0" y2="1">
@@ -276,67 +237,60 @@ const Index = () => {
                             <stop offset="100%" stopColor="hsl(var(--primary))" stopOpacity="0"></stop>
                           </linearGradient>
                         </defs>
-                        <path 
-                          className="transition-all duration-700 ease-in-out" 
-                          d={dynamicPlPaths.area} 
-                          fill="url(#chartFill)" 
-                        ></path>
-                        <path 
-                          d={dynamicPlPaths.line} 
-                          fill="none" 
-                          stroke="hsl(var(--primary))" 
-                          strokeLinecap="round" 
-                          strokeWidth="5" 
-                          vectorEffect="non-scaling-stroke"
-                          className="transition-all duration-700 ease-in-out"
-                        ></path>
+                        <path className="transition-all duration-1000 ease-in-out" d={dynamicPlPaths.area} fill="url(#chartFill)"></path>
+                        <path d={dynamicPlPaths.line} fill="none" stroke="hsl(var(--primary))" strokeLinecap="round" strokeWidth="5" vectorEffect="non-scaling-stroke" className="transition-all duration-1000 ease-in-out drop-shadow-lg"></path>
                       </svg>
                     </div>
 
                     <div className="relative z-10 flex justify-between items-start">
-                      <div>
-                        <div className="flex items-center gap-3 mb-2">
-                          <div className="p-2 bg-orange-100 dark:bg-orange-900/30 rounded-xl text-primary">
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-3 mb-1">
+                          <div className="p-2.5 bg-primary/10 rounded-2xl text-primary shadow-sm ring-1 ring-primary/20">
                             <LineChart className="w-5 h-5" />
                           </div>
-                          <div className="flex items-center gap-1.5">
-                            <span className="text-sm font-bold text-muted-foreground uppercase tracking-wider">Patrimônio Líquido</span>
-                            <Info className="w-3 h-3 text-muted-foreground/40" />
+                          <div className="flex flex-col">
+                            <span className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em] opacity-70">Consolidado</span>
+                            <p className="text-xs font-bold text-primary uppercase tracking-widest">Patrimônio Líquido</p>
                           </div>
                         </div>
-                        <h2 className="font-display font-extrabold text-5xl sm:text-6xl text-foreground tracking-tight leading-none mt-4 tabular-nums">
+                        <h2 className="font-display font-extrabold text-4xl sm:text-5xl lg:text-6xl text-foreground tracking-tighter leading-none mt-4 tabular-nums">
                           {formatCurrency(metricasPatrimoniais.plAtual)}
                         </h2>
-                        <div className="flex items-center gap-2 mt-4">
-                          <p className="text-muted-foreground font-medium tabular-nums">
+                        <div className="flex items-center gap-3 mt-4">
+                          <p className="text-xs sm:text-sm text-muted-foreground font-bold tabular-nums">
                             {metricasPatrimoniais.variacaoAbs >= 0 ? "+" : "-"} {formatCurrency(Math.abs(metricasPatrimoniais.variacaoAbs))}
                           </p>
                           <Badge variant="outline" className={cn(
-                            "text-xs font-bold px-2 py-0.5 rounded-lg border-none",
-                            metricasPatrimoniais.variacaoAbs >= 0 ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400" : "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"
+                            "text-[10px] font-black px-2 py-1 rounded-xl border-none shadow-sm",
+                            metricasPatrimoniais.variacaoAbs >= 0 ? "bg-success/10 text-success" : "bg-destructive/10 text-destructive"
                           )}>
                             {metricasPatrimoniais.variacaoAbs >= 0 ? <TrendingUp className="w-3 h-3 mr-1 inline" /> : <TrendingDown className="w-3 h-3 mr-1 inline" />}
-                            {Math.abs(metricasPatrimoniais.variacaoPerc).toFixed(1)}% {metricasPatrimoniais.variacaoAbs >= 0 ? 'de evolução' : 'de redução'}
+                            {Math.abs(metricasPatrimoniais.variacaoPerc).toFixed(1)}%
                           </Badge>
+                        </div>
+                      </div>
+                      
+                      <div className="hidden sm:flex flex-col items-end gap-2">
+                        <Badge className="bg-primary text-white border-none font-black text-[10px] px-3 py-1 rounded-full uppercase tracking-widest shadow-lg shadow-primary/20">
+                          Premium Account
+                        </Badge>
+                        <div className="flex items-center gap-1.5 text-[10px] font-bold text-muted-foreground uppercase tracking-widest opacity-60">
+                          <Sparkles className="w-3 h-3 text-accent" />
+                          Atualizado agora
                         </div>
                       </div>
                     </div>
                   </div>
                 </TooltipTrigger>
-                <TooltipContent className="max-w-[280px] p-4 rounded-3xl border-border shadow-2xl">
+                <TooltipContent className="max-w-[280px] p-4 rounded-2xl border-border shadow-2xl">
                   <div className="space-y-2">
                     <p className="text-xs font-bold text-foreground">Como é calculado?</p>
-                    <p className="text-[11px] leading-relaxed text-muted-foreground">
-                      <strong>Patrimônio Líquido = Ativos - Passivos</strong>.
-                    </p>
-                    <p className="text-[11px] leading-relaxed text-muted-foreground">
-                      Representa sua riqueza real. Considera saldos em contas, investimentos e veículos, subtraindo dívidas, empréstimos e faturas. O gráfico exibe a tendência dos últimos 7 meses.
-                    </p>
+                    <p className="text-[11px] leading-relaxed text-muted-foreground"><strong>Ativos - Passivos</strong>. Representa sua riqueza real acumulada.</p>
                   </div>
                 </TooltipContent>
               </Tooltip>
             </div>
-            <div className="col-span-12 lg:col-span-4 flex flex-col gap-6">
+            <div className="col-span-12 xl:col-span-4">
               <CockpitCards data={{
                 patrimonioTotal: metricasPatrimoniais.plAtual,
                 variacaoPatrimonio: metricasPatrimoniais.variacaoAbs,
@@ -350,110 +304,47 @@ const Index = () => {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-4 lg:grid-cols-8 gap-6 animate-fade-in-up" style={{ animationDelay: '100ms' }}>
-            <div className="col-span-1 md:col-span-2">
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <div className="bg-surface-light dark:bg-surface-dark rounded-[32px] p-6 shadow-soft border border-white/60 dark:border-white/5 flex flex-col justify-center h-[160px] hover:-translate-y-1 transition-transform duration-300 cursor-help">
-                    <div className="flex items-start justify-between mb-4">
-                      <div className="w-10 h-10 rounded-full bg-green-100 dark:bg-green-900/20 flex items-center justify-center text-green-700 dark:text-green-400">
-                        <TrendingUp className="w-5 h-5" />
-                      </div>
-                    </div>
-                    <div>
-                      <div className="flex items-center gap-1.5 mb-1">
-                        <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider">Resultado Operacional</p>
-                        <Info className="w-2.5 h-2.5 opacity-30" />
-                      </div>
-                      <p className="font-display font-bold text-3xl text-foreground tabular-nums">{formatCurrency(fluxo.p1.saldo)}</p>
-                    </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6 animate-fade-in-up">
+            <div className="col-span-1">
+              <div className="bg-surface-light dark:bg-surface-dark rounded-[24px] p-5 shadow-soft border border-white/60 dark:border-white/5 flex flex-col justify-center min-h-[120px] hover:-translate-y-1 transition-all group relative overflow-hidden">
+                <div className="absolute -right-2 -bottom-2 opacity-[0.03] dark:opacity-[0.05] group-hover:scale-110 transition-transform duration-700">
+                  <TrendingUp className="w-20 h-20 text-success" />
+                </div>
+                <div className="flex items-start justify-between mb-2 relative z-10">
+                  <div className="w-9 h-9 rounded-xl bg-green-100 dark:bg-green-900/20 flex items-center justify-center text-green-700 dark:text-green-400 shadow-sm group-hover:scale-110 transition-transform">
+                    <ArrowUpRight className="w-5 h-5" />
                   </div>
-                </TooltipTrigger>
-                <TooltipContent className="max-w-[200px] p-3 rounded-2xl">
-                  <p className="text-xs">Diferença entre todas as Entradas e Saídas do período selecionado. Indica se você está vivendo abaixo das suas posses.</p>
-                </TooltipContent>
-              </Tooltip>
+                  <Badge variant="outline" className="bg-green-50 text-green-600 border-none text-[8px] font-black uppercase px-1.5">Operacional</Badge>
+                </div>
+                <div className="relative z-10">
+                  <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest mb-0.5">Saldo Operacional</p>
+                  <p className="font-display font-bold text-lg sm:text-xl text-foreground tabular-nums">{formatCurrency(fluxo.p1.saldo)}</p>
+                </div>
+              </div>
             </div>
             
-            <div className="col-span-1 md:col-span-2">
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <div className="bg-surface-light dark:bg-surface-dark rounded-[32px] p-6 shadow-soft border border-white/60 dark:border-white/5 flex flex-col justify-center h-[160px] hover:-translate-y-1 transition-transform duration-300 cursor-help">
-                    <div className="flex items-start justify-between mb-4">
-                      <div className="w-10 h-10 rounded-full bg-orange-100 dark:bg-orange-900/20 flex items-center justify-center text-primary">
-                        <Sparkles className="w-5 h-5" />
-                      </div>
-                      <Badge variant="secondary" className="text-[10px] font-bold uppercase">Mês Atual</Badge>
-                    </div>
-                    <div>
-                      <div className="flex items-center gap-1.5 mb-1">
-                        <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider">Despesas Totais</p>
-                        <Info className="w-2.5 h-2.5 opacity-30" />
-                      </div>
-                      <p className="font-display font-bold text-3xl text-foreground tabular-nums">{formatCurrency(fluxo.p1.des)}</p>
-                    </div>
+            <div className="col-span-1">
+              <div className="bg-surface-light dark:bg-surface-dark rounded-[24px] p-5 shadow-soft border border-white/60 dark:border-white/5 flex flex-col justify-center min-h-[120px] hover:-translate-y-1 transition-all group relative overflow-hidden">
+                <div className="absolute -right-2 -bottom-2 opacity-[0.03] dark:opacity-[0.05] group-hover:scale-110 transition-transform duration-700">
+                  <TrendingDown className="w-20 h-20 text-destructive" />
+                </div>
+                <div className="flex items-start justify-between mb-2 relative z-10">
+                  <div className="w-9 h-9 rounded-xl bg-red-100 dark:bg-red-900/20 flex items-center justify-center text-destructive shadow-sm group-hover:scale-110 transition-transform">
+                    <Zap className="w-5 h-5" />
                   </div>
-                </TooltipTrigger>
-                <TooltipContent className="max-w-[200px] p-3 rounded-2xl">
-                  <p className="text-xs">Soma de todos os gastos (Despesas, Parcelas de Empréstimo e Compras de Bens) ocorridos no período selecionado.</p>
-                </TooltipContent>
-              </Tooltip>
-            </div>
-
-            <div className="col-span-1 md:col-span-4">
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <div className="bg-gradient-to-r from-neutral-800 to-neutral-900 text-white rounded-[32px] p-6 shadow-lg flex items-center justify-between relative overflow-hidden h-[160px] cursor-help">
-                    <div className="absolute right-0 bottom-0 opacity-10 scale-150 translate-x-10 translate-y-10">
-                      <Sparkles className="w-[180px] h-[180px]" />
-                    </div>
-                    <div className="z-10">
-                      <h3 className="font-display font-bold text-2xl mb-1">Score Orbium</h3>
-                      <p className="text-neutral-400 text-sm mb-4 max-w-[200px]">Saúde patrimonial com base em {contasMovimento.length} contas.</p>
-                      <div className="flex gap-2">
-                        <span className="px-3 py-1 bg-white/10 rounded-full text-[10px] font-bold uppercase backdrop-blur-md border border-white/10">
-                          {scoreInfo.label}
-                        </span>
-                        <span className="px-3 py-1 bg-white/10 rounded-full text-[10px] font-bold uppercase backdrop-blur-md border border-white/10">{scoreInfo.status}</span>
-                      </div>
-                    </div>
-                    <div className="z-10 text-right">
-                      <div className="w-24 h-24 rounded-full border-4 border-white/10 flex items-center justify-center bg-white/5 backdrop-blur-sm relative">
-                        <span className="font-display font-bold text-3xl">{scoreOrbium}</span>
-                        <svg className="absolute inset-0 w-full h-full -rotate-90">
-                          <circle 
-                            cx="48" cy="48" r="44" 
-                            fill="transparent" 
-                            stroke="hsl(var(--primary))" 
-                            strokeWidth="4" 
-                            strokeDasharray="276.46"
-                            strokeDashoffset={276.46 - (276.46 * (scoreOrbium / 1000))}
-                            strokeLinecap="round"
-                            className="transition-all duration-1000 ease-out"
-                          />
-                        </svg>
-                      </div>
-                    </div>
-                  </div>
-                </TooltipTrigger>
-                <TooltipContent className="max-w-[300px] p-4 rounded-3xl border-border shadow-2xl">
-                  <div className="space-y-3">
-                    <p className="text-xs font-bold text-foreground">O que compõe o Score?</p>
-                    <div className="grid grid-cols-2 gap-2 text-[10px]">
-                      <div className="p-2 bg-muted/50 rounded-xl"><strong>Liquidez:</strong> Capacidade de pagamento imediato.</div>
-                      <div className="p-2 bg-muted/50 rounded-xl"><strong>Dívida:</strong> Peso dos passivos no patrimônio.</div>
-                      <div className="p-2 bg-muted/50 rounded-xl"><strong>Poupança:</strong> Capacidade de poupar mensalmente.</div>
-                      <div className="p-2 bg-muted/50 rounded-xl"><strong>Evolução:</strong> Crescimento do PL no tempo.</div>
-                    </div>
-                  </div>
-                </TooltipContent>
-              </Tooltip>
+                  <Badge variant="outline" className="bg-red-50 text-red-600 border-none text-[8px] font-black uppercase px-1.5">Mensal</Badge>
+                </div>
+                <div className="relative z-10">
+                  <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest mb-0.5">Despesas Totais</p>
+                  <p className="font-display font-bold text-lg sm:text-xl text-foreground tabular-nums">{formatCurrency(fluxo.p1.des)}</p>
+                </div>
+              </div>
             </div>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            <div className="lg:col-span-2 space-y-8">
-              <section className="animate-fade-in-up" style={{ animationDelay: '150ms' }}>
+          <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 sm:gap-8">
+            <div className="lg:col-span-2 space-y-6 sm:space-y-8">
+              <section className="animate-fade-in-up">
                 <SaudeFinanceira
                   liquidez={saude.liquidez}
                   endividamento={saude.endividamento}
@@ -462,7 +353,7 @@ const Index = () => {
                   dependenciaRenda={saude.dependencia}
                 />
               </section>
-              <section className="animate-fade-in-up" style={{ animationDelay: '200ms' }}>
+              <section className="animate-fade-in-up">
                 <FluxoCaixaHeatmap 
                   month={dateRanges.range1.from ? format(dateRanges.range1.from, 'MM') : format(new Date(), 'MM')} 
                   year={dateRanges.range1.from ? dateRanges.range1.from.getFullYear() : new Date().getFullYear()} 
@@ -470,8 +361,8 @@ const Index = () => {
                 />
               </section>
             </div>
-            <div className="space-y-8">
-              <section className="animate-fade-in-up" style={{ animationDelay: '250ms' }}>
+            <div className="space-y-6 sm:space-y-8">
+              <section className="animate-fade-in-up">
                 <AcompanhamentoAtivos
                   investimentosRF={contasMovimento.filter(c => c.accountType === 'renda_fixa').reduce((a, c) => a + calculateBalanceUpToDate(c.id, dateRanges.range1.to, transacoesV2, contasMovimento), 0)}
                   criptomoedas={contasMovimento.filter(c => c.accountType === 'cripto' && !c.name.toLowerCase().includes('stable')).reduce((a, c) => a + calculateBalanceUpToDate(c.id, dateRanges.range1.to, transacoesV2, contasMovimento), 0)}
@@ -480,7 +371,7 @@ const Index = () => {
                   poupanca={contasMovimento.filter(c => c.accountType === 'poupanca').reduce((a, c) => a + calculateBalanceUpToDate(c.id, dateRanges.range1.to, transacoesV2, contasMovimento), 0)}
                 />
               </section>
-              <section className="animate-fade-in-up" style={{ animationDelay: '300ms' }}>
+              <section className="animate-fade-in-up">
                 <MovimentacoesRelevantes transacoes={transacoesPeriodo1} limit={5} />
               </section>
             </div>
